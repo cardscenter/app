@@ -1,0 +1,531 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ============================================================
+// AUTH & USER
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  displayName   String    @unique
+  bio           String?
+  avatarUrl     String?
+
+  // Wallet
+  balance       Float     @default(0)
+
+  // Account type
+  accountType       String   @default("FREE") // FREE | PREMIUM
+  premiumExpiresAt  DateTime?
+
+  // Seller defaults
+  defaultShippingCost Float @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  auctions          Auction[]
+  auctionBids       AuctionBid[]
+  claimsales        Claimsale[]
+  purchasedItems    ClaimsaleItem[]    @relation("Buyer")
+  shippingBundlesAsBuyer  ShippingBundle[] @relation("BundleBuyer")
+  shippingBundlesAsSeller ShippingBundle[] @relation("BundleSeller")
+  transactions      Transaction[]
+  conversationParticipants ConversationParticipant[]
+  sentMessages      Message[]          @relation("SentMessages")
+  listings          Listing[]
+  watchlistItems    Watchlist[]
+  notifications     Notification[]
+  reviewsGiven      Review[]       @relation("ReviewsGiven")
+  reviewsReceived   Review[]       @relation("ReviewsReceived")
+  autoBids          AutoBid[]
+}
+
+// ============================================================
+// CARD CATALOG (TCG → Series → Set)
+// ============================================================
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique // "Pokémon", "Yu-Gi-Oh!", "Magic: The Gathering"
+  slug        String   @unique // "pokemon", "yugioh", "mtg"
+  createdAt   DateTime @default(now())
+
+  series      Series[]
+}
+
+model Series {
+  id          String   @id @default(cuid())
+  name        String   // "Base Set Era", "Sword & Shield Era"
+
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  cardSets    CardSet[]
+
+  @@index([categoryId])
+}
+
+model CardSet {
+  id          String   @id @default(cuid())
+  name        String   // "Base Set", "Jungle", "Fossil"
+
+  seriesId    String
+  series      Series   @relation(fields: [seriesId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  auctions       Auction[]
+  claimsaleItems ClaimsaleItem[]
+  listings       Listing[]
+
+  @@index([seriesId])
+}
+
+// ============================================================
+// AUCTIONS (Veilingen)
+// ============================================================
+
+model Auction {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  imageUrls     String?  // JSON array of image URLs
+
+  // Auction type
+  auctionType   String   @default("SINGLE_CARD") // SINGLE_CARD | COLLECTION | BULK
+
+  // Card details (for SINGLE_CARD)
+  cardName      String?
+  cardSetId     String?
+  cardSet       CardSet? @relation(fields: [cardSetId], references: [id])
+  condition     String?  // "Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"
+
+  // Seller
+  sellerId      String
+  seller        User     @relation(fields: [sellerId], references: [id])
+
+  // Pricing
+  startingBid   Float
+  reservePrice  Float?   // null = without reserve
+  buyNowPrice   Float?   // null = no buy-it-now option
+  currentBid    Float?   // Denormalized: highest bid so far
+
+  // Timing
+  duration      Int      // 1, 3, 5, or 7 (days)
+  endTime       DateTime
+  extendedCount Int      @default(0) // Number of anti-snipe extensions
+
+  // Status
+  status        String   @default("ACTIVE") // ACTIVE | ENDED_SOLD | ENDED_RESERVE_NOT_MET | ENDED_NO_BIDS | BOUGHT_NOW | CANCELLED
+  winnerId      String?
+  finalPrice    Float?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  bids          AuctionBid[]
+  autoBids      AutoBid[]
+  conversations Conversation[]
+  watchlistItems Watchlist[]
+
+  @@index([sellerId])
+  @@index([status])
+  @@index([cardSetId])
+}
+
+model AuctionBid {
+  id         String   @id @default(cuid())
+  amount     Float
+  createdAt  DateTime @default(now())
+
+  auctionId  String
+  auction    Auction  @relation(fields: [auctionId], references: [id])
+
+  bidderId   String
+  bidder     User     @relation(fields: [bidderId], references: [id])
+
+  @@index([auctionId, amount])
+  @@index([bidderId])
+}
+
+// ============================================================
+// CLAIMSALES
+// ============================================================
+
+model Claimsale {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  shippingCost  Float
+
+  // Status: DRAFT (editable) → LIVE (immutable) → CLOSED
+  status        String   @default("DRAFT") // DRAFT | LIVE | CLOSED
+  publishedAt   DateTime?
+
+  sellerId      String
+  seller        User     @relation(fields: [sellerId], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items         ClaimsaleItem[]
+  conversations Conversation[]
+  watchlistItems Watchlist[]
+
+  @@index([sellerId])
+  @@index([status])
+}
+
+model ClaimsaleItem {
+  id           String   @id @default(cuid())
+  cardName     String
+  condition    String   // "Near Mint", "Lightly Played", etc.
+  price        Float
+  imageUrls    String   @default("[]") // JSON array of image URLs
+
+  cardSetId    String
+  cardSet      CardSet  @relation(fields: [cardSetId], references: [id])
+
+  claimsaleId  String
+  claimsale    Claimsale @relation(fields: [claimsaleId], references: [id], onDelete: Cascade)
+
+  // Purchase status
+  status       String   @default("AVAILABLE") // AVAILABLE | SOLD
+  buyerId      String?
+  buyer        User?    @relation("Buyer", fields: [buyerId], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Link to shipping bundle
+  shippingBundleId String?
+  shippingBundle   ShippingBundle? @relation(fields: [shippingBundleId], references: [id])
+
+  @@index([claimsaleId])
+  @@index([cardSetId])
+  @@index([buyerId])
+  @@index([status])
+}
+
+// ============================================================
+// MARKTPLAATS (Listings)
+// ============================================================
+
+model Listing {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  imageUrls     String   @default("[]") // JSON array of image URLs
+
+  // Listing type
+  listingType   String   @default("SINGLE_CARD") // SINGLE_CARD | MULTI_CARD | COLLECTION | SEALED_PRODUCT | OTHER
+
+  // Card details (for SINGLE_CARD)
+  cardName      String?
+  cardSetId     String?
+  cardSet       CardSet? @relation(fields: [cardSetId], references: [id])
+  condition     String?  // "Near Mint", "Lightly Played", etc.
+
+  // Multi-card details (for MULTI_CARD)
+  cardItems     String?  // JSON array: [{cardName, cardSetId, condition, quantity}]
+
+  // Collection details (for COLLECTION)
+  estimatedCardCount Int?
+  conditionRange     String? // e.g. "Lightly Played - Near Mint"
+
+  // Sealed product details (for SEALED_PRODUCT)
+  productType   String?  // BOOSTER | ETB | TIN | BOOSTER_BOX | OTHER_SEALED
+
+  // Other/Collectibles details (for OTHER)
+  itemCategory  String?  // "Playmat", "Binder", "Figuur", etc.
+
+  // Pricing
+  pricingType   String   // FIXED | NEGOTIABLE
+  price         Float?   // null if NEGOTIABLE
+
+  // Shipping
+  shippingCost    Float    @default(0)
+  deliveryMethod  String   @default("SHIP") // PICKUP | SHIP | BOTH
+  freeShipping    Boolean  @default(false)
+  carriers        String?  // JSON array: ["POSTNL","DHL","SELF"]
+  packageSize     String?  // LETTER | SMALL | MEDIUM | LARGE
+  packageCount    Int      @default(1)
+
+  // Seller
+  sellerId      String
+  seller        User     @relation(fields: [sellerId], references: [id])
+
+  // Status
+  status        String   @default("ACTIVE") // ACTIVE | SOLD | EXPIRED | DELETED
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  expiresAt     DateTime?
+
+  conversations  Conversation[]
+  watchlistItems Watchlist[]
+  upsells        ListingUpsell[]
+
+  @@index([sellerId])
+  @@index([status])
+  @@index([cardSetId])
+  @@index([listingType])
+}
+
+// ============================================================
+// LISTING UPSELLS
+// ============================================================
+
+model ListingUpsell {
+  id         String   @id @default(cuid())
+
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  type       String   // HOMEPAGE_SPOTLIGHT | CATEGORY_HIGHLIGHT | URGENT_LABEL
+  startsAt   DateTime @default(now())
+  expiresAt  DateTime
+  dailyCost  Float
+  totalCost  Float
+
+  createdAt  DateTime @default(now())
+
+  @@index([listingId])
+  @@index([type, expiresAt])
+}
+
+// ============================================================
+// SHIPPING BUNDLES
+// ============================================================
+
+model ShippingBundle {
+  id            String   @id @default(cuid())
+
+  buyerId       String
+  buyer         User     @relation("BundleBuyer", fields: [buyerId], references: [id])
+
+  sellerId      String
+  seller        User     @relation("BundleSeller", fields: [sellerId], references: [id])
+
+  shippingCost  Float
+  totalItemCost Float    @default(0)
+  totalCost     Float    @default(0) // totalItemCost + shippingCost
+
+  status        String   @default("PENDING") // PENDING | PAID | SHIPPED | COMPLETED
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items         ClaimsaleItem[]
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([buyerId, sellerId, status])
+}
+
+// ============================================================
+// WALLET / TRANSACTIONS
+// ============================================================
+
+model Transaction {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+
+  type           String   // DEPOSIT | PURCHASE | SALE | WITHDRAWAL | FEE | AUCTION_BID | AUCTION_WIN | AUCTION_BID_REFUND
+  amount         Float    // Positive for credit, negative for debit
+  balanceBefore  Float
+  balanceAfter   Float
+  description    String
+
+  // Optional references
+  relatedAuctionId        String?
+  relatedClaimsaleItemId  String?
+  relatedShippingBundleId String?
+  relatedListingId        String?
+
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============================================================
+// MESSAGING
+// ============================================================
+
+model Conversation {
+  id           String   @id @default(cuid())
+
+  // Optional link to context
+  auctionId    String?
+  auction      Auction?   @relation(fields: [auctionId], references: [id])
+  claimsaleId  String?
+  claimsale    Claimsale? @relation(fields: [claimsaleId], references: [id])
+  listingId    String?
+  listing      Listing?   @relation(fields: [listingId], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([auctionId])
+  @@index([claimsaleId])
+  @@index([listingId])
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  lastReadAt     DateTime?
+
+  // Chat organization
+  status         String    @default("ACTIVE") // ACTIVE | ARCHIVED | DELETED
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  body           String
+  createdAt      DateTime @default(now())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId       String
+  sender         User     @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+// ============================================================
+// WATCHLIST & NOTIFICATIONS
+// ============================================================
+
+model Watchlist {
+  id            String    @id @default(cuid())
+
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+
+  auctionId     String?
+  auction       Auction?  @relation(fields: [auctionId], references: [id])
+
+  claimsaleId   String?
+  claimsale     Claimsale? @relation(fields: [claimsaleId], references: [id])
+
+  listingId     String?
+  listing       Listing?  @relation(fields: [listingId], references: [id])
+
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, auctionId])
+  @@unique([userId, claimsaleId])
+  @@unique([userId, listingId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  type      String   // OUTBID | AUCTION_WON | ITEM_SOLD | NEW_MESSAGE | WATCHLIST_ENDING
+  title     String
+  body      String
+  link      String?
+
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+// ============================================================
+// REVIEWS & REPUTATION
+// ============================================================
+
+model Review {
+  id             String   @id @default(cuid())
+  rating         Int      // 1-5
+  comment        String?
+
+  reviewerId     String
+  reviewer       User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+
+  sellerId       String
+  seller         User     @relation("ReviewsReceived", fields: [sellerId], references: [id])
+
+  // Optional link to what was purchased
+  auctionId       String?
+  claimsaleItemId String?
+  listingId       String?
+
+  // Seller can respond
+  sellerResponse  String?
+
+  createdAt      DateTime @default(now())
+
+  @@index([sellerId])
+  @@index([reviewerId])
+}
+
+// ============================================================
+// AUTOBID
+// ============================================================
+
+model AutoBid {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  auctionId String
+  auction   Auction  @relation(fields: [auctionId], references: [id])
+
+  maxAmount Float
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, auctionId])
+  @@index([auctionId, isActive])
+}
+
+// ============================================================
+// APP CONFIG (for commission rates, etc.)
+// ============================================================
+
+model AppConfig {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String // JSON string for flexibility
+
+  updatedAt DateTime @updatedAt
+}
