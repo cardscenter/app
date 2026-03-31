@@ -19,7 +19,9 @@ type CardItem = {
   imageUrls: string[];
 };
 
-export function ClaimsaleForm({ seriesList, maxItems }: { seriesList: SeriesWithSets[]; maxItems: number }) {
+type ShippingMethod = { id: string; carrier: string; serviceName: string; price: number };
+
+export function ClaimsaleForm({ seriesList, maxItems, shippingMethods }: { seriesList: SeriesWithSets[]; maxItems: number; shippingMethods?: ShippingMethod[] }) {
   const t = useTranslations("claimsale");
   const ttcg = useTranslations("tcg");
   const tc = useTranslations("common");
@@ -66,6 +68,11 @@ export function ClaimsaleForm({ seriesList, maxItems }: { seriesList: SeriesWith
       price: parseFloat(i.price),
       imageUrls: i.imageUrls,
     }))));
+
+    // Include all shipping methods if available
+    if (shippingMethods && shippingMethods.length > 0) {
+      formData.set("shippingMethodIds", JSON.stringify(shippingMethods.map((m) => m.id)));
+    }
 
     const result = await createClaimsale(formData);
     if (result?.error) {

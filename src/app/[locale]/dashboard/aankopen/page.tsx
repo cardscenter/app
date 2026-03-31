@@ -23,24 +23,24 @@ export default async function MyPurchasesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-2xl font-bold text-foreground">
         {t("myPurchases")}
       </h1>
 
       {purchasedItems.length === 0 && wonAuctions.length === 0 ? (
-        <p className="mt-8 text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="mt-8 text-sm text-muted-foreground">
           {t("noPurchases")}
         </p>
       ) : (
         <div className="mt-6 space-y-6">
           {wonAuctions.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Gewonnen Veilingen</h2>
+              <h2 className="text-lg font-semibold text-foreground">Gewonnen Veilingen</h2>
               <div className="mt-3 space-y-3">
                 {wonAuctions.map((a) => (
-                  <div key={a.id} className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-50">{a.title}</p>
-                    <div className="mt-1 flex gap-4 text-sm text-zinc-500 dark:text-zinc-400">
+                  <div key={a.id} className="glass rounded-2xl p-4">
+                    <p className="font-medium text-foreground">{a.title}</p>
+                    <div className="mt-1 flex gap-4 text-sm text-muted-foreground">
                       <span>€{a.finalPrice?.toFixed(2)}</span>
                       <span>Verkoper: {a.seller.displayName}</span>
                     </div>
@@ -52,12 +52,12 @@ export default async function MyPurchasesPage() {
 
           {purchasedItems.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Claimsale Aankopen</h2>
+              <h2 className="text-lg font-semibold text-foreground">Claimsale Aankopen</h2>
               <div className="mt-3 space-y-3">
                 {purchasedItems.map((item) => (
-                  <div key={item.id} className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-50">{item.cardName}</p>
-                    <div className="mt-1 flex gap-4 text-sm text-zinc-500 dark:text-zinc-400">
+                  <div key={item.id} className="glass rounded-2xl p-4">
+                    <p className="font-medium text-foreground">{item.cardName}</p>
+                    <div className="mt-1 flex gap-4 text-sm text-muted-foreground">
                       <span>€{item.price.toFixed(2)}</span>
                       <span>Verkoper: {item.claimsale.seller.displayName}</span>
                       <span>{item.condition}</span>

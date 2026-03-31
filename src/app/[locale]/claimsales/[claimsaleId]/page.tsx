@@ -51,10 +51,10 @@ export default async function ClaimsaleDetailPage({
       />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-2xl font-bold text-foreground">
             {claimsale.title}
           </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             {claimsale.seller.displayName} · {availableCount}/{claimsale.items.length} {t("available").toLowerCase()} · {t("shippingCost")}: €{claimsale.shippingCost.toFixed(2)}
           </p>
         </div>
@@ -67,7 +67,7 @@ export default async function ClaimsaleDetailPage({
       </div>
 
       {claimsale.description && (
-        <p className="mt-4 whitespace-pre-wrap text-zinc-600 dark:text-zinc-400">
+        <p className="mt-4 whitespace-pre-wrap text-muted-foreground">
           {claimsale.description}
         </p>
       )}

@@ -20,19 +20,19 @@ export default async function MyClaimsalesPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl font-bold text-foreground">
           {t("myClaimsales")}
         </h1>
         <Link
           href="/claimsales/nieuw"
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
         >
           + {tc("createTitle")}
         </Link>
       </div>
 
       {claimsales.length === 0 ? (
-        <p className="mt-8 text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="mt-8 text-sm text-muted-foreground">
           {t("noActiveClaimsales")}
         </p>
       ) : (
@@ -41,10 +41,10 @@ export default async function MyClaimsalesPage() {
             <Link
               key={cs.id}
               href={`/claimsales/${cs.id}`}
-              className="block rounded-lg border border-zinc-200 p-4 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+              className="block glass rounded-2xl p-4 transition-colors hover:bg-muted/50"
             >
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-zinc-900 dark:text-zinc-50">{cs.title}</h3>
+                <h3 className="font-medium text-foreground">{cs.title}</h3>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                   cs.status === "LIVE"
                     ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
@@ -55,7 +55,7 @@ export default async function MyClaimsalesPage() {
                   {cs.status}
                 </span>
               </div>
-              <div className="mt-2 flex gap-4 text-sm text-zinc-500 dark:text-zinc-400">
+              <div className="mt-2 flex gap-4 text-sm text-muted-foreground">
                 <span>{cs.items.length}/{cs._count.items} verkocht</span>
                 <span>Verzending: €{cs.shippingCost.toFixed(2)}</span>
               </div>
