@@ -1,22 +1,70 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { ListingCard } from "@/components/listing/listing-card";
+import { SponsoredRow } from "@/components/listing/sponsored-row";
+import { Pagination } from "@/components/ui/pagination";
 import Link from "next/link";
+
+const PAGE_SIZE = 40;
 
 export default async function MarktplaatsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { locale } = await params;
+  const sp = await searchParams;
   const t = await getTranslations("listing");
 
-  const listings = await prisma.listing.findMany({
-    where: { status: "ACTIVE" },
+  const currentPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const now = new Date();
+
+  // Fetch sponsored listings (active CATEGORY_HIGHLIGHT upsell)
+  const sponsoredListings = await prisma.listing.findMany({
+    where: {
+      status: "ACTIVE",
+      upsells: {
+        some: {
+          type: "CATEGORY_HIGHLIGHT",
+          expiresAt: { gt: now },
+        },
+      },
+    },
     orderBy: { createdAt: "desc" },
+    take: 8,
     include: {
-      seller: { select: { displayName: true } },
-      upsells: { where: { expiresAt: { gt: new Date() } }, select: { type: true, expiresAt: true } },
+      seller: { select: { displayName: true, isVerified: true } },
+      upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
+    },
+  });
+
+  const sponsoredIds = sponsoredListings.map((l) => l.id);
+
+  // Count total non-sponsored active listings
+  const totalCount = await prisma.listing.count({
+    where: {
+      status: "ACTIVE",
+      ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
+    },
+  });
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  // Fetch paginated main listings (excluding sponsored)
+  const listings = await prisma.listing.findMany({
+    where: {
+      status: "ACTIVE",
+      ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    skip: (safePage - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+    include: {
+      seller: { select: { displayName: true, isVerified: true } },
+      upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
     },
   });
 
@@ -32,16 +80,33 @@ export default async function MarktplaatsPage({
         </Link>
       </div>
 
-      {listings.length === 0 ? (
+      {/* Sponsored row */}
+      <SponsoredRow
+        listings={sponsoredListings}
+        locale={locale}
+        title={t("sponsored")}
+        tooltip={t("sponsoredTooltip")}
+      />
+
+      {listings.length === 0 && sponsoredListings.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center">
           <p className="text-muted-foreground">{t("noListings")}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} locale={locale} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} locale={locale} />
+            ))}
+          </div>
+
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            baseUrl="/marktplaats"
+            locale={locale}
+          />
+        </>
       )}
     </div>
   );
