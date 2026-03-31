@@ -150,8 +150,8 @@ export function DashboardStats({
       {chartData.length > 0 && (
         <div className="glass-subtle rounded-xl p-5">
           <h3 className="text-sm font-semibold text-foreground mb-4">{t("stats.revenueChart")}</h3>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ width: "100%", height: 192 }}>
+            <ResponsiveContainer width="100%" height={192}>
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
