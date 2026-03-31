@@ -12,11 +12,13 @@ export function BidSection({
   currentBid,
   startingBid,
   buyNowPrice,
+  availableBalance,
 }: {
   auctionId: string;
   currentBid: number | null;
   startingBid: number;
   buyNowPrice: number | null;
+  availableBalance?: number;
 }) {
   const t = useTranslations("auction");
   const router = useRouter();
@@ -71,6 +73,18 @@ export function BidSection({
         startingBid={startingBid}
         onSelect={handleQuickBid}
       />
+
+      {/* Balance info */}
+      {availableBalance !== undefined && (
+        <div className="glass-subtle rounded-xl p-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Beschikbaar saldo</span>
+            <span className={`font-medium ${availableBalance < minimumBid ? "text-red-500" : "text-foreground"}`}>
+              {"\u20AC"}{availableBalance.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Bid form */}
       <form action={handleBid}>

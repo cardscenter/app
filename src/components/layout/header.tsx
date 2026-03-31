@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Menu, X, MessageCircle, Search } from "lucide-react";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { SearchBar } from "@/components/search/search-bar";
+import { CartIcon } from "@/components/ui/cart-icon";
 
 function HeaderContent() {
   const t = useTranslations("common");
@@ -78,6 +79,9 @@ function HeaderContent() {
               >
                 <MessageCircle className="h-5 w-5" />
               </Link>
+
+              {/* Cart */}
+              <CartIcon />
 
               {/* Dashboard / Avatar */}
               <Link

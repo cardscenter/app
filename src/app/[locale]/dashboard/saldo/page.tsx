@@ -1,84 +1,127 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
+import { BalanceSummary } from "@/components/dashboard/balance-summary";
+import { DepositMethods } from "@/components/dashboard/deposit-methods";
+import { PendingAuctionPayments } from "@/components/dashboard/pending-auction-payments";
 
 export default async function BalancePage() {
   const session = await auth();
+  if (!session?.user?.id) redirect("/login");
   const t = await getTranslations("wallet");
 
   const user = await prisma.user.findUnique({
-    where: { id: session!.user!.id },
+    where: { id: session.user.id },
+    select: {
+      balance: true,
+      reservedBalance: true,
+      heldBalance: true,
+      bankTransferReference: true,
+    },
   });
 
   const transactions = await prisma.transaction.findMany({
-    where: { userId: session!.user!.id },
+    where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
 
+  // Check for auctions awaiting payment
+  const pendingAuctions = await prisma.auction.findMany({
+    where: {
+      winnerId: session.user.id,
+      paymentStatus: "AWAITING_PAYMENT",
+    },
+    select: {
+      id: true,
+      title: true,
+      finalPrice: true,
+      paymentDeadline: true,
+    },
+  });
+
   if (!user) return null;
+
+  const availableBalance = Math.max(0, user.balance - user.reservedBalance);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-2xl font-bold text-foreground">
         {t("balance")}
       </h1>
 
-      {/* Balance card */}
-      <div className="mt-6 rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("balance")}</p>
-        <p className="mt-2 text-4xl font-bold text-zinc-900 dark:text-zinc-50">
-          €{user.balance.toFixed(2)}
-        </p>
-        <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-          {t("minimumDeposit")}
-        </p>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          {t("depositInstructions")}
-        </p>
+      {/* Balance summary */}
+      <div className="mt-6">
+        <BalanceSummary
+          balance={user.balance}
+          reservedBalance={user.reservedBalance}
+          heldBalance={user.heldBalance}
+        />
+      </div>
+
+      {/* Pending auction payments */}
+      {pendingAuctions.length > 0 && (
+        <div className="mt-6">
+          <PendingAuctionPayments
+            auctions={pendingAuctions.map((a) => ({
+              id: a.id,
+              title: a.title,
+              finalPrice: a.finalPrice,
+              paymentDeadline: a.paymentDeadline,
+            }))}
+          />
+        </div>
+      )}
+
+      {/* Deposit methods */}
+      <div className="mt-6">
+        <DepositMethods
+          bankTransferReference={user.bankTransferReference}
+        />
       </div>
 
       {/* Transaction history */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2 className="text-lg font-semibold text-foreground">
           {t("transactions")}
         </h2>
 
         {transactions.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-4 text-sm text-muted-foreground">
             {t("noTransactions")}
           </p>
         ) : (
-          <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <div className="mt-4 overflow-hidden glass rounded-2xl">
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-800/50">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">Datum</th>
-                  <th className="px-4 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">Beschrijving</th>
-                  <th className="px-4 py-3 text-right font-medium text-zinc-500 dark:text-zinc-400">Bedrag</th>
-                  <th className="px-4 py-3 text-right font-medium text-zinc-500 dark:text-zinc-400">Saldo</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Datum</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Beschrijving</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Bedrag</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Saldo</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <tbody className="divide-y divide-border">
                 {transactions.map((tx) => (
                   <tr key={tx.id}>
-                    <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {new Date(tx.createdAt).toLocaleDateString("nl-NL")}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         {tx.type}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-zinc-900 dark:text-zinc-50">
+                    <td className="px-4 py-3 text-foreground">
                       {tx.description}
                     </td>
-                    <td className={`px-4 py-3 text-right font-medium ${tx.amount >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {tx.amount >= 0 ? "+" : ""}€{tx.amount.toFixed(2)}
+                    <td className={`px-4 py-3 text-right font-medium ${tx.amount >= 0 ? "text-green-600" : "text-red-500"}`}>
+                      {tx.amount >= 0 ? "+" : ""}&euro;{tx.amount.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-400">
-                      €{tx.balanceAfter.toFixed(2)}
+                    <td className="px-4 py-3 text-right text-muted-foreground">
+                      &euro;{tx.balanceAfter.toFixed(2)}
                     </td>
                   </tr>
                 ))}

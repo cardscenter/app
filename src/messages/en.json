@@ -183,7 +183,14 @@
     "myBids": "My Bids",
     "myWatchlist": "Watchlist",
     "myNotifications": "Notifications",
-    "myReviews": "Reviews & Reputation"
+    "myReviews": "Reviews & Reputation",
+    "mySales": "My Sales",
+    "myShipping": "Shipping",
+    "mySubscription": "Subscription",
+    "myVerification": "Verification",
+    "myDisputes": "My Disputes",
+    "adminDisputes": "Admin Disputes",
+    "myReputation": "My Reputation"
   },
   "profile": {
     "displayName": "Username",

@@ -37,11 +37,16 @@ export async function register(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
+  // Generate unique bank transfer reference
+  const digits = Array.from({ length: 10 }, () => Math.floor(Math.random() * 10)).join("");
+  const bankTransferReference = `${displayName.toLowerCase().replace(/[^a-z0-9]/g, "")}${digits}`;
+
   await prisma.user.create({
     data: {
       email,
       displayName,
       passwordHash,
+      bankTransferReference,
     },
   });
 

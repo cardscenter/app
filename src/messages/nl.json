@@ -183,7 +183,14 @@
     "myBids": "Mijn Biedingen",
     "myWatchlist": "Volglijst",
     "myNotifications": "Meldingen",
-    "myReviews": "Reviews & Reputatie"
+    "myReviews": "Reviews & Reputatie",
+    "mySales": "Mijn Verkopen",
+    "myShipping": "Verzending",
+    "mySubscription": "Abonnement",
+    "myVerification": "Verificatie",
+    "myDisputes": "Mijn Geschillen",
+    "adminDisputes": "Admin Geschillen",
+    "myReputation": "Mijn Reputatie"
   },
   "profile": {
     "displayName": "Gebruikersnaam",
