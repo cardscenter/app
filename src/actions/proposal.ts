@@ -331,3 +331,39 @@ export async function completeProposalPayment(proposalId: string) {
 
   return { success: true };
 }
+
+export async function withdrawProposal(proposalId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const proposal = await prisma.proposal.findUnique({
+    where: { id: proposalId },
+    include: {
+      listing: { select: { title: true } },
+      conversation: { include: { participants: true } },
+    },
+  });
+
+  if (!proposal) return { error: "Voorstel niet gevonden" };
+  if (proposal.proposerId !== session.user.id) return { error: "Je kunt alleen je eigen voorstel intrekken" };
+  if (proposal.status !== "PENDING") return { error: "Dit voorstel kan niet meer worden ingetrokken" };
+
+  await prisma.proposal.update({
+    where: { id: proposalId },
+    data: { status: "REJECTED", respondedAt: new Date() },
+  });
+
+  // Notify the other party
+  const otherUserId = proposal.conversation.participants.find((p) => p.userId !== session.user!.id)?.userId;
+  if (otherUserId) {
+    await createNotification(
+      otherUserId,
+      "NEW_MESSAGE",
+      "Voorstel ingetrokken",
+      `Het voorstel van €${proposal.amount.toFixed(2)} voor "${proposal.listing.title}" is ingetrokken.`,
+      `/nl/berichten/${proposal.conversationId}`
+    );
+  }
+
+  return { success: true };
+}
