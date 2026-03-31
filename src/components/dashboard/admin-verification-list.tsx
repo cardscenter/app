@@ -49,7 +49,7 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
 
   if (pending.length === 0) {
     return (
-      <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="mt-6 text-sm text-muted-foreground">
         {t("noPendingRequests")}
       </p>
     );
@@ -69,17 +69,17 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
       {pending.map((request) => (
         <div
           key={request.id}
-          className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
+          className="glass rounded-2xl p-4"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="font-medium text-zinc-900 dark:text-zinc-50">
+              <p className="font-medium text-foreground">
                 {request.user.displayName}
               </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm text-muted-foreground">
                 {request.user.email}
               </p>
-              <div className="mt-1 flex gap-3 text-xs text-zinc-400">
+              <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
                 <span>{documentTypeLabel(request.documentType)}</span>
                 <span>{t("submittedOn")} {new Date(request.createdAt).toLocaleDateString("nl-NL")}</span>
                 <span>{t("memberSince")} {new Date(request.user.createdAt).toLocaleDateString("nl-NL")}</span>
@@ -98,20 +98,20 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
               {/* Document images */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <p className="mb-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">{t("frontImage")}</p>
+                  <p className="mb-1 text-xs font-medium text-muted-foreground">{t("frontImage")}</p>
                   <img
                     src={request.frontImageUrl}
                     alt="Document front"
-                    className="max-h-64 rounded-md border border-zinc-200 object-contain dark:border-zinc-700"
+                    className="max-h-64 rounded-md border border-border object-contain"
                   />
                 </div>
                 {request.backImageUrl && (
                   <div>
-                    <p className="mb-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">{t("backImage")}</p>
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">{t("backImage")}</p>
                     <img
                       src={request.backImageUrl}
                       alt="Document back"
-                      className="max-h-64 rounded-md border border-zinc-200 object-contain dark:border-zinc-700"
+                      className="max-h-64 rounded-md border border-border object-contain"
                     />
                   </div>
                 )}
@@ -128,13 +128,13 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
                 </button>
 
                 <div className="flex-1">
-                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t("rejectReasonLabel")}</label>
+                  <label className="text-xs text-muted-foreground">{t("rejectReasonLabel")}</label>
                   <input
                     type="text"
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder={t("rejectReasonPlaceholder")}
-                    className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                    className="mt-1 block w-full rounded-md glass-input px-3 py-2 text-sm"
                   />
                 </div>
 

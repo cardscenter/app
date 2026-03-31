@@ -47,9 +47,9 @@ export function VerificationForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
-      <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">{t("uploadDocuments")}</h3>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+    <form onSubmit={handleSubmit} className="glass rounded-2xl p-6">
+      <h3 className="font-semibold text-foreground">{t("uploadDocuments")}</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
         {t("uploadDescription")}
       </p>
 
@@ -59,13 +59,13 @@ export function VerificationForm() {
 
       {/* Document type selection */}
       <div className="mt-4">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="text-sm font-medium text-foreground">
           {t("documentType")}
         </label>
         <select
           value={documentType}
           onChange={(e) => setDocumentType(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="mt-1 block w-full rounded-md glass-input px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
         >
           <option value="ID_CARD">{t("idCard")}</option>
           <option value="PASSPORT">{t("passport")}</option>
@@ -75,7 +75,7 @@ export function VerificationForm() {
 
       {/* Front image */}
       <div className="mt-4">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="text-sm font-medium text-foreground">
           {t("frontImage")}
         </label>
         <div className="mt-1">
@@ -90,7 +90,7 @@ export function VerificationForm() {
       {/* Back image (not for passport) */}
       {needsBackImage && (
         <div className="mt-4">
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label className="text-sm font-medium text-foreground">
             {t("backImage")}
           </label>
           <div className="mt-1">

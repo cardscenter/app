@@ -32,7 +32,7 @@ export function ProfileForm({ user }: { user: User }) {
       )}
 
       <div>
-        <label htmlFor="displayName" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label htmlFor="displayName" className="block text-sm font-medium text-foreground">
           {t("displayName")}
         </label>
         <input
@@ -41,12 +41,12 @@ export function ProfileForm({ user }: { user: User }) {
           type="text"
           defaultValue={user.displayName}
           required
-          className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+          className="mt-1 block w-full rounded-lg glass-input px-3 py-2 text-foreground focus:border-border focus:outline-none focus:ring-1 focus:ring-border"
         />
       </div>
 
       <div>
-        <label htmlFor="bio" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label htmlFor="bio" className="block text-sm font-medium text-foreground">
           {t("bio")}
         </label>
         <textarea
@@ -54,7 +54,7 @@ export function ProfileForm({ user }: { user: User }) {
           name="bio"
           rows={3}
           defaultValue={user.bio ?? ""}
-          className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+          className="mt-1 block w-full rounded-lg glass-input px-3 py-2 text-foreground focus:border-border focus:outline-none focus:ring-1 focus:ring-border"
         />
       </div>
 

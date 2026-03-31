@@ -50,7 +50,6 @@ export default async function ConversationPage({
     const otherUser = conv.participants.find((p) => p.userId !== session.user!.id);
     const lastMsg = conv.messages[0];
     const lastRead = myP?.lastReadAt;
-    // Don't mark current conversation as unread
     const hasUnread = conv.id === conversationId
       ? false
       : !!(lastMsg && (!lastRead || new Date(lastMsg.createdAt) > new Date(lastRead)));
@@ -73,7 +72,7 @@ export default async function ConversationPage({
     };
   });
 
-  // Get active conversation messages
+  // Get active conversation with messages, listing context, and proposals
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     include: {
@@ -86,7 +85,10 @@ export default async function ConversationPage({
       },
       auction: { select: { title: true } },
       claimsale: { select: { title: true } },
-      listing: { select: { title: true } },
+      listing: { select: { id: true, title: true, price: true, status: true, sellerId: true } },
+      proposals: {
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -94,6 +96,26 @@ export default async function ConversationPage({
 
   const otherUser = conversation.participants.find((p) => p.userId !== session.user!.id);
   const context = conversation.auction?.title ?? conversation.claimsale?.title ?? conversation.listing?.title;
+
+  // Build listing context for proposal system
+  const listingContext = conversation.listing ? {
+    id: conversation.listing.id,
+    title: conversation.listing.title,
+    price: conversation.listing.price,
+    status: conversation.listing.status,
+    sellerId: conversation.listing.sellerId,
+  } : null;
+
+  // Build proposals map
+  const proposals = conversation.proposals.map((p) => ({
+    id: p.id,
+    amount: p.amount,
+    type: p.type,
+    status: p.status,
+    proposerId: p.proposerId,
+    paymentStatus: p.paymentStatus,
+    paymentDeadline: p.paymentDeadline?.toISOString() ?? null,
+  }));
 
   return (
     <ChatLayout conversations={previews} activeConversationId={conversationId}>
@@ -108,18 +130,22 @@ export default async function ConversationPage({
           )}
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6">
+        {/* Messages + input */}
+        <div className="flex-1 overflow-hidden">
           <MessageThread
             conversationId={conversationId}
             messages={conversation.messages.map((m) => ({
               id: m.id,
               body: m.body,
+              imageUrl: m.imageUrl,
               senderName: m.sender.displayName,
               senderId: m.senderId,
               createdAt: m.createdAt.toISOString(),
+              proposalId: m.proposalId,
             }))}
             currentUserId={session.user.id!}
+            listingContext={listingContext}
+            proposals={proposals}
           />
         </div>
       </div>

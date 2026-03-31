@@ -23,18 +23,18 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+      <h2 className="text-lg font-semibold text-foreground">
         {t("depositTitle")}
       </h2>
 
       {/* Tabs */}
-      <div className="mt-4 flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mt-4 flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
         <button
           onClick={() => setActiveTab("bank")}
           className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "bank"
-              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           {t("bankTransfer")}
@@ -43,8 +43,8 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
           onClick={() => setActiveTab("ideal")}
           className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "ideal"
-              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           iDEAL
@@ -53,17 +53,17 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
 
       {/* Bank transfer tab */}
       {activeTab === "bank" && (
-        <div className="mt-4 rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="mt-4 glass rounded-2xl p-6">
+          <p className="text-sm text-muted-foreground">
             {t("bankTransferInstructions")}
           </p>
 
           <div className="mt-4 space-y-3">
             {/* IBAN */}
-            <div className="flex items-center justify-between rounded-md bg-zinc-50 px-4 py-3 dark:bg-zinc-800/50">
+            <div className="flex items-center justify-between rounded-md bg-muted/50 px-4 py-3">
               <div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">IBAN</p>
-                <p className="font-mono text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                <p className="text-xs text-muted-foreground">IBAN</p>
+                <p className="font-mono text-sm font-medium text-foreground">
                   {PLACEHOLDER_IBAN}
                 </p>
               </div>
@@ -76,10 +76,10 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
             </div>
 
             {/* Account name */}
-            <div className="flex items-center justify-between rounded-md bg-zinc-50 px-4 py-3 dark:bg-zinc-800/50">
+            <div className="flex items-center justify-between rounded-md bg-muted/50 px-4 py-3">
               <div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("accountName")}</p>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                <p className="text-xs text-muted-foreground">{t("accountName")}</p>
+                <p className="text-sm font-medium text-foreground">
                   {PLACEHOLDER_NAME}
                 </p>
               </div>
@@ -116,7 +116,7 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
             </p>
           </div>
 
-          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mt-3 text-xs text-muted-foreground">
             {t("minimumDeposit")}
           </p>
         </div>
@@ -124,22 +124,22 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
 
       {/* iDEAL tab */}
       {activeTab === "ideal" && (
-        <div className="mt-4 rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
+        <div className="mt-4 glass rounded-2xl p-6">
           <div className="flex flex-col items-center py-8 text-center">
-            <div className="rounded-full bg-zinc-100 p-4 dark:bg-zinc-800">
-              <svg className="h-8 w-8 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="rounded-full bg-muted p-4">
+              <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="mt-4 text-lg font-medium text-zinc-900 dark:text-zinc-50">
+            <h3 className="mt-4 text-lg font-medium text-foreground">
               {t("idealComingSoon")}
             </h3>
-            <p className="mt-2 max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
               {t("idealComingSoonDescription")}
             </p>
             <button
               disabled
-              className="mt-6 cursor-not-allowed rounded-md bg-zinc-200 px-6 py-2 text-sm font-medium text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600"
+              className="mt-6 cursor-not-allowed rounded-md bg-muted px-6 py-2 text-sm font-medium text-muted-foreground"
             >
               {t("idealButton")}
             </button>

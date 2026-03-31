@@ -53,13 +53,13 @@ export function PendingAuctionPayments({ auctions }: PendingAuctionPaymentsProps
         {remaining.map((auction) => (
           <div
             key={auction.id}
-            className="flex items-center justify-between rounded-md bg-white px-4 py-3 dark:bg-zinc-900"
+            className="flex items-center justify-between rounded-md bg-background px-4 py-3"
           >
             <div>
-              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+              <p className="text-sm font-medium text-foreground">
                 {auction.title}
               </p>
-              <div className="flex gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="flex gap-3 text-xs text-muted-foreground">
                 <span>&euro;{auction.finalPrice?.toFixed(2)}</span>
                 {auction.paymentDeadline && (
                   <span>

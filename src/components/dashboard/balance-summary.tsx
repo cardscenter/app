@@ -15,9 +15,9 @@ export function BalanceSummary({ balance, reservedBalance, heldBalance }: Balanc
   return (
     <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Available balance */}
-      <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("availableBalance")}</p>
-        <p className="mt-1 text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+      <div className="glass rounded-2xl p-4">
+        <p className="text-sm text-muted-foreground">{t("availableBalance")}</p>
+        <p className="mt-1 text-3xl font-bold text-foreground">
           &euro;{availableBalance.toFixed(2)}
         </p>
       </div>
@@ -33,9 +33,9 @@ export function BalanceSummary({ balance, reservedBalance, heldBalance }: Balanc
       )}
 
       {/* Total balance */}
-      <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("totalBalance")}</p>
-        <p className="mt-1 text-3xl font-bold text-zinc-600 dark:text-zinc-300">
+      <div className="glass rounded-2xl p-4">
+        <p className="text-sm text-muted-foreground">{t("totalBalance")}</p>
+        <p className="mt-1 text-3xl font-bold text-foreground">
           &euro;{balance.toFixed(2)}
         </p>
       </div>
