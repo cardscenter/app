@@ -3,7 +3,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkClaimsaleLimit } from "@/lib/account-limits";
-import { deductBalance, creditBalance } from "@/actions/wallet";
+import { deductBalance, escrowCredit } from "@/actions/wallet";
+import { createNotification } from "@/actions/notification";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -18,11 +19,14 @@ const claimsaleItemSchema = z.object({
 export async function createClaimsale(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+  const userId = session.user.id;
 
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || null;
+  const coverImage = (formData.get("coverImage") as string) || null;
   const shippingCost = parseFloat(formData.get("shippingCost") as string);
   const itemsJson = formData.get("items") as string;
+  const shippingMethodIdsJson = formData.get("shippingMethodIds") as string | null;
 
   if (!title || title.length < 3) return { error: "Titel is te kort" };
   if (isNaN(shippingCost) || shippingCost < 0) return { error: "Ongeldige verzendkosten" };
@@ -42,23 +46,56 @@ export async function createClaimsale(formData: FormData) {
     return { error: `Maximum ${limit.maxItems} kaarten per claimsale` };
   }
 
-  const claimsale = await prisma.claimsale.create({
-    data: {
-      title,
-      description,
-      shippingCost,
-      sellerId: session.user.id,
-      status: "DRAFT",
-      items: {
-        create: items.map((item) => ({
-          cardName: item.cardName,
-          cardSetId: item.cardSetId,
-          condition: item.condition,
-          price: item.price,
-          imageUrls: JSON.stringify(item.imageUrls ?? []),
-        })),
+  // Parse shipping method IDs
+  let shippingMethodIds: string[] = [];
+  if (shippingMethodIdsJson) {
+    try {
+      shippingMethodIds = JSON.parse(shippingMethodIdsJson);
+    } catch { /* ignore */ }
+  }
+
+  // Lookup shipping methods for price snapshots
+  let methodSnapshots: { id: string; price: number }[] = [];
+  if (shippingMethodIds.length > 0) {
+    const methods = await prisma.sellerShippingMethod.findMany({
+      where: { id: { in: shippingMethodIds }, sellerId: userId },
+    });
+    methodSnapshots = methods.map((m) => ({ id: m.id, price: m.price }));
+  }
+
+  const claimsale = await prisma.$transaction(async (tx) => {
+    const cs = await tx.claimsale.create({
+      data: {
+        title,
+        description,
+        coverImage,
+        shippingCost,
+        sellerId: userId,
+        status: "DRAFT",
+        items: {
+          create: items.map((item) => ({
+            cardName: item.cardName,
+            cardSetId: item.cardSetId,
+            condition: item.condition,
+            price: item.price,
+            imageUrls: JSON.stringify(item.imageUrls ?? []),
+          })),
+        },
       },
-    },
+    });
+
+    // Create shipping method links
+    for (const m of methodSnapshots) {
+      await tx.claimsaleShippingMethod.create({
+        data: {
+          claimsaleId: cs.id,
+          shippingMethodId: m.id,
+          price: m.price,
+        },
+      });
+    }
+
+    return cs;
   });
 
   redirect(`/nl/claimsales/${claimsale.id}`);
@@ -152,6 +189,12 @@ export async function claimItem(claimsaleItemId: string) {
         shippingCost: item.claimsale.shippingCost,
         totalItemCost: item.price,
         totalCost: item.price + item.claimsale.shippingCost,
+        status: "PAID",
+        buyerStreet: user.street,
+        buyerHouseNumber: user.houseNumber,
+        buyerPostalCode: user.postalCode,
+        buyerCity: user.city,
+        buyerCountry: user.country,
       },
     });
 
@@ -195,14 +238,21 @@ export async function claimItem(claimsaleItemId: string) {
     },
   });
 
-  // Credit seller
-  await creditBalance(
+  // Hold in escrow for seller
+  await escrowCredit(
     item.claimsale.sellerId,
     item.price,
-    "SALE",
-    `Verkocht: ${item.cardName}`,
-    undefined,
-    claimsaleItemId
+    `Verkocht (escrow): ${item.cardName}`,
+    bundle.id
+  );
+
+  // Notify seller
+  await createNotification(
+    item.claimsale.sellerId,
+    "ITEM_SOLD",
+    "Kaart verkocht!",
+    `"${item.cardName}" is verkocht voor €${item.price.toFixed(2)}.`,
+    `/nl/claimsales/${item.claimsaleId}`
   );
 
   return { success: true };
