@@ -123,24 +123,24 @@ export default async function ClaimsaleClaimsPage({
         ]}
       />
 
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-2xl font-bold text-foreground">
         {t("title")}
       </h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-muted-foreground">
         {claimsale.title}
       </p>
 
       {/* Summary stats */}
       <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-zinc-200 bg-white/60 p-4 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/60">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("totalItems")}</p>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+        <div className="rounded-xl border border-border bg-white/60 p-4 backdrop-blur-sm">
+          <p className="text-xs text-muted-foreground">{t("totalItems")}</p>
+          <p className="text-2xl font-bold text-foreground">
             {claimsale.items.length}
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-white/60 p-4 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/60">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("totalRevenue")}</p>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+        <div className="rounded-xl border border-border bg-white/60 p-4 backdrop-blur-sm">
+          <p className="text-xs text-muted-foreground">{t("totalRevenue")}</p>
+          <p className="text-2xl font-bold text-foreground">
             &euro;{totalRevenue.toFixed(2)}
           </p>
         </div>
@@ -148,19 +148,19 @@ export default async function ClaimsaleClaimsPage({
 
       {/* Buyer groups */}
       {buyerGroups.size === 0 ? (
-        <p className="mt-8 text-sm text-zinc-500 dark:text-zinc-400">{t("noClaims")}</p>
+        <p className="mt-8 text-sm text-muted-foreground">{t("noClaims")}</p>
       ) : (
         <div className="mt-6 space-y-4">
           {Array.from(buyerGroups.entries()).map(([buyerId, group]) => (
             <div
               key={buyerId}
-              className="overflow-hidden rounded-2xl border border-zinc-200 bg-white/60 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/60"
+              className="overflow-hidden rounded-2xl border border-border bg-white/60 backdrop-blur-sm"
             >
               {/* Buyer header */}
-              <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50/80 px-5 py-3 dark:border-zinc-800 dark:bg-zinc-800/50">
+              <div className="flex items-center justify-between border-b border-border bg-muted/50/80 px-5 py-3">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-zinc-400" />
-                  <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold text-foreground">
                     {t("buyer")}: {group.buyerName}
                   </span>
                 </div>
@@ -171,22 +171,22 @@ export default async function ClaimsaleClaimsPage({
 
               {/* Buyer address (visible after payment) */}
               {group.buyerAddress && (
-                <div className="border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
+                <div className="border-b border-border px-5 py-3">
                   <div className="flex items-start gap-2 text-sm">
-                    <MapPin className="h-4 w-4 mt-0.5 text-zinc-400 shrink-0" />
+                    <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                     <div>
-                      <p className="font-medium text-zinc-700 dark:text-zinc-300">{t("shippingAddress")}</p>
-                      <p className="text-zinc-500 dark:text-zinc-400">
+                      <p className="font-medium text-foreground">{t("shippingAddress")}</p>
+                      <p className="text-muted-foreground">
                         {group.buyerAddress.street} {group.buyerAddress.houseNumber}
                       </p>
-                      <p className="text-zinc-500 dark:text-zinc-400">
+                      <p className="text-muted-foreground">
                         {group.buyerAddress.postalCode} {group.buyerAddress.city}
                       </p>
-                      <p className="text-zinc-500 dark:text-zinc-400">
+                      <p className="text-muted-foreground">
                         {group.buyerAddress.country}
                       </p>
                       {group.shippingMethodName && (
-                        <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                        <p className="mt-1 text-xs text-muted-foreground0">
                           <Package className="inline h-3 w-3 mr-1" />{group.shippingMethodName}
                         </p>
                       )}
@@ -196,7 +196,7 @@ export default async function ClaimsaleClaimsPage({
               )}
 
               {/* Items */}
-              <div className="divide-y divide-zinc-100 px-5 dark:divide-zinc-800">
+              <div className="divide-y divide-border px-5">
                 {group.items.map((item) => {
                   let images: string[] = [];
                   try {
@@ -206,28 +206,28 @@ export default async function ClaimsaleClaimsPage({
                   return (
                     <div key={item.id} className="flex items-center gap-3 py-3">
                       {images.length > 0 ? (
-                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-700">
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border">
                           <img src={images[0]} alt={item.cardName} className="h-full w-full object-cover" />
                         </div>
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
-                          <ImageIcon className="h-4 w-4 text-zinc-300 dark:text-zinc-600" />
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50">
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        <p className="truncate text-sm font-medium text-foreground">
                           {item.cardName}
                         </p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="text-xs text-muted-foreground">
                           {item.condition}
                           {item.reference && (
-                            <span className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                            <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                               {item.reference}
                             </span>
                           )}
                         </p>
                       </div>
-                      <p className="shrink-0 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                      <p className="shrink-0 text-sm font-medium text-foreground">
                         &euro;{item.price.toFixed(2)}
                       </p>
                     </div>
@@ -236,16 +236,16 @@ export default async function ClaimsaleClaimsPage({
               </div>
 
               {/* Totals */}
-              <div className="border-t border-zinc-200 bg-zinc-50/80 px-5 py-3 dark:border-zinc-800 dark:bg-zinc-800/50">
+              <div className="border-t border-border bg-muted/50/80 px-5 py-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500 dark:text-zinc-400">{t("items")}</span>
+                  <span className="text-muted-foreground">{t("items")}</span>
                   <span className="font-medium">&euro;{group.totalItemCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500 dark:text-zinc-400">{t("shipping")}</span>
+                  <span className="text-muted-foreground">{t("shipping")}</span>
                   <span className="font-medium">&euro;{group.shippingCost.toFixed(2)}</span>
                 </div>
-                <div className="mt-1 flex justify-between border-t border-zinc-200 pt-1 text-sm dark:border-zinc-700">
+                <div className="mt-1 flex justify-between border-t border-border pt-1 text-sm">
                   <span className="font-semibold">{t("total")}</span>
                   <span className="font-semibold">&euro;{group.totalCost.toFixed(2)}</span>
                 </div>
@@ -253,12 +253,12 @@ export default async function ClaimsaleClaimsPage({
 
               {/* Ship action or tracking info */}
               {group.bundleId && group.bundleStatus === "PAID" && (
-                <div className="border-t border-zinc-200 px-5 py-3 dark:border-zinc-800">
+                <div className="border-t border-border px-5 py-3">
                   <ShipBundleForm bundleId={group.bundleId} />
                 </div>
               )}
               {group.trackingUrl && (
-                <div className="border-t border-zinc-200 px-5 py-3 dark:border-zinc-800">
+                <div className="border-t border-border px-5 py-3">
                   <a
                     href={group.trackingUrl}
                     target="_blank"

@@ -49,7 +49,7 @@ export function CartItemRow({
     <div className={`flex items-center gap-4 py-3 ${isUnavailable ? "opacity-50" : ""}`}>
       {/* Thumbnail */}
       {imageUrls.length > 0 ? (
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border">
           <img
             src={imageUrls[0]}
             alt={cardName}
@@ -57,17 +57,17 @@ export function CartItemRow({
           />
         </div>
       ) : (
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
-          <ImageIcon className="h-5 w-5 text-zinc-300 dark:text-zinc-600" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50">
+          <ImageIcon className="h-5 w-5 text-muted-foreground" />
         </div>
       )}
 
       {/* Details */}
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">
+        <p className="truncate font-medium text-foreground">
           {cardName}
         </p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs text-muted-foreground">
           {cardSetName} · {condition}
         </p>
         {isUnavailable && (
@@ -76,7 +76,7 @@ export function CartItemRow({
       </div>
 
       {/* Price */}
-      <p className="shrink-0 font-medium text-zinc-900 dark:text-zinc-50">
+      <p className="shrink-0 font-medium text-foreground">
         &euro;{price.toFixed(2)}
       </p>
 
@@ -84,7 +84,7 @@ export function CartItemRow({
       <button
         onClick={handleRemove}
         disabled={removing}
-        className="shrink-0 rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 disabled:opacity-50"
+        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 disabled:opacity-50"
         title={t("remove")}
       >
         <Trash2 className="h-4 w-4" />

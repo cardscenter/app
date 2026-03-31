@@ -36,7 +36,7 @@ export function AddToCartButton({
       disabled={loading || added}
       className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
         added
-          ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 cursor-default"
+          ? "bg-muted text-muted-foreground0 cursor-default"
           : "bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
       }`}
     >

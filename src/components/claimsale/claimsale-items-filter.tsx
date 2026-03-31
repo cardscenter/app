@@ -90,19 +90,19 @@ export function ClaimsaleItemsFilter({
       {/* Filter bar */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={ts("placeholder")}
-            className="w-full rounded-md border border-zinc-200 bg-white pl-9 pr-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            className="w-full rounded-md border border-border bg-white pl-9 pr-3 py-1.5 text-sm"
           />
         </div>
         <select
           value={conditionFilter}
           onChange={(e) => setConditionFilter(e.target.value)}
-          className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          className="rounded-md border border-border bg-white px-3 py-1.5 text-sm"
         >
           <option value="">{ts("allConditions")}</option>
           {conditions.map((c) => (
@@ -114,7 +114,7 @@ export function ClaimsaleItemsFilter({
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortKey)}
-          className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          className="rounded-md border border-border bg-white px-3 py-1.5 text-sm"
         >
           <option value="name">{t("cardName")}</option>
           <option value="price_asc">{ts("sortPriceLow")}</option>
@@ -124,52 +124,52 @@ export function ClaimsaleItemsFilter({
       </div>
 
       {/* Results count */}
-      <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="mb-2 text-xs text-muted-foreground">
         {filteredItems.length}/{items.length} {t("available").toLowerCase()}
       </p>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+      <div className="overflow-hidden rounded-lg border border-border">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 dark:bg-zinc-800/50">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                 {t("cardName")}
               </th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                 Set
               </th>
-              <th className="px-4 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                 {t("condition")}
               </th>
-              <th className="px-4 py-3 text-right font-medium text-zinc-500 dark:text-zinc-400">
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                 {t("price")}
               </th>
-              <th className="px-4 py-3 text-center font-medium text-zinc-500 dark:text-zinc-400">
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                 Status
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <tbody className="divide-y divide-border">
             {filteredItems.map((item) => (
               <tr key={item.id}>
-                <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-50">
+                <td className="px-4 py-3 font-medium text-foreground">
                   {item.cardName}
                 </td>
-                <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">
+                <td className="px-4 py-3 text-muted-foreground">
                   {item.cardSet.series.category.name} &middot; {item.cardSet.name}
                 </td>
-                <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">
+                <td className="px-4 py-3 text-muted-foreground">
                   {item.condition}
                 </td>
-                <td className="px-4 py-3 text-right font-medium text-zinc-900 dark:text-zinc-50">
+                <td className="px-4 py-3 text-right font-medium text-foreground">
                   &euro;{item.price.toFixed(2)}
                 </td>
                 <td className="px-4 py-3 text-center">
                   {item.status === "AVAILABLE" && isLive && !isOwner && hasSession ? (
                     <ClaimButton itemId={item.id} />
                   ) : item.status === "SOLD" ? (
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                       {t("claimed")}
                     </span>
                   ) : (
@@ -184,7 +184,7 @@ export function ClaimsaleItemsFilter({
               <tr>
                 <td
                   colSpan={5}
-                  className="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400"
+                  className="px-4 py-8 text-center text-sm text-muted-foreground"
                 >
                   {ts("noResultsHint")}
                 </td>

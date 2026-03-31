@@ -64,17 +64,17 @@ export function CartContent({ groups, buyerCountry, hasAddress }: CartContentPro
         return (
           <div
             key={group.sellerId}
-            className="overflow-hidden rounded-2xl border border-zinc-200 bg-white/60 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/60"
+            className="overflow-hidden rounded-2xl border border-border bg-white/60 backdrop-blur-sm"
           >
             {/* Seller header */}
-            <div className="border-b border-zinc-200 bg-zinc-50/80 px-5 py-3 dark:border-zinc-800 dark:bg-zinc-800/50">
-              <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            <div className="border-b border-border bg-muted/50/80 px-5 py-3">
+              <h2 className="text-sm font-semibold text-foreground">
                 {t("sellerGroup", { name: group.sellerName })}
               </h2>
             </div>
 
             {/* Items */}
-            <div className="divide-y divide-zinc-100 px-5 dark:divide-zinc-800">
+            <div className="divide-y divide-border px-5">
               {group.items.map((item) => (
                 <CartItemRow
                   key={item.cartItemId}
@@ -91,7 +91,7 @@ export function CartContent({ groups, buyerCountry, hasAddress }: CartContentPro
 
             {/* Shipping method picker (if methods available) */}
             {group.shippingMethods.length > 0 && buyerCountry && (
-              <div className="border-t border-zinc-200 px-5 py-3 dark:border-zinc-800">
+              <div className="border-t border-border px-5 py-3">
                 <ShippingMethodPicker
                   methods={group.shippingMethods}
                   buyerCountry={buyerCountry}
@@ -102,22 +102,22 @@ export function CartContent({ groups, buyerCountry, hasAddress }: CartContentPro
             )}
 
             {/* Group totals */}
-            <div className="border-t border-zinc-200 bg-zinc-50/80 px-5 py-3 dark:border-zinc-800 dark:bg-zinc-800/50">
+            <div className="border-t border-border bg-muted/50/80 px-5 py-3">
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500 dark:text-zinc-400">{t("subtotal")}</span>
-                <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                <span className="text-muted-foreground">{t("subtotal")}</span>
+                <span className="font-medium text-foreground">
                   &euro;{totals.itemTotal.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500 dark:text-zinc-400">{t("shipping")}</span>
-                <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                <span className="text-muted-foreground">{t("shipping")}</span>
+                <span className="font-medium text-foreground">
                   &euro;{totals.shippingCost.toFixed(2)}
                 </span>
               </div>
-              <div className="mt-1 flex justify-between border-t border-zinc-200 pt-1 text-sm dark:border-zinc-700">
-                <span className="font-semibold text-zinc-900 dark:text-zinc-50">{t("total")}</span>
-                <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+              <div className="mt-1 flex justify-between border-t border-border pt-1 text-sm">
+                <span className="font-semibold text-foreground">{t("total")}</span>
+                <span className="font-semibold text-foreground">
                   &euro;{totals.groupTotal.toFixed(2)}
                 </span>
               </div>
@@ -127,12 +127,12 @@ export function CartContent({ groups, buyerCountry, hasAddress }: CartContentPro
       })}
 
       {/* Grand total + checkout */}
-      <div className="rounded-2xl border border-zinc-200 bg-white/60 p-5 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/60">
+      <div className="rounded-2xl border border-border bg-white/60 p-5 backdrop-blur-sm">
         <div className="mb-4 flex items-center justify-between">
-          <span className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          <span className="text-lg font-bold text-foreground">
             {t("total")}
           </span>
-          <span className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          <span className="text-lg font-bold text-foreground">
             &euro;{grandTotal.toFixed(2)}
           </span>
         </div>

@@ -35,16 +35,16 @@ export default async function CartPage() {
         ]}
       />
 
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-2xl font-bold text-foreground">
         {t("title")}
       </h1>
 
       {totalItems === 0 ? (
         <div className="mt-12 flex flex-col items-center gap-4 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-            <ShoppingCart className="h-8 w-8 text-zinc-400" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <ShoppingCart className="h-8 w-8 text-muted-foreground" />
           </div>
-          <p className="text-zinc-500 dark:text-zinc-400">{t("empty")}</p>
+          <p className="text-muted-foreground">{t("empty")}</p>
           <Link
             href="/claimsales"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover transition-colors"

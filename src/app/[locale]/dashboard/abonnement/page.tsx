@@ -125,7 +125,7 @@ export default async function SubscriptionPage() {
                           value ? (
                             <Check className="h-4 w-4 text-green-500" />
                           ) : (
-                            <X className="h-4 w-4 text-zinc-400" />
+                            <X className="h-4 w-4 text-muted-foreground" />
                           )
                         ) : (
                           <span className="font-medium text-foreground">{value}</span>

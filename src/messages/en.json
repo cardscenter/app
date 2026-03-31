@@ -190,7 +190,26 @@
     "myVerification": "Verification",
     "myDisputes": "My Disputes",
     "adminDisputes": "Admin Disputes",
-    "myReputation": "My Reputation"
+    "myReputation": "My Reputation",
+    "stats": {
+      "totalRevenue": "Total revenue",
+      "thisMonth": "This month",
+      "inEscrow": "In escrow",
+      "activeItems": "Active items",
+      "auctionsEndingSoon": "Auctions ending soon",
+      "activeClaimsales": "Active claimsales",
+      "activeListings": "Active listings",
+      "recentActivity": "Recent activity (7 days)",
+      "newBids": "New bids",
+      "newMessages": "New messages",
+      "newReviews": "New reviews",
+      "revenueChart": "Revenue (30 days)",
+      "revenue": "Revenue",
+      "premiumStatsTitle": "Seller statistics",
+      "upgradeCta": "Upgrade to PRO or UNLIMITED for advanced statistics",
+      "locked": "Premium Statistics",
+      "lockedDescription": "Get access to advanced seller statistics, revenue charts and activity insights."
+    }
   },
   "profile": {
     "displayName": "Username",

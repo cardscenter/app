@@ -190,7 +190,26 @@
     "myVerification": "Verificatie",
     "myDisputes": "Mijn Geschillen",
     "adminDisputes": "Admin Geschillen",
-    "myReputation": "Mijn Reputatie"
+    "myReputation": "Mijn Reputatie",
+    "stats": {
+      "totalRevenue": "Totale omzet",
+      "thisMonth": "Deze maand",
+      "inEscrow": "In escrow",
+      "activeItems": "Actieve items",
+      "auctionsEndingSoon": "Veilingen die bijna aflopen",
+      "activeClaimsales": "Actieve claimsales",
+      "activeListings": "Actieve advertenties",
+      "recentActivity": "Recente activiteit (7 dagen)",
+      "newBids": "Nieuwe biedingen",
+      "newMessages": "Nieuwe berichten",
+      "newReviews": "Nieuwe reviews",
+      "revenueChart": "Omzet (30 dagen)",
+      "revenue": "Omzet",
+      "premiumStatsTitle": "Verkopersstatistieken",
+      "upgradeCta": "Upgrade naar PRO of UNLIMITED voor uitgebreide statistieken",
+      "locked": "Premium Statistieken",
+      "lockedDescription": "Krijg toegang tot uitgebreide verkopersstatistieken, omzetgrafieken en activiteitsinzichten."
+    }
   },
   "profile": {
     "displayName": "Gebruikersnaam",

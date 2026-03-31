@@ -28,10 +28,10 @@ export default async function AdminVerificationsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-2xl font-bold text-foreground">
         {t("adminTitle")}
       </h1>
-      <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="mt-2 text-sm text-muted-foreground">
         {t("adminDescription")}
       </p>
 
