@@ -82,7 +82,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType 
   const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
   const [showPreview, setShowPreview] = useState(false);
-  const isPremium = userAccountType === "PREMIUM";
+  const isPremium = userAccountType !== "FREE"; // For backward compat references
   const topRef = useRef<HTMLDivElement>(null);
 
   const [actionState, formAction, pending] = useActionState(
@@ -137,7 +137,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType 
     return (
       <ListingPreview
         form={form}
-        isPremium={isPremium}
+        accountType={userAccountType}
         onBack={() => setShowPreview(false)}
         onPublish={handleSubmit}
         pending={pending}
@@ -209,7 +209,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType 
         <StepUpsells
           upsells={form.upsells}
           userBalance={userBalance}
-          isPremium={isPremium}
+          accountType={userAccountType}
           onChange={(v) => updateField("upsells", v)}
         />
       </section>

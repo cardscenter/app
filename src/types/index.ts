@@ -35,6 +35,8 @@ export const SHIPPING_BUNDLE_STATUSES = [
   "PAID",
   "SHIPPED",
   "COMPLETED",
+  "CANCELLED",
+  "DISPUTED",
 ] as const;
 export type ShippingBundleStatus = (typeof SHIPPING_BUNDLE_STATUSES)[number];
 
@@ -47,10 +49,11 @@ export const TRANSACTION_TYPES = [
   "AUCTION_BID",
   "AUCTION_WIN",
   "AUCTION_BID_REFUND",
+  "COMMISSION",
 ] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
-export const ACCOUNT_TYPES = ["FREE", "PREMIUM"] as const;
+export const ACCOUNT_TYPES = ["FREE", "PRO", "UNLIMITED", "ADMIN"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
 // Listing types
@@ -70,7 +73,7 @@ export type ListingStatus = (typeof LISTING_STATUSES)[number];
 export const DELIVERY_METHODS = ["PICKUP", "SHIP", "BOTH"] as const;
 export type DeliveryMethod = (typeof DELIVERY_METHODS)[number];
 
-export const CARRIERS = ["POSTNL", "DHL", "SELF"] as const;
+export const CARRIERS = ["POSTNL", "DHL", "DPD", "GLS", "UPS", "BPOST", "ROYAL_MAIL", "DEUTSCHE_POST", "LA_POSTE", "OTHER", "SELF"] as const;
 export type Carrier = (typeof CARRIERS)[number];
 
 export const PACKAGE_SIZES = ["LETTER", "SMALL", "MEDIUM", "LARGE"] as const;
@@ -94,6 +97,16 @@ export const UPSELL_TYPES = [
 ] as const;
 export type UpsellType = (typeof UPSELL_TYPES)[number];
 
+// Proposal types
+export const PROPOSAL_TYPES = ["BUY", "SELL"] as const;
+export type ProposalType = (typeof PROPOSAL_TYPES)[number];
+
+export const PROPOSAL_STATUSES = ["PENDING", "ACCEPTED", "REJECTED"] as const;
+export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
+
+export const PROPOSAL_PAYMENT_STATUSES = ["AWAITING_PAYMENT", "PAID", "PAYMENT_FAILED"] as const;
+export type ProposalPaymentStatus = (typeof PROPOSAL_PAYMENT_STATUSES)[number];
+
 // Card item entry for MULTI_CARD listings
 export interface CardItemEntry {
   cardName: string;
@@ -102,16 +115,29 @@ export interface CardItemEntry {
   quantity: number;
 }
 
-// Account limits
-export const ACCOUNT_LIMITS = {
-  FREE: {
-    maxActiveAuctions: 1,
-    maxActiveClaimsales: 1,
-    maxItemsPerClaimsale: 20,
-  },
-  PREMIUM: {
-    maxActiveAuctions: Infinity,
-    maxActiveClaimsales: Infinity,
-    maxItemsPerClaimsale: 100,
-  },
-} as const;
+// Dispute types
+export const DISPUTE_REASONS = [
+  "NOT_RECEIVED",
+  "NOT_AS_DESCRIBED",
+  "DAMAGED_IN_TRANSIT",
+] as const;
+export type DisputeReason = (typeof DISPUTE_REASONS)[number];
+
+export const DISPUTE_STATUSES = [
+  "OPEN",
+  "SELLER_RESPONDED",
+  "RESOLVED_BUYER",
+  "RESOLVED_SELLER",
+  "RESOLVED_MUTUAL",
+  "ESCALATED",
+] as const;
+export type DisputeStatus = (typeof DISPUTE_STATUSES)[number];
+
+export const DISPUTE_RESOLUTIONS = [
+  "REFUND_FULL",
+  "REFUND_PARTIAL",
+  "NO_REFUND",
+  "MUTUAL_AGREEMENT",
+  "ADMIN_DECISION",
+] as const;
+export type DisputeResolution = (typeof DISPUTE_RESOLUTIONS)[number];

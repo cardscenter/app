@@ -41,6 +41,9 @@ export const createListingSchema = z.object({
   packageSize: z.enum(PACKAGE_SIZES).optional(),
   packageCount: z.coerce.number().int().min(1).max(10).default(1),
 
+  // Shipping methods
+  shippingMethodIds: z.string().optional(), // JSON array of shipping method IDs
+
   // Upsells
   upsells: z.string().optional(), // JSON array of {type, days}
 }).superRefine((data, ctx) => {

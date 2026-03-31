@@ -76,60 +76,69 @@ export async function getSellerStats(userId: string) {
     select: { rating: true },
   });
 
-  // Count sales: auctions won + claimsale items sold + listings sold
-  const [auctionSales, claimsaleItemSales, listingSales] = await Promise.all([
-    prisma.auction.count({
+  // Fetch sales revenue data
+  const [auctionSalesData, claimsaleItemsData, listingSalesData, auctionPurchasesData, claimsalePurchasesData] = await Promise.all([
+    prisma.auction.findMany({
       where: { sellerId: userId, status: { in: ["ENDED_SOLD", "BOUGHT_NOW"] } },
+      select: { finalPrice: true },
     }),
-    prisma.claimsaleItem.count({
+    prisma.claimsaleItem.findMany({
       where: { claimsale: { sellerId: userId }, status: "SOLD" },
+      select: { price: true },
     }),
-    prisma.listing.count({
+    prisma.listing.findMany({
       where: { sellerId: userId, status: "SOLD" },
+      select: { price: true },
     }),
-  ]);
-
-  // Count purchases
-  const [auctionPurchases, claimsalePurchases] = await Promise.all([
-    prisma.auction.count({
+    prisma.auction.findMany({
       where: { winnerId: userId, status: { in: ["ENDED_SOLD", "BOUGHT_NOW"] } },
+      select: { finalPrice: true },
     }),
-    prisma.claimsaleItem.count({
+    prisma.claimsaleItem.findMany({
       where: { buyerId: userId, status: "SOLD" },
+      select: { price: true },
     }),
   ]);
 
-  const totalSales = auctionSales + claimsaleItemSales + listingSales;
-  const totalPurchases = auctionPurchases + claimsalePurchases;
+  const totalSales = auctionSalesData.length + claimsaleItemsData.length + listingSalesData.length;
+  const totalSalesRevenue =
+    auctionSalesData.reduce((sum, a) => sum + (a.finalPrice ?? 0), 0) +
+    claimsaleItemsData.reduce((sum, i) => sum + i.price, 0) +
+    listingSalesData.reduce((sum, l) => sum + (l.price ?? 0), 0);
+  const totalPurchasesRevenue =
+    auctionPurchasesData.reduce((sum, a) => sum + (a.finalPrice ?? 0), 0) +
+    claimsalePurchasesData.reduce((sum, i) => sum + i.price, 0);
+
   const totalReviews = reviews.length;
   const avgRating = totalReviews > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
     : 0;
+  const fiveStarReviewCount = reviews.filter((r) => r.rating === 5).length;
   const positiveReviewCount = reviews.filter((r) => r.rating >= 4).length;
   const positivePercent = totalReviews > 0
     ? Math.round((positiveReviewCount / totalReviews) * 100)
     : 100;
 
-  // Calculate XP
+  // Calculate XP (revenue-based)
   const { calculateXP } = await import("@/lib/seller-levels");
   const xpBreakdown = calculateXP({
     accountCreatedAt: user.createdAt,
-    totalSales,
-    totalPurchases,
-    positiveReviewCount,
+    totalSalesRevenue,
+    totalPurchasesRevenue,
+    fiveStarReviewCount,
   });
 
   return {
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
-    isPro: user.accountType === "PREMIUM",
+    accountType: user.accountType,
     xp: xpBreakdown.total,
     xpBreakdown,
     avgRating: Math.round(avgRating * 10) / 10,
     totalReviews,
     positivePercent,
     totalSales,
-    totalPurchases,
+    totalPurchases: auctionPurchasesData.length + claimsalePurchasesData.length,
     memberSince: user.createdAt.toLocaleDateString("nl-NL", {
       month: "short",
       year: "numeric",

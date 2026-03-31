@@ -8,7 +8,7 @@ import { ShoppingBag, TrendingUp, Calendar, ThumbsUp } from "lucide-react";
 export type SellerStats = {
   displayName: string;
   avatarUrl: string | null;
-  isPro: boolean;
+  accountType: string;
   xp: number;
   avgRating: number;
   totalReviews: number;
@@ -35,7 +35,7 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-foreground">{stats.displayName}</span>
-            <SellerLevelBadge xp={stats.xp} size="sm" isPro={stats.isPro} />
+            <SellerLevelBadge xp={stats.xp} size="sm" isPro={stats.accountType !== "FREE"} />
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             {stats.totalReviews > 0 && (
@@ -57,7 +57,7 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
         <div className="flex-1">
           <h2 className="text-xl font-bold text-foreground">{stats.displayName}</h2>
           <div className="mt-1">
-            <SellerLevelBadge xp={stats.xp} showProgress isPro={stats.isPro} />
+            <SellerLevelBadge xp={stats.xp} showProgress isPro={stats.accountType !== "FREE"} />
           </div>
           {stats.totalReviews > 0 && (
             <div className="mt-2">

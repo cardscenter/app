@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { Star, TrendingUp, Zap } from "lucide-react";
-import { UPSELL_PRICING, calculateUpsellCost, PREMIUM_UPSELL_DISCOUNT } from "@/lib/upsell-config";
+import { UPSELL_PRICING, calculateUpsellCost } from "@/lib/upsell-config";
+import { getUpsellDiscount } from "@/lib/subscription-tiers";
 import { UPSELL_TYPES } from "@/types";
 import type { UpsellType } from "@/types";
 
@@ -14,7 +15,7 @@ interface UpsellEntry {
 interface StepUpsellsProps {
   upsells: UpsellEntry[];
   userBalance: number;
-  isPremium: boolean;
+  accountType: string;
   onChange: (upsells: UpsellEntry[]) => void;
 }
 
@@ -30,8 +31,10 @@ const UPSELL_KEYS: Record<UpsellType, { label: string; desc: string }> = {
   URGENT_LABEL: { label: "upsellUrgent", desc: "upsellUrgentDesc" },
 };
 
-export function StepUpsells({ upsells, userBalance, isPremium, onChange }: StepUpsellsProps) {
+export function StepUpsells({ upsells, userBalance, accountType, onChange }: StepUpsellsProps) {
   const t = useTranslations("listing");
+  const discount = getUpsellDiscount(accountType);
+  const hasDiscount = discount > 0;
 
   const toggleUpsell = (type: UpsellType) => {
     const existing = upsells.find((u) => u.type === type);
@@ -47,7 +50,7 @@ export function StepUpsells({ upsells, userBalance, isPremium, onChange }: StepU
   };
 
   const totalCost = upsells.reduce(
-    (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, isPremium),
+    (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, accountType),
     0
   );
   const remainingBalance = userBalance - totalCost;
@@ -64,9 +67,7 @@ export function StepUpsells({ upsells, userBalance, isPremium, onChange }: StepU
           const keys = UPSELL_KEYS[type];
           const config = UPSELL_PRICING[type];
           const active = upsells.find((u) => u.type === type);
-          const dailyCost = isPremium
-            ? config.dailyCost * (1 - PREMIUM_UPSELL_DISCOUNT)
-            : config.dailyCost;
+          const dailyCost = config.dailyCost * (1 - discount);
 
           return (
             <div
@@ -116,7 +117,7 @@ export function StepUpsells({ upsells, userBalance, isPremium, onChange }: StepU
                     {active.days}d
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    = &euro;{calculateUpsellCost(type, active.days, isPremium).toFixed(2)}
+                    = &euro;{calculateUpsellCost(type, active.days, accountType).toFixed(2)}
                   </span>
                 </div>
               )}
@@ -126,9 +127,9 @@ export function StepUpsells({ upsells, userBalance, isPremium, onChange }: StepU
       </div>
 
       {/* Premium discount notice */}
-      {isPremium && (
+      {hasDiscount && (
         <div className="glass-subtle rounded-xl p-3 text-sm text-primary">
-          ✨ {t("premiumDiscount")}
+          {t("premiumDiscount")}
         </div>
       )}
 

@@ -3,13 +3,22 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createListingSchema } from "@/lib/validations/listing";
-import { calculateUpsellCost, PREMIUM_UPSELL_DISCOUNT } from "@/lib/upsell-config";
+import { calculateUpsellCost } from "@/lib/upsell-config";
+import { deductBalance, escrowCredit } from "@/actions/wallet";
+import { createNotification } from "@/actions/notification";
+import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
+import { checkAmountAllowed } from "@/lib/account-age";
 
 
 export async function createListing(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const listingLimit = await checkListingLimit(session.user.id);
+  if (!listingLimit.allowed) {
+    return { error: `Je hebt het maximum aantal actieve advertenties bereikt (${listingLimit.max})` };
+  }
 
   const raw = {
     listingType: formData.get("listingType"),
@@ -33,6 +42,7 @@ export async function createListing(formData: FormData) {
     packageSize: formData.get("packageSize") || undefined,
     packageCount: formData.get("packageCount") || "1",
     upsells: formData.get("upsells") || undefined,
+    shippingMethodIds: formData.get("shippingMethodIds") || undefined,
   };
 
   const result = createListingSchema.safeParse(raw);
@@ -58,20 +68,19 @@ export async function createListing(formData: FormData) {
   // Get user for balance check and premium status
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { balance: true, accountType: true },
+    select: { balance: true, reservedBalance: true, accountType: true },
   });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
-  const isPremium = user.accountType === "PREMIUM";
-
   if (upsellEntries.length > 0) {
     totalUpsellCost = upsellEntries.reduce(
-      (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, isPremium),
+      (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, user.accountType),
       0
     );
 
-    if (user.balance < totalUpsellCost) {
-      return { error: `Onvoldoende saldo. Benodigd: €${totalUpsellCost.toFixed(2)}, beschikbaar: €${user.balance.toFixed(2)}` };
+    const availableBalance = user.balance - user.reservedBalance;
+    if (availableBalance < totalUpsellCost) {
+      return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalUpsellCost.toFixed(2)}, beschikbaar: €${availableBalance.toFixed(2)}` };
     }
   }
 
@@ -114,16 +123,48 @@ export async function createListing(formData: FormData) {
       break;
   }
 
-  // Atomic transaction: create listing + upsells + deduct balance
+  // Parse shipping method IDs
+  let shippingMethodIds: string[] = [];
+  if (data.shippingMethodIds) {
+    try {
+      shippingMethodIds = JSON.parse(data.shippingMethodIds);
+    } catch {
+      // ignore
+    }
+  }
+
+  // Look up methods for price snapshots
+  let methodSnapshots: { id: string; price: number }[] = [];
+  if (shippingMethodIds.length > 0) {
+    const methods = await prisma.sellerShippingMethod.findMany({
+      where: { id: { in: shippingMethodIds }, sellerId: userId },
+    });
+    methodSnapshots = methods.map((m) => ({ id: m.id, price: m.price }));
+  }
+
+  // Atomic transaction: create listing + shipping methods + upsells + deduct balance
   const listing = await prisma.$transaction(async (tx) => {
     const newListing = await tx.listing.create({ data: listingData as never });
+
+    // Create shipping method links
+    if (methodSnapshots.length > 0) {
+      for (const m of methodSnapshots) {
+        await tx.listingShippingMethod.create({
+          data: {
+            listingId: newListing.id,
+            shippingMethodId: m.id,
+            price: m.price,
+          },
+        });
+      }
+    }
 
     // Create upsell records and deduct balance
     if (upsellEntries.length > 0) {
       const now = new Date();
 
       for (const entry of upsellEntries) {
-        const cost = calculateUpsellCost(entry.type, entry.days, isPremium);
+        const cost = calculateUpsellCost(entry.type, entry.days, user.accountType);
         const expiresAt = new Date(now.getTime() + entry.days * 24 * 60 * 60 * 1000);
 
         await tx.listingUpsell.create({
@@ -164,6 +205,93 @@ export async function createListing(formData: FormData) {
   });
 
   return { success: true, listingId: listing.id };
+}
+
+export async function buyListing(listingId: string, shippingMethodId?: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: { shippingMethods: true },
+  });
+  if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.status !== "ACTIVE") return { error: "Advertentie is niet meer beschikbaar" };
+  if (listing.sellerId === session.user.id) return { error: "Je kunt je eigen advertentie niet kopen" };
+  if (listing.pricingType !== "FIXED" || !listing.price) return { error: "Deze advertentie heeft geen vaste prijs" };
+
+  const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!buyer) return { error: "Gebruiker niet gevonden" };
+
+  // Determine shipping cost
+  let shippingCost = listing.shippingCost;
+  let selectedMethodId: string | null = null;
+  if (shippingMethodId && listing.shippingMethods.length > 0) {
+    const method = listing.shippingMethods.find((m) => m.shippingMethodId === shippingMethodId);
+    if (method) {
+      shippingCost = method.price;
+      selectedMethodId = method.shippingMethodId;
+    }
+  }
+  if (listing.freeShipping) shippingCost = 0;
+
+  const totalCost = listing.price + shippingCost;
+
+  // Account age restriction check
+  const ageCheck = checkAmountAllowed(buyer, totalCost);
+  if (!ageCheck.allowed) return { error: ageCheck.error! };
+
+  const buyerAvailable = buyer.balance - buyer.reservedBalance;
+  if (buyerAvailable < totalCost) {
+    return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalCost.toFixed(2)}` };
+  }
+
+  // Check buyer has address
+  if (!buyer.street || !buyer.postalCode || !buyer.city) {
+    return { error: "Vul eerst je adres in via Dashboard → Verzending" };
+  }
+
+  // Deduct from buyer
+  await deductBalance(session.user.id, totalCost, "PURCHASE", `Gekocht: ${listing.title}`, undefined, undefined, listingId);
+
+  // Hold in escrow for seller
+  await escrowCredit(listing.sellerId, totalCost, `Verkocht (escrow): ${listing.title}`);
+
+  // Mark listing as sold
+  await prisma.listing.update({
+    where: { id: listingId },
+    data: { status: "SOLD", buyerId: session.user.id },
+  });
+
+  // Create ShippingBundle
+  await prisma.shippingBundle.create({
+    data: {
+      buyerId: session.user.id,
+      sellerId: listing.sellerId,
+      shippingCost,
+      totalItemCost: listing.price,
+      totalCost,
+      status: "PAID",
+      listingId,
+      shippingMethodId: selectedMethodId,
+      buyerStreet: buyer.street,
+      buyerHouseNumber: buyer.houseNumber,
+      buyerPostalCode: buyer.postalCode,
+      buyerCity: buyer.city,
+      buyerCountry: buyer.country,
+    },
+  });
+
+  // Notify seller
+  await createNotification(
+    listing.sellerId,
+    "OUTBID",
+    "Advertentie verkocht!",
+    `"${listing.title}" is verkocht voor €${listing.price.toFixed(2)}.`,
+    `/nl/marktplaats/${listingId}`
+  );
+
+  return { success: true };
 }
 
 export async function updateListingStatus(listingId: string, status: "SOLD" | "DELETED") {

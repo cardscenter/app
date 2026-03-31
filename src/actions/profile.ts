@@ -24,7 +24,7 @@ export async function updateProfile(formData: FormData) {
     return { error: result.error.issues[0].message };
   }
 
-  const { displayName, bio, defaultShippingCost } = result.data;
+  const { displayName, bio } = result.data;
 
   // Check uniqueness if name changed
   const existing = await prisma.user.findUnique({ where: { displayName } });
@@ -34,7 +34,7 @@ export async function updateProfile(formData: FormData) {
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { displayName, bio: bio ?? null, defaultShippingCost },
+    data: { displayName, bio: bio ?? null },
   });
 
   return { success: true };

@@ -102,7 +102,7 @@ async function main() {
         displayName: bot.displayName,
         bio: bot.bio,
         balance: randomPrice(50, 500),
-        defaultShippingCost: randomFrom([2.50, 3.50, 4.50, 5.00]),
+        // defaultShippingCost removed from schema, shipping is now per-method
       },
     });
     users.push({ id: user.id, displayName: user.displayName });

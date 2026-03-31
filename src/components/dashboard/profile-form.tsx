@@ -58,24 +58,6 @@ export function ProfileForm({ user }: { user: User }) {
         />
       </div>
 
-      <div>
-        <label htmlFor="defaultShippingCost" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          {t("shippingCost")}
-        </label>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="text-zinc-500">€</span>
-          <input
-            id="defaultShippingCost"
-            name="defaultShippingCost"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={user.defaultShippingCost.toFixed(2)}
-            className="block w-32 rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-          />
-        </div>
-      </div>
-
       <div className="flex items-center gap-4">
         <button
           type="submit"

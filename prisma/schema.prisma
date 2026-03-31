@@ -19,20 +19,45 @@ model User {
   avatarUrl     String?
 
   // Wallet
-  balance       Float     @default(0)
+  balance         Float     @default(0)
+  heldBalance     Float     @default(0) // Escrow: held until buyer confirms delivery
+  reservedBalance Float     @default(0) // Reserved by active auction bids (40% of bid amount)
 
-  // Account type
-  accountType       String   @default("FREE") // FREE | PREMIUM
+  // Bank transfer
+  bankTransferReference String? @unique // e.g. "atomicsnipz8729376290"
+
+  // Verification
+  isVerified           Boolean  @default(false)
+  verificationStatus   String   @default("NONE") // NONE | PENDING | APPROVED | REJECTED
+
+  // Account type & role
+  accountType       String   @default("FREE") // FREE | PRO | UNLIMITED | ADMIN
   premiumExpiresAt  DateTime?
 
-  // Seller defaults
-  defaultShippingCost Float @default(0)
+  // Account kind (individual vs business)
+  accountKind       String   @default("INDIVIDUAL") // INDIVIDUAL | BUSINESS
+  companyName       String?
+  vatNumber         String?  // BTW-nummer
+  cocNumber         String?  // KVK / Chamber of Commerce number
+
+  // Address
+  street        String?
+  houseNumber   String?
+  postalCode    String?
+  city          String?
+  country       String?  // ISO 3166-1 alpha-2: "NL", "DE", "BE", etc.
+
+  // Username change tracking
+  lastUsernameChange DateTime?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
+  usernameHistory        UsernameHistory[]
+  verificationRequests   VerificationRequest[]
   auctions          Auction[]
+  sellerShippingMethods SellerShippingMethod[]
   auctionBids       AuctionBid[]
   claimsales        Claimsale[]
   purchasedItems    ClaimsaleItem[]    @relation("Buyer")
@@ -42,11 +67,43 @@ model User {
   conversationParticipants ConversationParticipant[]
   sentMessages      Message[]          @relation("SentMessages")
   listings          Listing[]
+  purchasedListings Listing[]  @relation("ListingBuyer")
   watchlistItems    Watchlist[]
   notifications     Notification[]
   reviewsGiven      Review[]       @relation("ReviewsGiven")
   reviewsReceived   Review[]       @relation("ReviewsReceived")
   autoBids          AutoBid[]
+  cartItems         CartItem[]
+  disputesOpened    Dispute[]  @relation("DisputesOpened")
+  subscriptions     Subscription[]
+}
+
+// ============================================================
+// SELLER SHIPPING METHODS
+// ============================================================
+
+model SellerShippingMethod {
+  id          String   @id @default(cuid())
+
+  sellerId    String
+  seller      User     @relation(fields: [sellerId], references: [id])
+
+  carrier     String   // "POSTNL", "DHL", "DPD", etc.
+  serviceName String   // "Briefpost", "Brievenbuspakket", "Aangetekend", etc.
+  price       Float    // Price in EUR
+  countries   String   // JSON array of ISO country codes: ["NL","BE","DE"]
+
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  claimsaleShippingMethods ClaimsaleShippingMethod[]
+  listingShippingMethods   ListingShippingMethod[]
+  auctionShippingMethods   AuctionShippingMethod[]
+  shippingBundles          ShippingBundle[]
+
+  @@index([sellerId])
 }
 
 // ============================================================
@@ -127,9 +184,13 @@ model Auction {
   extendedCount Int      @default(0) // Number of anti-snipe extensions
 
   // Status
-  status        String   @default("ACTIVE") // ACTIVE | ENDED_SOLD | ENDED_RESERVE_NOT_MET | ENDED_NO_BIDS | BOUGHT_NOW | CANCELLED
+  status        String   @default("ACTIVE") // ACTIVE | ENDED_SOLD | ENDED_RESERVE_NOT_MET | ENDED_NO_BIDS | BOUGHT_NOW | CANCELLED | AWAITING_PAYMENT | PAYMENT_FAILED
   winnerId      String?
   finalPrice    Float?
+
+  // Payment deadline (for winners with insufficient balance)
+  paymentDeadline DateTime?  // 5 days after auction end to complete payment
+  paymentStatus   String?    // AWAITING_PAYMENT | PAID | PAYMENT_FAILED
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -138,10 +199,24 @@ model Auction {
   autoBids      AutoBid[]
   conversations Conversation[]
   watchlistItems Watchlist[]
+  shippingMethods AuctionShippingMethod[]
+  shippingBundle ShippingBundle?
 
   @@index([sellerId])
   @@index([status])
   @@index([cardSetId])
+}
+
+model AuctionShippingMethod {
+  id               String               @id @default(cuid())
+  auctionId        String
+  auction          Auction              @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  shippingMethodId String
+  shippingMethod   SellerShippingMethod @relation(fields: [shippingMethodId], references: [id])
+  price            Float                // Snapshot of price at creation time
+
+  @@unique([auctionId, shippingMethodId])
+  @@index([auctionId])
 }
 
 model AuctionBid {
@@ -167,6 +242,7 @@ model Claimsale {
   id            String   @id @default(cuid())
   title         String
   description   String?
+  coverImage    String?  // URL for claimsale thumbnail/cover
   shippingCost  Float
 
   // Status: DRAFT (editable) → LIVE (immutable) → CLOSED
@@ -182,9 +258,22 @@ model Claimsale {
   items         ClaimsaleItem[]
   conversations Conversation[]
   watchlistItems Watchlist[]
+  shippingMethods ClaimsaleShippingMethod[]
 
   @@index([sellerId])
   @@index([status])
+}
+
+model ClaimsaleShippingMethod {
+  id               String               @id @default(cuid())
+  claimsaleId      String
+  claimsale        Claimsale            @relation(fields: [claimsaleId], references: [id], onDelete: Cascade)
+  shippingMethodId String
+  shippingMethod   SellerShippingMethod @relation(fields: [shippingMethodId], references: [id])
+  price            Float                // Snapshot of price at creation time
+
+  @@unique([claimsaleId, shippingMethodId])
+  @@index([claimsaleId])
 }
 
 model ClaimsaleItem {
@@ -192,6 +281,7 @@ model ClaimsaleItem {
   cardName     String
   condition    String   // "Near Mint", "Lightly Played", etc.
   price        Float
+  reference    String?  // Optional seller reference (e.g. binder location, inventory code)
   imageUrls    String   @default("[]") // JSON array of image URLs
 
   cardSetId    String
@@ -211,6 +301,8 @@ model ClaimsaleItem {
   // Link to shipping bundle
   shippingBundleId String?
   shippingBundle   ShippingBundle? @relation(fields: [shippingBundleId], references: [id])
+
+  cartItems    CartItem[]
 
   @@index([claimsaleId])
   @@index([cardSetId])
@@ -273,14 +365,32 @@ model Listing {
   updatedAt     DateTime @updatedAt
   expiresAt     DateTime?
 
+  buyerId        String?
+  buyer          User?    @relation("ListingBuyer", fields: [buyerId], references: [id])
+
   conversations  Conversation[]
   watchlistItems Watchlist[]
   upsells        ListingUpsell[]
+  shippingMethods ListingShippingMethod[]
+  shippingBundle ShippingBundle?
+  proposals      Proposal[]
 
   @@index([sellerId])
   @@index([status])
   @@index([cardSetId])
   @@index([listingType])
+}
+
+model ListingShippingMethod {
+  id               String               @id @default(cuid())
+  listingId        String
+  listing          Listing              @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  shippingMethodId String
+  shippingMethod   SellerShippingMethod @relation(fields: [shippingMethodId], references: [id])
+  price            Float                // Snapshot of price at creation time
+
+  @@unique([listingId, shippingMethodId])
+  @@index([listingId])
 }
 
 // ============================================================
@@ -322,16 +432,105 @@ model ShippingBundle {
   totalItemCost Float    @default(0)
   totalCost     Float    @default(0) // totalItemCost + shippingCost
 
-  status        String   @default("PENDING") // PENDING | PAID | SHIPPED | COMPLETED
+  // Selected shipping method
+  shippingMethodId String?
+  shippingMethod   SellerShippingMethod? @relation(fields: [shippingMethodId], references: [id])
+
+  // Tracking & dates
+  trackingUrl   String?
+  shippedAt     DateTime?
+  deliveredAt   DateTime?
+
+  // Buyer address snapshot at time of purchase
+  buyerStreet      String?
+  buyerHouseNumber String?
+  buyerPostalCode  String?
+  buyerCity        String?
+  buyerCountry     String?
+
+  status        String   @default("PENDING") // PENDING | PAID | SHIPPED | COMPLETED | CANCELLED | DISPUTED
+
+  // Optional link to source (auction or listing purchase)
+  auctionId     String?  @unique
+  auction       Auction? @relation(fields: [auctionId], references: [id])
+  listingId     String?  @unique
+  listing       Listing? @relation(fields: [listingId], references: [id])
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   items         ClaimsaleItem[]
+  dispute       Dispute?
 
   @@index([buyerId])
   @@index([sellerId])
   @@index([buyerId, sellerId, status])
+}
+
+// ============================================================
+// DISPUTES (Geschillen)
+// ============================================================
+
+model Dispute {
+  id                String   @id @default(cuid())
+
+  shippingBundleId  String   @unique
+  shippingBundle    ShippingBundle @relation(fields: [shippingBundleId], references: [id])
+
+  // Opened by buyer
+  openedById        String
+  openedBy          User     @relation("DisputesOpened", fields: [openedById], references: [id])
+
+  // Dispute details
+  reason            String   // NOT_RECEIVED | NOT_AS_DESCRIBED | DAMAGED_IN_TRANSIT
+  description       String
+  evidenceUrls      String   @default("[]") // JSON array of image URLs
+
+  // Seller response
+  sellerResponse       String?
+  sellerEvidenceUrls   String?  // JSON array of image URLs
+  sellerRespondedAt    DateTime?
+
+  // Proposal system
+  partialRefundAmount Float?
+  proposedById        String?   // userId of who proposed the partial refund
+
+  // Resolution
+  status            String   @default("OPEN") // OPEN | SELLER_RESPONDED | RESOLVED_BUYER | RESOLVED_SELLER | RESOLVED_MUTUAL | ESCALATED
+  resolution        String?  // REFUND_FULL | REFUND_PARTIAL | NO_REFUND | MUTUAL_AGREEMENT | ADMIN_DECISION
+  resolvedAt        DateTime?
+  resolvedById      String?  // Admin userId who resolved (for ESCALATED)
+
+  // Escalation: both parties must agree to admin review
+  buyerAcceptsEscalation  Boolean @default(false)
+  sellerAcceptsEscalation Boolean @default(false)
+  adminNotes              String? // Admin's reasoning for their decision
+
+  // Deadlines
+  responseDeadline     DateTime  // Seller has 7 days to respond
+  buyerReviewDeadline  DateTime? // Buyer has 7 days after seller responds
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  events DisputeEvent[]
+
+  @@index([openedById])
+  @@index([status])
+}
+
+model DisputeEvent {
+  id         String   @id @default(cuid())
+  disputeId  String
+  dispute    Dispute  @relation(fields: [disputeId], references: [id])
+
+  type       String   // OPENED | SELLER_RESPONDED | PROPOSAL_MADE | PROPOSAL_ACCEPTED | PROPOSAL_WITHDRAWN | ESCALATION_REQUESTED | ESCALATED | REJECTED_TO_ADMIN | RESOLVED
+  actorId    String   // userId who performed the action
+  detail     String?  // Extra info (e.g. amount, resolution text)
+
+  createdAt  DateTime @default(now())
+
+  @@index([disputeId])
 }
 
 // ============================================================
@@ -382,6 +581,7 @@ model Conversation {
 
   participants ConversationParticipant[]
   messages     Message[]
+  proposals    Proposal[]
 
   @@index([auctionId])
   @@index([claimsaleId])
@@ -409,6 +609,7 @@ model ConversationParticipant {
 model Message {
   id             String   @id @default(cuid())
   body           String
+  imageUrl       String?  // Optional photo attachment
   createdAt      DateTime @default(now())
 
   conversationId String
@@ -417,8 +618,47 @@ model Message {
   senderId       String
   sender         User     @relation("SentMessages", fields: [senderId], references: [id])
 
+  // Optional link to a proposal (rendered as special message)
+  proposalId     String?
+  proposal       Proposal? @relation(fields: [proposalId], references: [id])
+
   @@index([conversationId, createdAt])
   @@index([senderId])
+}
+
+// ============================================================
+// PROPOSALS (Biedingen/Voorstellen via chat)
+// ============================================================
+
+model Proposal {
+  id             String   @id @default(cuid())
+
+  listingId      String
+  listing        Listing  @relation(fields: [listingId], references: [id])
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  proposerId     String   // userId who made the proposal
+
+  amount         Float    // Proposed price
+  type           String   // BUY | SELL
+  status         String   @default("PENDING") // PENDING | ACCEPTED | REJECTED
+
+  // Payment deadline (for buyers with >= 40% but < 100% balance)
+  paymentDeadline DateTime?
+  paymentStatus   String?  // AWAITING_PAYMENT | PAID | PAYMENT_FAILED
+
+  respondedAt    DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  messages       Message[]
+
+  @@index([listingId])
+  @@index([conversationId])
+  @@index([status])
 }
 
 // ============================================================
@@ -472,8 +712,13 @@ model Notification {
 
 model Review {
   id             String   @id @default(cuid())
-  rating         Int      // 1-5
+  rating         Int      // 1-5 (average of subcategories, or standalone)
   comment        String?
+
+  // Subcategory ratings (1-5 each)
+  packagingRating    Int?  // Verpakking
+  shippingRating     Int?  // Verzendsnelheid
+  communicationRating Int? // Communicatie
 
   reviewerId     String
   reviewer       User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
@@ -485,6 +730,7 @@ model Review {
   auctionId       String?
   claimsaleItemId String?
   listingId       String?
+  shippingBundleId String?
 
   // Seller can respond
   sellerResponse  String?
@@ -519,6 +765,54 @@ model AutoBid {
 }
 
 // ============================================================
+// SHOPPING CART
+// ============================================================
+
+model CartItem {
+  id              String        @id @default(cuid())
+
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+
+  claimsaleItemId String
+  claimsaleItem   ClaimsaleItem @relation(fields: [claimsaleItemId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime      @default(now())
+
+  @@unique([userId, claimsaleItemId])
+  @@index([userId])
+}
+
+// ============================================================
+// SUBSCRIPTIONS
+// ============================================================
+
+model Subscription {
+  id            String   @id @default(cuid())
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+
+  tier          String   // PRO | UNLIMITED
+  billingCycle  String   @default("MONTHLY") // MONTHLY | YEARLY
+  status        String   @default("ACTIVE")  // ACTIVE | CANCELLED | EXPIRED
+
+  startsAt      DateTime @default(now())
+  expiresAt     DateTime
+  cancelledAt   DateTime?
+
+  monthlyPrice  Float
+  yearlyPrice   Float?
+  paymentMethod String?  // For future payment integration (Fase 17)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status, expiresAt])
+}
+
+// ============================================================
 // APP CONFIG (for commission rates, etc.)
 // ============================================================
 
@@ -528,4 +822,44 @@ model AppConfig {
   value String // JSON string for flexibility
 
   updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// VERIFICATION REQUESTS
+// ============================================================
+
+model VerificationRequest {
+  id              String    @id @default(cuid())
+
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+
+  documentType    String    // ID_CARD | PASSPORT | DRIVERS_LICENSE
+  frontImageUrl   String
+  backImageUrl    String?   // Not needed for passport
+
+  status          String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  rejectReason    String?
+  reviewedById    String?   // Admin who reviewed
+  reviewedAt      DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================================================
+// USERNAME HISTORY
+// ============================================================
+
+model UsernameHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  oldName   String
+  changedAt DateTime @default(now())
+
+  @@index([userId])
 }

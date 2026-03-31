@@ -1,4 +1,5 @@
 import type { UpsellType } from "@/types";
+import { getUpsellDiscount } from "@/lib/subscription-tiers";
 
 export const UPSELL_PRICING: Record<
   UpsellType,
@@ -9,14 +10,13 @@ export const UPSELL_PRICING: Record<
   URGENT_LABEL: { dailyCost: 0.15, minDays: 1, maxDays: 14 },
 } as const;
 
-export const PREMIUM_UPSELL_DISCOUNT = 0.5; // 50% off for premium users
-
 export function calculateUpsellCost(
   type: UpsellType,
   days: number,
-  isPremium: boolean
+  accountType: string
 ): number {
   const config = UPSELL_PRICING[type];
   const baseCost = config.dailyCost * days;
-  return isPremium ? baseCost * (1 - PREMIUM_UPSELL_DISCOUNT) : baseCost;
+  const discount = getUpsellDiscount(accountType);
+  return Math.round(baseCost * (1 - discount) * 100) / 100;
 }

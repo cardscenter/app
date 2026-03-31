@@ -37,7 +37,7 @@ interface FormData {
 
 interface ListingPreviewProps {
   form: FormData;
-  isPremium: boolean;
+  accountType: string;
   onBack: () => void;
   onPublish: () => void;
   pending: boolean;
@@ -56,13 +56,13 @@ const UPSELL_KEYS: Record<UpsellType, string> = {
   URGENT_LABEL: "upsellUrgent",
 };
 
-export function ListingPreview({ form, isPremium, onBack, onPublish, pending, error }: ListingPreviewProps) {
+export function ListingPreview({ form, accountType, onBack, onPublish, pending, error }: ListingPreviewProps) {
   const t = useTranslations("listing");
   const [current, setCurrent] = useState(0);
   const [lightbox, setLightbox] = useState(false);
 
   const totalUpsellCost = form.upsells.reduce(
-    (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, isPremium),
+    (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, accountType),
     0
   );
 
@@ -328,7 +328,7 @@ export function ListingPreview({ form, isPremium, onBack, onPublish, pending, er
           <div className="flex flex-wrap gap-2">
             {form.upsells.map((entry) => {
               const Icon = UPSELL_ICONS[entry.type];
-              const cost = calculateUpsellCost(entry.type, entry.days, isPremium);
+              const cost = calculateUpsellCost(entry.type, entry.days, accountType);
               return (
                 <div key={entry.type} className="flex items-center gap-2 glass-subtle rounded-lg px-3 py-2 text-sm">
                   <Icon className="h-4 w-4 text-primary" />

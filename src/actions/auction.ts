@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createAuctionSchema } from "@/lib/validations/auction";
 import { checkAuctionLimit } from "@/lib/account-limits";
 import { getMinimumNextBid, ANTI_SNIPE_MINUTES, ANTI_SNIPE_EXTENSION_MINUTES } from "@/lib/auction/bid-increments";
-import { deductBalance, creditBalance } from "@/actions/wallet";
+import { deductBalance, creditBalance, escrowCredit } from "@/actions/wallet";
 import { resolveAutoBids } from "@/lib/auction/autobid";
 import { createNotification } from "@/actions/notification";
 import { redirect } from "next/navigation";
@@ -326,6 +326,80 @@ export async function cancelAutoBid(auctionId: string) {
   await prisma.autoBid.updateMany({
     where: { userId: session.user.id, auctionId },
     data: { isActive: false },
+  });
+
+  return { success: true };
+}
+
+// ============================================================
+// COMPLETE AUCTION PAYMENT (for winners with AWAITING_PAYMENT)
+// ============================================================
+
+export async function completeAuctionPayment(auctionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const auction = await prisma.auction.findUnique({
+    where: { id: auctionId },
+    include: { shippingMethods: true },
+  });
+
+  if (!auction) return { error: "Veiling niet gevonden" };
+  if (auction.winnerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (auction.paymentStatus !== "AWAITING_PAYMENT") return { error: "Geen openstaande betaling" };
+
+  // Check deadline
+  if (auction.paymentDeadline && new Date() > auction.paymentDeadline) {
+    await prisma.auction.update({
+      where: { id: auctionId },
+      data: { paymentStatus: "PAYMENT_FAILED", status: "PAYMENT_FAILED" },
+    });
+    return { error: "De betalingsdeadline is verlopen" };
+  }
+
+  const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!buyer) return { error: "Gebruiker niet gevonden" };
+
+  const totalCost = auction.finalPrice ?? 0;
+  const availableBalance = buyer.balance - buyer.reservedBalance;
+
+  if (availableBalance < totalCost) {
+    return { error: `Onvoldoende saldo. Benodigd: €${totalCost.toFixed(2)}, beschikbaar: €${availableBalance.toFixed(2)}` };
+  }
+
+  // Check buyer has address
+  if (!buyer.street || !buyer.postalCode || !buyer.city) {
+    return { error: "Vul eerst je adres in via Dashboard → Verzending" };
+  }
+
+  // Deduct from buyer
+  await deductBalance(session.user.id, totalCost, "AUCTION_WIN", `Veiling gewonnen: ${auction.title}`, auctionId);
+
+  // Escrow for seller
+  await escrowCredit(auction.sellerId, totalCost, `Veiling verkocht (escrow): ${auction.title}`);
+
+  // Create ShippingBundle
+  await prisma.shippingBundle.create({
+    data: {
+      buyerId: session.user.id,
+      sellerId: auction.sellerId,
+      shippingCost: 0,
+      totalItemCost: totalCost,
+      totalCost,
+      status: "PAID",
+      auctionId,
+      buyerStreet: buyer.street,
+      buyerHouseNumber: buyer.houseNumber,
+      buyerPostalCode: buyer.postalCode,
+      buyerCity: buyer.city,
+      buyerCountry: buyer.country,
+    },
+  });
+
+  // Update auction payment status
+  await prisma.auction.update({
+    where: { id: auctionId },
+    data: { paymentStatus: "PAID" },
   });
 
   return { success: true };

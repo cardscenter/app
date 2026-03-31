@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { parseImageUrls } from "@/lib/upload";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 
 interface ListingUpsellInfo {
   type: string;
@@ -19,7 +20,7 @@ interface ListingCardProps {
     price: number | null;
     shippingCost: number;
     freeShipping?: boolean;
-    seller: { displayName: string };
+    seller: { displayName: string; isVerified?: boolean };
     upsells?: ListingUpsellInfo[];
   };
   locale: string;
@@ -63,7 +64,7 @@ export function ListingCard({ listing, locale }: ListingCardProps) {
           </div>
         )}
         {hasUrgent && (
-          <span className="absolute right-2 top-2 rounded-full bg-red-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+          <span className="absolute right-2 top-2 rounded-full bg-red-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-md">
             {locale === "en" ? "Close-Out Sale!" : "Moet nu weg!"}
           </span>
         )}
@@ -91,7 +92,10 @@ export function ListingCard({ listing, locale }: ListingCardProps) {
           </span>
         </div>
 
-        <p className="mt-1 text-xs text-muted-foreground">{listing.seller.displayName}</p>
+        <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+          {listing.seller.displayName}
+          {listing.seller.isVerified && <VerifiedBadge size="sm" />}
+        </p>
       </div>
     </Link>
   );

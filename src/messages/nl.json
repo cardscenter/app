@@ -201,7 +201,37 @@
     "selectConversation": "Selecteer een gesprek om te beginnen",
     "archive": "Archiveren",
     "delete": "Verwijderen",
-    "restore": "Herstellen"
+    "restore": "Herstellen",
+    "noMessages": "Nog geen berichten",
+    "messagePlaceholder": "Typ een bericht...",
+    "send": "Verstuur",
+    "attachPhoto": "Foto bijvoegen",
+    "photoUploading": "Uploaden...",
+    "photoAttached": "Foto bijgevoegd"
+  },
+  "proposal": {
+    "makeOffer": "Bod plaatsen",
+    "suggestPrice": "Prijs voorstellen",
+    "proposalFor": "Voorstel voor: {title}",
+    "enterAmount": "Voer een bedrag in",
+    "amount": "Bedrag",
+    "submit": "Verstuur voorstel",
+    "buyerOffers": "{name} biedt €{amount}",
+    "sellerOffers": "{name} stelt €{amount} voor",
+    "accept": "Accepteren",
+    "reject": "Afwijzen",
+    "accepted": "Geaccepteerd",
+    "rejected": "Afgewezen",
+    "pending": "In afwachting",
+    "cancelled": "Geannuleerd",
+    "insufficientBalance": "Onvoldoende saldo (minimaal 40% vereist)",
+    "paymentDeadline": "Betaal binnen 5 dagen",
+    "completePayment": "Betaling voltooien",
+    "proposalAccepted": "Voorstel geaccepteerd! De advertentie is verkocht.",
+    "proposalRejected": "Voorstel afgewezen. Je kunt een nieuw voorstel doen.",
+    "alreadyPending": "Er is al een openstaand voorstel voor deze advertentie.",
+    "listingNotActive": "Deze advertentie is niet meer beschikbaar.",
+    "awaitingPayment": "Betaling in afwachting — {days} dagen resterend"
   },
   "listing": {
     "browseTitle": "Marktplaats",
@@ -314,7 +344,12 @@
     "publishConfirm": "Advertentie plaatsen",
     "titlePlaceholder": "Titel van je advertentie",
     "descriptionPlaceholder": "Beschrijf je item...",
-    "upsellDeductNotice": "Dit bedrag wordt bij het plaatsen van je saldo afgetrokken."
+    "upsellDeductNotice": "Dit bedrag wordt bij het plaatsen van je saldo afgetrokken.",
+    "sponsored": "Gesponsord",
+    "sponsoredTooltip": "Deze advertenties worden weergegeven omdat de verkoper voor extra zichtbaarheid heeft betaald.",
+    "previousPage": "Vorige",
+    "nextPage": "Volgende",
+    "page": "Pagina {page} van {total}"
   },
   "watchlist": {
     "title": "Volglijst",

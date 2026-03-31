@@ -13,6 +13,8 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { SocialShare } from "@/components/ui/social-share";
 import { ItemCarousel } from "@/components/ui/item-carousel";
 import { getSellerOtherItems, getSimilarItems } from "@/lib/recommendations";
+import { SellerInfoBlock } from "@/components/ui/seller-info-block";
+import { getSellerInfo } from "@/lib/seller-info";
 
 export default async function ListingDetailPage({
   params,
@@ -38,7 +40,7 @@ export default async function ListingDetailPage({
   const isActive = listing.status === "ACTIVE";
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
-  const [watched, sellerItems, similarItems] = await Promise.all([
+  const [watched, sellerItems, similarItems, sellerInfo] = await Promise.all([
     session?.user ? isWatched({ listingId: listing.id }) : false,
     getSellerOtherItems(listing.sellerId, { listingId: listing.id }),
     getSimilarItems({
@@ -48,6 +50,7 @@ export default async function ListingDetailPage({
       excludeId: listing.id,
       itemType: "listing",
     }),
+    getSellerInfo(listing.sellerId),
   ]);
 
   return (
@@ -62,8 +65,7 @@ export default async function ListingDetailPage({
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Left: Images & Details */}
         <div className="lg:col-span-2 space-y-6">
-          {images.length > 0 && <ImageGallery images={images} alt={listing.title} />}
-
+          {/* Title above image */}
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">{listing.title}</h1>
@@ -75,6 +77,8 @@ export default async function ListingDetailPage({
               <WatchlistButton listingId={listing.id} initialWatched={watched} />
             )}
           </div>
+
+          {images.length > 0 && <ImageGallery images={images} alt={listing.title} />}
 
           {/* Card info */}
           <div className="glass-subtle rounded-2xl p-4 space-y-2">
@@ -165,6 +169,9 @@ export default async function ListingDetailPage({
               </div>
             )}
           </div>
+
+          {/* Seller Info Block */}
+          {sellerInfo && <SellerInfoBlock seller={sellerInfo} />}
 
           {/* Social share */}
           <div className="glass-subtle rounded-2xl p-4">

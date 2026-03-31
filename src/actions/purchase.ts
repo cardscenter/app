@@ -1,0 +1,227 @@
+"use server";
+
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { refundEscrow, releaseEscrow } from "@/actions/wallet";
+import { createNotification } from "@/actions/notification";
+
+const CANCEL_DAYS = 7;
+const AUTO_CONFIRM_DAYS = 30;
+
+// Buyer cancels purchase (after 7 days without shipping)
+export async function cancelPurchase(bundleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const bundle = await prisma.shippingBundle.findUnique({
+    where: { id: bundleId },
+    include: { seller: { select: { displayName: true } } },
+  });
+
+  if (!bundle) return { error: "Bestelling niet gevonden" };
+  if (bundle.buyerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (bundle.status !== "PAID") return { error: "Kan alleen betaalde bestellingen annuleren" };
+
+  // Check if 7 days have passed since purchase
+  const daysSincePurchase = (Date.now() - bundle.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysSincePurchase < CANCEL_DAYS) {
+    return { error: "CANCEL_TOO_EARLY", daysRemaining: Math.ceil(CANCEL_DAYS - daysSincePurchase) };
+  }
+
+  // Refund: release escrow back to buyer
+  await refundEscrow(
+    bundle.sellerId,
+    session.user.id,
+    bundle.totalCost,       // full refund to buyer (items + shipping)
+    bundle.totalItemCost,   // only item costs were in seller's escrow
+    `Geannuleerd: bestelling bij ${bundle.seller.displayName}`,
+    bundle.id
+  );
+
+  // Set items back to AVAILABLE
+  await prisma.claimsaleItem.updateMany({
+    where: { shippingBundleId: bundle.id },
+    data: {
+      status: "AVAILABLE",
+      buyerId: null,
+      shippingBundleId: null,
+    },
+  });
+
+  // Mark bundle as cancelled
+  await prisma.shippingBundle.update({
+    where: { id: bundleId },
+    data: { status: "CANCELLED" },
+  });
+
+  // Notify seller
+  await createNotification(
+    bundle.sellerId,
+    "ORDER_CANCELLED",
+    "Bestelling geannuleerd",
+    `De koper heeft de bestelling geannuleerd omdat deze niet binnen 7 dagen is verzonden.`,
+    "/dashboard/claimsales"
+  );
+
+  return { success: true };
+}
+
+// Seller marks bundle as shipped with tracking URL
+export async function markAsShipped(bundleId: string, trackingUrl: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const bundle = await prisma.shippingBundle.findUnique({
+    where: { id: bundleId },
+    include: { seller: { select: { displayName: true } } },
+  });
+
+  if (!bundle) return { error: "Bestelling niet gevonden" };
+  if (bundle.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (bundle.status !== "PAID") return { error: "Kan alleen betaalde bestellingen als verzonden markeren" };
+
+  await prisma.shippingBundle.update({
+    where: { id: bundleId },
+    data: {
+      status: "SHIPPED",
+      trackingUrl: trackingUrl || null,
+      shippedAt: new Date(),
+    },
+  });
+
+  // Notify buyer
+  await createNotification(
+    bundle.buyerId,
+    "ORDER_SHIPPED",
+    "Je bestelling is verzonden!",
+    `${bundle.seller.displayName} heeft je bestelling verzonden.${trackingUrl ? " Volg je pakket via de trackinglink." : ""}`,
+    "/dashboard/aankopen"
+  );
+
+  return { success: true };
+}
+
+// Buyer confirms delivery (with optional review)
+export async function confirmDelivery(
+  bundleId: string,
+  review?: {
+    packagingRating: number;
+    shippingRating: number;
+    communicationRating: number;
+    comment?: string;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const bundle = await prisma.shippingBundle.findUnique({
+    where: { id: bundleId },
+    include: { seller: { select: { displayName: true } } },
+  });
+
+  if (!bundle) return { error: "Bestelling niet gevonden" };
+  if (bundle.buyerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (bundle.status !== "SHIPPED") return { error: "Bestelling is nog niet verzonden" };
+
+  // Mark as completed
+  await prisma.shippingBundle.update({
+    where: { id: bundleId },
+    data: {
+      status: "COMPLETED",
+      deliveredAt: new Date(),
+    },
+  });
+
+  // Release escrow to seller
+  await releaseEscrow(
+    bundle.sellerId,
+    bundle.totalItemCost,
+    `Bezorgd bevestigd: bestelling ${bundle.id}`,
+    bundle.id
+  );
+
+  // Create review if provided
+  if (review) {
+    const avgRating = Math.round(
+      (review.packagingRating + review.shippingRating + review.communicationRating) / 3
+    );
+
+    await prisma.review.create({
+      data: {
+        rating: avgRating,
+        packagingRating: review.packagingRating,
+        shippingRating: review.shippingRating,
+        communicationRating: review.communicationRating,
+        comment: review.comment || null,
+        reviewerId: session.user.id,
+        sellerId: bundle.sellerId,
+        shippingBundleId: bundle.id,
+      },
+    });
+  }
+
+  // Notify seller
+  await createNotification(
+    bundle.sellerId,
+    "ORDER_COMPLETED",
+    "Bezorging bevestigd!",
+    `De koper heeft de ontvangst van de bestelling bevestigd. Het bedrag is vrijgegeven.`,
+    "/dashboard/claimsales"
+  );
+
+  return { success: true };
+}
+
+// Auto-confirm deliveries after 30 days (called by cron/API)
+export async function autoConfirmDeliveries() {
+  const cutoffDate = new Date(Date.now() - AUTO_CONFIRM_DAYS * 24 * 60 * 60 * 1000);
+
+  const expiredBundles = await prisma.shippingBundle.findMany({
+    where: {
+      status: "SHIPPED",
+      shippedAt: { lte: cutoffDate },
+      dispute: null, // Skip bundles with active disputes
+    },
+  });
+
+  let confirmed = 0;
+
+  for (const bundle of expiredBundles) {
+    await prisma.shippingBundle.update({
+      where: { id: bundle.id },
+      data: {
+        status: "COMPLETED",
+        deliveredAt: new Date(),
+      },
+    });
+
+    // Release escrow to seller
+    await releaseEscrow(
+      bundle.sellerId,
+      bundle.totalItemCost,
+      `Auto-bevestigd na ${AUTO_CONFIRM_DAYS} dagen: bestelling ${bundle.id}`,
+      bundle.id
+    );
+
+    // Notify both parties
+    await createNotification(
+      bundle.buyerId,
+      "ORDER_AUTO_CONFIRMED",
+      "Bestelling automatisch afgerond",
+      "Je bestelling is automatisch als bezorgd gemarkeerd na 30 dagen.",
+      "/dashboard/aankopen"
+    );
+
+    await createNotification(
+      bundle.sellerId,
+      "ORDER_COMPLETED",
+      "Bestelling automatisch afgerond",
+      "Een bestelling is automatisch als bezorgd gemarkeerd na 30 dagen. Het bedrag is vrijgegeven.",
+      "/dashboard/claimsales"
+    );
+
+    confirmed++;
+  }
+
+  return { confirmed };
+}

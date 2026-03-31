@@ -42,10 +42,10 @@ export async function startConversation(recipientId: string, auctionId?: string,
   return { conversationId: conversation.id };
 }
 
-export async function sendMessage(conversationId: string, body: string) {
+export async function sendMessage(conversationId: string, body: string, imageUrl?: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
-  if (!body.trim()) return { error: "Bericht mag niet leeg zijn" };
+  if (!body.trim() && !imageUrl) return { error: "Bericht mag niet leeg zijn" };
 
   // Verify user is participant
   const participant = await prisma.conversationParticipant.findFirst({
@@ -58,6 +58,7 @@ export async function sendMessage(conversationId: string, body: string) {
       conversationId,
       senderId: session.user.id,
       body: body.trim(),
+      imageUrl: imageUrl || null,
     },
   });
 

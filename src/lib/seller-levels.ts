@@ -73,17 +73,17 @@ export type XPBreakdown = {
   total: number;
 };
 
-// XP rewards
-const XP_PER_DAY = 1; // 1 XP per day account exists
-const XP_PER_SALE = 10; // 10 XP per completed sale
-const XP_PER_PURCHASE = 5; // 5 XP per purchase
-const XP_PER_POSITIVE_REVIEW = 15; // 15 XP per positive review (4-5 stars)
+// XP rewards (revenue-based)
+const XP_PER_DAY = 1;              // 1 XP per day account exists
+const XP_PER_EUR_SOLD = 1;         // 1 XP per € sold
+const XP_PER_EUR_BOUGHT = 1;       // 1 XP per € bought
+const XP_PER_5STAR_REVIEW = 20;    // 20 XP per 5-star review
 
 export function calculateXP(stats: {
   accountCreatedAt: Date;
-  totalSales: number;
-  totalPurchases: number;
-  positiveReviewCount: number;
+  totalSalesRevenue: number;
+  totalPurchasesRevenue: number;
+  fiveStarReviewCount: number;
 }): XPBreakdown {
   const now = new Date();
   const ageInDays = Math.floor(
@@ -91,9 +91,9 @@ export function calculateXP(stats: {
   );
 
   const accountAge = ageInDays * XP_PER_DAY;
-  const sales = stats.totalSales * XP_PER_SALE;
-  const purchases = stats.totalPurchases * XP_PER_PURCHASE;
-  const positiveReviews = stats.positiveReviewCount * XP_PER_POSITIVE_REVIEW;
+  const sales = Math.floor(stats.totalSalesRevenue * XP_PER_EUR_SOLD);
+  const purchases = Math.floor(stats.totalPurchasesRevenue * XP_PER_EUR_BOUGHT);
+  const positiveReviews = stats.fiveStarReviewCount * XP_PER_5STAR_REVIEW;
 
   return {
     accountAge,

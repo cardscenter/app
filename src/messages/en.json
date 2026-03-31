@@ -201,7 +201,37 @@
     "selectConversation": "Select a conversation to get started",
     "archive": "Archive",
     "delete": "Delete",
-    "restore": "Restore"
+    "restore": "Restore",
+    "noMessages": "No messages yet",
+    "messagePlaceholder": "Type a message...",
+    "send": "Send",
+    "attachPhoto": "Attach photo",
+    "photoUploading": "Uploading...",
+    "photoAttached": "Photo attached"
+  },
+  "proposal": {
+    "makeOffer": "Make offer",
+    "suggestPrice": "Suggest price",
+    "proposalFor": "Offer for: {title}",
+    "enterAmount": "Enter an amount",
+    "amount": "Amount",
+    "submit": "Send offer",
+    "buyerOffers": "{name} offers €{amount}",
+    "sellerOffers": "{name} suggests €{amount}",
+    "accept": "Accept",
+    "reject": "Reject",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "pending": "Pending",
+    "cancelled": "Cancelled",
+    "insufficientBalance": "Insufficient balance (minimum 40% required)",
+    "paymentDeadline": "Pay within 5 days",
+    "completePayment": "Complete payment",
+    "proposalAccepted": "Offer accepted! The listing has been sold.",
+    "proposalRejected": "Offer rejected. You can make a new offer.",
+    "alreadyPending": "There is already a pending offer for this listing.",
+    "listingNotActive": "This listing is no longer available.",
+    "awaitingPayment": "Payment pending — {days} days remaining"
   },
   "listing": {
     "browseTitle": "Marketplace",
@@ -314,7 +344,12 @@
     "publishConfirm": "Publish listing",
     "titlePlaceholder": "Title of your listing",
     "descriptionPlaceholder": "Describe your item...",
-    "upsellDeductNotice": "This amount will be deducted from your balance when publishing."
+    "upsellDeductNotice": "This amount will be deducted from your balance when publishing.",
+    "sponsored": "Sponsored",
+    "sponsoredTooltip": "These listings are shown because the seller has paid for extra visibility.",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "page": "Page {page} of {total}"
   },
   "watchlist": {
     "title": "Watchlist",
