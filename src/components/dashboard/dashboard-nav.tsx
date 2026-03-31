@@ -32,13 +32,13 @@ export function DashboardNav({ accountType }: { accountType?: string }) {
 
   const sections: NavSection[] = [
     {
-      label: "Overzicht",
+      label: "sectionOverview",
       items: [
         { href: "/dashboard", labelKey: "title", icon: LayoutDashboard },
       ],
     },
     {
-      label: "Verkopen",
+      label: "sectionSales",
       items: [
         { href: "/dashboard/veilingen", labelKey: "myAuctions", icon: Gavel },
         { href: "/dashboard/claimsales", labelKey: "myClaimsales", icon: Tag },
@@ -47,7 +47,7 @@ export function DashboardNav({ accountType }: { accountType?: string }) {
       ],
     },
     {
-      label: "Kopen",
+      label: "sectionBuying",
       items: [
         { href: "/dashboard/aankopen", labelKey: "myPurchases", icon: ShoppingBag },
         { href: "/dashboard/biedingen", labelKey: "myBids", icon: Gavel },
@@ -55,14 +55,14 @@ export function DashboardNav({ accountType }: { accountType?: string }) {
       ],
     },
     {
-      label: "Handel",
+      label: "sectionTrading",
       items: [
         { href: "/dashboard/saldo", labelKey: "myBalance", icon: Wallet },
         { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
       ],
     },
     {
-      label: "Account",
+      label: "sectionAccount",
       items: [
         { href: "/dashboard/profiel", labelKey: "profile", icon: User },
         { href: "/dashboard/abonnement", labelKey: "mySubscription", icon: CreditCard },
@@ -72,7 +72,7 @@ export function DashboardNav({ accountType }: { accountType?: string }) {
       ],
     },
     {
-      label: "Geschillen",
+      label: "sectionDisputes",
       items: [
         { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
         ...(isAdmin
@@ -87,7 +87,7 @@ export function DashboardNav({ accountType }: { accountType?: string }) {
       {sections.map((section) => (
         <div key={section.label} className="md:mb-2">
           <p className="hidden md:block px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-            {section.label}
+            {t(section.label)}
           </p>
           {section.items.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));

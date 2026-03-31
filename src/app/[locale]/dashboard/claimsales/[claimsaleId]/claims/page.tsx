@@ -13,7 +13,7 @@ export default async function ClaimsaleClaimsPage({
 }) {
   const { claimsaleId } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/nl/login");
+  if (!session?.user?.id) redirect("/login");
 
   const t = await getTranslations("sellerClaims");
   const tBreadcrumbs = await getTranslations("breadcrumbs");

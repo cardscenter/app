@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 import { getSellerStats, getSellerReviews } from "@/actions/review";
 import { SellerReputationCard } from "@/components/ui/seller-reputation-card";
 import { ReviewList } from "@/components/ui/review-list";
@@ -9,17 +9,18 @@ import { getLevel, getNextLevel } from "@/lib/seller-levels";
 
 export default async function DashboardReviewsPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect({ href: "/login", locale: "nl" });
+  if (!session?.user?.id) redirect("/login");
 
   const userId = session!.user!.id!;
   const t = await getTranslations("reputation");
+  const tCommon = await getTranslations("common");
   const stats = await getSellerStats(userId);
   const reviews = await getSellerReviews(userId);
 
   if (!stats) {
     return (
       <div className="py-8 text-center text-muted-foreground">
-        Er is iets misgegaan.
+        {tCommon("error")}
       </div>
     );
   }
@@ -69,10 +70,10 @@ export default async function DashboardReviewsPage() {
       <div className="glass rounded-2xl p-6">
         <h3 className="mb-4 text-lg font-bold text-foreground">{t("xpBreakdown")}</h3>
         <div className="space-y-3">
-          <XPRow label={t("xpAccountAge")} value={stats.xpBreakdown.accountAge} detail="1 XP / dag" />
-          <XPRow label={t("xpSales")} value={stats.xpBreakdown.sales} detail="10 XP / verkoop" />
-          <XPRow label={t("xpPurchases")} value={stats.xpBreakdown.purchases} detail="5 XP / aankoop" />
-          <XPRow label={t("xpReviews")} value={stats.xpBreakdown.positiveReviews} detail="15 XP / positieve review" />
+          <XPRow label={t("xpAccountAge")} value={stats.xpBreakdown.accountAge} detail={t("xpDetailAccountAge")} />
+          <XPRow label={t("xpSales")} value={stats.xpBreakdown.sales} detail={t("xpDetailSales")} />
+          <XPRow label={t("xpPurchases")} value={stats.xpBreakdown.purchases} detail={t("xpDetailPurchases")} />
+          <XPRow label={t("xpReviews")} value={stats.xpBreakdown.positiveReviews} detail={t("xpDetailReviews")} />
           <div className="border-t border-white/10 pt-3">
             <XPRow label={t("xpTotal")} value={stats.xp} bold />
           </div>

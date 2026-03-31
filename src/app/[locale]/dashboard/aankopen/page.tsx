@@ -35,14 +35,14 @@ export default async function MyPurchasesPage() {
         <div className="mt-6 space-y-6">
           {wonAuctions.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Gewonnen Veilingen</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t("wonAuctions")}</h2>
               <div className="mt-3 space-y-3">
                 {wonAuctions.map((a) => (
                   <div key={a.id} className="glass rounded-2xl p-4">
                     <p className="font-medium text-foreground">{a.title}</p>
                     <div className="mt-1 flex gap-4 text-sm text-muted-foreground">
                       <span>€{a.finalPrice?.toFixed(2)}</span>
-                      <span>Verkoper: {a.seller.displayName}</span>
+                      <span>{t("seller")}: {a.seller.displayName}</span>
                     </div>
                   </div>
                 ))}
@@ -52,14 +52,14 @@ export default async function MyPurchasesPage() {
 
           {purchasedItems.length > 0 && (
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Claimsale Aankopen</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t("claimsalePurchases")}</h2>
               <div className="mt-3 space-y-3">
                 {purchasedItems.map((item) => (
                   <div key={item.id} className="glass rounded-2xl p-4">
                     <p className="font-medium text-foreground">{item.cardName}</p>
                     <div className="mt-1 flex gap-4 text-sm text-muted-foreground">
                       <span>€{item.price.toFixed(2)}</span>
-                      <span>Verkoper: {item.claimsale.seller.displayName}</span>
+                      <span>{t("seller")}: {item.claimsale.seller.displayName}</span>
                       <span>{item.condition}</span>
                     </div>
                   </div>

@@ -31,7 +31,7 @@ export function DashboardStatsLocked() {
                   <TrendingUp className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Totale omzet</p>
+                  <p className="text-xs text-muted-foreground">{t("stats.totalRevenue")}</p>
                   <p className="text-xl font-bold">€1.234,56</p>
                 </div>
               </div>
@@ -42,7 +42,7 @@ export function DashboardStatsLocked() {
                   <Wallet className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Deze maand</p>
+                  <p className="text-xs text-muted-foreground">{t("stats.thisMonth")}</p>
                   <p className="text-xl font-bold">€456,78</p>
                 </div>
               </div>
@@ -53,7 +53,7 @@ export function DashboardStatsLocked() {
                   <Clock className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">In escrow</p>
+                  <p className="text-xs text-muted-foreground">{t("stats.inEscrow")}</p>
                   <p className="text-xl font-bold">€89,00</p>
                 </div>
               </div>
@@ -63,46 +63,46 @@ export function DashboardStatsLocked() {
           {/* Active + Recent row */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="glass-subtle rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-3">Actieve items</h3>
+              <h3 className="text-sm font-semibold mb-3">{t("stats.activeItems")}</h3>
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Gavel className="h-4 w-4" /> Veilingen
+                    <Gavel className="h-4 w-4" /> {t("stats.auctionsEndingSoon")}
                   </div>
                   <span className="text-sm font-semibold">3</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Tag className="h-4 w-4" /> Claimsales
+                    <Tag className="h-4 w-4" /> {t("stats.activeClaimsales")}
                   </div>
                   <span className="text-sm font-semibold">5</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Store className="h-4 w-4" /> Listings
+                    <Store className="h-4 w-4" /> {t("stats.activeListings")}
                   </div>
                   <span className="text-sm font-semibold">12</span>
                 </div>
               </div>
             </div>
             <div className="glass-subtle rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-3">Recente activiteit</h3>
+              <h3 className="text-sm font-semibold mb-3">{t("stats.recentActivity")}</h3>
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Gavel className="h-4 w-4" /> Biedingen
+                    <Gavel className="h-4 w-4" /> {t("stats.newBids")}
                   </div>
                   <span className="text-sm font-semibold">8</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MessageCircle className="h-4 w-4" /> Berichten
+                    <MessageCircle className="h-4 w-4" /> {t("stats.newMessages")}
                   </div>
                   <span className="text-sm font-semibold">4</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Star className="h-4 w-4" /> Reviews
+                    <Star className="h-4 w-4" /> {t("stats.newReviews")}
                   </div>
                   <span className="text-sm font-semibold">2</span>
                 </div>
@@ -112,7 +112,7 @@ export function DashboardStatsLocked() {
 
           {/* Fake chart area */}
           <div className="glass-subtle rounded-xl p-5">
-            <h3 className="text-sm font-semibold mb-4">Omzet (30 dagen)</h3>
+            <h3 className="text-sm font-semibold mb-4">{t("stats.revenueChart")}</h3>
             <div className="h-48 bg-gradient-to-t from-primary/5 to-transparent rounded-lg" />
           </div>
         </div>

@@ -10,7 +10,7 @@ import { Link } from "@/i18n/navigation";
 
 export default async function CartPage() {
   const session = await auth();
-  if (!session?.user) redirect("/nl/login");
+  if (!session?.user) redirect("/login");
 
   const t = await getTranslations("cart");
   const tBreadcrumbs = await getTranslations("breadcrumbs");

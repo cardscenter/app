@@ -96,11 +96,11 @@ export default async function BalancePage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Datum</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Beschrijving</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Bedrag</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Saldo</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("date")}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("type")}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("description")}</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("amount")}</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("balanceColumn")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
