@@ -1,40 +1,36 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { CARD_CONDITIONS } from "@/types";
+import { CARD_CONDITIONS, SEALED_PRODUCT_TYPES } from "@/types";
 import type { AuctionType } from "@/types";
-import type { Series, CardSet } from "@prisma/client";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-
-type SeriesWithSets = Series & { cardSets: CardSet[] };
 
 interface StepDetailsProps {
   auctionType: AuctionType;
-  seriesList: SeriesWithSets[];
   title: string;
   description: string;
   cardName: string;
-  cardSetId: string;
-  selectedSeries: string;
   condition: string;
+  estimatedCardCount: number | null;
+  conditionRange: string;
+  productType: string;
+  itemCategory: string;
   onChange: (field: string, value: unknown) => void;
 }
 
 export function StepDetails({
   auctionType,
-  seriesList,
   title,
   description,
   cardName,
-  cardSetId,
-  selectedSeries,
   condition,
+  estimatedCardCount,
+  conditionRange,
+  productType,
+  itemCategory,
   onChange,
 }: StepDetailsProps) {
   const t = useTranslations("auction");
-  const ttcg = useTranslations("tcg");
-
-  const series = seriesList.find((s) => s.id === selectedSeries);
 
   return (
     <div className="space-y-5">
@@ -67,33 +63,6 @@ export function StepDetails({
       {/* SINGLE_CARD specific */}
       {auctionType === "SINGLE_CARD" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-foreground">{ttcg("selectSeries")}</label>
-              <select
-                value={selectedSeries}
-                onChange={(e) => {
-                  onChange("selectedSeries", e.target.value);
-                  onChange("cardSetId", "");
-                }}
-                className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
-              >
-                <option value="">--</option>
-                {seriesList.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground">{ttcg("selectSet")}</label>
-              <select
-                value={cardSetId}
-                onChange={(e) => onChange("cardSetId", e.target.value)}
-                className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
-              >
-                <option value="">--</option>
-                {series?.cardSets.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-          </div>
           <div>
             <label htmlFor="cardName" className="block text-sm font-medium text-foreground">{t("cardName")}</label>
             <input
@@ -114,6 +83,91 @@ export function StepDetails({
               {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+        </div>
+      )}
+
+      {/* MULTI_CARD specific */}
+      {auctionType === "MULTI_CARD" && (
+        <div>
+          <label htmlFor="estimatedCardCount" className="block text-sm font-medium text-foreground">
+            {t("estimatedCardCount")}
+          </label>
+          <input
+            id="estimatedCardCount"
+            type="number"
+            min={1}
+            value={estimatedCardCount ?? ""}
+            onChange={(e) => onChange("estimatedCardCount", e.target.value ? parseInt(e.target.value) : null)}
+            className="mt-1 block w-48 glass-input px-3 py-2.5 text-foreground"
+          />
+        </div>
+      )}
+
+      {/* COLLECTION specific */}
+      {auctionType === "COLLECTION" && (
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="estimatedCardCountCol" className="block text-sm font-medium text-foreground">
+              {t("estimatedCardCount")}
+            </label>
+            <input
+              id="estimatedCardCountCol"
+              type="number"
+              min={1}
+              value={estimatedCardCount ?? ""}
+              onChange={(e) => onChange("estimatedCardCount", e.target.value ? parseInt(e.target.value) : null)}
+              className="mt-1 block w-48 glass-input px-3 py-2.5 text-foreground"
+            />
+          </div>
+          <div>
+            <label htmlFor="conditionRange" className="block text-sm font-medium text-foreground">
+              {t("conditionRange")}
+            </label>
+            <input
+              id="conditionRange"
+              type="text"
+              value={conditionRange}
+              onChange={(e) => onChange("conditionRange", e.target.value)}
+              className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+              placeholder="e.g. Lightly Played - Near Mint"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* SEALED_PRODUCT specific */}
+      {auctionType === "SEALED_PRODUCT" && (
+        <div>
+          <label className="block text-sm font-medium text-foreground">{t("productType")}</label>
+          <select
+            value={productType}
+            onChange={(e) => onChange("productType", e.target.value)}
+            className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground sm:w-64"
+          >
+            <option value="">--</option>
+            {SEALED_PRODUCT_TYPES.map((pt) => (
+              <option key={pt} value={pt}>
+                {t(`product${pt.charAt(0)}${pt.slice(1).toLowerCase().replace(/_/g, "")}` as never) || pt}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* OTHER specific */}
+      {auctionType === "OTHER" && (
+        <div>
+          <label htmlFor="itemCategory" className="block text-sm font-medium text-foreground">
+            {t("itemCategory")}
+          </label>
+          <input
+            id="itemCategory"
+            type="text"
+            value={itemCategory}
+            onChange={(e) => onChange("itemCategory", e.target.value)}
+            className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+            placeholder={t("itemCategoryPlaceholder")}
+          />
         </div>
       )}
     </div>

@@ -5,10 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { createAuctionSchema } from "@/lib/validations/auction";
 import { checkAuctionLimit } from "@/lib/account-limits";
 import { getMinimumNextBid, ANTI_SNIPE_MINUTES, ANTI_SNIPE_EXTENSION_MINUTES } from "@/lib/auction/bid-increments";
-import { deductBalance, creditBalance, escrowCredit } from "@/actions/wallet";
+import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { resolveAutoBids } from "@/lib/auction/autobid";
 import { createNotification } from "@/actions/notification";
+import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
+import { calculateAuctionUpsellCost } from "@/lib/upsell-config";
 import { redirect } from "next/navigation";
+import type { UpsellType } from "@/types";
 
 export async function createAuction(formData: FormData) {
   const session = await auth();
@@ -26,12 +29,16 @@ export async function createAuction(formData: FormData) {
     description: formData.get("description") || undefined,
     auctionType: formData.get("auctionType"),
     cardName: formData.get("cardName") || undefined,
-    cardSetId: formData.get("cardSetId") || undefined,
     condition: formData.get("condition") || undefined,
+    estimatedCardCount: formData.get("estimatedCardCount") || undefined,
+    conditionRange: formData.get("conditionRange") || undefined,
+    productType: formData.get("productType") || undefined,
+    itemCategory: formData.get("itemCategory") || undefined,
     startingBid: formData.get("startingBid"),
     reservePrice: formData.get("reservePrice") || undefined,
     buyNowPrice: formData.get("buyNowPrice") || undefined,
     duration: formData.get("duration"),
+    upsells: formData.get("upsells") || undefined,
   };
 
   const result = createAuctionSchema.safeParse(raw);
@@ -43,6 +50,32 @@ export async function createAuction(formData: FormData) {
   const endTime = new Date();
   endTime.setDate(endTime.getDate() + data.duration);
 
+  // Parse upsells and calculate total cost
+  let upsellEntries: { type: UpsellType; days: number }[] = [];
+  let totalUpsellCost = 0;
+
+  if (data.upsells) {
+    try {
+      upsellEntries = JSON.parse(data.upsells) as { type: UpsellType; days: number }[];
+      const seller = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { balance: true, reservedBalance: true, accountType: true },
+      });
+      const accountType = seller?.accountType ?? "FREE";
+      totalUpsellCost = upsellEntries.reduce(
+        (sum, entry) => sum + calculateAuctionUpsellCost(entry.type as UpsellType, entry.days, accountType),
+        0
+      );
+      const availableBalance = (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
+      if (totalUpsellCost > availableBalance) {
+        return { error: "Onvoldoende saldo voor promotie-opties" };
+      }
+    } catch {
+      // Invalid JSON, skip upsells
+      upsellEntries = [];
+    }
+  }
+
   const auction = await prisma.auction.create({
     data: {
       title: data.title,
@@ -50,8 +83,11 @@ export async function createAuction(formData: FormData) {
       imageUrls: imageUrls || null,
       auctionType: data.auctionType,
       cardName: data.cardName,
-      cardSetId: data.cardSetId || null,
       condition: data.condition,
+      estimatedCardCount: data.estimatedCardCount || null,
+      conditionRange: data.conditionRange || null,
+      productType: data.productType || null,
+      itemCategory: data.itemCategory || null,
       sellerId: session.user.id,
       startingBid: data.startingBid,
       reservePrice: data.reservePrice || null,
@@ -60,6 +96,41 @@ export async function createAuction(formData: FormData) {
       endTime,
     },
   });
+
+  // Create upsell records and deduct balance
+  if (upsellEntries.length > 0 && totalUpsellCost > 0) {
+    const seller = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { accountType: true },
+    });
+    const accountType = seller?.accountType ?? "FREE";
+
+    for (const entry of upsellEntries) {
+      const cost = calculateAuctionUpsellCost(entry.type as UpsellType, entry.days, accountType);
+      const startsAt = new Date();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + entry.days);
+
+      await prisma.auctionUpsell.create({
+        data: {
+          auctionId: auction.id,
+          type: entry.type,
+          startsAt,
+          expiresAt,
+          dailyCost: cost / entry.days,
+          totalCost: cost,
+        },
+      });
+    }
+
+    await deductBalance(
+      session.user.id,
+      totalUpsellCost,
+      "UPSELL",
+      `Promotie-opties veiling: ${data.title}`,
+      auction.id
+    );
+  }
 
   redirect(`/nl/veilingen/${auction.id}`);
 }
@@ -81,34 +152,33 @@ export async function placeBid(auctionId: string, amount: number) {
     return { error: `Minimaal bod is €${minimumBid.toFixed(2)}` };
   }
 
-  // Check balance
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || user.balance < amount) {
-    return { error: "Onvoldoende saldo" };
-  }
-
-  // Refund previous highest bidder
+  // Block self-outbidding
   const previousHighestBid = await prisma.auctionBid.findFirst({
     where: { auctionId },
     orderBy: { amount: "desc" },
   });
-  if (previousHighestBid && previousHighestBid.bidderId !== session.user.id) {
-    await creditBalance(
-      previousHighestBid.bidderId,
-      previousHighestBid.amount,
-      "AUCTION_BID_REFUND",
-      `Bod teruggestort: ${auction.title}`,
-      auctionId
-    );
+  if (previousHighestBid && previousHighestBid.bidderId === session.user.id) {
+    return { error: "Je bent al de hoogste bieder" };
   }
 
-  // Deduct balance from new bidder
-  await deductBalance(session.user.id, amount, "AUCTION_BID", `Bod geplaatst: ${auction.title}`, auctionId);
+  // Check available balance (40% reserve model)
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user || getAvailableBalance(user) < calculateReserveAmount(amount)) {
+    return { error: "Onvoldoende saldo" };
+  }
 
-  // Create bid and update auction
+  // Create bid record (no balance deduction — only reserves)
   await prisma.auctionBid.create({
     data: { auctionId, bidderId: session.user.id, amount },
   });
+
+  // Sync reserved balance for new bidder
+  await syncReservedBalance(session.user.id);
+
+  // Release reserve for previous highest bidder (their bid is no longer winning)
+  if (previousHighestBid) {
+    await syncReservedBalance(previousHighestBid.bidderId);
+  }
 
   // Anti-snipe: extend if bid in last 2 minutes
   let newEndTime = auction.endTime;
@@ -126,8 +196,8 @@ export async function placeBid(auctionId: string, amount: number) {
     },
   });
 
-  // Remove buy now option after first bid
-  if (auction.buyNowPrice && !previousHighestBid) {
+  // Remove buy now option when bids reach 75% of buy now price
+  if (auction.buyNowPrice && amount >= auction.buyNowPrice * 0.75) {
     await prisma.auction.update({
       where: { id: auctionId },
       data: { buyNowPrice: null },
@@ -174,26 +244,11 @@ export async function buyNow(auctionId: string) {
     return { error: "Onvoldoende saldo" };
   }
 
-  // Refund any existing highest bidder
-  const highestBid = await prisma.auctionBid.findFirst({
-    where: { auctionId },
-    orderBy: { amount: "desc" },
-  });
-  if (highestBid) {
-    await creditBalance(
-      highestBid.bidderId,
-      highestBid.amount,
-      "AUCTION_BID_REFUND",
-      `Bod teruggestort (direct kopen): ${auction.title}`,
-      auctionId
-    );
-  }
-
-  // Deduct from buyer
+  // Deduct from buyer (100% — direct purchase)
   await deductBalance(session.user.id, auction.buyNowPrice, "PURCHASE", `Direct gekocht: ${auction.title}`, auctionId);
 
-  // Credit seller
-  await creditBalance(auction.sellerId, auction.buyNowPrice, "SALE", `Verkocht (direct kopen): ${auction.title}`, auctionId);
+  // Escrow for seller
+  await escrowCredit(auction.sellerId, auction.buyNowPrice, `Verkocht (direct kopen): ${auction.title}`);
 
   // Update auction
   await prisma.auction.update({
@@ -204,6 +259,16 @@ export async function buyNow(auctionId: string) {
       finalPrice: auction.buyNowPrice,
     },
   });
+
+  // Release reserves for ALL other bidders on this auction
+  const allBidderIds = await prisma.auctionBid.findMany({
+    where: { auctionId },
+    select: { bidderId: true },
+    distinct: ["bidderId"],
+  });
+  for (const { bidderId } of allBidderIds) {
+    await syncReservedBalance(bidderId);
+  }
 
   return { success: true };
 }
@@ -217,6 +282,16 @@ export async function finalizeAuction(auctionId: string) {
   if (!auction || auction.status !== "ACTIVE") return;
   if (new Date() < auction.endTime) return;
 
+  // Release reserves for ALL bidders on this auction
+  const allBidderIds = await prisma.auctionBid.findMany({
+    where: { auctionId },
+    select: { bidderId: true },
+    distinct: ["bidderId"],
+  });
+  for (const { bidderId } of allBidderIds) {
+    await syncReservedBalance(bidderId);
+  }
+
   if (auction.bids.length === 0) {
     await prisma.auction.update({
       where: { id: auctionId },
@@ -228,14 +303,7 @@ export async function finalizeAuction(auctionId: string) {
   const highestBid = auction.bids[0];
 
   if (auction.reservePrice && highestBid.amount < auction.reservePrice) {
-    // Reserve not met — refund highest bidder
-    await creditBalance(
-      highestBid.bidderId,
-      highestBid.amount,
-      "AUCTION_BID_REFUND",
-      `Bod teruggestort (reserveprijs niet behaald): ${auction.title}`,
-      auctionId
-    );
+    // Reserve not met — no payment needed (40% reserve model, no actual deduction was made)
     await prisma.auction.update({
       where: { id: auctionId },
       data: { status: "ENDED_RESERVE_NOT_MET" },
@@ -243,23 +311,80 @@ export async function finalizeAuction(auctionId: string) {
     return;
   }
 
-  // Auction sold — credit seller
-  await creditBalance(
-    auction.sellerId,
-    highestBid.amount,
-    "SALE",
-    `Veiling verkocht: ${auction.title}`,
-    auctionId
-  );
+  // Auction sold — try to collect full payment from winner
+  const winner = await prisma.user.findUnique({ where: { id: highestBid.bidderId } });
+  const totalCost = highestBid.amount;
 
-  await prisma.auction.update({
-    where: { id: auctionId },
-    data: {
-      status: "ENDED_SOLD",
-      winnerId: highestBid.bidderId,
-      finalPrice: highestBid.amount,
-    },
-  });
+  if (winner && winner.balance >= totalCost) {
+    // Winner has enough balance — deduct full amount and escrow to seller
+    await deductBalance(
+      highestBid.bidderId,
+      totalCost,
+      "AUCTION_WIN",
+      `Veiling gewonnen: ${auction.title}`,
+      auctionId
+    );
+
+    await escrowCredit(
+      auction.sellerId,
+      totalCost,
+      `Veiling verkocht (escrow): ${auction.title}`
+    );
+
+    // Create ShippingBundle if winner has address
+    if (winner.street && winner.postalCode && winner.city) {
+      await prisma.shippingBundle.create({
+        data: {
+          buyerId: highestBid.bidderId,
+          sellerId: auction.sellerId,
+          shippingCost: 0,
+          totalItemCost: totalCost,
+          totalCost,
+          status: "PAID",
+          auctionId,
+          buyerStreet: winner.street,
+          buyerHouseNumber: winner.houseNumber,
+          buyerPostalCode: winner.postalCode,
+          buyerCity: winner.city,
+          buyerCountry: winner.country,
+        },
+      });
+    }
+
+    await prisma.auction.update({
+      where: { id: auctionId },
+      data: {
+        status: "ENDED_SOLD",
+        winnerId: highestBid.bidderId,
+        finalPrice: totalCost,
+        paymentStatus: "PAID",
+      },
+    });
+  } else {
+    // Winner doesn't have enough balance — set AWAITING_PAYMENT with 5-day deadline
+    const paymentDeadline = new Date();
+    paymentDeadline.setDate(paymentDeadline.getDate() + 5);
+
+    await prisma.auction.update({
+      where: { id: auctionId },
+      data: {
+        status: "ENDED_SOLD",
+        winnerId: highestBid.bidderId,
+        finalPrice: totalCost,
+        paymentStatus: "AWAITING_PAYMENT",
+        paymentDeadline,
+      },
+    });
+
+    // Notify winner they need to pay
+    await createNotification(
+      highestBid.bidderId,
+      "OUTBID",
+      "Veiling gewonnen — betaling vereist",
+      `Je hebt "${auction.title}" gewonnen voor €${totalCost.toFixed(2)}. Betaal binnen 5 dagen.`,
+      `/nl/veilingen/${auctionId}`
+    );
+  }
 }
 
 // ============================================================
@@ -282,9 +407,9 @@ export async function setAutoBid(auctionId: string, maxAmount: number) {
     return { error: `Maximum autobied moet minimaal €${minimumBid.toFixed(2)} zijn` };
   }
 
-  // Check balance
+  // Check available balance (40% of max autobid amount)
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || user.balance < minimumBid) {
+  if (!user || getAvailableBalance(user) < calculateReserveAmount(maxAmount)) {
     return { error: "Onvoldoende saldo" };
   }
 

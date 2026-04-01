@@ -160,13 +160,26 @@ model Auction {
   imageUrls     String?  // JSON array of image URLs
 
   // Auction type
-  auctionType   String   @default("SINGLE_CARD") // SINGLE_CARD | COLLECTION | BULK
+  auctionType   String   @default("SINGLE_CARD") // SINGLE_CARD | MULTI_CARD | COLLECTION | SEALED_PRODUCT | OTHER
 
   // Card details (for SINGLE_CARD)
   cardName      String?
   cardSetId     String?
   cardSet       CardSet? @relation(fields: [cardSetId], references: [id])
   condition     String?  // "Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"
+
+  // Multi-card details (for MULTI_CARD)
+  cardItems     String?  // JSON array: [{cardName, condition, quantity}]
+
+  // Collection details (for COLLECTION)
+  estimatedCardCount Int?
+  conditionRange     String? // e.g. "Lightly Played - Near Mint"
+
+  // Sealed product details (for SEALED_PRODUCT)
+  productType   String?  // BOOSTER | ETB | TIN | BOOSTER_BOX | OTHER_SEALED
+
+  // Other/Collectibles details (for OTHER)
+  itemCategory  String?  // "Playmat", "Binder", "Figuur", etc.
 
   // Seller
   sellerId      String
@@ -179,7 +192,7 @@ model Auction {
   currentBid    Float?   // Denormalized: highest bid so far
 
   // Timing
-  duration      Int      // 1, 3, 5, or 7 (days)
+  duration      Int      // 3, 5, 7, or 14 (days)
   endTime       DateTime
   extendedCount Int      @default(0) // Number of anti-snipe extensions
 
@@ -201,10 +214,29 @@ model Auction {
   watchlistItems Watchlist[]
   shippingMethods AuctionShippingMethod[]
   shippingBundle ShippingBundle?
+  upsells       AuctionUpsell[]
 
   @@index([sellerId])
   @@index([status])
   @@index([cardSetId])
+}
+
+model AuctionUpsell {
+  id         String   @id @default(cuid())
+
+  auctionId  String
+  auction    Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  type       String   // HOMEPAGE_SPOTLIGHT | CATEGORY_HIGHLIGHT | URGENT_LABEL
+  startsAt   DateTime @default(now())
+  expiresAt  DateTime
+  dailyCost  Float
+  totalCost  Float
+
+  createdAt  DateTime @default(now())
+
+  @@index([auctionId])
+  @@index([type, expiresAt])
 }
 
 model AuctionShippingMethod {

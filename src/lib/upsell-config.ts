@@ -20,3 +20,23 @@ export function calculateUpsellCost(
   const discount = getUpsellDiscount(accountType);
   return Math.round(baseCost * (1 - discount) * 100) / 100;
 }
+
+export const AUCTION_UPSELL_PRICING: Record<
+  UpsellType,
+  { dailyCost: number; minDays: number; maxDays: number }
+> = {
+  HOMEPAGE_SPOTLIGHT: { dailyCost: 0.75, minDays: 1, maxDays: 30 },
+  CATEGORY_HIGHLIGHT: { dailyCost: 0.40, minDays: 1, maxDays: 30 },
+  URGENT_LABEL: { dailyCost: 0.25, minDays: 1, maxDays: 14 },
+} as const;
+
+export function calculateAuctionUpsellCost(
+  type: UpsellType,
+  days: number,
+  accountType: string
+): number {
+  const config = AUCTION_UPSELL_PRICING[type];
+  const baseCost = config.dailyCost * days;
+  const discount = getUpsellDiscount(accountType);
+  return Math.round(baseCost * (1 - discount) * 100) / 100;
+}

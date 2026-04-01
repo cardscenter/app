@@ -13,17 +13,20 @@ export function BidSection({
   startingBid,
   buyNowPrice,
   availableBalance,
+  isHighestBidder,
 }: {
   auctionId: string;
   currentBid: number | null;
   startingBid: number;
   buyNowPrice: number | null;
   availableBalance?: number;
+  isHighestBidder?: boolean;
 }) {
   const t = useTranslations("auction");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showBuyNowConfirm, setShowBuyNowConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const minimumBid = currentBid === null ? startingBid : getMinimumNextBid(currentBid);
@@ -47,9 +50,10 @@ export function BidSection({
     }
   }
 
-  async function handleBuyNow() {
+  async function handleBuyNowConfirmed() {
     setLoading(true);
     setError(null);
+    setShowBuyNowConfirm(false);
     const result = await buyNow(auctionId);
     if (result?.error) {
       setError(result.error);
@@ -67,15 +71,17 @@ export function BidSection({
         </div>
       )}
 
-      {/* Quick bid buttons */}
-      <QuickBidButtons
-        currentBid={currentBid}
-        startingBid={startingBid}
-        onSelect={handleQuickBid}
-      />
+      {/* Quick bid buttons - hidden when highest bidder */}
+      {!isHighestBidder && (
+        <QuickBidButtons
+          currentBid={currentBid}
+          startingBid={startingBid}
+          onSelect={handleQuickBid}
+        />
+      )}
 
       {/* Balance info */}
-      {availableBalance !== undefined && (
+      {!isHighestBidder && availableBalance !== undefined && (
         <div className="glass-subtle rounded-xl p-3 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Beschikbaar saldo</span>
@@ -86,43 +92,73 @@ export function BidSection({
         </div>
       )}
 
-      {/* Bid form */}
-      <form action={handleBid}>
-        <p className="text-xs text-muted-foreground mb-2">
-          {t("minimumBid")}: {"\u20AC"}{minimumBid.toFixed(2)}
-        </p>
-        <div className="flex gap-2">
-          <div className="flex flex-1 items-center gap-1">
-            <span className="text-muted-foreground">{"\u20AC"}</span>
-            <input
-              ref={inputRef}
-              name="bidAmount"
-              type="number"
-              step="0.01"
-              min={minimumBid}
-              defaultValue={minimumBid}
-              className="block w-full glass-input px-3 py-2.5 text-foreground"
-            />
+      {/* Bid form - hidden when highest bidder */}
+      {!isHighestBidder && (
+        <form action={handleBid}>
+          <p className="text-xs text-muted-foreground mb-2">
+            {t("minimumBid")}: {"\u20AC"}{minimumBid.toFixed(2)}
+          </p>
+          <div className="flex gap-2">
+            <div className="flex flex-1 items-center gap-1">
+              <span className="text-muted-foreground">{"\u20AC"}</span>
+              <input
+                ref={inputRef}
+                name="bidAmount"
+                type="number"
+                step="0.01"
+                min={minimumBid}
+                defaultValue={minimumBid}
+                className="block w-full glass-input px-3 py-2.5 text-foreground"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
+            >
+              {t("placeBid")}
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
-          >
-            {t("placeBid")}
-          </button>
-        </div>
-      </form>
+        </form>
+      )}
 
       {/* Buy now */}
-      {buyNowPrice && (
+      {buyNowPrice && !showBuyNowConfirm && (
         <button
-          onClick={handleBuyNow}
+          onClick={() => setShowBuyNowConfirm(true)}
           disabled={loading}
           className="w-full rounded-xl border-2 border-primary px-4 py-3 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-50 transition-all"
         >
           {t("buyNow")} — {"\u20AC"}{buyNowPrice.toFixed(2)}
         </button>
+      )}
+
+      {/* Buy now confirmation */}
+      {buyNowPrice && showBuyNowConfirm && (
+        <div className="glass-subtle rounded-2xl border-2 border-primary/30 p-4 space-y-3">
+          <p className="text-sm font-medium text-foreground text-center">
+            {t("buyNowConfirmTitle")}
+          </p>
+          <p className="text-xs text-muted-foreground text-center">
+            {t("buyNowConfirmMessage", { price: buyNowPrice.toFixed(2) })}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowBuyNowConfirm(false)}
+              disabled={loading}
+              className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50 transition-all"
+            >
+              {t("buyNowCancel")}
+            </button>
+            <button
+              onClick={handleBuyNowConfirmed}
+              disabled={loading}
+              className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
+            >
+              {t("buyNowConfirm")}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

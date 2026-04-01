@@ -1,19 +1,23 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { CreditCard, Archive, Layers } from "lucide-react";
+import { CreditCard, Archive, Layers, Package, Sparkles } from "lucide-react";
 import type { AuctionType } from "@/types";
 
 const TYPE_OPTIONS: { value: AuctionType; icon: typeof CreditCard }[] = [
   { value: "SINGLE_CARD", icon: CreditCard },
+  { value: "MULTI_CARD", icon: Layers },
   { value: "COLLECTION", icon: Archive },
-  { value: "BULK", icon: Layers },
+  { value: "SEALED_PRODUCT", icon: Package },
+  { value: "OTHER", icon: Sparkles },
 ];
 
 const TYPE_KEYS: Record<AuctionType, { label: string; desc: string }> = {
   SINGLE_CARD: { label: "singleCard", desc: "singleCardDesc" },
+  MULTI_CARD: { label: "multiCard", desc: "multiCardDesc" },
   COLLECTION: { label: "collection", desc: "collectionDesc" },
-  BULK: { label: "bulk", desc: "bulkDesc" },
+  SEALED_PRODUCT: { label: "sealedProduct", desc: "sealedProductDesc" },
+  OTHER: { label: "other", desc: "otherDesc" },
 };
 
 interface StepTypeProps {
@@ -27,7 +31,7 @@ export function StepType({ value, onChange }: StepTypeProps) {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-foreground">{t("selectType")}</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {TYPE_OPTIONS.map((opt) => {
           const Icon = opt.icon;
           const keys = TYPE_KEYS[opt.value];

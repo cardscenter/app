@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getMinimumNextBid } from "@/lib/auction/bid-increments";
-import { deductBalance, creditBalance } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
 
 /**
  * After a manual bid is placed, check if any other user has an active AutoBid
@@ -56,9 +56,9 @@ export async function resolveAutoBids(
     return { finalBid: currentBidAmount, finalBidderId: currentBidderId };
   }
 
-  // Check autobidder's balance
+  // Check autobidder's available balance (40% reserve model)
   const user = await prisma.user.findUnique({ where: { id: winner.userId } });
-  if (!user || user.balance < autobidAmount) {
+  if (!user || getAvailableBalance(user) < calculateReserveAmount(autobidAmount)) {
     // Deactivate this autobid — insufficient funds
     await prisma.autoBid.update({
       where: { id: winner.id },
@@ -81,34 +81,28 @@ export async function resolveAutoBids(
     return { finalBid: currentBidAmount, finalBidderId: currentBidderId };
   }
 
-  // Refund the previous highest bidder
-  await creditBalance(
-    currentBidderId,
-    currentBidAmount,
-    "AUCTION_BID_REFUND",
-    `Bod teruggestort (autobied): ${auction.title}`,
-    auctionId
-  );
-
-  // Deduct from autobidder
-  await deductBalance(
-    winner.userId,
-    autobidAmount,
-    "AUCTION_BID",
-    `Autobied geplaatst: ${auction.title}`,
-    auctionId
-  );
-
-  // Create the bid record
+  // Create the bid record (no balance deduction — only reserves)
   await prisma.auctionBid.create({
     data: { auctionId, bidderId: winner.userId, amount: autobidAmount },
   });
 
-  // Update auction currentBid
-  await prisma.auction.update({
-    where: { id: auctionId },
-    data: { currentBid: autobidAmount },
-  });
+  // Sync reserved balances for both users
+  await syncReservedBalance(winner.userId);
+  await syncReservedBalance(currentBidderId);
+
+  // Remove buy now option when autobid reaches 75% of buy now price
+  if (auction.buyNowPrice && autobidAmount >= auction.buyNowPrice * 0.75) {
+    await prisma.auction.update({
+      where: { id: auctionId },
+      data: { currentBid: autobidAmount, buyNowPrice: null },
+    });
+  } else {
+    // Update auction currentBid
+    await prisma.auction.update({
+      where: { id: auctionId },
+      data: { currentBid: autobidAmount },
+    });
+  }
 
   // Notify the outbid user
   await createNotification(

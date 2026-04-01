@@ -9,8 +9,10 @@ export type CardCondition = (typeof CARD_CONDITIONS)[number];
 
 export const AUCTION_TYPES = [
   "SINGLE_CARD",
+  "MULTI_CARD",
   "COLLECTION",
-  "BULK",
+  "SEALED_PRODUCT",
+  "OTHER",
 ] as const;
 export type AuctionType = (typeof AUCTION_TYPES)[number];
 

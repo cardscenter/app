@@ -11,9 +11,11 @@ interface AuctionFormData {
   title: string;
   description: string;
   cardName: string;
-  cardSetId: string;
-  selectedSeries: string;
   condition: string;
+  estimatedCardCount: number | null;
+  conditionRange: string;
+  productType: string;
+  itemCategory: string;
   startingBid: number | null;
   duration: number;
   hasReserve: boolean;
@@ -166,7 +168,7 @@ export function AuctionPreview({ form, onBack, onPublish, pending, error }: Auct
           {/* Title & type badge */}
           <div>
             <span className="rounded-full bg-primary-light px-2.5 py-0.5 text-xs font-medium text-primary dark:bg-red-950 dark:text-red-400">
-              {form.auctionType === "SINGLE_CARD" ? t("singleCard") : form.auctionType === "COLLECTION" ? t("collection") : t("bulk")}
+              {form.auctionType === "SINGLE_CARD" ? t("singleCard") : form.auctionType === "MULTI_CARD" ? t("multiCard") : form.auctionType === "COLLECTION" ? t("collection") : form.auctionType === "SEALED_PRODUCT" ? t("sealedProduct") : t("other")}
             </span>
             <h1 className="mt-2 text-2xl font-bold text-foreground">
               {form.title || <span className="text-muted-foreground italic">{t("titlePlaceholder")}</span>}

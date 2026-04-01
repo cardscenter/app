@@ -13,7 +13,7 @@ interface StepPricingProps {
   onChange: (field: string, value: unknown) => void;
 }
 
-const DURATIONS = [1, 3, 5, 7];
+const DURATIONS = [3, 5, 7, 14];
 
 export function StepPricing({
   startingBid,

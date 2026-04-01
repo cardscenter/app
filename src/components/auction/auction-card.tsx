@@ -42,11 +42,13 @@ export function AuctionCard({ auction }: { auction: AuctionCardData }) {
         {/* Type badge */}
         <div className="absolute top-3 left-3">
           <span className="rounded-md bg-primary px-2 py-1 text-xs font-medium text-white">
-            {auction.auctionType === "SINGLE_CARD"
-              ? t("singleCard")
-              : auction.auctionType === "COLLECTION"
-                ? t("collection")
-                : t("bulk")}
+            {t(({
+              SINGLE_CARD: "singleCard",
+              MULTI_CARD: "multiCard",
+              COLLECTION: "collection",
+              SEALED_PRODUCT: "sealedProduct",
+              OTHER: "other",
+            } as Record<string, string>)[auction.auctionType] || "other")}
           </span>
         </div>
       </div>

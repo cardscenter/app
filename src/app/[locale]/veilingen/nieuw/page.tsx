@@ -10,14 +10,11 @@ export default async function NewAuctionPage() {
 
   const t = await getTranslations("auction");
 
-  const pokemon = await prisma.category.findFirst({ where: { slug: "pokemon" } });
-  const seriesList = pokemon
-    ? await prisma.series.findMany({
-        where: { categoryId: pokemon.id },
-        include: { cardSets: true },
-        orderBy: { name: "asc" },
-      })
-    : [];
+  // Get user balance and account type for upsells
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { balance: true, reservedBalance: true, accountType: true },
+  });
 
   // Get seller's shipping methods
   const shippingMethods = await prisma.sellerShippingMethod.findMany({
@@ -31,7 +28,11 @@ export default async function NewAuctionPage() {
         {t("createTitle")}
       </h1>
       <div className="mt-8">
-        <MultiStepAuctionForm seriesList={seriesList} shippingMethods={shippingMethods} />
+        <MultiStepAuctionForm
+          shippingMethods={shippingMethods}
+          userBalance={(user?.balance ?? 0) - (user?.reservedBalance ?? 0)}
+          accountType={user?.accountType ?? "FREE"}
+        />
       </div>
     </div>
   );

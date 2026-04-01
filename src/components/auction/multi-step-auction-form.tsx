@@ -5,17 +5,21 @@ import { useActionState, useState, useRef, useEffect } from "react";
 import { createAuction } from "@/actions/auction";
 import { useRouter } from "@/i18n/navigation";
 import { Eye } from "lucide-react";
-import type { Series, CardSet, SellerShippingMethod } from "@prisma/client";
-import type { AuctionType } from "@/types";
+import type { SellerShippingMethod } from "@prisma/client";
+import type { AuctionType, UpsellType } from "@/types";
 
 import { StepType } from "./steps/step-type";
 import { StepPhotos } from "./steps/step-photos";
 import { StepDetails } from "./steps/step-details";
 import { StepPricing } from "./steps/step-pricing";
+import { StepUpsells } from "./steps/step-upsells";
 import { AuctionPreview } from "./steps/step-review";
 import { ShippingMethodSelector } from "@/components/ui/shipping-method-selector";
 
-type SeriesWithSets = Series & { cardSets: CardSet[] };
+interface UpsellEntry {
+  type: UpsellType;
+  days: number;
+}
 
 interface FormState {
   auctionType: AuctionType;
@@ -23,9 +27,11 @@ interface FormState {
   title: string;
   description: string;
   cardName: string;
-  cardSetId: string;
-  selectedSeries: string;
   condition: string;
+  estimatedCardCount: number | null;
+  conditionRange: string;
+  productType: string;
+  itemCategory: string;
   startingBid: number | null;
   duration: number;
   hasReserve: boolean;
@@ -33,6 +39,7 @@ interface FormState {
   hasBuyNow: boolean;
   buyNowPrice: number | null;
   selectedShippingMethods: string[];
+  upsells: UpsellEntry[];
 }
 
 const INITIAL_STATE: FormState = {
@@ -41,9 +48,11 @@ const INITIAL_STATE: FormState = {
   title: "",
   description: "",
   cardName: "",
-  cardSetId: "",
-  selectedSeries: "",
   condition: "Near Mint",
+  estimatedCardCount: null,
+  conditionRange: "",
+  productType: "",
+  itemCategory: "",
   startingBid: null,
   duration: 7,
   hasReserve: false,
@@ -51,14 +60,16 @@ const INITIAL_STATE: FormState = {
   hasBuyNow: false,
   buyNowPrice: null,
   selectedShippingMethods: [],
+  upsells: [],
 };
 
 interface MultiStepAuctionFormProps {
-  seriesList: SeriesWithSets[];
   shippingMethods: SellerShippingMethod[];
+  userBalance: number;
+  accountType: string;
 }
 
-export function MultiStepAuctionForm({ seriesList, shippingMethods }: MultiStepAuctionFormProps) {
+export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType }: MultiStepAuctionFormProps) {
   const t = useTranslations("auction");
   const ts = useTranslations("shipping");
   const router = useRouter();
@@ -96,11 +107,15 @@ export function MultiStepAuctionForm({ seriesList, shippingMethods }: MultiStepA
     formData.set("duration", String(form.duration));
 
     if (form.cardName) formData.set("cardName", form.cardName);
-    if (form.cardSetId) formData.set("cardSetId", form.cardSetId);
     if (form.condition) formData.set("condition", form.condition);
+    if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
+    if (form.conditionRange) formData.set("conditionRange", form.conditionRange);
+    if (form.productType) formData.set("productType", form.productType);
+    if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
     if (form.hasReserve && form.reservePrice !== null) formData.set("reservePrice", String(form.reservePrice));
     if (form.hasBuyNow && form.buyNowPrice !== null) formData.set("buyNowPrice", String(form.buyNowPrice));
     if (form.selectedShippingMethods.length > 0) formData.set("shippingMethodIds", JSON.stringify(form.selectedShippingMethods));
+    if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
 
     formAction(formData);
   };
@@ -141,13 +156,14 @@ export function MultiStepAuctionForm({ seriesList, shippingMethods }: MultiStepA
       <section className="glass rounded-2xl p-6">
         <StepDetails
           auctionType={form.auctionType}
-          seriesList={seriesList}
           title={form.title}
           description={form.description}
           cardName={form.cardName}
-          cardSetId={form.cardSetId}
-          selectedSeries={form.selectedSeries}
           condition={form.condition}
+          estimatedCardCount={form.estimatedCardCount}
+          conditionRange={form.conditionRange}
+          productType={form.productType}
+          itemCategory={form.itemCategory}
           onChange={updateField}
         />
       </section>
@@ -173,6 +189,16 @@ export function MultiStepAuctionForm({ seriesList, shippingMethods }: MultiStepA
           methods={shippingMethods}
           selected={form.selectedShippingMethods}
           onChange={(v) => updateField("selectedShippingMethods", v)}
+        />
+      </section>
+
+      {/* Section 6: Upsells */}
+      <section className="glass rounded-2xl p-6">
+        <StepUpsells
+          upsells={form.upsells}
+          userBalance={userBalance}
+          accountType={accountType}
+          onChange={(v) => updateField("upsells", v)}
         />
       </section>
 

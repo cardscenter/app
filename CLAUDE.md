@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# TCG Marketplace
+# Cards Center
 
 Pokémon trading card marketplace — auctions, claimsales, listings, wallet, messaging, reviews, watchlist, notifications, disputes.
 
@@ -53,8 +53,13 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 - **Seller levels** — 20-tier progression system (`src/lib/seller-levels.ts`). XP earned via: 1 XP/day account age, 1 XP/€ sold, 1 XP/€ bought, 20 XP per 5-star review. Tiers: Tin→Copper→Bronze→Silver→Gold→Platinum→Titanium→Cobalt→Jade→Amethyst→Sapphire→Ruby→Emerald→Diamond→Obsidian→Champion→Elite→Legend→Mythic→Transcendent (95k XP). Data fetching sums revenue amounts, not counts.
 - **Disputes** — buyer opens on SHIPPED bundle (10–30 days after shipment); seller responds; buyer accepts/rejects; mutual proposals; escalation (both parties agree) → admin resolves. Event-sourced timeline via `DisputeEvent` model. Auto-resolve cron for unresponded disputes. Actions in `dispute.ts`, UI in `dispute-detail-content.tsx`, page in `dashboard/geschillen/[disputeId]/page.tsx`
 - **Chat proposals** — Buyer/seller can make buy/sell price proposals in chat linked to a listing. Proposal model with PENDING/ACCEPTED/REJECTED status. 40% minimum balance rule applies. Accepted proposals: mark listing SOLD, create ShippingBundle, escrow flow. `withdrawProposal()` for retracting pending offers.
-- **Sponsored listings** — Listings with active `CATEGORY_HIGHLIGHT` upsell appear in "Gesponsord" row on marketplace page with tooltip explanation.
-- **Marketplace pagination** — 40 listings per page, sponsored excluded from main grid.
+- **Buy Now price** — Optional on auctions. Removed when bids reach 75% of buy now price (not after first bid). Check in both `placeBid()` and `resolveAutoBids()`.
+- **Auction upsells** — `AuctionUpsell` model (same structure as `ListingUpsell`). Higher pricing than listings: Homepage Spotlight €0.75/day, Category Highlight €0.40/day, Urgent Label €0.25/day. Config in `upsell-config.ts` (`AUCTION_UPSELL_PRICING`).
+- **Auction types** — `SINGLE_CARD | MULTI_CARD | COLLECTION | SEALED_PRODUCT | OTHER` (same as listing types). Type-specific fields: `cardItems`, `estimatedCardCount`, `conditionRange`, `productType`, `itemCategory`.
+- **Auction durations** — 3, 5, 7, or 14 days (no 1-day).
+- **Sponsored listings & auctions** — Items with active `CATEGORY_HIGHLIGHT` upsell appear in "Gesponsord" row on marketplace/veilingen page with tooltip explanation.
+- **Marketplace/Auction pagination** — 40 items per page, sponsored excluded from main grid, 4-column layout.
+- **Real-time bid updates** — Polling via `/api/auctions/[auctionId]/bids` endpoint. 5-second interval normally, 2-second in last 30 minutes. Client component: `live-auction-content.tsx`. Shows "Je bent de hoogste bieder" banner + hides bid form when user is highest bidder.
 - **SQLite date handling** — no DATE_TRUNC; fetch raw + group in JS
 
 ---
@@ -116,7 +121,7 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 ### Components (`src/components/`)
 | Folder | Key files |
 |--------|-----------|
-| `auction/` | `auction-card`, `auction-form`, `multi-step-auction-form`, `steps/`, `autobid-form`, `bid-section`, `quick-bid-buttons`, `countdown-timer` |
+| `auction/` | `auction-card`, `multi-step-auction-form`, `steps/` (type, photos, details, pricing, upsells, review), `autobid-form`, `bid-section`, `quick-bid-buttons`, `countdown-timer`, `live-auction-content`, `sponsored-row` |
 | `claimsale/` | `claimsale-form`, `claimsale-card`, `claimsale-actions`, `claimsale-items-filter`, `claim-button`, `add-to-cart-button` |
 | `listing/` | `listing-form`, `multi-step-listing-form`, `steps/`, `listing-card`, `listing-actions`, `sponsored-row` |
 | `cart/` | `cart-checkout`, `cart-content`, `cart-item-row` |
@@ -141,7 +146,7 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `seller-levels.ts` | 20-tier seller level definitions, XP calculation (revenue-based), styling |
 | `seller-info.ts` | `getSellerInfo()` — fetches seller data for info blocks on detail pages |
 | `recommendations.ts` | Seller other items & similar items queries |
-| `upsell-config.ts` | Tier-based upsell pricing (discount per account tier) |
+| `upsell-config.ts` | Tier-based upsell pricing for listings (`UPSELL_PRICING`) and auctions (`AUCTION_UPSELL_PRICING`, higher rates) |
 | `auction/bid-increments.ts` | Min bid increment per price tier |
 | `balance-check.ts` | Available balance, reserve calculation (40%), per-auction reserve tracking |
 | `account-age.ts` | Account age tier restrictions (0-24h €50, 1-7d €200, 7+d €500, verified unlimited) |
@@ -151,7 +156,7 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `validations/` | Zod schemas: `auth`, `auction`, `listing`, `address`, `shipping-method`, `cart` |
 
 ### Database (`prisma/schema.prisma`)
-User, Category, Series, CardSet, Auction, AuctionBid, AuctionShippingMethod, Claimsale, ClaimsaleItem, ClaimsaleShippingMethod, Listing, ListingShippingMethod, ListingUpsell, SellerShippingMethod, ShippingBundle, Transaction, Subscription, Conversation, ConversationParticipant, Message, Proposal, Watchlist, Notification, Review, AppConfig, AutoBid, CartItem, Dispute, DisputeEvent, UsernameHistory, VerificationRequest
+User, Category, Series, CardSet, Auction, AuctionBid, AuctionShippingMethod, AuctionUpsell, Claimsale, ClaimsaleItem, ClaimsaleShippingMethod, Listing, ListingShippingMethod, ListingUpsell, SellerShippingMethod, ShippingBundle, Transaction, Subscription, Conversation, ConversationParticipant, Message, Proposal, Watchlist, Notification, Review, AppConfig, AutoBid, CartItem, Dispute, DisputeEvent, UsernameHistory, VerificationRequest
 
 ### i18n (`src/i18n/`)
 `routing.ts` (locales: nl default, en) · `request.ts` (translations per request) · `navigation.ts` (i18n Link/redirect) · Middleware: `src/middleware.ts`
@@ -171,6 +176,7 @@ User, Category, Series, CardSet, Auction, AuctionBid, AuctionShippingMethod, Cla
 | `cron/auto-resolve-disputes/route.ts` | Auto-resolve unresponded disputes |
 | `cron/check-subscriptions/route.ts` | Downgrade expired subscriptions to FREE |
 | `cron/auction-payment-deadline/route.ts` | Mark expired AWAITING_PAYMENT auctions as PAYMENT_FAILED |
+| `auctions/[auctionId]/bids/route.ts` | Real-time bid polling (GET: currentBid, bidCount, highestBidderId, recentBids) |
 
 ---
 

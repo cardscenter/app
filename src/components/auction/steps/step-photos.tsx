@@ -6,14 +6,18 @@ import type { AuctionType } from "@/types";
 
 const MAX_IMAGES: Record<AuctionType, number> = {
   SINGLE_CARD: 10,
+  MULTI_CARD: 15,
   COLLECTION: 20,
-  BULK: 15,
+  SEALED_PRODUCT: 10,
+  OTHER: 10,
 };
 
 const TIP_KEYS: Record<AuctionType, string> = {
   SINGLE_CARD: "photoTipSingleCard",
+  MULTI_CARD: "photoTipMultiCard",
   COLLECTION: "photoTipCollection",
-  BULK: "photoTipBulk",
+  SEALED_PRODUCT: "photoTipSealed",
+  OTHER: "photoTipOther",
 };
 
 interface StepPhotosProps {
