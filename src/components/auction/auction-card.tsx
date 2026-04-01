@@ -17,7 +17,7 @@ export interface AuctionCardData {
   _count?: { bids: number };
 }
 
-export function AuctionCard({ auction }: { auction: AuctionCardData }) {
+export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; sponsored?: boolean }) {
   const t = useTranslations("auction");
 
   const images = auction.imageUrls ? parseImageUrls(auction.imageUrls) : [];
@@ -26,10 +26,12 @@ export function AuctionCard({ auction }: { auction: AuctionCardData }) {
   return (
     <Link
       href={`/veilingen/${auction.id}`}
-      className="group glass overflow-hidden rounded-2xl transition-all hover:shadow-lg hover:scale-[1.01]"
+      className={`group glass overflow-hidden rounded-2xl transition-all hover:shadow-lg hover:scale-[1.01] ${
+        sponsored ? "glass-sponsored" : ""
+      }`}
     >
       {/* Card image */}
-      <div className="relative h-36 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="relative aspect-square bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
         {firstImage ? (
           <Image src={firstImage} alt={auction.title} fill className="object-cover" />
         ) : (
@@ -58,9 +60,16 @@ export function AuctionCard({ auction }: { auction: AuctionCardData }) {
         <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
           {auction.title}
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {auction.seller.displayName}
-        </p>
+        <div className="mt-1 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {auction.seller.displayName}
+          </p>
+          {sponsored && (
+            <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
+              {t("sponsored")}
+            </span>
+          )}
+        </div>
 
         {/* Price + bids */}
         <div className="mt-4 flex items-end justify-between">

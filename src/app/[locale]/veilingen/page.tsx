@@ -5,27 +5,63 @@ import { Clock, Plus } from "lucide-react";
 import { AuctionCard } from "@/components/auction/auction-card";
 import { SponsoredAuctionRow } from "@/components/auction/sponsored-row";
 import { Pagination } from "@/components/ui/pagination";
+import { AuctionCreatedToast } from "@/components/auction/auction-created-toast";
+import { AuctionSortBar } from "@/components/auction/auction-sort-bar";
 
 const PAGE_SIZE = 40;
+const ROWS_PER_GRID = 4; // 4 columns on desktop
+
+type SortOption = "newest" | "ending" | "highest" | "bids";
+
+// Seeded shuffle — same seed produces same order (consistent per day)
+function seededShuffle<T>(arr: T[], seed: number): T[] {
+  const a = [...arr];
+  let s = seed;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 16807 + 0) % 2147483647;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getOrderBy(sort: SortOption) {
+  switch (sort) {
+    case "ending":
+      return { endTime: "asc" as const };
+    case "highest":
+      return { currentBid: "desc" as const };
+    case "bids":
+      return undefined; // handled in JS
+    case "newest":
+    default:
+      return { createdAt: "desc" as const };
+  }
+}
 
 export default async function AuctionsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string; seed?: string }>;
 }) {
   const { locale } = await params;
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, sort: sortParam, seed: seedParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const sort = (["newest", "ending", "highest", "bids"].includes(sortParam ?? "")
+    ? sortParam
+    : "newest") as SortOption;
+  // Random seed generated on first visit, preserved across sort/page changes
+  const seed = parseInt(seedParam || "0", 10) || Math.floor(Math.random() * 2147483647);
 
   const t = await getTranslations("auction");
   const tc = await getTranslations("common");
 
   const now = new Date();
 
-  // Sponsored auctions (active with CATEGORY_HIGHLIGHT upsell)
-  const sponsoredAuctions = await prisma.auction.findMany({
+  // Fetch all sponsored auctions and shuffle for fairness
+  const sponsoredRaw = await prisma.auction.findMany({
     where: {
       status: "ACTIVE",
       upsells: {
@@ -35,32 +71,30 @@ export default async function AuctionsPage({
         },
       },
     },
-    orderBy: { createdAt: "desc" },
     include: {
       seller: { select: { displayName: true } },
       _count: { select: { bids: true } },
     },
   });
+  const sponsoredAuctions = seededShuffle(sponsoredRaw, seed);
 
-  const sponsoredIds = sponsoredAuctions.map((a) => a.id);
+  // Split sponsored into up to 3 groups of 4
+  const sponsoredTop = sponsoredAuctions.slice(0, 4);
+  const sponsoredMid = sponsoredAuctions.slice(4, 8);
+  const sponsoredBottom = sponsoredAuctions.slice(8, 12);
 
-  // Count non-sponsored active auctions
+  // Count ALL active auctions (sponsored included in main grid now)
   const totalCount = await prisma.auction.count({
-    where: {
-      status: "ACTIVE",
-      ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
-    },
+    where: { status: "ACTIVE" },
   });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // Paginated non-sponsored auctions
-  const auctions = await prisma.auction.findMany({
-    where: {
-      status: "ACTIVE",
-      ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
-    },
-    orderBy: { createdAt: "desc" },
+  // Fetch paginated auctions (including sponsored ones)
+  const orderBy = getOrderBy(sort);
+  let auctions = await prisma.auction.findMany({
+    where: { status: "ACTIVE" },
+    ...(orderBy ? { orderBy } : { orderBy: { createdAt: "desc" } }),
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: {
@@ -69,10 +103,36 @@ export default async function AuctionsPage({
     },
   });
 
-  const hasAuctions = sponsoredAuctions.length > 0 || auctions.length > 0;
+  // Sort by most bids in JS (Prisma can't order by _count directly)
+  if (sort === "bids") {
+    auctions = auctions.sort((a, b) => (b._count.bids ?? 0) - (a._count.bids ?? 0));
+  }
+
+  // For "ending" sort: push expired auctions to the end
+  if (sort === "ending") {
+    auctions = auctions.sort((a, b) => {
+      const aEnd = new Date(a.endTime).getTime();
+      const bEnd = new Date(b.endTime).getTime();
+      const nowMs = now.getTime();
+      const aExpired = aEnd <= nowMs;
+      const bExpired = bEnd <= nowMs;
+      if (aExpired !== bExpired) return aExpired ? 1 : -1;
+      return aEnd - bEnd;
+    });
+  }
+
+  const hasAuctions = auctions.length > 0;
+
+  // Split main grid into chunks of 1 row (4 items) to insert sponsored mid-row
+  const ROW_SIZE = ROWS_PER_GRID;
+  const insertAfterRow = 5; // Insert mid-sponsored after row 5
+
+  const topRows = auctions.slice(0, insertAfterRow * ROW_SIZE);
+  const bottomRows = auctions.slice(insertAfterRow * ROW_SIZE);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <AuctionCreatedToast />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -80,7 +140,7 @@ export default async function AuctionsPage({
             {tc("auctions")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t("activeCount", { count: totalCount + sponsoredAuctions.length })}
+            {t("activeCount", { count: totalCount })}
           </p>
         </div>
         <Link
@@ -90,6 +150,11 @@ export default async function AuctionsPage({
           <Plus className="size-4 mr-1" />
           {t("createTitle")}
         </Link>
+      </div>
+
+      {/* Sort bar */}
+      <div className="mt-6">
+        <AuctionSortBar currentSort={sort} seed={seed} />
       </div>
 
       {!hasAuctions ? (
@@ -107,19 +172,50 @@ export default async function AuctionsPage({
         </div>
       ) : (
         <div className="mt-8">
-          {/* Sponsored row */}
+          {/* Top sponsored row */}
           <SponsoredAuctionRow
-            auctions={sponsoredAuctions}
+            auctions={sponsoredTop}
             title={t("sponsored")}
             tooltip={t("sponsoredTooltip")}
           />
 
-          {/* Main grid */}
+          {/* Main grid — first chunk */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {auctions.map((auction) => (
+            {topRows.map((auction) => (
               <AuctionCard key={auction.id} auction={auction} />
             ))}
           </div>
+
+          {/* Mid sponsored row (after row 5) */}
+          {sponsoredMid.length > 0 && topRows.length >= insertAfterRow * ROW_SIZE && (
+            <div className="mt-8">
+              <SponsoredAuctionRow
+                auctions={sponsoredMid}
+                title={t("sponsored")}
+                tooltip={t("sponsoredTooltip")}
+              />
+            </div>
+          )}
+
+          {/* Main grid — remaining rows */}
+          {bottomRows.length > 0 && (
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {bottomRows.map((auction) => (
+                <AuctionCard key={auction.id} auction={auction} />
+              ))}
+            </div>
+          )}
+
+          {/* Bottom sponsored row */}
+          {sponsoredBottom.length > 0 && (
+            <div className="mt-8">
+              <SponsoredAuctionRow
+                auctions={sponsoredBottom}
+                title={t("sponsored")}
+                tooltip={t("sponsoredTooltip")}
+              />
+            </div>
+          )}
 
           {/* Pagination */}
           <Pagination
@@ -127,6 +223,7 @@ export default async function AuctionsPage({
             totalPages={totalPages}
             baseUrl="/veilingen"
             locale={locale}
+            extraParams={{ seed: String(seed), ...(sort !== "newest" ? { sort } : {}) }}
           />
         </div>
       )}

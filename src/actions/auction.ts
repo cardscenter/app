@@ -132,7 +132,7 @@ export async function createAuction(formData: FormData) {
     );
   }
 
-  redirect(`/nl/veilingen/${auction.id}`);
+  return { success: true, auctionId: auction.id };
 }
 
 export async function placeBid(auctionId: string, amount: number) {
@@ -514,6 +514,9 @@ export async function cancelAutoBid(auctionId: string) {
     where: { userId: session.user.id, auctionId },
     data: { isActive: false },
   });
+
+  // Recalculate reserved balance after deactivating autobid
+  await syncReservedBalance(session.user.id);
 
   return { success: true };
 }

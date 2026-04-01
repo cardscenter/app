@@ -9,6 +9,8 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { SocialShare } from "@/components/ui/social-share";
 import { ItemCarousel } from "@/components/ui/item-carousel";
 import { getSellerOtherItems } from "@/lib/recommendations";
+import { SellerInfoBlock } from "@/components/ui/seller-info-block";
+import { getSellerInfo } from "@/lib/seller-info";
 
 export default async function ClaimsaleDetailPage({
   params,
@@ -39,7 +41,10 @@ export default async function ClaimsaleDetailPage({
   const availableCount = claimsale.items.filter((i) => i.status === "AVAILABLE").length;
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
-  const sellerItems = await getSellerOtherItems(claimsale.sellerId, { claimsaleId: claimsale.id });
+  const [sellerInfo, sellerItems] = await Promise.all([
+    getSellerInfo(claimsale.sellerId),
+    getSellerOtherItems(claimsale.sellerId, { claimsaleId: claimsale.id }),
+  ]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -76,10 +81,12 @@ export default async function ClaimsaleDetailPage({
         {t("shippingNote")}
       </div>
 
-      {/* Social share */}
-      <div className="mt-4">
-        <SocialShare title={claimsale.title} />
-      </div>
+      {/* Seller info */}
+      {sellerInfo && (
+        <div className="mt-6">
+          <SellerInfoBlock seller={sellerInfo} />
+        </div>
+      )}
 
       {/* Items table with client-side filtering */}
       <div className="mt-6">
@@ -102,6 +109,11 @@ export default async function ClaimsaleDetailPage({
           isLive={claimsale.status === "LIVE"}
           hasSession={!!session?.user}
         />
+      </div>
+
+      {/* Social share */}
+      <div className="mt-4">
+        <SocialShare title={claimsale.title} />
       </div>
 
       {/* Carousel */}

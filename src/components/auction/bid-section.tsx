@@ -13,6 +13,8 @@ export function BidSection({
   startingBid,
   buyNowPrice,
   availableBalance,
+  totalBalance,
+  reservedBalance,
   isHighestBidder,
 }: {
   auctionId: string;
@@ -20,16 +22,22 @@ export function BidSection({
   startingBid: number;
   buyNowPrice: number | null;
   availableBalance?: number;
+  totalBalance?: number;
+  reservedBalance?: number;
   isHighestBidder?: boolean;
 }) {
   const t = useTranslations("auction");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [bidWarning, setBidWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showBuyNowConfirm, setShowBuyNowConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const minimumBid = currentBid === null ? startingBid : getMinimumNextBid(currentBid);
+  // Maximum bid: 2.5x available balance (since only 40% is reserved)
+  const maxBid = availableBalance !== undefined ? Math.floor((availableBalance / 0.4) * 100) / 100 : undefined;
+  const hasReservedFunds = (reservedBalance ?? 0) > 0;
 
   async function handleBid(formData: FormData) {
     setLoading(true);
@@ -82,13 +90,31 @@ export function BidSection({
 
       {/* Balance info */}
       {!isHighestBidder && availableBalance !== undefined && (
-        <div className="glass-subtle rounded-xl p-3 text-sm">
+        <div className="glass-subtle rounded-xl p-3 text-sm space-y-2">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Beschikbaar saldo</span>
-            <span className={`font-medium ${availableBalance < minimumBid ? "text-red-500" : "text-foreground"}`}>
+            <span className="text-muted-foreground">{t("availableBalance")}</span>
+            <span className="font-medium text-foreground">
               {"\u20AC"}{availableBalance.toFixed(2)}
             </span>
           </div>
+          {maxBid !== undefined && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t("maxBidAmount")}</span>
+              <span className="font-medium text-foreground">
+                {"\u20AC"}{maxBid.toFixed(2)}
+              </span>
+            </div>
+          )}
+          {hasReservedFunds && (
+            <p className="text-xs text-muted-foreground">
+              {t("balanceReservedInfo", { amount: reservedBalance!.toFixed(2) })}
+            </p>
+          )}
+          {bidWarning && (
+            <p className="text-xs text-red-500 dark:text-red-400">
+              {bidWarning}
+            </p>
+          )}
         </div>
       )}
 
@@ -108,12 +134,20 @@ export function BidSection({
                 step="0.01"
                 min={minimumBid}
                 defaultValue={minimumBid}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (maxBid !== undefined && val > maxBid) {
+                    setBidWarning(t("bidTooHighWarning", { max: maxBid.toFixed(2) }));
+                  } else {
+                    setBidWarning(null);
+                  }
+                }}
                 className="block w-full glass-input px-3 py-2.5 text-foreground"
               />
             </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!bidWarning}
               className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
             >
               {t("placeBid")}

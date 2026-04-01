@@ -14,6 +14,9 @@ import { SocialShare } from "@/components/ui/social-share";
 import { ItemCarousel } from "@/components/ui/item-carousel";
 import { getSellerOtherItems, getSimilarItems } from "@/lib/recommendations";
 import { LiveAuctionContent } from "@/components/auction/live-auction-content";
+import { ContactSellerButton } from "@/components/message/contact-seller-button";
+import { SellerInfoBlock } from "@/components/ui/seller-info-block";
+import { getSellerInfo } from "@/lib/seller-info";
 
 export default async function AuctionDetailPage({
   params,
@@ -50,16 +53,17 @@ export default async function AuctionDetailPage({
   const currentUser = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { balance: true, reservedBalance: true },
+        select: { balance: true, reservedBalance: true, heldBalance: true },
       })
     : null;
   const userAvailableBalance = currentUser
     ? currentUser.balance - currentUser.reservedBalance
     : 0;
 
-  const [watched, existingAutoBid, sellerItems, similarItems] = await Promise.all([
+  const [watched, existingAutoBid, sellerInfo, sellerItems, similarItems] = await Promise.all([
     session?.user ? isWatched({ auctionId: auction.id }) : false,
     session?.user && !isOwner ? getAutoBid(auction.id) : null,
+    getSellerInfo(auction.sellerId),
     getSellerOtherItems(auction.sellerId, { auctionId: auction.id }),
     getSimilarItems({
       cardSetId: auction.cardSetId,
@@ -141,26 +145,31 @@ export default async function AuctionDetailPage({
         </div>
 
         {/* Right: Live bidding sidebar */}
-        <LiveAuctionContent
-          auctionId={auction.id}
-          sellerId={auction.sellerId}
-          currentUserId={session?.user?.id ?? null}
-          isOwner={isOwner}
-          initialCurrentBid={auction.currentBid}
-          startingBid={auction.startingBid}
-          buyNowPrice={auction.buyNowPrice}
-          endTime={auction.endTime.toISOString()}
-          status={auction.status}
-          reservePrice={auction.reservePrice}
-          initialBids={initialBids}
-          initialBidCount={auction.bids.length}
-          initialHighestBidderId={highestBidderId}
-          existingAutoBid={existingAutoBid ? { maxAmount: existingAutoBid.maxAmount, isActive: existingAutoBid.isActive } : null}
-          availableBalance={userAvailableBalance}
-        />
+        <div className="space-y-4">
+          <LiveAuctionContent
+            auctionId={auction.id}
+            currentUserId={session?.user?.id ?? null}
+            isOwner={isOwner}
+            initialCurrentBid={auction.currentBid}
+            startingBid={auction.startingBid}
+            buyNowPrice={auction.buyNowPrice}
+            endTime={auction.endTime.toISOString()}
+            status={auction.status}
+            reservePrice={auction.reservePrice}
+            initialBids={initialBids}
+            initialBidCount={auction.bids.length}
+            initialHighestBidderId={highestBidderId}
+            existingAutoBid={existingAutoBid ? { maxAmount: existingAutoBid.maxAmount, isActive: existingAutoBid.isActive } : null}
+            availableBalance={userAvailableBalance}
+            totalBalance={currentUser?.balance ?? 0}
+            reservedBalance={currentUser?.reservedBalance ?? 0}
+          >
+            {sellerInfo && <SellerInfoBlock seller={sellerInfo} />}
+            {!isOwner && session?.user && (
+              <ContactSellerButton sellerId={auction.sellerId} auctionId={auction.id} />
+            )}
+          </LiveAuctionContent>
 
-        {/* Social share */}
-        <div className="lg:col-span-1">
           <div className="glass-subtle rounded-2xl p-4">
             <SocialShare title={auction.title} />
           </div>

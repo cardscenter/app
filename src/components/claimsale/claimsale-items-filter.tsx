@@ -96,13 +96,13 @@ export function ClaimsaleItemsFilter({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={ts("placeholder")}
-            className="w-full rounded-md border border-border bg-white pl-9 pr-3 py-1.5 text-sm"
+            className="w-full rounded-md border border-border bg-background pl-9 pr-3 py-1.5 text-sm text-foreground"
           />
         </div>
         <select
           value={conditionFilter}
           onChange={(e) => setConditionFilter(e.target.value)}
-          className="rounded-md border border-border bg-white px-3 py-1.5 text-sm"
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
         >
           <option value="">{ts("allConditions")}</option>
           {conditions.map((c) => (
@@ -114,7 +114,7 @@ export function ClaimsaleItemsFilter({
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortKey)}
-          className="rounded-md border border-border bg-white px-3 py-1.5 text-sm"
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
         >
           <option value="name">{t("cardName")}</option>
           <option value="price_asc">{ts("sortPriceLow")}</option>

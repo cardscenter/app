@@ -8,7 +8,7 @@ interface DepositMethodsProps {
 }
 
 const PLACEHOLDER_IBAN = "NL00 ABNA 0000 0000 00";
-const PLACEHOLDER_NAME = "TCG Marketplace B.V.";
+const PLACEHOLDER_NAME = "Cards Center B.V.";
 
 export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
   const t = useTranslations("wallet");

@@ -7,6 +7,7 @@ import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Toaster } from "sonner";
 import "../globals.css";
 
 const poppins = Poppins({
@@ -28,7 +29,7 @@ const libreBaskerville = Libre_Baskerville({
 });
 
 export const metadata: Metadata = {
-  title: "TCG Marktplaats",
+  title: "Cards Center",
   description:
     "Koop, verkoop en veil Pokémon trading cards",
 };
@@ -65,6 +66,7 @@ export default async function LocaleLayout({
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />
+            <Toaster position="bottom-center" richColors />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

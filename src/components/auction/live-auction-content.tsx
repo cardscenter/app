@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { BidSection } from "./bid-section";
 import { AutoBidForm } from "./autobid-form";
 import { CountdownTimer } from "./countdown-timer";
-import { ContactSellerButton } from "@/components/message/contact-seller-button";
-import { ArrowUp } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import { ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface BidEntry {
   id: string;
@@ -28,7 +28,6 @@ interface BidData {
 
 interface LiveAuctionContentProps {
   auctionId: string;
-  sellerId: string;
   currentUserId: string | null;
   isOwner: boolean;
   initialCurrentBid: number | null;
@@ -42,11 +41,13 @@ interface LiveAuctionContentProps {
   initialHighestBidderId: string | null;
   existingAutoBid: { maxAmount: number; isActive: boolean } | null;
   availableBalance: number;
+  totalBalance: number;
+  reservedBalance: number;
+  children?: React.ReactNode;
 }
 
 export function LiveAuctionContent({
   auctionId,
-  sellerId,
   currentUserId,
   isOwner,
   initialCurrentBid,
@@ -60,8 +61,13 @@ export function LiveAuctionContent({
   initialHighestBidderId,
   existingAutoBid,
   availableBalance,
+  totalBalance,
+  reservedBalance,
+  children,
 }: LiveAuctionContentProps) {
   const t = useTranslations("auction");
+  const [bidPage, setBidPage] = useState(0);
+  const BIDS_PER_PAGE = 5;
 
   const [bidData, setBidData] = useState<BidData>({
     currentBid: initialCurrentBid,
@@ -221,8 +227,23 @@ export function LiveAuctionContent({
 
           {/* Highest bidder banner */}
           {isActive && !isOwner && currentUserId && isHighestBidder && (
-            <div className="mt-4 rounded-xl bg-green-50 px-4 py-3 text-center text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
-              {t("youAreHighestBidder")}
+            <div className="mt-4 space-y-2">
+              <div className="rounded-xl bg-green-50 px-4 py-3 text-center text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                {t("youAreHighestBidder")}
+              </div>
+              {bidData.currentBid !== null && bidData.currentBid > totalBalance && (
+                <div className="rounded-xl border border-dashed border-amber-400/60 bg-amber-50/50 px-4 py-3 dark:bg-amber-950/20">
+                  <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                    {t.rich("bidExceedsBalanceWarning", {
+                      link: (chunks) => (
+                        <Link href="/dashboard/saldo" className="underline font-medium hover:text-amber-700 dark:hover:text-amber-300">
+                          {chunks}
+                        </Link>
+                      ),
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -243,6 +264,8 @@ export function LiveAuctionContent({
                 buyNowPrice={bidData.buyNowPrice}
                 isHighestBidder={isHighestBidder}
                 availableBalance={availableBalance}
+                totalBalance={totalBalance}
+                reservedBalance={reservedBalance}
               />
               <AutoBidForm
                 auctionId={auctionId}
@@ -259,15 +282,6 @@ export function LiveAuctionContent({
             </p>
           )}
 
-          {!isOwner && currentUserId && (
-            <div className="mt-4">
-              <ContactSellerButton
-                sellerId={sellerId}
-                auctionId={auctionId}
-              />
-            </div>
-          )}
-
           {bidData.status !== "ACTIVE" && (
             <div className="mt-4 text-center">
               <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
@@ -278,45 +292,82 @@ export function LiveAuctionContent({
         </div>
       </div>
 
+      {/* Slot for seller info etc. */}
+      {children}
+
       {/* Bid history */}
-      <div className="lg:col-span-2">
+      <div>
         <h2 className="text-lg font-semibold text-foreground">
           {t("bidHistory")}
         </h2>
         {bidData.recentBids.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">{t("noBids")}</p>
         ) : (
-          <div className="mt-3 space-y-2">
-            {bidData.recentBids.map((bid, i) => (
-              <div
-                key={bid.id}
-                className={`flex items-center justify-between rounded-xl px-4 py-3 transition-all duration-300 ${
-                  i === 0
-                    ? `glass bg-primary-light/50 dark:bg-primary/10 ${
-                        hasNewBid ? "ring-2 ring-primary/30" : ""
-                      }`
-                    : "glass-subtle"
-                }`}
-              >
-                <span className="text-sm font-medium text-foreground">
-                  {bid.bidderName}
+          <>
+            <div className="mt-3 space-y-2">
+              {bidData.recentBids
+                .slice(bidPage * BIDS_PER_PAGE, (bidPage + 1) * BIDS_PER_PAGE)
+                .map((bid, i) => {
+                  const globalIndex = bidPage * BIDS_PER_PAGE + i;
+                  return (
+                    <div
+                      key={bid.id}
+                      className={`flex items-center justify-between rounded-xl px-4 py-3 transition-all duration-300 ${
+                        globalIndex === 0
+                          ? `glass bg-primary-light/50 dark:bg-primary/10 ${
+                              hasNewBid ? "ring-2 ring-primary/30" : ""
+                            }`
+                          : "glass-subtle"
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-foreground">
+                        {bid.bidderName}
+                      </span>
+                      <div className="text-right">
+                        <span
+                          className={`font-semibold ${
+                            globalIndex === 0 ? "text-primary" : "text-foreground"
+                          }`}
+                        >
+                          {"\u20AC"}
+                          {bid.amount.toFixed(2)}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(bid.createdAt).toLocaleString("nl-NL")}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+            {bidData.recentBids.length > BIDS_PER_PAGE && (
+              <div className="mt-3 flex items-center justify-between">
+                <button
+                  onClick={() => setBidPage((p) => Math.max(0, p - 1))}
+                  disabled={bidPage === 0}
+                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  {t("previous")}
+                </button>
+                <span className="text-xs text-muted-foreground">
+                  {bidPage + 1}/{Math.ceil(bidData.recentBids.length / BIDS_PER_PAGE)}
                 </span>
-                <div className="text-right">
-                  <span
-                    className={`font-semibold ${
-                      i === 0 ? "text-primary" : "text-foreground"
-                    }`}
-                  >
-                    {"\u20AC"}
-                    {bid.amount.toFixed(2)}
-                  </span>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(bid.createdAt).toLocaleString("nl-NL")}
-                  </p>
-                </div>
+                <button
+                  onClick={() =>
+                    setBidPage((p) =>
+                      Math.min(Math.ceil(bidData.recentBids.length / BIDS_PER_PAGE) - 1, p + 1)
+                    )
+                  }
+                  disabled={bidPage >= Math.ceil(bidData.recentBids.length / BIDS_PER_PAGE) - 1}
+                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  {t("next")}
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useState, useRef, useEffect } from "react";
+import { useActionState, useState, useRef, useEffect, useTransition } from "react";
 import { createAuction } from "@/actions/auction";
 import { useRouter } from "@/i18n/navigation";
 import { Eye } from "lucide-react";
@@ -76,6 +76,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
   const [showPreview, setShowPreview] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
+  const [, startTransition] = useTransition();
 
   const [actionState, formAction, pending] = useActionState(
     async (_prev: { error?: string; success?: boolean; auctionId?: string } | null | undefined, formData: FormData) => {
@@ -89,7 +90,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
   useEffect(() => {
     const state = actionState as { success?: boolean; auctionId?: string } | null;
     if (state?.success && state.auctionId) {
-      router.push(`/veilingen/${state.auctionId}`);
+      router.push("/veilingen?created=1");
     }
   }, [actionState, router]);
 
@@ -117,7 +118,9 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     if (form.selectedShippingMethods.length > 0) formData.set("shippingMethodIds", JSON.stringify(form.selectedShippingMethods));
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
 
-    formAction(formData);
+    startTransition(() => {
+      formAction(formData);
+    });
   };
 
   // Preview modal

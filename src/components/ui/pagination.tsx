@@ -9,9 +9,10 @@ interface PaginationProps {
   totalPages: number;
   baseUrl: string;
   locale: string;
+  extraParams?: Record<string, string>;
 }
 
-export function Pagination({ currentPage, totalPages, baseUrl, locale }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, baseUrl, locale, extraParams }: PaginationProps) {
   const t = useTranslations("listing");
 
   if (totalPages <= 1) return null;
@@ -27,7 +28,10 @@ export function Pagination({ currentPage, totalPages, baseUrl, locale }: Paginat
   }
 
   function pageUrl(page: number) {
-    return page === 1 ? `/${locale}${baseUrl}` : `/${locale}${baseUrl}?page=${page}`;
+    const params = new URLSearchParams(extraParams);
+    if (page > 1) params.set("page", String(page));
+    const qs = params.toString();
+    return `/${locale}${baseUrl}${qs ? `?${qs}` : ""}`;
   }
 
   return (
