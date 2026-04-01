@@ -134,32 +134,38 @@ export function BidSection({
       )}
 
       {/* Buy now confirmation */}
-      {buyNowPrice && showBuyNowConfirm && (
-        <div className="glass-subtle rounded-2xl border-2 border-primary/30 p-4 space-y-3">
-          <p className="text-sm font-medium text-foreground text-center">
-            {t("buyNowConfirmTitle")}
-          </p>
-          <p className="text-xs text-muted-foreground text-center">
-            {t("buyNowConfirmMessage", { price: buyNowPrice.toFixed(2) })}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowBuyNowConfirm(false)}
-              disabled={loading}
-              className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50 transition-all"
-            >
-              {t("buyNowCancel")}
-            </button>
-            <button
-              onClick={handleBuyNowConfirmed}
-              disabled={loading}
-              className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
-            >
-              {t("buyNowConfirm")}
-            </button>
+      {buyNowPrice && showBuyNowConfirm && (() => {
+        const canPayFull = availableBalance !== undefined && availableBalance >= buyNowPrice;
+        const reserveAmount = Math.round(buyNowPrice * 0.4 * 100) / 100;
+        return (
+          <div className="glass-subtle rounded-2xl border-2 border-primary/30 p-4 space-y-3">
+            <p className="text-sm font-medium text-foreground text-center">
+              {t("buyNowConfirmTitle")}
+            </p>
+            <p className="text-xs text-muted-foreground text-center">
+              {canPayFull
+                ? t("buyNowConfirmMessage", { price: buyNowPrice.toFixed(2) })
+                : t("buyNowConfirmPartial", { price: buyNowPrice.toFixed(2), reserve: reserveAmount.toFixed(2) })}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowBuyNowConfirm(false)}
+                disabled={loading}
+                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50 transition-all"
+              >
+                {t("buyNowCancel")}
+              </button>
+              <button
+                onClick={handleBuyNowConfirmed}
+                disabled={loading}
+                className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
+              >
+                {t("buyNowConfirm")}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

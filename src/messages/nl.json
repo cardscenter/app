@@ -123,6 +123,7 @@
     "buyNow": "Direct Kopen",
     "buyNowConfirmTitle": "Direct kopen bevestigen",
     "buyNowConfirmMessage": "Weet je zeker dat je dit item direct wilt kopen voor \u20AC{price}? Dit bedrag wordt direct van je saldo afgeschreven.",
+    "buyNowConfirmPartial": "Weet je zeker dat je dit item direct wilt kopen voor \u20AC{price}? Er wordt 40% van dit bedrag (\u20AC{reserve}) vastgehouden totdat je het kavel hebt afgerekend. Je hebt hiervoor 5 dagen de tijd.",
     "buyNowConfirm": "Ja, kopen",
     "buyNowCancel": "Annuleren",
     "minimumBid": "Minimaal bod",

@@ -123,6 +123,7 @@
     "buyNow": "Buy Now",
     "buyNowConfirmTitle": "Confirm Buy Now",
     "buyNowConfirmMessage": "Are you sure you want to buy this item for \u20AC{price}? This amount will be deducted from your balance immediately.",
+    "buyNowConfirmPartial": "Are you sure you want to buy this item for \u20AC{price}? 40% of this amount (\u20AC{reserve}) will be held until you complete payment. You have 5 days to pay.",
     "buyNowConfirm": "Yes, buy now",
     "buyNowCancel": "Cancel",
     "minimumBid": "Minimum bid",

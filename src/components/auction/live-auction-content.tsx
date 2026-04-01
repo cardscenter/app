@@ -41,6 +41,7 @@ interface LiveAuctionContentProps {
   initialBidCount: number;
   initialHighestBidderId: string | null;
   existingAutoBid: { maxAmount: number; isActive: boolean } | null;
+  availableBalance: number;
 }
 
 export function LiveAuctionContent({
@@ -58,6 +59,7 @@ export function LiveAuctionContent({
   initialBidCount,
   initialHighestBidderId,
   existingAutoBid,
+  availableBalance,
 }: LiveAuctionContentProps) {
   const t = useTranslations("auction");
 
@@ -240,6 +242,7 @@ export function LiveAuctionContent({
                 startingBid={bidData.startingBid}
                 buyNowPrice={bidData.buyNowPrice}
                 isHighestBidder={isHighestBidder}
+                availableBalance={availableBalance}
               />
               <AutoBidForm
                 auctionId={auctionId}

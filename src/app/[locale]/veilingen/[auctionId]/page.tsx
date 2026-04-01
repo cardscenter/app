@@ -45,6 +45,18 @@ export default async function AuctionDetailPage({
   const isOwner = session?.user?.id === auction.sellerId;
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
+
+  // Get user's available balance for buy now confirmation
+  const currentUser = session?.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { balance: true, reservedBalance: true },
+      })
+    : null;
+  const userAvailableBalance = currentUser
+    ? currentUser.balance - currentUser.reservedBalance
+    : 0;
+
   const [watched, existingAutoBid, sellerItems, similarItems] = await Promise.all([
     session?.user ? isWatched({ auctionId: auction.id }) : false,
     session?.user && !isOwner ? getAutoBid(auction.id) : null,
@@ -144,6 +156,7 @@ export default async function AuctionDetailPage({
           initialBidCount={auction.bids.length}
           initialHighestBidderId={highestBidderId}
           existingAutoBid={existingAutoBid ? { maxAmount: existingAutoBid.maxAmount, isActive: existingAutoBid.isActive } : null}
+          availableBalance={userAvailableBalance}
         />
 
         {/* Social share */}

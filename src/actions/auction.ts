@@ -240,25 +240,15 @@ export async function buyNow(auctionId: string) {
   if (auction.sellerId === session.user.id) return { error: "Je kunt niet je eigen veiling kopen" };
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || user.balance < auction.buyNowPrice) {
-    return { error: "Onvoldoende saldo" };
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  const available = getAvailableBalance(user);
+  const reserveNeeded = calculateReserveAmount(auction.buyNowPrice);
+
+  // Need at least 40% to proceed
+  if (available < reserveNeeded) {
+    return { error: `Onvoldoende saldo. Je hebt minimaal €${reserveNeeded.toFixed(2)} (40%) nodig.` };
   }
-
-  // Deduct from buyer (100% — direct purchase)
-  await deductBalance(session.user.id, auction.buyNowPrice, "PURCHASE", `Direct gekocht: ${auction.title}`, auctionId);
-
-  // Escrow for seller
-  await escrowCredit(auction.sellerId, auction.buyNowPrice, `Verkocht (direct kopen): ${auction.title}`);
-
-  // Update auction
-  await prisma.auction.update({
-    where: { id: auctionId },
-    data: {
-      status: "BOUGHT_NOW",
-      winnerId: session.user.id,
-      finalPrice: auction.buyNowPrice,
-    },
-  });
 
   // Release reserves for ALL other bidders on this auction
   const allBidderIds = await prisma.auctionBid.findMany({
@@ -266,8 +256,80 @@ export async function buyNow(auctionId: string) {
     select: { bidderId: true },
     distinct: ["bidderId"],
   });
+
+  if (available >= auction.buyNowPrice) {
+    // Full payment — immediate purchase
+    await deductBalance(session.user.id, auction.buyNowPrice, "PURCHASE", `Direct gekocht: ${auction.title}`, auctionId);
+    await escrowCredit(auction.sellerId, auction.buyNowPrice, `Verkocht (direct kopen): ${auction.title}`);
+
+    // Check buyer has address for shipping bundle
+    const hasAddress = user.street && user.postalCode && user.city;
+
+    await prisma.auction.update({
+      where: { id: auctionId },
+      data: {
+        status: "BOUGHT_NOW",
+        winnerId: session.user.id,
+        finalPrice: auction.buyNowPrice,
+        paymentStatus: "PAID",
+      },
+    });
+
+    // Create ShippingBundle if address available
+    if (hasAddress) {
+      await prisma.shippingBundle.create({
+        data: {
+          buyerId: session.user.id,
+          sellerId: auction.sellerId,
+          shippingCost: 0,
+          totalItemCost: auction.buyNowPrice,
+          totalCost: auction.buyNowPrice,
+          status: "PAID",
+          auctionId,
+          buyerStreet: user.street!,
+          buyerHouseNumber: user.houseNumber,
+          buyerPostalCode: user.postalCode!,
+          buyerCity: user.city!,
+          buyerCountry: user.country,
+        },
+      });
+    }
+  } else {
+    // Partial payment — reserve 40%, give 5-day deadline
+    const paymentDeadline = new Date();
+    paymentDeadline.setDate(paymentDeadline.getDate() + 5);
+
+    await prisma.auction.update({
+      where: { id: auctionId },
+      data: {
+        status: "BOUGHT_NOW",
+        winnerId: session.user.id,
+        finalPrice: auction.buyNowPrice,
+        paymentStatus: "AWAITING_PAYMENT",
+        paymentDeadline,
+      },
+    });
+
+    // Reserve 40% by creating a bid record so syncReservedBalance picks it up
+    await prisma.auctionBid.create({
+      data: { auctionId, bidderId: session.user.id, amount: auction.buyNowPrice },
+    });
+    await syncReservedBalance(session.user.id);
+
+    await createNotification(
+      session.user.id,
+      "AUCTION_WIN",
+      "Direct gekocht — betaling vereist",
+      `Je hebt "${auction.title}" direct gekocht voor €${auction.buyNowPrice.toFixed(2)}. Rond de betaling af binnen 5 dagen.`,
+      `/nl/dashboard/biedingen`
+    );
+  }
+
+  // Release reserves for all other bidders
   for (const { bidderId } of allBidderIds) {
-    await syncReservedBalance(bidderId);
+    if (bidderId !== session.user.id) {
+      await syncReservedBalance(bidderId);
+    }
   }
 
   return { success: true };
