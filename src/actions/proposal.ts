@@ -16,7 +16,6 @@ export async function createProposal(
 
   if (amount <= 0) return { error: "Bedrag moet groter zijn dan 0" };
 
-  // Verify conversation exists and has a listing
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     include: {
@@ -26,32 +25,31 @@ export async function createProposal(
   });
 
   if (!conversation) return { error: "Gesprek niet gevonden" };
-  if (!conversation.listing) return { error: "Dit gesprek is niet gekoppeld aan een advertentie" };
-  if (conversation.listing.status !== "ACTIVE") return { error: "Deze advertentie is niet meer beschikbaar" };
 
   // Verify user is participant
   const isParticipant = conversation.participants.some((p) => p.userId === session.user!.id);
   if (!isParticipant) return { error: "Niet geautoriseerd" };
 
-  // Verify correct party: buyer can only BUY, seller can only SELL
-  const isSeller = conversation.listing.sellerId === session.user.id;
-  if (type === "BUY" && isSeller) return { error: "Als verkoper kun je alleen een verkoopvoorstel doen" };
-  if (type === "SELL" && !isSeller) return { error: "Als koper kun je alleen een koopvoorstel doen" };
+  // If listing context: validate seller/buyer roles
+  if (conversation.listing) {
+    if (conversation.listing.status !== "ACTIVE") return { error: "Deze advertentie is niet meer beschikbaar" };
+    const isSeller = conversation.listing.sellerId === session.user.id;
+    if (type === "BUY" && isSeller) return { error: "Als verkoper kun je alleen een verkoopvoorstel doen" };
+    if (type === "SELL" && !isSeller) return { error: "Als koper kun je alleen een koopvoorstel doen" };
+  }
 
-  // Check no pending proposal exists
+  // Check no pending proposal exists in this conversation
   const existingPending = await prisma.proposal.findFirst({
     where: {
       conversationId,
-      listingId: conversation.listing.id,
       status: "PENDING",
     },
   });
-  if (existingPending) return { error: "Er is al een openstaand voorstel voor deze advertentie" };
+  if (existingPending) return { error: "Er is al een openstaand betaalverzoek in dit gesprek" };
 
-  // Create proposal
   const proposal = await prisma.proposal.create({
     data: {
-      listingId: conversation.listing.id,
+      listingId: conversation.listing?.id,
       conversationId,
       proposerId: session.user.id,
       amount: Math.round(amount * 100) / 100,
@@ -70,7 +68,6 @@ export async function createProposal(
     },
   });
 
-  // Update conversation timestamp
   await prisma.conversation.update({
     where: { id: conversationId },
     data: { updatedAt: new Date() },
@@ -78,17 +75,60 @@ export async function createProposal(
 
   // Notify the other party
   const otherUserId = conversation.participants.find((p) => p.userId !== session.user!.id)?.userId;
+  const contextTitle = conversation.listing?.title ?? "Betaalverzoek";
   if (otherUserId) {
     await createNotification(
       otherUserId,
       "NEW_MESSAGE",
       type === "BUY" ? "Nieuw koopvoorstel" : "Nieuw verkoopvoorstel",
-      `Voorstel van €${amount.toFixed(2)} voor "${conversation.listing.title}"`,
+      `Voorstel van €${amount.toFixed(2)} voor "${contextTitle}"`,
       `/nl/berichten/${conversationId}`
     );
   }
 
   return { success: true, proposalId: proposal.id };
+}
+
+export async function getProposalBalanceInfo(proposalId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const proposal = await prisma.proposal.findUnique({
+    where: { id: proposalId },
+    include: {
+      listing: { select: { shippingCost: true } },
+      conversation: { include: { participants: true } },
+    },
+  });
+
+  if (!proposal) return { error: "Niet gevonden" };
+
+  // Determine buyer
+  const isBuyProposal = proposal.type === "BUY";
+  const buyerId = isBuyProposal
+    ? proposal.proposerId
+    : proposal.conversation.participants.find((p) => p.userId !== proposal.proposerId)?.userId;
+
+  if (!buyerId) return { error: "Koper niet gevonden" };
+
+  const buyer = await prisma.user.findUnique({
+    where: { id: buyerId },
+    select: { balance: true, reservedBalance: true },
+  });
+  if (!buyer) return { error: "Koper niet gevonden" };
+
+  const shippingCost = proposal.listing?.shippingCost ?? 0;
+  const totalCost = proposal.amount + shippingCost;
+  const availableBalance = buyer.balance - buyer.reservedBalance;
+  const hasSufficientBalance = availableBalance >= totalCost;
+
+  return {
+    totalCost,
+    shippingCost,
+    availableBalance,
+    hasSufficientBalance,
+    buyerId,
+  };
 }
 
 export async function respondToProposal(
@@ -112,11 +152,8 @@ export async function respondToProposal(
 
   if (!proposal) return { error: "Voorstel niet gevonden" };
   if (proposal.status !== "PENDING") return { error: "Dit voorstel is al beantwoord" };
-
-  // Verify responder is the OTHER party (not the proposer)
   if (proposal.proposerId === session.user.id) return { error: "Je kunt je eigen voorstel niet beantwoorden" };
 
-  // Verify responder is participant
   const isParticipant = proposal.conversation.participants.some((p) => p.userId === session.user!.id);
   if (!isParticipant) return { error: "Niet geautoriseerd" };
 
@@ -126,12 +163,12 @@ export async function respondToProposal(
       data: { status: "REJECTED", respondedAt: new Date() },
     });
 
-    // Notify proposer
+    const contextTitle = proposal.listing?.title ?? "betaalverzoek";
     await createNotification(
       proposal.proposerId,
       "NEW_MESSAGE",
       "Voorstel afgewezen",
-      `Je voorstel van €${proposal.amount.toFixed(2)} voor "${proposal.listing.title}" is afgewezen.`,
+      `Je voorstel van €${proposal.amount.toFixed(2)} voor "${contextTitle}" is afgewezen.`,
       `/nl/berichten/${proposal.conversationId}`
     );
 
@@ -139,21 +176,19 @@ export async function respondToProposal(
   }
 
   // ACCEPT flow
-  // Determine buyer and seller
   const isBuyProposal = proposal.type === "BUY";
   const buyerId = isBuyProposal ? proposal.proposerId : session.user.id;
-  const sellerId = proposal.listing.sellerId;
+  const sellerId = proposal.listing
+    ? proposal.listing.sellerId
+    : proposal.conversation.participants.find((p) => p.userId !== buyerId)?.userId;
 
-  // Verify listing is still active
-  if (proposal.listing.status !== "ACTIVE") {
-    return { error: "Deze advertentie is niet meer beschikbaar" };
-  }
+  if (!sellerId) return { error: "Verkoper niet gevonden" };
 
   const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
   if (!buyer) return { error: "Koper niet gevonden" };
 
   const amount = proposal.amount;
-  const shippingCost = proposal.listing.shippingCost;
+  const shippingCost = proposal.listing?.shippingCost ?? 0;
   const totalCost = amount + shippingCost;
 
   // Account age check
@@ -161,52 +196,58 @@ export async function respondToProposal(
   if (!ageCheck.allowed) return { error: ageCheck.error! };
 
   const availableBalance = buyer.balance - buyer.reservedBalance;
-  const minimumRequired = totalCost * 0.4;
 
-  if (availableBalance < minimumRequired) {
-    return { error: `Onvoldoende saldo. Minimaal 40% (€${minimumRequired.toFixed(2)}) is vereist.` };
+  // For proposals WITHOUT a listing, no 40% minimum — just accept and set deadline if needed
+  // For proposals WITH a listing, require 40% minimum
+  if (proposal.listing) {
+    const minimumRequired = totalCost * 0.4;
+    if (availableBalance < minimumRequired) {
+      return { error: `Onvoldoende saldo. Minimaal 40% (€${minimumRequired.toFixed(2)}) is vereist.` };
+    }
   }
 
-  // Check buyer has address
-  if (!buyer.street || !buyer.postalCode || !buyer.city) {
+  // Check buyer has address (only for listing-based proposals with shipping)
+  if (proposal.listing && (!buyer.street || !buyer.postalCode || !buyer.city)) {
     return { error: "De koper moet eerst een adres invullen via Dashboard → Verzending" };
   }
 
+  const contextTitle = proposal.listing?.title ?? "betaalverzoek";
+
   if (availableBalance >= totalCost) {
     // Full payment: immediate purchase
-    await deductBalance(buyerId, totalCost, "PURCHASE", `Gekocht via voorstel: ${proposal.listing.title}`, undefined, undefined, proposal.listing.id);
-    await escrowCredit(sellerId, totalCost, `Verkocht via voorstel (escrow): ${proposal.listing.title}`);
+    await deductBalance(buyerId, totalCost, "PURCHASE", `Betaalverzoek: ${contextTitle}`, undefined, undefined, proposal.listing?.id);
+    await escrowCredit(sellerId, totalCost, `Betaalverzoek (escrow): ${contextTitle}`);
 
-    // Mark listing as sold
-    await prisma.listing.update({
-      where: { id: proposal.listing.id },
-      data: { status: "SOLD", buyerId },
-    });
+    if (proposal.listing) {
+      await prisma.listing.update({
+        where: { id: proposal.listing.id },
+        data: { status: "SOLD", buyerId },
+      });
 
-    // Create ShippingBundle
-    await prisma.shippingBundle.create({
-      data: {
-        buyerId,
-        sellerId,
-        shippingCost,
-        totalItemCost: amount,
-        totalCost,
-        status: "PAID",
-        listingId: proposal.listing.id,
-        buyerStreet: buyer.street,
-        buyerHouseNumber: buyer.houseNumber,
-        buyerPostalCode: buyer.postalCode,
-        buyerCity: buyer.city,
-        buyerCountry: buyer.country,
-      },
-    });
+      await prisma.shippingBundle.create({
+        data: {
+          buyerId,
+          sellerId,
+          shippingCost,
+          totalItemCost: amount,
+          totalCost,
+          status: "PAID",
+          listingId: proposal.listing.id,
+          buyerStreet: buyer.street,
+          buyerHouseNumber: buyer.houseNumber,
+          buyerPostalCode: buyer.postalCode,
+          buyerCity: buyer.city,
+          buyerCountry: buyer.country,
+        },
+      });
+    }
 
     await prisma.proposal.update({
       where: { id: proposalId },
       data: { status: "ACCEPTED", respondedAt: new Date(), paymentStatus: "PAID" },
     });
   } else {
-    // Partial balance (>= 40%): set payment deadline (5 days)
+    // Partial/no balance: set payment deadline (5 days)
     const paymentDeadline = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
     await prisma.proposal.update({
@@ -219,11 +260,12 @@ export async function respondToProposal(
       },
     });
 
-    // Mark listing as sold with buyer
-    await prisma.listing.update({
-      where: { id: proposal.listing.id },
-      data: { status: "SOLD", buyerId },
-    });
+    if (proposal.listing) {
+      await prisma.listing.update({
+        where: { id: proposal.listing.id },
+        data: { status: "SOLD", buyerId },
+      });
+    }
   }
 
   // Notify both parties
@@ -231,16 +273,16 @@ export async function respondToProposal(
     proposal.proposerId,
     "ITEM_SOLD",
     "Voorstel geaccepteerd!",
-    `Het voorstel van €${amount.toFixed(2)} voor "${proposal.listing.title}" is geaccepteerd.`,
+    `Het voorstel van €${amount.toFixed(2)} voor "${contextTitle}" is geaccepteerd.`,
     `/nl/berichten/${proposal.conversationId}`
   );
 
   await createNotification(
     sellerId,
     "ITEM_SOLD",
-    "Advertentie verkocht!",
-    `"${proposal.listing.title}" is verkocht voor €${amount.toFixed(2)}.`,
-    `/nl/marktplaats/${proposal.listing.id}`
+    "Betaalverzoek geaccepteerd!",
+    `"${contextTitle}" — €${amount.toFixed(2)} is geaccepteerd.`,
+    proposal.listing ? `/nl/marktplaats/${proposal.listing.id}` : `/nl/berichten/${proposal.conversationId}`
   );
 
   return { success: true, status: "ACCEPTED" };
@@ -263,21 +305,20 @@ export async function completeProposalPayment(proposalId: string) {
     return { error: "Dit voorstel wacht niet op betaling" };
   }
 
-  // Check deadline
   if (proposal.paymentDeadline && new Date() > proposal.paymentDeadline) {
     await prisma.proposal.update({
       where: { id: proposalId },
       data: { paymentStatus: "PAYMENT_FAILED" },
     });
-    // Re-activate listing
-    await prisma.listing.update({
-      where: { id: proposal.listing.id },
-      data: { status: "ACTIVE", buyerId: null },
-    });
+    if (proposal.listing) {
+      await prisma.listing.update({
+        where: { id: proposal.listing.id },
+        data: { status: "ACTIVE", buyerId: null },
+      });
+    }
     return { error: "De betalingsdeadline is verlopen" };
   }
 
-  // Determine buyer
   const buyerId = proposal.type === "BUY" ? proposal.proposerId :
     proposal.conversation.participants.find((p) => p.userId !== proposal.proposerId)?.userId;
 
@@ -286,47 +327,55 @@ export async function completeProposalPayment(proposalId: string) {
   const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
   if (!buyer) return { error: "Gebruiker niet gevonden" };
 
-  const totalCost = proposal.amount + proposal.listing.shippingCost;
+  const shippingCost = proposal.listing?.shippingCost ?? 0;
+  const totalCost = proposal.amount + shippingCost;
   const availableBalance = buyer.balance - buyer.reservedBalance;
 
   if (availableBalance < totalCost) {
     return { error: `Onvoldoende saldo. Benodigd: €${totalCost.toFixed(2)}, beschikbaar: €${availableBalance.toFixed(2)}` };
   }
 
-  // Complete the purchase
-  await deductBalance(buyerId, totalCost, "PURCHASE", `Gekocht via voorstel: ${proposal.listing.title}`, undefined, undefined, proposal.listing.id);
-  await escrowCredit(proposal.listing.sellerId, totalCost, `Verkocht via voorstel (escrow): ${proposal.listing.title}`);
+  const sellerId = proposal.listing
+    ? proposal.listing.sellerId
+    : proposal.conversation.participants.find((p) => p.userId !== buyerId)?.userId;
 
-  // Create ShippingBundle
-  await prisma.shippingBundle.create({
-    data: {
-      buyerId,
-      sellerId: proposal.listing.sellerId,
-      shippingCost: proposal.listing.shippingCost,
-      totalItemCost: proposal.amount,
-      totalCost,
-      status: "PAID",
-      listingId: proposal.listing.id,
-      buyerStreet: buyer.street,
-      buyerHouseNumber: buyer.houseNumber,
-      buyerPostalCode: buyer.postalCode,
-      buyerCity: buyer.city,
-      buyerCountry: buyer.country,
-    },
-  });
+  if (!sellerId) return { error: "Verkoper niet gevonden" };
+
+  const contextTitle = proposal.listing?.title ?? "betaalverzoek";
+
+  await deductBalance(buyerId, totalCost, "PURCHASE", `Betaalverzoek: ${contextTitle}`, undefined, undefined, proposal.listing?.id);
+  await escrowCredit(sellerId, totalCost, `Betaalverzoek (escrow): ${contextTitle}`);
+
+  if (proposal.listing) {
+    await prisma.shippingBundle.create({
+      data: {
+        buyerId,
+        sellerId,
+        shippingCost,
+        totalItemCost: proposal.amount,
+        totalCost,
+        status: "PAID",
+        listingId: proposal.listing.id,
+        buyerStreet: buyer.street,
+        buyerHouseNumber: buyer.houseNumber,
+        buyerPostalCode: buyer.postalCode,
+        buyerCity: buyer.city,
+        buyerCountry: buyer.country,
+      },
+    });
+  }
 
   await prisma.proposal.update({
     where: { id: proposalId },
     data: { paymentStatus: "PAID" },
   });
 
-  // Notify seller
   await createNotification(
-    proposal.listing.sellerId,
+    sellerId,
     "ITEM_SOLD",
     "Betaling ontvangen!",
-    `De betaling voor "${proposal.listing.title}" (€${totalCost.toFixed(2)}) is voltooid.`,
-    `/nl/marktplaats/${proposal.listing.id}`
+    `De betaling voor "${contextTitle}" (€${totalCost.toFixed(2)}) is voltooid.`,
+    proposal.listing ? `/nl/marktplaats/${proposal.listing.id}` : `/nl/berichten/${proposal.conversationId}`
   );
 
   return { success: true };
@@ -353,14 +402,14 @@ export async function withdrawProposal(proposalId: string) {
     data: { status: "REJECTED", respondedAt: new Date() },
   });
 
-  // Notify the other party
   const otherUserId = proposal.conversation.participants.find((p) => p.userId !== session.user!.id)?.userId;
+  const contextTitle = proposal.listing?.title ?? "betaalverzoek";
   if (otherUserId) {
     await createNotification(
       otherUserId,
       "NEW_MESSAGE",
       "Voorstel ingetrokken",
-      `Het voorstel van €${proposal.amount.toFixed(2)} voor "${proposal.listing.title}" is ingetrokken.`,
+      `Het voorstel van €${proposal.amount.toFixed(2)} voor "${contextTitle}" is ingetrokken.`,
       `/nl/berichten/${proposal.conversationId}`
     );
   }

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Inbox, MessageSquare, Archive, Trash2 } from "lucide-react";
 import { ConversationList } from "./conversation-list";
-import { ChatActions } from "./chat-actions";
 
 export type ChatTab = "inbox" | "active" | "archived" | "deleted";
 
@@ -28,7 +27,18 @@ interface ChatLayoutProps {
 
 export function ChatLayout({ conversations, activeConversationId, children }: ChatLayoutProps) {
   const t = useTranslations("chat");
-  const [activeTab, setActiveTab] = useState<ChatTab>("inbox");
+
+  // Determine initial tab: if we have an active conversation, go to the tab it belongs to
+  const getInitialTab = (): ChatTab => {
+    if (!activeConversationId) return "inbox";
+    const conv = conversations.find((c) => c.id === activeConversationId);
+    if (!conv) return "active";
+    if (conv.participantStatus === "ARCHIVED") return "archived";
+    if (conv.participantStatus === "DELETED") return "deleted";
+    return "active";
+  };
+
+  const [activeTab, setActiveTab] = useState<ChatTab>(getInitialTab);
   const [searchQuery, setSearchQuery] = useState("");
 
   const tabs: { key: ChatTab; label: string; icon: React.ElementType }[] = [
@@ -70,11 +80,11 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden border-t border-border">
       {/* Left panel: conversation list */}
-      <div className="flex w-80 flex-shrink-0 flex-col border-r border-border lg:w-96">
+      <div className="flex w-80 flex-shrink-0 flex-col border-r border-border bg-background lg:w-96">
         {/* Tabs */}
-        <div className="flex border-b border-border">
+        <div className="flex border-b border-border bg-muted/30">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const badge = getBadge(tab.key);
@@ -101,13 +111,13 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
         </div>
 
         {/* Search */}
-        <div className="p-3">
+        <div className="p-3 border-b border-border">
           <input
             type="text"
             placeholder={t("search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full glass-input px-3 py-2 text-sm text-foreground"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
 
@@ -129,20 +139,11 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
       </div>
 
       {/* Right panel: active conversation */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden bg-background">
         {activeConversationId ? (
-          <>
-            {/* Action bar for active conversation */}
-            <div className="flex items-center justify-end border-b border-border px-4 py-2">
-              <ChatActions
-                conversationId={activeConversationId}
-                status={conversations.find((c) => c.id === activeConversationId)?.participantStatus ?? "ACTIVE"}
-              />
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {children}
-            </div>
-          </>
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {children}
+          </div>
         ) : (
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center text-muted-foreground">

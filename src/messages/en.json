@@ -349,7 +349,18 @@
     "proposalRejected": "Offer rejected. You can make a new offer.",
     "alreadyPending": "There is already a pending offer for this listing.",
     "listingNotActive": "This listing is no longer available.",
-    "awaitingPayment": "Payment pending — {days} days remaining"
+    "awaitingPayment": "Payment pending — {days} days remaining",
+    "paymentExpired": "Payment deadline expired",
+    "paymentComplete": "Payment completed",
+    "confirmAccept": "Accept payment request",
+    "shippingCost": "Shipping cost",
+    "total": "Total",
+    "yourBalance": "Available balance",
+    "balanceSufficient": "Your balance is sufficient. The amount will be deducted immediately upon acceptance.",
+    "balanceInsufficient": "Your balance is insufficient. After accepting, you have 5 days to top up your balance and complete the payment.",
+    "topUpBalance": "Top up balance →",
+    "cancel": "Cancel",
+    "confirmAcceptButton": "Accept"
   },
   "listing": {
     "browseTitle": "Marketplace",

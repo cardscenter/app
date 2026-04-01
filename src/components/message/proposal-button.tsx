@@ -8,9 +8,8 @@ import { useRouter } from "next/navigation";
 
 interface ProposalButtonProps {
   conversationId: string;
-  listingId: string;
-  listingTitle: string;
-  listingPrice: number | null;
+  listingTitle?: string;
+  listingPrice?: number | null;
   isSeller: boolean;
 }
 
@@ -57,23 +56,25 @@ export function ProposalButton({
     router.refresh();
   }
 
+  const title = isSeller ? t("suggestPrice") : t("makeOffer");
+
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg p-2 text-muted-foreground hover:bg-white/60 dark:hover:bg-white/5 transition-colors"
-        title={isSeller ? t("suggestPrice") : t("makeOffer")}
+        className="rounded-lg p-2 text-muted-foreground hover:bg-muted/50 transition-colors"
+        title={title}
       >
         <HandCoins className="h-5 w-5" />
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="glass w-full max-w-md rounded-2xl p-6 mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setOpen(false); setError(null); }}>
+          <div className="glass w-full max-w-md rounded-2xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">
-                {isSeller ? t("suggestPrice") : t("makeOffer")}
+                {title}
               </h3>
               <button
                 type="button"
@@ -84,9 +85,11 @@ export function ProposalButton({
               </button>
             </div>
 
-            <p className="text-sm text-muted-foreground mb-4 truncate">
-              {t("proposalFor", { title: listingTitle })}
-            </p>
+            {listingTitle && (
+              <p className="text-sm text-muted-foreground mb-4 truncate">
+                {t("proposalFor", { title: listingTitle })}
+              </p>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -101,7 +104,7 @@ export function ProposalButton({
                     min="0.01"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="glass-input w-full pl-8 pr-4 py-2.5 text-sm text-foreground"
+                    className="w-full rounded-lg border border-border bg-background pl-8 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                     placeholder="0.00"
                     required
                   />

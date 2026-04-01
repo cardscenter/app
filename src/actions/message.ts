@@ -22,6 +22,14 @@ export async function startConversation(recipientId: string, auctionId?: string,
   });
 
   if (existing && existing.participants.length === 2) {
+    // Reactivate participant if they archived/deleted this conversation
+    const myParticipant = existing.participants.find((p) => p.userId === session.user!.id);
+    if (myParticipant && myParticipant.status !== "ACTIVE") {
+      await prisma.conversationParticipant.update({
+        where: { id: myParticipant.id },
+        data: { status: "ACTIVE", archivedAt: null, deletedAt: null },
+      });
+    }
     return { conversationId: existing.id };
   }
 

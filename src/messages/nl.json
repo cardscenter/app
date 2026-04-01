@@ -349,7 +349,18 @@
     "proposalRejected": "Voorstel afgewezen. Je kunt een nieuw voorstel doen.",
     "alreadyPending": "Er is al een openstaand voorstel voor deze advertentie.",
     "listingNotActive": "Deze advertentie is niet meer beschikbaar.",
-    "awaitingPayment": "Betaling in afwachting — {days} dagen resterend"
+    "awaitingPayment": "Betaling in afwachting — {days} dagen resterend",
+    "paymentExpired": "Betalingsdeadline verlopen",
+    "paymentComplete": "Betaling voltooid",
+    "confirmAccept": "Betaalverzoek accepteren",
+    "shippingCost": "Verzendkosten",
+    "total": "Totaal",
+    "yourBalance": "Beschikbaar saldo",
+    "balanceSufficient": "Je saldo is toereikend. Het bedrag wordt direct afgeschreven na accepteren.",
+    "balanceInsufficient": "Je saldo is ontoereikend. Na accepteren heb je 5 dagen om je saldo op te waarderen en de betaling te voltooien.",
+    "topUpBalance": "Saldo opwaarderen →",
+    "cancel": "Annuleren",
+    "confirmAcceptButton": "Accepteren"
   },
   "listing": {
     "browseTitle": "Marktplaats",

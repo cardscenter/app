@@ -43,12 +43,14 @@ export function MessageThread({
   currentUserId,
   listingContext,
   proposals,
+  contextType,
 }: {
   conversationId: string;
   messages: Message[];
   currentUserId: string;
   listingContext?: ListingContext | null;
   proposals?: ProposalData[];
+  contextType?: "auction" | "claimsale" | "listing" | null;
 }) {
   const router = useRouter();
   const t = useTranslations("chat");
@@ -58,6 +60,7 @@ export function MessageThread({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const proposalMap = new Map((proposals ?? []).map((p) => [p.id, p]));
 
@@ -71,13 +74,13 @@ export function MessageThread({
 
     setUploading(true);
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("files", file);
 
     try {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
-      if (data.url) {
-        setUploadedImageUrl(data.url);
+      if (data.urls && data.urls.length > 0) {
+        setUploadedImageUrl(data.urls[0]);
       }
     } catch {
       setImagePreview(null);
@@ -93,13 +96,30 @@ export function MessageThread({
   }
 
   async function handleSend(formData: FormData) {
-    setLoading(true);
     const body = formData.get("body") as string;
+    if (!body.trim() && !uploadedImageUrl) return;
+    setLoading(true);
     await sendMessage(conversationId, body, uploadedImageUrl || undefined);
     clearImage();
     formRef.current?.reset();
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
     router.refresh();
     setLoading(false);
+  }
+
+  function handleTextareaInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      formRef.current?.requestSubmit();
+    }
   }
 
   const isSeller = listingContext?.sellerId === currentUserId;
@@ -163,8 +183,8 @@ export function MessageThread({
         </div>
       </div>
 
-      {/* Send form — sticky at bottom */}
-      <div className="border-t border-border px-4 py-3 sticky bottom-0 bg-background z-10">
+      {/* Send form — fixed at bottom */}
+      <div className="flex-shrink-0 border-t border-border bg-background px-4 py-3">
         {/* Image preview */}
         {imagePreview && (
           <div className="mb-2 flex items-start gap-2">
@@ -184,9 +204,9 @@ export function MessageThread({
           </div>
         )}
 
-        <form ref={formRef} action={handleSend} className="flex items-center gap-2">
+        <form ref={formRef} action={handleSend} className="flex items-end gap-2">
           {/* Photo upload */}
-          <label className="cursor-pointer rounded-lg p-2 text-muted-foreground hover:bg-white/60 dark:hover:bg-white/5 transition-colors" title={t("attachPhoto")}>
+          <label className="cursor-pointer rounded-lg p-2 text-muted-foreground hover:bg-muted/50 transition-colors" title={t("attachPhoto")}>
             <ImagePlus className="h-5 w-5" />
             <input
               ref={fileInputRef}
@@ -197,22 +217,33 @@ export function MessageThread({
             />
           </label>
 
-          {/* Proposal button */}
-          {listingContext && listingContext.status === "ACTIVE" && (
-            <ProposalButton
-              conversationId={conversationId}
-              listingId={listingContext.id}
-              listingTitle={listingContext.title}
-              listingPrice={listingContext.price}
-              isSeller={isSeller}
-            />
+          {/* Proposal button — listing conversations (active) + direct messages (no context) */}
+          {contextType !== "auction" && contextType !== "claimsale" && (
+            listingContext ? (
+              listingContext.status === "ACTIVE" && (
+                <ProposalButton
+                  conversationId={conversationId}
+                  listingTitle={listingContext.title}
+                  listingPrice={listingContext.price}
+                  isSeller={isSeller}
+                />
+              )
+            ) : (
+              <ProposalButton
+                conversationId={conversationId}
+                isSeller={false}
+              />
+            )
           )}
 
-          <input
+          <textarea
+            ref={textareaRef}
             name="body"
-            type="text"
+            rows={1}
             placeholder={t("messagePlaceholder")}
-            className="flex-1 glass-input px-4 py-2.5 text-sm text-foreground"
+            onChange={handleTextareaInput}
+            onKeyDown={handleKeyDown}
+            className="flex-1 resize-none rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
           <button
             type="submit"

@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ChatLayout, type ConversationPreview } from "@/components/message/chat-layout";
 import { MessageThread } from "@/components/message/message-thread";
+import { ChatActions } from "@/components/message/chat-actions";
 
 export default async function ConversationPage({
   params,
@@ -106,6 +107,12 @@ export default async function ConversationPage({
     sellerId: conversation.listing.sellerId,
   } : null;
 
+  // Determine conversation context type
+  const contextType = conversation.auction ? "auction" as const
+    : conversation.claimsale ? "claimsale" as const
+    : conversation.listing ? "listing" as const
+    : null;
+
   // Build proposals map
   const proposals = conversation.proposals.map((p) => ({
     id: p.id,
@@ -121,13 +128,19 @@ export default async function ConversationPage({
     <ChatLayout conversations={previews} activeConversationId={conversationId}>
       <div className="flex h-full flex-col">
         {/* Chat header */}
-        <div className="border-b border-border px-6 py-3">
-          <h2 className="font-semibold text-foreground">
-            {otherUser?.user.displayName ?? "Gesprek"}
-          </h2>
-          {context && (
-            <p className="text-xs text-muted-foreground">Re: {context}</p>
-          )}
+        <div className="flex items-center justify-between border-b border-border px-6 py-3 bg-muted/20">
+          <div>
+            <h2 className="font-semibold text-foreground">
+              {otherUser?.user.displayName ?? "Gesprek"}
+            </h2>
+            {context && (
+              <p className="text-xs text-muted-foreground">Re: {context}</p>
+            )}
+          </div>
+          <ChatActions
+            conversationId={conversationId}
+            status={previews.find((c) => c.id === conversationId)?.participantStatus ?? "ACTIVE"}
+          />
         </div>
 
         {/* Messages + input */}
@@ -146,6 +159,7 @@ export default async function ConversationPage({
             currentUserId={session.user.id!}
             listingContext={listingContext}
             proposals={proposals}
+            contextType={contextType}
           />
         </div>
       </div>
