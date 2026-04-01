@@ -316,8 +316,8 @@ model ClaimsaleItem {
   reference    String?  // Optional seller reference (e.g. binder location, inventory code)
   imageUrls    String   @default("[]") // JSON array of image URLs
 
-  cardSetId    String
-  cardSet      CardSet  @relation(fields: [cardSetId], references: [id])
+  cardSetId    String?
+  cardSet      CardSet?  @relation(fields: [cardSetId], references: [id])
 
   claimsaleId  String
   claimsale    Claimsale @relation(fields: [claimsaleId], references: [id], onDelete: Cascade)

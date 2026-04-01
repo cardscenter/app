@@ -25,9 +25,11 @@ export function SponsoredAuctionRow({ auctions, title, tooltip }: SponsoredAucti
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {auctions.slice(0, 4).map((auction) => (
-          <AuctionCard key={auction.id} auction={auction} sponsored />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+        {auctions.slice(0, 4).map((auction, i) => (
+          <div key={auction.id} className={i >= 2 ? (i === 2 ? "hidden lg:block" : "hidden xl:block") : i === 1 ? "hidden sm:block" : ""}>
+            <AuctionCard auction={auction} sponsored />
+          </div>
         ))}
       </div>
     </div>

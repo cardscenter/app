@@ -211,6 +211,9 @@
     "maxBidAmount": "Maximaal bod",
     "balanceReservedInfo": "€{amount} van je saldo wordt vastgehouden voor biedingen op andere veilingen.",
     "bidTooHighWarning": "Je hebt onvoldoende saldo om dit bod te doen. Je maximale bod is €{max}. Vul je saldo aan om hoger te kunnen bieden.",
+    "noBalanceTitle": "Doe een storting om te kunnen bieden",
+    "noBalanceMessage": "Je hebt minimaal 40% van het bod als saldo nodig om een geldig bod uit te brengen.",
+    "topUpBalance": "Saldo opwaarderen →",
     "bidExceedsBalanceWarning": "Je bod is hoger dan je gestorte saldo. Overweeg om je saldo te verhogen door een <link>storting te doen</link> als je van plan bent op dit kavel te blijven bieden.",
     "sortBy": "Sorteren op",
     "sortNewest": "Nieuwste eerst",
@@ -235,7 +238,9 @@
     "claimed": "Verkocht",
     "available": "Beschikbaar",
     "itemCount": "{count} kaarten",
-    "shippingNote": "Meerdere kaarten van dezelfde verkoper = 1x verzendkosten"
+    "shippingNote": "Meerdere kaarten van dezelfde verkoper = 1x verzendkosten",
+    "browseTitle": "Claimsales",
+    "activeCount": "{count} claimsales actief"
   },
   "wallet": {
     "balance": "Saldo",
@@ -316,6 +321,7 @@
     "deleted": "Verwijderd",
     "search": "Zoek gesprekken...",
     "noConversations": "Geen gesprekken",
+    "archiveAutoDeleteNotice": "Gearchiveerde gesprekken worden na 60 dagen automatisch verwijderd.",
     "selectConversation": "Selecteer een gesprek om te beginnen",
     "archive": "Archiveren",
     "delete": "Verwijderen",
@@ -364,6 +370,7 @@
   },
   "listing": {
     "browseTitle": "Marktplaats",
+    "activeCount": "{count} advertenties actief",
     "createTitle": "Nieuwe Advertentie",
     "title": "Titel",
     "description": "Beschrijving",

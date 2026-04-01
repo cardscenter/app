@@ -97,12 +97,13 @@ export default async function ClaimsaleDetailPage({
             condition: item.condition,
             price: item.price,
             status: item.status,
-            cardSet: {
+            imageUrls: item.imageUrls,
+            cardSet: item.cardSet ? {
               name: item.cardSet.name,
               series: {
                 category: { name: item.cardSet.series.category.name },
               },
-            },
+            } : null,
             buyer: item.buyer,
           }))}
           isOwner={isOwner}

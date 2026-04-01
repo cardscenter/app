@@ -3,7 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { ListingCard } from "@/components/listing/listing-card";
 import { SponsoredRow } from "@/components/listing/sponsored-row";
 import { Pagination } from "@/components/ui/pagination";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { Plus } from "lucide-react";
 
 const PAGE_SIZE = 40;
 
@@ -70,13 +71,22 @@ export default async function MarktplaatsPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-foreground">{t("browseTitle")}</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {t("browseTitle")}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("activeCount", { count: totalCount })}
+          </p>
+        </div>
         <Link
-          href={`/${locale}/marktplaats/nieuw`}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg"
+          href="/marktplaats/nieuw"
+          className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-emerald-700 hover:shadow-lg"
         >
-          + {t("createTitle")}
+          <Plus className="size-4 mr-1" />
+          {t("createTitle")}
         </Link>
       </div>
 
@@ -94,7 +104,7 @@ export default async function MarktplaatsPage({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
             {listings.map((listing) => (
               <ListingCard key={listing.id} listing={listing} locale={locale} />
             ))}

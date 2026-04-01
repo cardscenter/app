@@ -9,7 +9,6 @@ import { AuctionCreatedToast } from "@/components/auction/auction-created-toast"
 import { AuctionSortBar } from "@/components/auction/auction-sort-bar";
 
 const PAGE_SIZE = 40;
-const ROWS_PER_GRID = 4; // 4 columns on desktop
 
 type SortOption = "newest" | "ending" | "highest" | "bids";
 
@@ -78,10 +77,8 @@ export default async function AuctionsPage({
   });
   const sponsoredAuctions = seededShuffle(sponsoredRaw, seed);
 
-  // Split sponsored into up to 3 groups of 4
+  // Single sponsored row — max 4 items
   const sponsoredTop = sponsoredAuctions.slice(0, 4);
-  const sponsoredMid = sponsoredAuctions.slice(4, 8);
-  const sponsoredBottom = sponsoredAuctions.slice(8, 12);
 
   // Count ALL active auctions (sponsored included in main grid now)
   const totalCount = await prisma.auction.count({
@@ -122,13 +119,6 @@ export default async function AuctionsPage({
   }
 
   const hasAuctions = auctions.length > 0;
-
-  // Split main grid into chunks of 1 row (4 items) to insert sponsored mid-row
-  const ROW_SIZE = ROWS_PER_GRID;
-  const insertAfterRow = 5; // Insert mid-sponsored after row 5
-
-  const topRows = auctions.slice(0, insertAfterRow * ROW_SIZE);
-  const bottomRows = auctions.slice(insertAfterRow * ROW_SIZE);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -172,50 +162,19 @@ export default async function AuctionsPage({
         </div>
       ) : (
         <div className="mt-8">
-          {/* Top sponsored row */}
+          {/* Sponsored row */}
           <SponsoredAuctionRow
             auctions={sponsoredTop}
             title={t("sponsored")}
             tooltip={t("sponsoredTooltip")}
           />
 
-          {/* Main grid — first chunk */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {topRows.map((auction) => (
+          {/* Main grid */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+            {auctions.map((auction) => (
               <AuctionCard key={auction.id} auction={auction} />
             ))}
           </div>
-
-          {/* Mid sponsored row (after row 5) */}
-          {sponsoredMid.length > 0 && topRows.length >= insertAfterRow * ROW_SIZE && (
-            <div className="mt-8">
-              <SponsoredAuctionRow
-                auctions={sponsoredMid}
-                title={t("sponsored")}
-                tooltip={t("sponsoredTooltip")}
-              />
-            </div>
-          )}
-
-          {/* Main grid — remaining rows */}
-          {bottomRows.length > 0 && (
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {bottomRows.map((auction) => (
-                <AuctionCard key={auction.id} auction={auction} />
-              ))}
-            </div>
-          )}
-
-          {/* Bottom sponsored row */}
-          {sponsoredBottom.length > 0 && (
-            <div className="mt-8">
-              <SponsoredAuctionRow
-                auctions={sponsoredBottom}
-                title={t("sponsored")}
-                tooltip={t("sponsoredTooltip")}
-              />
-            </div>
-          )}
 
           {/* Pagination */}
           <Pagination

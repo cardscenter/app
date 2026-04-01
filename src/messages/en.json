@@ -211,6 +211,9 @@
     "maxBidAmount": "Maximum bid",
     "balanceReservedInfo": "€{amount} of your balance is reserved for bids on other auctions.",
     "bidTooHighWarning": "You don't have enough balance for this bid. Your maximum bid is €{max}. Top up your balance to bid higher.",
+    "noBalanceTitle": "Make a deposit to place bids",
+    "noBalanceMessage": "You need at least 40% of your bid amount as balance to place a valid bid.",
+    "topUpBalance": "Top up balance →",
     "bidExceedsBalanceWarning": "Your bid exceeds your deposited balance. Consider <link>topping up your balance</link> if you plan to keep bidding on this lot.",
     "sortBy": "Sort by",
     "sortNewest": "Newest first",
@@ -235,7 +238,9 @@
     "claimed": "Sold",
     "available": "Available",
     "itemCount": "{count} cards",
-    "shippingNote": "Multiple cards from the same seller = shipping charged once"
+    "shippingNote": "Multiple cards from the same seller = shipping charged once",
+    "browseTitle": "Claimsales",
+    "activeCount": "{count} claimsales active"
   },
   "wallet": {
     "balance": "Balance",
@@ -316,6 +321,7 @@
     "deleted": "Deleted",
     "search": "Search conversations...",
     "noConversations": "No conversations",
+    "archiveAutoDeleteNotice": "Archived conversations are automatically deleted after 60 days.",
     "selectConversation": "Select a conversation to get started",
     "archive": "Archive",
     "delete": "Delete",
@@ -364,6 +370,7 @@
   },
   "listing": {
     "browseTitle": "Marketplace",
+    "activeCount": "{count} listings active",
     "createTitle": "New Listing",
     "title": "Title",
     "description": "Description",

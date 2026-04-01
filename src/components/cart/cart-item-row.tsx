@@ -12,7 +12,7 @@ interface CartItemRowProps {
   cardName: string;
   condition: string;
   price: number;
-  cardSetName: string;
+  cardSetName: string | null;
   imageUrls: string[];
   status: string;
 }
@@ -68,7 +68,7 @@ export function CartItemRow({
           {cardName}
         </p>
         <p className="text-xs text-muted-foreground">
-          {cardSetName} · {condition}
+          {cardSetName ? `${cardSetName} · ` : ""}{condition}
         </p>
         {isUnavailable && (
           <p className="text-xs font-medium text-red-500">{t("claimedByOther")}</p>

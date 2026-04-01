@@ -26,24 +26,27 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
   return (
     <Link
       href={`/veilingen/${auction.id}`}
-      className={`group glass overflow-hidden rounded-2xl transition-all hover:shadow-lg hover:scale-[1.01] ${
+      className={`group glass overflow-hidden rounded-2xl transition-all hover:shadow-lg hover:scale-[1.01] flex flex-row sm:flex-col ${
         sponsored ? "glass-sponsored" : ""
       }`}
     >
-      {/* Card image */}
-      <div className="relative aspect-square bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+      {/* Card image — mobile: fixed size, desktop: aspect-square with fill */}
+      <div className="shrink-0 sm:relative sm:w-full sm:aspect-square bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
         {firstImage ? (
-          <Image src={firstImage} alt={auction.title} fill className="object-cover" />
+          <>
+            <Image src={firstImage} alt={auction.title} width={96} height={128} className="sm:hidden object-cover w-24 h-32" />
+            <Image src={firstImage} alt={auction.title} fill className="hidden sm:block object-cover" />
+          </>
         ) : (
           <Gavel className="h-10 w-10 text-slate-600" />
         )}
         {/* Countdown badge */}
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
           <CountdownPill endTime={auction.endTime} />
         </div>
         {/* Type badge */}
-        <div className="absolute top-3 left-3">
-          <span className="rounded-md bg-primary px-2 py-1 text-xs font-medium text-white">
+        <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
+          <span className="rounded-md bg-primary px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs font-medium text-white">
             {t(({
               SINGLE_CARD: "singleCard",
               MULTI_CARD: "multiCard",
@@ -56,26 +59,28 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
       </div>
 
       {/* Card body */}
-      <div className="p-4">
-        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-          {auction.title}
-        </h3>
-        <div className="mt-1 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            {auction.seller.displayName}
-          </p>
-          {sponsored && (
-            <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
-              {t("sponsored")}
-            </span>
-          )}
+      <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between">
+        <div>
+          <h3 className="font-semibold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors line-clamp-2">
+            {auction.title}
+          </h3>
+          <div className="mt-1 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              {auction.seller.displayName}
+            </p>
+            {sponsored && (
+              <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
+                {t("sponsored")}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Price + bids */}
-        <div className="mt-4 flex items-end justify-between">
+        <div className="mt-2 sm:mt-4 flex items-end justify-between">
           <div>
             <p className="text-xs text-muted-foreground">{t("currentBid")}</p>
-            <p className="text-xl font-bold text-foreground">
+            <p className="text-lg sm:text-xl font-bold text-foreground">
               &euro;{(auction.currentBid ?? auction.startingBid).toFixed(2)}
             </p>
           </div>

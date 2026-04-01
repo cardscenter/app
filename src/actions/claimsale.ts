@@ -9,8 +9,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const claimsaleItemSchema = z.object({
-  cardName: z.string().min(1),
-  cardSetId: z.string().min(1),
+  cardName: z.string(),
+  cardNumber: z.string().optional(),
+  cardSetId: z.string().optional(),
   condition: z.string().min(1),
   price: z.coerce.number().min(0.01),
   imageUrls: z.array(z.string()).optional().default([]),
@@ -74,8 +75,9 @@ export async function createClaimsale(formData: FormData) {
         status: "DRAFT",
         items: {
           create: items.map((item) => ({
-            cardName: item.cardName,
-            cardSetId: item.cardSetId,
+            cardName: item.cardName || "Kaart",
+            ...(item.cardSetId ? { cardSetId: item.cardSetId } : {}),
+            ...(item.cardNumber ? { reference: item.cardNumber } : {}),
             condition: item.condition,
             price: item.price,
             imageUrls: JSON.stringify(item.imageUrls ?? []),

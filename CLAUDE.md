@@ -46,7 +46,10 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 - **Account age restrictions** — config in `src/lib/account-age.ts`. 0-24h: max €50, 1-7d: max €200, 7+d unverified: max €500, verified: unlimited. Accounts before 2026-03-31 skip restrictions.
 - **Account verification** — ID/passport/driver's license upload → admin review → `isVerified` + `verificationStatus` on User. `VerificationRequest` model. Actions in `verification.ts`. Pages: `dashboard/verificatie/` (user), `dashboard/geschillen/admin/verificaties/` (admin). Verified badge: `components/ui/verified-badge.tsx`.
 - **Balance top-up** — Bank transfer with unique `bankTransferReference` per user (format: `[username][10digits]`, generated at registration, regenerated on username change). Admin confirms via `confirmBankTransfer()`. iDEAL: placeholder UI only.
-- **Claimsales immutable** once LIVE (DRAFT → LIVE, no edits)
+- **Claimsales immutable** once LIVE (DRAFT → LIVE, no edits). `cardSetId` optional on ClaimsaleItem. Form uses front/back image uploads per card (stored as JSON array in `imageUrls`). `coverImage` on Claimsale for thumbnail. `reference` field stores card number.
+- **Mobile card layout** — All 3 main pages (veilingen, marktplaats, claimsales) use horizontal cards on mobile (image left, info right) with fixed `Image` width/height (not `fill`+`aspect-ratio` — that breaks in flex containers on mobile). Desktop uses vertical cards with `fill`+`aspect-square`.
+- **Page color theming** — Create buttons on main pages: Veilingen=blue (`bg-primary`), Marktplaats=green (`bg-emerald-600`), Claimsales=dark-yellow (`bg-amber-600`). Only on overview pages.
+- **`upload.ts` is server-only** — contains `fs/promises`. Client components must NOT import from it. Use inline `parseImageUrls` instead.
 - **Anti-snipe** — bids in last 2 min → +2 min extension
 - **Bid increments** — per price tier (`src/lib/auction/bid-increments.ts`)
 - **Account tiers** — FREE / PRO / UNLIMITED (config in `src/lib/subscription-tiers.ts`). ADMIN is a role, not a tier — maps to UNLIMITED perks. Limits: auctions, claimsales, listings, items/claimsale. Commission deducted at escrow release. Subscription model tracks billing history.

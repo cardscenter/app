@@ -86,7 +86,7 @@ export type CartSellerGroup = {
     condition: string;
     price: number;
     imageUrls: string[];
-    cardSetName: string;
+    cardSetName: string | null;
     status: string;
   }[];
 };
@@ -170,7 +170,7 @@ export async function getCart(): Promise<CartSellerGroup[]> {
       condition: ci.claimsaleItem.condition,
       price: ci.claimsaleItem.price,
       imageUrls,
-      cardSetName: ci.claimsaleItem.cardSet.name,
+      cardSetName: ci.claimsaleItem.cardSet?.name ?? null,
       status: ci.claimsaleItem.status,
     });
   }
