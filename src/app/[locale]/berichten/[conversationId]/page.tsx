@@ -98,6 +98,15 @@ export default async function ConversationPage({
   const otherUser = conversation.participants.find((p) => p.userId !== session.user!.id);
   const context = conversation.auction?.title ?? conversation.claimsale?.title ?? conversation.listing?.title;
 
+  // Get user balance for proposal system
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id! },
+    select: { balance: true, reservedBalance: true },
+  });
+  const availableBalance = currentUser
+    ? currentUser.balance - currentUser.reservedBalance
+    : 0;
+
   // Build listing context for proposal system
   const listingContext = conversation.listing ? {
     id: conversation.listing.id,
@@ -160,6 +169,7 @@ export default async function ConversationPage({
             listingContext={listingContext}
             proposals={proposals}
             contextType={contextType}
+            availableBalance={availableBalance}
           />
         </div>
       </div>

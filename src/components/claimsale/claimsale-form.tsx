@@ -4,12 +4,13 @@ import { useTranslations } from "next-intl";
 import { createClaimsale } from "@/actions/claimsale";
 import { useState, useCallback } from "react";
 import { CARD_CONDITIONS } from "@/types";
-import { Upload, X, ImageIcon } from "lucide-react";
+import { Upload, X, ImageIcon, Copy } from "lucide-react";
 
 type CardItem = {
   id: string;
   cardName: string;
   cardNumber: string;
+  sellerNote: string;
   condition: string;
   price: string;
   frontImage: string | null;
@@ -81,6 +82,54 @@ function SingleImageUpload({
   );
 }
 
+function DuplicateButton({ onDuplicate, remaining }: { onDuplicate: (count: number) => void; remaining: number }) {
+  const t = useTranslations("claimsale");
+  const [showInput, setShowInput] = useState(false);
+  const [count, setCount] = useState("1");
+
+  if (remaining <= 0) return null;
+
+  if (!showInput) {
+    return (
+      <button
+        type="button"
+        onClick={() => setShowInput(true)}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Copy className="h-3 w-3" />
+        {t("duplicate")}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="number"
+        min="1"
+        max={remaining}
+        value={count}
+        onChange={(e) => setCount(e.target.value)}
+        className="w-14 glass-input px-2 py-1 text-xs text-foreground text-center"
+      />
+      <button
+        type="button"
+        onClick={() => { onDuplicate(parseInt(count) || 1); setShowInput(false); setCount("1"); }}
+        className="text-xs font-medium text-primary hover:underline"
+      >
+        {t("duplicateConfirm")}
+      </button>
+      <button
+        type="button"
+        onClick={() => { setShowInput(false); setCount("1"); }}
+        className="text-xs text-muted-foreground hover:text-foreground"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number; shippingMethods?: ShippingMethod[] }) {
   const t = useTranslations("claimsale");
   const tc = useTranslations("common");
@@ -89,12 +138,23 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
   const [items, setItems] = useState<CardItem[]>([
-    { id: "1", cardName: "", cardNumber: "", condition: "Near Mint", price: "", frontImage: null, backImage: null },
+    { id: "1", cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null },
   ]);
 
   function addItem() {
     if (items.length >= maxItems) return;
-    setItems([...items, { id: Date.now().toString(), cardName: "", cardNumber: "", condition: "Near Mint", price: "", frontImage: null, backImage: null }]);
+    setItems([...items, { id: Date.now().toString(), cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null }]);
+  }
+
+  function duplicateItem(item: CardItem, count: number = 1) {
+    const remaining = maxItems - items.length;
+    const toAdd = Math.min(count, remaining);
+    if (toAdd <= 0) return;
+    const newItems: CardItem[] = [];
+    for (let i = 0; i < toAdd; i++) {
+      newItems.push({ ...item, id: `${Date.now()}-${i}`, frontImage: null, backImage: null });
+    }
+    setItems([...items, ...newItems]);
   }
 
   function removeItem(id: string) {
@@ -137,6 +197,7 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
       return {
         cardName: i.cardName || `Kaart ${items.indexOf(i) + 1}`,
         cardNumber: i.cardNumber || undefined,
+        sellerNote: i.sellerNote || undefined,
         condition: i.condition,
         price: parseFloat(i.price),
         imageUrls,
@@ -239,11 +300,17 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
           <div key={item.id} className="glass-subtle rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">#{idx + 1}</span>
-              {items.length > 1 && (
-                <button type="button" onClick={() => removeItem(item.id)} className="text-xs text-red-500 hover:underline">
-                  {t("removeCard")}
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                <DuplicateButton
+                  onDuplicate={(count) => duplicateItem(item, count)}
+                  remaining={maxItems - items.length}
+                />
+                {items.length > 1 && (
+                  <button type="button" onClick={() => removeItem(item.id)} className="text-xs text-red-500 hover:underline">
+                    {t("removeCard")}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -276,7 +343,7 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
                 />
                 <input
                   type="text"
-                  placeholder="Kaartnummer (optioneel)"
+                  placeholder={t("cardNumber")}
                   value={item.cardNumber}
                   onChange={(e) => updateItem(item.id, "cardNumber", e.target.value)}
                   className="col-span-2 sm:col-span-1 glass-input px-3 py-2.5 text-sm text-foreground"
@@ -300,6 +367,13 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
                     className="w-full glass-input px-3 py-2.5 text-sm text-foreground"
                   />
                 </div>
+                <input
+                  type="text"
+                  placeholder={t("sellerNote")}
+                  value={item.sellerNote}
+                  onChange={(e) => updateItem(item.id, "sellerNote", e.target.value)}
+                  className="col-span-2 glass-input px-3 py-2.5 text-sm text-foreground"
+                />
               </div>
             </div>
           </div>

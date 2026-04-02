@@ -3,58 +3,28 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
+import { createNotification } from "@/actions/notification";
+import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
+import { expireClaimedItems, unclaimItem } from "@/actions/claimsale";
 
-export async function addToCart(claimsaleItemId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Niet ingelogd" };
-
-  const item = await prisma.claimsaleItem.findUnique({
-    where: { id: claimsaleItemId },
-    include: { claimsale: true },
-  });
-
-  if (!item) return { error: "Kaart niet gevonden" };
-  if (item.status !== "AVAILABLE") return { error: "Kaart is niet meer beschikbaar" };
-  if (item.claimsale.status !== "LIVE") return { error: "Claimsale is niet actief" };
-  if (item.claimsale.sellerId === session.user.id) return { error: "Je kunt niet je eigen kaarten toevoegen" };
-
-  // Check if already in cart
-  const existing = await prisma.cartItem.findUnique({
-    where: {
-      userId_claimsaleItemId: {
-        userId: session.user.id,
-        claimsaleItemId,
-      },
-    },
-  });
-
-  if (existing) return { error: "Dit item zit al in je winkelwagen" };
-
-  await prisma.cartItem.create({
-    data: {
-      userId: session.user.id,
-      claimsaleItemId,
-    },
-  });
-
-  return { success: true, cardName: item.cardName };
-}
-
+/**
+ * Remove item from cart. This also unclaims the item so it becomes available again.
+ */
 export async function removeFromCart(cartItemId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
   const cartItem = await prisma.cartItem.findUnique({
     where: { id: cartItemId },
+    select: { userId: true, claimsaleItemId: true },
   });
 
   if (!cartItem) return { error: "Item niet gevonden" };
   if (cartItem.userId !== session.user.id) return { error: "Niet geautoriseerd" };
 
-  await prisma.cartItem.delete({ where: { id: cartItemId } });
-
-  return { success: true };
+  // Unclaim the item (resets to AVAILABLE + deletes cart item)
+  return unclaimItem(cartItem.claimsaleItemId);
 }
 
 export async function getCartCount(): Promise<number> {
@@ -88,12 +58,25 @@ export type CartSellerGroup = {
     imageUrls: string[];
     cardSetName: string | null;
     status: string;
+    // Claim timer data
+    claimedAt: string | null;
+    expiresAt: string | null;
+    // Change detection (snapshot vs current)
+    snapshotPrice: number | null;
+    snapshotCardName: string | null;
+    priceChanged: boolean;
+    nameChanged: boolean;
   }[];
 };
+
+const CLAIM_DURATION_MS = 15 * 60 * 1000;
 
 export async function getCart(): Promise<CartSellerGroup[]> {
   const session = await auth();
   if (!session?.user?.id) return [];
+
+  // Expire any stale claims before fetching cart
+  await expireClaimedItems();
 
   const cartItems = await prisma.cartItem.findMany({
     where: { userId: session.user.id },
@@ -163,6 +146,11 @@ export async function getCart(): Promise<CartSellerGroup[]> {
       // ignore parse errors
     }
 
+    const claimedAt = ci.claimsaleItem.claimedAt?.toISOString() ?? null;
+    const expiresAt = ci.claimsaleItem.claimedAt
+      ? new Date(ci.claimsaleItem.claimedAt.getTime() + CLAIM_DURATION_MS).toISOString()
+      : null;
+
     group.items.push({
       cartItemId: ci.id,
       claimsaleItemId: ci.claimsaleItem.id,
@@ -172,6 +160,12 @@ export async function getCart(): Promise<CartSellerGroup[]> {
       imageUrls,
       cardSetName: ci.claimsaleItem.cardSet?.name ?? null,
       status: ci.claimsaleItem.status,
+      claimedAt,
+      expiresAt,
+      snapshotPrice: ci.snapshotPrice,
+      snapshotCardName: ci.snapshotCardName,
+      priceChanged: ci.snapshotPrice != null && ci.snapshotPrice !== ci.claimsaleItem.price,
+      nameChanged: ci.snapshotCardName != null && ci.snapshotCardName !== ci.claimsaleItem.cardName,
     });
   }
 
@@ -232,12 +226,43 @@ export async function checkout(shippingSelections?: Record<string, string>) {
 
   if (cartItems.length === 0) return { error: "Winkelwagen is leeg" };
 
-  // Split into available and conflicted items
-  const availableItems = cartItems.filter(
-    (ci) => ci.claimsaleItem.status === "AVAILABLE" && ci.claimsaleItem.claimsale.status === "LIVE"
+  // Expire stale claims before checkout
+  await expireClaimedItems();
+
+  // Re-fetch to get updated statuses after expiration
+  const freshCartItems = await prisma.cartItem.findMany({
+    where: { userId: session.user.id },
+    include: {
+      claimsaleItem: {
+        include: {
+          claimsale: {
+            include: {
+              shippingMethods: {
+                include: { shippingMethod: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (freshCartItems.length === 0) return { error: "Alle claims zijn verlopen" };
+
+  const userId = session.user.id;
+
+  // Split: CLAIMED by this user + LIVE claimsale = valid for checkout
+  const availableItems = freshCartItems.filter(
+    (ci) =>
+      ci.claimsaleItem.status === "CLAIMED" &&
+      ci.claimsaleItem.claimedById === userId &&
+      ci.claimsaleItem.claimsale.status === "LIVE"
   );
-  const conflictedItems = cartItems.filter(
-    (ci) => ci.claimsaleItem.status !== "AVAILABLE" || ci.claimsaleItem.claimsale.status !== "LIVE"
+  const conflictedItems = freshCartItems.filter(
+    (ci) =>
+      ci.claimsaleItem.status !== "CLAIMED" ||
+      ci.claimsaleItem.claimedById !== userId ||
+      ci.claimsaleItem.claimsale.status !== "LIVE"
   );
 
   if (availableItems.length === 0) {
@@ -331,6 +356,7 @@ export async function checkout(shippingSelections?: Record<string, string>) {
     if (!bundle) {
       bundle = await prisma.shippingBundle.create({
         data: {
+          orderNumber: generateOrderNumber(),
           buyerId: session.user.id,
           sellerId,
           shippingCost,
@@ -348,16 +374,19 @@ export async function checkout(shippingSelections?: Record<string, string>) {
     }
 
     for (const ci of items) {
-      // Atomically try to claim the item (race condition protection)
+      // Atomically move from CLAIMED to SOLD (race condition protection)
       const updated = await prisma.claimsaleItem.updateMany({
         where: {
           id: ci.claimsaleItemId,
-          status: "AVAILABLE",
+          status: "CLAIMED",
+          claimedById: session.user.id,
         },
         data: {
           status: "SOLD",
           buyerId: session.user.id,
           shippingBundleId: bundle.id,
+          claimedAt: null,
+          claimedById: null,
         },
       });
 
@@ -370,8 +399,7 @@ export async function checkout(shippingSelections?: Record<string, string>) {
       }
 
       // Deduct from buyer
-      const isFirstItemInBundle = claimedCount === 0 && shippingCost > 0 &&
-        items.indexOf(ci) === 0;
+      const isFirstItemInBundle = items.indexOf(ci) === 0 && shippingCost > 0;
       const deductAmount = isFirstItemInBundle
         ? ci.claimsaleItem.price + shippingCost
         : ci.claimsaleItem.price;
@@ -405,6 +433,17 @@ export async function checkout(shippingSelections?: Record<string, string>) {
       });
 
       claimedCount++;
+    }
+
+    // Notify seller about new order
+    if (claimedCount > 0) {
+      await createNotification(
+        sellerId,
+        "ORDER_PAID",
+        "Nieuwe bestelling ontvangen!",
+        "Er is een nieuwe bestelling binnengekomen. Bekijk deze in je verkopen.",
+        "/dashboard/verkopen"
+      );
     }
   }
 

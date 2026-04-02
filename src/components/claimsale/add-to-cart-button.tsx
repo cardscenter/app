@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { addToCart } from "@/actions/cart";
+import { claimItem } from "@/actions/claimsale";
 import { useState } from "react";
 import { ShoppingCart, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -13,18 +13,18 @@ export function AddToCartButton({
   itemId: string;
   cardName: string;
 }) {
-  const t = useTranslations("cart");
+  const t = useTranslations("claimsale");
   const [loading, setLoading] = useState(false);
-  const [added, setAdded] = useState(false);
+  const [claimed, setClaimed] = useState(false);
 
-  async function handleAdd() {
+  async function handleClaim() {
     setLoading(true);
-    const result = await addToCart(itemId);
+    const result = await claimItem(itemId);
     if (result?.error) {
       toast.error(result.error);
     } else {
-      toast.success(t("itemAdded", { name: cardName }));
-      setAdded(true);
+      toast.success(t("claimSuccess", { name: cardName }));
+      setClaimed(true);
       window.dispatchEvent(new CustomEvent("cart-updated"));
     }
     setLoading(false);
@@ -32,23 +32,23 @@ export function AddToCartButton({
 
   return (
     <button
-      onClick={handleAdd}
-      disabled={loading || added}
+      onClick={handleClaim}
+      disabled={loading || claimed}
       className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-        added
-          ? "bg-muted text-muted-foreground0 cursor-default"
+        claimed
+          ? "bg-muted text-muted-foreground cursor-default"
           : "bg-primary text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
       }`}
     >
-      {added ? (
+      {claimed ? (
         <>
           <Check className="h-3.5 w-3.5" />
-          {t("addedToCart")}
+          {t("claimed")}
         </>
       ) : (
         <>
           <ShoppingCart className="h-3.5 w-3.5" />
-          {loading ? "..." : t("addToCart")}
+          {loading ? "..." : t("claim")}
         </>
       )}
     </button>

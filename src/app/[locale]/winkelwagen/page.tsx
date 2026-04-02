@@ -16,13 +16,14 @@ export default async function CartPage() {
   const tBreadcrumbs = await getTranslations("breadcrumbs");
   const groups = await getCart();
 
-  // Get buyer address info
+  // Get buyer address + balance info
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { street: true, city: true, country: true },
+    select: { street: true, city: true, country: true, balance: true, reservedBalance: true },
   });
   const hasAddress = !!(user?.street && user?.city && user?.country);
   const buyerCountry = user?.country ?? null;
+  const availableBalance = (user?.balance ?? 0) - (user?.reservedBalance ?? 0);
 
   const totalItems = groups.reduce((sum, g) => sum + g.items.length, 0);
 
@@ -57,6 +58,7 @@ export default async function CartPage() {
           groups={groups}
           buyerCountry={buyerCountry}
           hasAddress={hasAddress}
+          availableBalance={availableBalance}
         />
       )}
     </div>

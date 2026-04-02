@@ -6,6 +6,7 @@ import { getMinimumNextBid } from "@/lib/auction/bid-increments";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { QuickBidButtons } from "@/components/auction/quick-bid-buttons";
+import { Link } from "@/i18n/navigation";
 
 export function BidSection({
   auctionId,
@@ -88,8 +89,26 @@ export function BidSection({
         />
       )}
 
-      {/* Balance info */}
-      {!isHighestBidder && availableBalance !== undefined && (
+      {/* No balance: deposit prompt */}
+      {!isHighestBidder && maxBid !== undefined && maxBid < minimumBid && (
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 p-4 text-sm space-y-2">
+          <p className="font-medium text-amber-700 dark:text-amber-400">
+            {t("noBalanceTitle")}
+          </p>
+          <p className="text-xs text-amber-600 dark:text-amber-400/80">
+            {t("noBalanceMessage")}
+          </p>
+          <Link
+            href="/dashboard/saldo"
+            className="inline-block mt-1 text-xs font-medium text-amber-700 dark:text-amber-400 underline hover:no-underline"
+          >
+            {t("topUpBalance")}
+          </Link>
+        </div>
+      )}
+
+      {/* Balance info — only when user CAN bid */}
+      {!isHighestBidder && availableBalance !== undefined && maxBid !== undefined && maxBid >= minimumBid && (
         <div className="glass-subtle rounded-xl p-3 text-sm space-y-2">
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("availableBalance")}</span>
@@ -97,14 +116,12 @@ export function BidSection({
               {"\u20AC"}{availableBalance.toFixed(2)}
             </span>
           </div>
-          {maxBid !== undefined && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t("maxBidAmount")}</span>
-              <span className="font-medium text-foreground">
-                {"\u20AC"}{maxBid.toFixed(2)}
-              </span>
-            </div>
-          )}
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{t("maxBidAmount")}</span>
+            <span className="font-medium text-foreground">
+              {"\u20AC"}{maxBid.toFixed(2)}
+            </span>
+          </div>
           {hasReservedFunds && (
             <p className="text-xs text-muted-foreground">
               {t("balanceReservedInfo", { amount: reservedBalance!.toFixed(2) })}
@@ -118,8 +135,8 @@ export function BidSection({
         </div>
       )}
 
-      {/* Bid form - hidden when highest bidder */}
-      {!isHighestBidder && (
+      {/* Bid form - hidden when highest bidder or no balance */}
+      {!isHighestBidder && (maxBid === undefined || maxBid >= minimumBid) && (
         <form action={handleBid}>
           <p className="text-xs text-muted-foreground mb-2">
             {t("minimumBid")}: {"\u20AC"}{minimumBid.toFixed(2)}

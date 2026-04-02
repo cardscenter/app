@@ -1,8 +1,8 @@
 "use client";
 
 import { sendMessage } from "@/actions/message";
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Send, ImagePlus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
@@ -44,6 +44,7 @@ export function MessageThread({
   listingContext,
   proposals,
   contextType,
+  availableBalance,
 }: {
   conversationId: string;
   messages: Message[];
@@ -51,8 +52,10 @@ export function MessageThread({
   listingContext?: ListingContext | null;
   proposals?: ProposalData[];
   contextType?: "auction" | "claimsale" | "listing" | null;
+  availableBalance?: number;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations("chat");
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -61,6 +64,17 @@ export function MessageThread({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Prefill message from URL param (e.g. cancel request from purchases page)
+  useEffect(() => {
+    const prefill = searchParams.get("prefill");
+    if (prefill && textareaRef.current) {
+      textareaRef.current.value = prefill;
+      textareaRef.current.focus();
+      // Clean up URL without reload
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [searchParams]);
 
   const proposalMap = new Map((proposals ?? []).map((p) => [p.id, p]));
 
@@ -204,7 +218,7 @@ export function MessageThread({
           </div>
         )}
 
-        <form ref={formRef} action={handleSend} className="flex items-end gap-2">
+        <div className="flex items-end gap-2">
           {/* Photo upload */}
           <label className="cursor-pointer rounded-lg p-2 text-muted-foreground hover:bg-muted/50 transition-colors" title={t("attachPhoto")}>
             <ImagePlus className="h-5 w-5" />
@@ -226,34 +240,38 @@ export function MessageThread({
                   listingTitle={listingContext.title}
                   listingPrice={listingContext.price}
                   isSeller={isSeller}
+                  availableBalance={availableBalance}
                 />
               )
             ) : (
               <ProposalButton
                 conversationId={conversationId}
                 isSeller={false}
+                availableBalance={availableBalance}
               />
             )
           )}
 
-          <textarea
-            ref={textareaRef}
-            name="body"
-            rows={1}
-            placeholder={t("messagePlaceholder")}
-            onChange={handleTextareaInput}
-            onKeyDown={handleKeyDown}
-            className="flex-1 resize-none rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
-          <button
-            type="submit"
-            disabled={loading || uploading}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-          >
-            <Send className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("send")}</span>
-          </button>
-        </form>
+          <form ref={formRef} action={handleSend} className="flex flex-1 items-end gap-2">
+            <textarea
+              ref={textareaRef}
+              name="body"
+              rows={1}
+              placeholder={t("messagePlaceholder")}
+              onChange={handleTextareaInput}
+              onKeyDown={handleKeyDown}
+              className="flex-1 resize-none rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <button
+              type="submit"
+              disabled={loading || uploading}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("send")}</span>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -44,6 +44,13 @@ export default async function SellerProfilePage({
     orderBy: { createdAt: "desc" },
   });
 
+  const activeClaimsales = await prisma.claimsale.findMany({
+    where: { sellerId: userId, status: "LIVE" },
+    take: 5,
+    orderBy: { createdAt: "desc" },
+    include: { _count: { select: { items: { where: { status: "AVAILABLE" } } } } },
+  });
+
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
       <Link
@@ -124,6 +131,26 @@ export default async function SellerProfilePage({
                         €{listing.price.toFixed(2)}
                       </span>
                     )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeClaimsales.length > 0 && (
+            <div className="glass rounded-2xl p-5">
+              <h3 className="mb-3 font-semibold text-foreground">{t("activeClaimsales")}</h3>
+              <div className="space-y-2">
+                {activeClaimsales.map((cs) => (
+                  <Link
+                    key={cs.id}
+                    href={`/claimsales/${cs.id}`}
+                    className="block rounded-xl p-2.5 text-sm text-foreground transition-colors hover:bg-white/50 dark:hover:bg-white/5"
+                  >
+                    <span className="font-medium">{cs.title}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {cs._count.items} {t("availableItems")}
+                    </span>
                   </Link>
                 ))}
               </div>

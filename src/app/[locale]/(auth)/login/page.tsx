@@ -1,15 +1,20 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { login } from "@/actions/auth";
 import { useActionState } from "react";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const locale = useLocale();
   const [state, formAction, pending] = useActionState(
-    async (_prev: { error: string } | null | undefined, formData: FormData) => {
+    async (_prev: { error?: string } | null, formData: FormData) => {
       const result = await login(formData);
+      if (result && "success" in result && result.success) {
+        window.location.href = `/${locale}`;
+        return null;
+      }
       return result ?? null;
     },
     null

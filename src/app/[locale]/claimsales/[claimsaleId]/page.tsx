@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { ClaimsaleActions } from "@/components/claimsale/claimsale-actions";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
 import { ClaimsaleItemsFilter } from "@/components/claimsale/claimsale-items-filter";
+import { LiveClaimsaleItems } from "@/components/claimsale/live-claimsale-items";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { SocialShare } from "@/components/ui/social-share";
 import { ItemCarousel } from "@/components/ui/item-carousel";
@@ -38,7 +39,7 @@ export default async function ClaimsaleDetailPage({
   if (!claimsale) notFound();
 
   const isOwner = session?.user?.id === claimsale.sellerId;
-  const availableCount = claimsale.items.filter((i) => i.status === "AVAILABLE").length;
+  const availableCount = claimsale.items.filter((i) => i.status === "AVAILABLE" || i.status === "CLAIMED").length;
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
   const [sellerInfo, sellerItems] = await Promise.all([
@@ -90,26 +91,51 @@ export default async function ClaimsaleDetailPage({
 
       {/* Items table with client-side filtering */}
       <div className="mt-6">
-        <ClaimsaleItemsFilter
-          items={claimsale.items.map((item) => ({
-            id: item.id,
-            cardName: item.cardName,
-            condition: item.condition,
-            price: item.price,
-            status: item.status,
-            imageUrls: item.imageUrls,
-            cardSet: item.cardSet ? {
-              name: item.cardSet.name,
-              series: {
-                category: { name: item.cardSet.series.category.name },
-              },
-            } : null,
-            buyer: item.buyer,
-          }))}
-          isOwner={isOwner}
-          isLive={claimsale.status === "LIVE"}
-          hasSession={!!session?.user}
-        />
+        {claimsale.status === "LIVE" ? (
+          <LiveClaimsaleItems
+            claimsaleId={claimsale.id}
+            initialItems={claimsale.items.map((item) => ({
+              id: item.id,
+              cardName: item.cardName,
+              condition: item.condition,
+              price: item.price,
+              status: item.status,
+              imageUrls: item.imageUrls,
+              cardSet: item.cardSet ? {
+                name: item.cardSet.name,
+                series: {
+                  category: { name: item.cardSet.series.category.name },
+                },
+              } : null,
+              buyer: item.buyer,
+            }))}
+            isOwner={isOwner}
+            isLive={true}
+            hasSession={!!session?.user}
+          />
+        ) : (
+          <ClaimsaleItemsFilter
+            claimsaleId={claimsale.id}
+            items={claimsale.items.map((item) => ({
+              id: item.id,
+              cardName: item.cardName,
+              condition: item.condition,
+              price: item.price,
+              status: item.status,
+              imageUrls: item.imageUrls,
+              cardSet: item.cardSet ? {
+                name: item.cardSet.name,
+                series: {
+                  category: { name: item.cardSet.series.category.name },
+                },
+              } : null,
+              buyer: item.buyer,
+            }))}
+            isOwner={isOwner}
+            isLive={false}
+            hasSession={!!session?.user}
+          />
+        )}
       </div>
 
       {/* Social share */}

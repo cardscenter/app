@@ -6,23 +6,28 @@ import { SalesContent } from "@/components/dashboard/sales-content";
 export default async function MySalesPage() {
   const session = await auth();
   const t = await getTranslations("sales");
+  const userId = session!.user!.id!;
 
+  // Fetch shipping bundles (all statuses except PENDING)
   const bundles = await prisma.shippingBundle.findMany({
     where: {
-      sellerId: session!.user!.id!,
+      sellerId: userId,
       status: { not: "PENDING" },
     },
     orderBy: { createdAt: "desc" },
     include: {
-      buyer: { select: { id: true, displayName: true } },
+      buyer: { select: { id: true, displayName: true, firstName: true, lastName: true } },
       shippingMethod: { select: { carrier: true, serviceName: true } },
       items: {
+        orderBy: { createdAt: "asc" },
         select: {
           id: true,
           cardName: true,
           condition: true,
           price: true,
           imageUrls: true,
+          reference: true,
+          sellerNote: true,
         },
       },
       auction: {
@@ -37,8 +42,30 @@ export default async function MySalesPage() {
     },
   });
 
+  // Fetch auctions awaiting payment (buyer won but hasn't fully paid)
+  const awaitingPaymentAuctions = await prisma.auction.findMany({
+    where: {
+      sellerId: userId,
+      paymentStatus: "AWAITING_PAYMENT",
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  // Fetch winner display names for awaiting payment auctions
+  const winnerIds = awaitingPaymentAuctions
+    .map((a) => a.winnerId)
+    .filter((id): id is string => id !== null);
+  const winners = winnerIds.length > 0
+    ? await prisma.user.findMany({
+        where: { id: { in: winnerIds } },
+        select: { id: true, displayName: true },
+      })
+    : [];
+  const winnerMap = new Map(winners.map((w) => [w.id, w.displayName]));
+
   const serialized = bundles.map((b) => ({
     id: b.id,
+    orderNumber: b.orderNumber,
     buyerName: b.buyer.displayName,
     buyerId: b.buyer.id,
     status: b.status,
@@ -62,6 +89,8 @@ export default async function MySalesPage() {
     buyerPostalCode: b.buyerPostalCode,
     buyerCity: b.buyerCity,
     buyerCountry: b.buyerCountry,
+    buyerFirstName: b.buyer.firstName ?? null,
+    buyerLastName: b.buyer.lastName ?? null,
     disputeInfo: b.dispute ? { id: b.dispute.id, status: b.dispute.status, reason: b.dispute.reason } : null,
     items: b.items.map((i) => ({
       id: i.id,
@@ -71,7 +100,23 @@ export default async function MySalesPage() {
       imageUrl: (() => {
         try { const urls = JSON.parse(i.imageUrls); return urls[0] ?? null; } catch { return null; }
       })(),
+      reference: i.reference ?? null,
+      sellerNote: i.sellerNote ?? null,
     })),
+  }));
+
+  const pendingAuctions = awaitingPaymentAuctions.map((a) => ({
+    id: a.id,
+    title: a.title,
+    imageUrl: (() => {
+      if (!a.imageUrls) return null;
+      try { const urls = JSON.parse(a.imageUrls); return urls[0] ?? null; } catch { return null; }
+    })(),
+    finalPrice: a.finalPrice ?? 0,
+    buyerName: a.winnerId ? (winnerMap.get(a.winnerId) ?? "Onbekend") : "Onbekend",
+    buyerId: a.winnerId ?? "",
+    paymentDeadline: a.paymentDeadline?.toISOString() ?? null,
+    createdAt: a.updatedAt.toISOString(),
   }));
 
   // Summary stats
@@ -83,17 +128,19 @@ export default async function MySalesPage() {
     pendingShipments: serialized.filter((b) => b.status === "PAID").length,
   };
 
+  const hasContent = serialized.length > 0 || pendingAuctions.length > 0;
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-foreground">
         {t("title")}
       </h1>
-      {serialized.length === 0 ? (
+      {!hasContent ? (
         <p className="mt-8 text-sm text-muted-foreground">
           {t("noSales")}
         </p>
       ) : (
-        <SalesContent bundles={serialized} stats={stats} />
+        <SalesContent bundles={serialized} stats={stats} pendingAuctions={pendingAuctions} />
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import { resolveAutoBids } from "@/lib/auction/autobid";
 import { createNotification } from "@/actions/notification";
 import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
 import { calculateAuctionUpsellCost } from "@/lib/upsell-config";
+import { generateOrderNumber } from "@/lib/order-number";
 import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
 
@@ -279,6 +280,7 @@ export async function buyNow(auctionId: string) {
     if (hasAddress) {
       await prisma.shippingBundle.create({
         data: {
+          orderNumber: generateOrderNumber(),
           buyerId: session.user.id,
           sellerId: auction.sellerId,
           shippingCost: 0,
@@ -294,6 +296,15 @@ export async function buyNow(auctionId: string) {
         },
       });
     }
+
+    // Notify seller about buy-now sale
+    await createNotification(
+      auction.sellerId,
+      "ORDER_PAID",
+      "Veiling direct gekocht!",
+      `"${auction.title}" is direct gekocht voor €${auction.buyNowPrice.toFixed(2)}. Bekijk je verkopen om te verzenden.`,
+      "/dashboard/verkopen"
+    );
   } else {
     // Partial payment — reserve 40%, give 5-day deadline
     const paymentDeadline = new Date();
@@ -397,6 +408,7 @@ export async function finalizeAuction(auctionId: string) {
     if (winner.street && winner.postalCode && winner.city) {
       await prisma.shippingBundle.create({
         data: {
+          orderNumber: generateOrderNumber(),
           buyerId: highestBid.bidderId,
           sellerId: auction.sellerId,
           shippingCost: 0,
@@ -422,6 +434,15 @@ export async function finalizeAuction(auctionId: string) {
         paymentStatus: "PAID",
       },
     });
+
+    // Notify seller about auction sale
+    await createNotification(
+      auction.sellerId,
+      "ORDER_PAID",
+      "Veiling verkocht!",
+      `"${auction.title}" is verkocht voor €${totalCost.toFixed(2)}. Bekijk je verkopen om te verzenden.`,
+      "/dashboard/verkopen"
+    );
   } else {
     // Winner doesn't have enough balance — set AWAITING_PAYMENT with 5-day deadline
     const paymentDeadline = new Date();
@@ -571,6 +592,7 @@ export async function completeAuctionPayment(auctionId: string) {
   // Create ShippingBundle
   await prisma.shippingBundle.create({
     data: {
+      orderNumber: generateOrderNumber(),
       buyerId: session.user.id,
       sellerId: auction.sellerId,
       shippingCost: 0,
@@ -591,6 +613,15 @@ export async function completeAuctionPayment(auctionId: string) {
     where: { id: auctionId },
     data: { paymentStatus: "PAID" },
   });
+
+  // Notify seller about completed payment
+  await createNotification(
+    auction.sellerId,
+    "ORDER_PAID",
+    "Veilingbetaling ontvangen!",
+    `De betaling voor "${auction.title}" is voltooid. Bekijk je verkopen om te verzenden.`,
+    "/dashboard/verkopen"
+  );
 
   return { success: true };
 }

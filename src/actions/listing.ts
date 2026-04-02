@@ -6,6 +6,7 @@ import { createListingSchema } from "@/lib/validations/listing";
 import { calculateUpsellCost } from "@/lib/upsell-config";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { generateOrderNumber } from "@/lib/order-number";
 import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
 import { checkAmountAllowed } from "@/lib/account-age";
@@ -266,6 +267,7 @@ export async function buyListing(listingId: string, shippingMethodId?: string) {
   // Create ShippingBundle
   await prisma.shippingBundle.create({
     data: {
+      orderNumber: generateOrderNumber(),
       buyerId: session.user.id,
       sellerId: listing.sellerId,
       shippingCost,
@@ -285,10 +287,10 @@ export async function buyListing(listingId: string, shippingMethodId?: string) {
   // Notify seller
   await createNotification(
     listing.sellerId,
-    "OUTBID",
+    "ORDER_PAID",
     "Advertentie verkocht!",
-    `"${listing.title}" is verkocht voor €${listing.price.toFixed(2)}.`,
-    `/nl/marktplaats/${listingId}`
+    `"${listing.title}" is verkocht voor €${listing.price.toFixed(2)}. Bekijk je verkopen om te verzenden.`,
+    "/dashboard/verkopen"
   );
 
   return { success: true };

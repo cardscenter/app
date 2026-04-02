@@ -65,6 +65,7 @@ export async function getSellerStats(userId: string) {
       displayName: true,
       avatarUrl: true,
       accountType: true,
+      isVerified: true,
       createdAt: true,
     },
   });
@@ -132,6 +133,7 @@ export async function getSellerStats(userId: string) {
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
     accountType: user.accountType,
+    isVerified: user.isVerified,
     xp: xpBreakdown.total,
     xpBreakdown,
     avgRating: Math.round(avgRating * 10) / 10,

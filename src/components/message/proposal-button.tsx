@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HandCoins, X } from "lucide-react";
+import { HandCoins, X, Wallet, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createProposal } from "@/actions/proposal";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ interface ProposalButtonProps {
   listingTitle?: string;
   listingPrice?: number | null;
   isSeller: boolean;
+  availableBalance?: number;
 }
 
 export function ProposalButton({
@@ -18,6 +19,7 @@ export function ProposalButton({
   listingTitle,
   listingPrice,
   isSeller,
+  availableBalance,
 }: ProposalButtonProps) {
   const t = useTranslations("proposal");
   const router = useRouter();
@@ -110,6 +112,25 @@ export function ProposalButton({
                   />
                 </div>
               </div>
+
+              {/* Balance info for buyers */}
+              {!isSeller && availableBalance !== undefined && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t("yourBalance")}:</span>
+                  <span className="font-medium text-foreground">&euro;{availableBalance.toFixed(2)}</span>
+                </div>
+              )}
+
+              {/* Warning if amount exceeds balance */}
+              {!isSeller && availableBalance !== undefined && parseFloat(amount) > availableBalance && parseFloat(amount) > 0 && (
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                    {t("balanceInsufficient")}
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <p className="text-sm text-red-500">{error}</p>

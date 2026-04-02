@@ -3,12 +3,14 @@
 import { useTranslations } from "next-intl";
 import { StarRatingDisplay } from "@/components/ui/star-rating";
 import { SellerLevelBadge } from "@/components/ui/seller-level-badge";
-import { ShoppingBag, TrendingUp, Calendar, ThumbsUp } from "lucide-react";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { ShoppingBag, TrendingUp, Calendar, ThumbsUp, Crown, Zap } from "lucide-react";
 
 export type SellerStats = {
   displayName: string;
   avatarUrl: string | null;
   accountType: string;
+  isVerified?: boolean;
   xp: number;
   avgRating: number;
   totalReviews: number;
@@ -29,9 +31,13 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
   if (compact) {
     return (
       <div className="glass-subtle flex items-center gap-3 rounded-xl p-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
-          {stats.displayName.charAt(0).toUpperCase()}
-        </div>
+        {stats.avatarUrl ? (
+          <img src={stats.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary shrink-0">
+            {stats.displayName.charAt(0).toUpperCase()}
+          </div>
+        )}
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-foreground">{stats.displayName}</span>
@@ -51,11 +57,28 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
   return (
     <div className="glass rounded-2xl p-6">
       <div className="flex items-start gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary">
-          {stats.displayName.charAt(0).toUpperCase()}
-        </div>
+        {stats.avatarUrl ? (
+          <img src={stats.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary shrink-0">
+            {stats.displayName.charAt(0).toUpperCase()}
+          </div>
+        )}
         <div className="flex-1">
-          <h2 className="text-xl font-bold text-foreground">{stats.displayName}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl font-bold text-foreground">{stats.displayName}</h2>
+            {stats.isVerified && <VerifiedBadge />}
+            {stats.accountType === "PRO" && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                <Zap className="h-3 w-3" /> PRO
+              </span>
+            )}
+            {(stats.accountType === "UNLIMITED" || stats.accountType === "ADMIN") && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-yellow-500/10 px-1.5 py-0.5 text-xs font-bold text-yellow-600 dark:text-yellow-400">
+                <Crown className="h-3 w-3" /> UNLIMITED
+              </span>
+            )}
+          </div>
           <div className="mt-1">
             <SellerLevelBadge xp={stats.xp} showProgress isPro={stats.accountType !== "FREE"} />
           </div>

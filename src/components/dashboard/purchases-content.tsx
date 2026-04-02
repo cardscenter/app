@@ -3,6 +3,7 @@
 import { useTranslations, useLocale } from "next-intl";
 import { useState } from "react";
 import { cancelPurchase, confirmDelivery } from "@/actions/purchase";
+import { contactSeller } from "@/actions/message";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
@@ -21,6 +22,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { OpenDisputeForm } from "./open-dispute-form";
+import { SourceTypeBadge } from "@/components/ui/source-type-badge";
+import { OrderDetailModal } from "./order-detail-modal";
 
 type BundleItem = {
   id: string;
@@ -28,10 +31,13 @@ type BundleItem = {
   condition: string;
   price: number;
   imageUrl: string | null;
+  reference: string | null;
+  sellerNote: string | null;
 };
 
 type PurchaseBundle = {
   id: string;
+  orderNumber: string;
   sellerName: string;
   sellerId: string;
   status: string;
@@ -82,13 +88,23 @@ const AUTO_CONFIRM_DAYS = 30;
 export function PurchasesContent({ bundles }: { bundles: PurchaseBundle[] }) {
   const t = useTranslations("purchases");
   const locale = useLocale();
+  const [search, setSearch] = useState("");
+
+  const searchLower = search.toLowerCase().trim();
+  const searchedBundles = searchLower
+    ? bundles.filter((b) =>
+        b.orderNumber.toLowerCase().includes(searchLower) ||
+        b.sellerName.toLowerCase().includes(searchLower) ||
+        b.totalCost.toFixed(2).includes(searchLower)
+      )
+    : bundles;
 
   const counts: Record<Tab, number> = {
-    PAID: bundles.filter((b) => b.status === "PAID").length,
-    SHIPPED: bundles.filter((b) => b.status === "SHIPPED").length,
-    COMPLETED: bundles.filter((b) => b.status === "COMPLETED").length,
-    CANCELLED: bundles.filter((b) => b.status === "CANCELLED").length,
-    DISPUTED: bundles.filter((b) => b.status === "DISPUTED").length,
+    PAID: searchedBundles.filter((b) => b.status === "PAID").length,
+    SHIPPED: searchedBundles.filter((b) => b.status === "SHIPPED").length,
+    COMPLETED: searchedBundles.filter((b) => b.status === "COMPLETED").length,
+    CANCELLED: searchedBundles.filter((b) => b.status === "CANCELLED").length,
+    DISPUTED: searchedBundles.filter((b) => b.status === "DISPUTED").length,
   };
 
   // Hide tabs with 0 items (except always-visible ones)
@@ -99,10 +115,21 @@ export function PurchasesContent({ bundles }: { bundles: PurchaseBundle[] }) {
   const defaultTab = TABS.find((tab) => counts[tab] > 0) ?? "PAID";
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
 
-  const filtered = bundles.filter((b) => b.status === activeTab);
+  const filtered = searchedBundles.filter((b) => b.status === activeTab);
 
   return (
     <div className="mt-6 space-y-6">
+      {/* Search */}
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          className="w-full rounded-xl glass-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-border"
+        />
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl bg-muted/50 p-1 overflow-x-auto">
         {visibleTabs.map((tab) => {
@@ -158,6 +185,7 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [showDeliveryConfirm, setShowDeliveryConfirm] = useState(false);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
 
@@ -215,6 +243,10 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
+              <SourceTypeBadge type={bundle.sourceType} />
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground">
+                {bundle.orderNumber}
+              </span>
               <Link
                 href={`/verkoper/${bundle.sellerId}`}
                 className="text-sm font-semibold text-foreground hover:text-primary truncate"
@@ -249,6 +281,12 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
             &euro;{bundle.totalCost.toFixed(2)}
           </span>
           <button
+            onClick={() => setShowOrderDetail(true)}
+            className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+          >
+            {t("orderDetails")}
+          </button>
+          <button
             onClick={() => setExpanded(!expanded)}
             className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
           >
@@ -256,6 +294,31 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
           </button>
         </div>
       </div>
+
+      {/* Order detail modal */}
+      {showOrderDetail && (
+        <OrderDetailModal
+          namespace="purchases"
+          order={{
+            orderNumber: bundle.orderNumber,
+            status: bundle.status,
+            sourceType: bundle.sourceType,
+            sourceTitle: bundle.sourceTitle,
+            sourceImageUrl: bundle.sourceImageUrl,
+            totalItemCost: bundle.totalItemCost,
+            shippingCost: bundle.shippingCost,
+            totalCost: bundle.totalCost,
+            shippingMethodCarrier: bundle.shippingMethodCarrier,
+            shippingMethodService: bundle.shippingMethodService,
+            trackingUrl: bundle.trackingUrl,
+            createdAt: bundle.createdAt,
+            shippedAt: bundle.shippedAt,
+            items: bundle.items,
+            sellerName: bundle.sellerName,
+          }}
+          onClose={() => setShowOrderDetail(false)}
+        />
+      )}
 
       {/* Status hints (collapsed) */}
       {!expanded && bundle.status === "PAID" && (
@@ -472,13 +535,7 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
                     <Clock className="h-3.5 w-3.5" />
                     <span>{t("canCancelIn", { days: daysRemaining })}</span>
                   </div>
-                  <Link
-                    href={`/berichten`}
-                    className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    {t("requestCancel")}
-                  </Link>
+                  <ContactSellerFromPurchase sellerId={bundle.sellerId} sellerName={bundle.sellerName} orderNumber={bundle.orderNumber} />
                   <p className="text-xs text-muted-foreground">{t("requestCancelHint")}</p>
                 </div>
               )}
@@ -611,6 +668,46 @@ function DeliveryConfirmForm({
         </button>
       </div>
     </div>
+  );
+}
+
+// Contact seller button (creates/finds conversation + prefills cancel request)
+function ContactSellerFromPurchase({
+  sellerId,
+  sellerName,
+  orderNumber,
+}: {
+  sellerId: string;
+  sellerName: string;
+  orderNumber: string;
+}) {
+  const t = useTranslations("purchases");
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function handleContact() {
+    setLoading(true);
+    const result = await contactSeller(sellerId);
+    if ("error" in result) {
+      toast.error(result.error);
+      setLoading(false);
+      return;
+    }
+    if (result.conversationId) {
+      const message = t("cancelRequestMessage", { sellerName, orderNumber });
+      router.push(`/berichten/${result.conversationId}?prefill=${encodeURIComponent(message)}`);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleContact}
+      disabled={loading}
+      className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+    >
+      <MessageCircle className="h-3.5 w-3.5" />
+      {loading ? "..." : t("requestCancel")}
+    </button>
   );
 }
 

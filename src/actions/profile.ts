@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { saveUploadedFile } from "@/lib/upload";
 import { z } from "zod";
 
 const profileSchema = z.object({
@@ -32,9 +33,30 @@ export async function updateProfile(formData: FormData) {
     return { error: "Deze gebruikersnaam is al in gebruik" };
   }
 
+  // Handle avatar upload
+  let avatarUrl: string | undefined;
+  const removeAvatar = formData.get("removeAvatar") === "true";
+
+  if (removeAvatar) {
+    avatarUrl = "";
+  } else {
+    const avatarFile = formData.get("avatarFile") as File | null;
+    if (avatarFile && avatarFile.size > 0) {
+      try {
+        avatarUrl = await saveUploadedFile(avatarFile);
+      } catch {
+        return { error: "Profielfoto uploaden mislukt. Maximaal 5MB (JPG, PNG, WebP, GIF)." };
+      }
+    }
+  }
+
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { displayName, bio: bio ?? null },
+    data: {
+      displayName,
+      bio: bio ?? null,
+      ...(avatarUrl !== undefined && { avatarUrl: avatarUrl || null }),
+    },
   });
 
   return { success: true };

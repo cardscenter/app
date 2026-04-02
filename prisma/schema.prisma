@@ -15,6 +15,8 @@ model User {
   email         String    @unique
   passwordHash  String
   displayName   String    @unique
+  firstName     String?
+  lastName      String?
   bio           String?
   avatarUrl     String?
 
@@ -47,6 +49,11 @@ model User {
   city          String?
   country       String?  // ISO 3166-1 alpha-2: "NL", "DE", "BE", etc.
 
+  // Registration preferences
+  accountFocus      String?   // BUYING | SELLING | BOTH
+  referralSource    String?   // How the user found the platform
+  termsAcceptedAt   DateTime? // When the user accepted terms & conditions
+
   // Username change tracking
   lastUsernameChange DateTime?
 
@@ -76,6 +83,7 @@ model User {
   cartItems         CartItem[]
   disputesOpened    Dispute[]  @relation("DisputesOpened")
   subscriptions     Subscription[]
+  claimedItems      ClaimsaleItem[]    @relation("ClaimedBy")
 }
 
 // ============================================================
@@ -313,7 +321,8 @@ model ClaimsaleItem {
   cardName     String
   condition    String   // "Near Mint", "Lightly Played", etc.
   price        Float
-  reference    String?  // Optional seller reference (e.g. binder location, inventory code)
+  reference    String?  // Card number / set reference (e.g. "#4", "SV1-199")
+  sellerNote   String?  // Seller's personal note (e.g. binder location, inventory code)
   imageUrls    String   @default("[]") // JSON array of image URLs
 
   cardSetId    String?
@@ -323,9 +332,14 @@ model ClaimsaleItem {
   claimsale    Claimsale @relation(fields: [claimsaleId], references: [id], onDelete: Cascade)
 
   // Purchase status
-  status       String   @default("AVAILABLE") // AVAILABLE | SOLD
+  status       String   @default("AVAILABLE") // AVAILABLE | CLAIMED | SOLD | DELETED
   buyerId      String?
   buyer        User?    @relation("Buyer", fields: [buyerId], references: [id])
+
+  // Claim reservation (15 min)
+  claimedAt    DateTime?
+  claimedById  String?
+  claimedBy    User?    @relation("ClaimedBy", fields: [claimedById], references: [id])
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -339,6 +353,7 @@ model ClaimsaleItem {
   @@index([claimsaleId])
   @@index([cardSetId])
   @@index([buyerId])
+  @@index([claimedById])
   @@index([status])
 }
 
@@ -453,6 +468,7 @@ model ListingUpsell {
 
 model ShippingBundle {
   id            String   @id @default(cuid())
+  orderNumber   String   @unique @default("")
 
   buyerId       String
   buyer         User     @relation("BundleBuyer", fields: [buyerId], references: [id])
@@ -808,6 +824,10 @@ model CartItem {
 
   claimsaleItemId String
   claimsaleItem   ClaimsaleItem @relation(fields: [claimsaleItemId], references: [id], onDelete: Cascade)
+
+  // Snapshot at time of claim (for change detection in cart)
+  snapshotPrice    Float?
+  snapshotCardName String?
 
   createdAt       DateTime      @default(now())
 

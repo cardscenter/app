@@ -66,10 +66,68 @@ export async function cancelPurchase(bundleId: string) {
   return { success: true };
 }
 
+// Seller cancels a PAID order (refund to buyer)
+export async function cancelOrderBySeller(bundleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const bundle = await prisma.shippingBundle.findUnique({
+    where: { id: bundleId },
+    include: { buyer: { select: { displayName: true } } },
+  });
+
+  if (!bundle) return { error: "Bestelling niet gevonden" };
+  if (bundle.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (bundle.status !== "PAID") return { error: "Kan alleen betaalde bestellingen annuleren" };
+
+  // Refund buyer: release escrow back to buyer
+  await refundEscrow(
+    session.user.id,        // seller
+    bundle.buyerId,         // buyer gets refund
+    bundle.totalCost,       // full refund (items + shipping)
+    bundle.totalItemCost,   // item costs in escrow
+    `Geannuleerd door verkoper: bestelling ${bundle.id}`,
+    bundle.id
+  );
+
+  // Set claimsale items back to AVAILABLE
+  await prisma.claimsaleItem.updateMany({
+    where: { shippingBundleId: bundle.id },
+    data: {
+      status: "AVAILABLE",
+      buyerId: null,
+      shippingBundleId: null,
+    },
+  });
+
+  // Mark bundle as cancelled
+  await prisma.shippingBundle.update({
+    where: { id: bundleId },
+    data: { status: "CANCELLED" },
+  });
+
+  // Notify buyer
+  await createNotification(
+    bundle.buyerId,
+    "ORDER_CANCELLED",
+    "Bestelling geannuleerd door verkoper",
+    "De verkoper heeft je bestelling geannuleerd. Het volledige bedrag is teruggestort op je saldo.",
+    "/dashboard/aankopen"
+  );
+
+  return { success: true };
+}
+
 // Seller marks bundle as shipped with tracking URL
 export async function markAsShipped(bundleId: string, trackingUrl: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  if (!trackingUrl || !trackingUrl.trim()) {
+    return { error: "Een Track & Trace link is verplicht" };
+  }
+
+  const trimmedUrl = trackingUrl.trim();
 
   const bundle = await prisma.shippingBundle.findUnique({
     where: { id: bundleId },
@@ -84,7 +142,7 @@ export async function markAsShipped(bundleId: string, trackingUrl: string) {
     where: { id: bundleId },
     data: {
       status: "SHIPPED",
-      trackingUrl: trackingUrl || null,
+      trackingUrl: trimmedUrl,
       shippedAt: new Date(),
     },
   });

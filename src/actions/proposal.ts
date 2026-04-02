@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
 
 export async function createProposal(
@@ -226,6 +227,7 @@ export async function respondToProposal(
 
       await prisma.shippingBundle.create({
         data: {
+          orderNumber: generateOrderNumber(),
           buyerId,
           sellerId,
           shippingCost,
@@ -279,10 +281,10 @@ export async function respondToProposal(
 
   await createNotification(
     sellerId,
-    "ITEM_SOLD",
+    "ORDER_PAID",
     "Betaalverzoek geaccepteerd!",
-    `"${contextTitle}" — €${amount.toFixed(2)} is geaccepteerd.`,
-    proposal.listing ? `/nl/marktplaats/${proposal.listing.id}` : `/nl/berichten/${proposal.conversationId}`
+    `"${contextTitle}" — €${amount.toFixed(2)} is geaccepteerd. Bekijk je verkopen om te verzenden.`,
+    "/dashboard/verkopen"
   );
 
   return { success: true, status: "ACCEPTED" };
@@ -349,6 +351,7 @@ export async function completeProposalPayment(proposalId: string) {
   if (proposal.listing) {
     await prisma.shippingBundle.create({
       data: {
+        orderNumber: generateOrderNumber(),
         buyerId,
         sellerId,
         shippingCost,
@@ -372,10 +375,10 @@ export async function completeProposalPayment(proposalId: string) {
 
   await createNotification(
     sellerId,
-    "ITEM_SOLD",
+    "ORDER_PAID",
     "Betaling ontvangen!",
-    `De betaling voor "${contextTitle}" (€${totalCost.toFixed(2)}) is voltooid.`,
-    proposal.listing ? `/nl/marktplaats/${proposal.listing.id}` : `/nl/berichten/${proposal.conversationId}`
+    `De betaling voor "${contextTitle}" (€${totalCost.toFixed(2)}) is voltooid. Bekijk je verkopen om te verzenden.`,
+    "/dashboard/verkopen"
   );
 
   return { success: true };

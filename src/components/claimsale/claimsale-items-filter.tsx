@@ -2,15 +2,19 @@
 
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Search, X } from "lucide-react";
+import { Search, X, ShoppingCart, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { ClaimButton } from "@/components/claimsale/claim-button";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { AddToCartButton } from "@/components/claimsale/add-to-cart-button";
+import { ClaimsaleItemEdit } from "@/components/claimsale/claimsale-item-edit";
+import { claimAllItems, deleteClaimsaleItem } from "@/actions/claimsale";
 
 function parseImageUrls(json: string): string[] {
   try { return JSON.parse(json); } catch { return []; }
 }
 
-interface ClaimsaleItem {
+export interface ClaimsaleItem {
   id: string;
   cardName: string;
   condition: string;
@@ -28,6 +32,7 @@ interface ClaimsaleItem {
 
 interface ClaimsaleItemsFilterProps {
   items: ClaimsaleItem[];
+  claimsaleId: string;
   isOwner: boolean;
   isLive: boolean;
   hasSession: boolean;
@@ -37,6 +42,7 @@ type SortKey = "name" | "price_asc" | "price_desc" | "condition";
 
 export function ClaimsaleItemsFilter({
   items,
+  claimsaleId,
   isOwner,
   isLive,
   hasSession,
@@ -48,6 +54,41 @@ export function ClaimsaleItemsFilter({
   const [conditionFilter, setConditionFilter] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("name");
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [showClaimAllConfirm, setShowClaimAllConfirm] = useState(false);
+  const [claimingAll, setClaimingAll] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function handleDeleteItem(itemId: string) {
+    setDeletingItemId(itemId);
+    const result = await deleteClaimsaleItem(itemId);
+    if (result?.error) {
+      toast.error(result.error);
+    } else {
+      toast.success(t("itemDeleted"));
+      router.refresh();
+    }
+    setDeletingItemId(null);
+  }
+
+  const availableCount = useMemo(
+    () => items.filter((i) => i.status === "AVAILABLE").length,
+    [items]
+  );
+
+  async function handleClaimAll(claimsaleId: string) {
+    setClaimingAll(true);
+    const result = await claimAllItems(claimsaleId);
+    if (result?.error) {
+      toast.error(result.error);
+    } else if (result.success) {
+      toast.success(t("claimAllSuccess", { count: result.claimedCount }));
+      window.dispatchEvent(new CustomEvent("cart-updated"));
+    }
+    setClaimingAll(false);
+    setShowClaimAllConfirm(false);
+  }
 
   const conditions = useMemo(() => {
     const set = new Set(items.map((i) => i.condition));
@@ -55,7 +96,8 @@ export function ClaimsaleItemsFilter({
   }, [items]);
 
   const filteredItems = useMemo(() => {
-    let result = [...items];
+    // Hide DELETED items from non-owners
+    let result = isOwner ? [...items] : items.filter((i) => i.status !== "DELETED");
 
     // Text search
     if (search) {
@@ -118,6 +160,52 @@ export function ClaimsaleItemsFilter({
         </div>
       )}
 
+      {/* Claim all confirmation overlay */}
+      {showClaimAllConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowClaimAllConfirm(false)}
+        >
+          <div
+            className="mx-4 w-full max-w-sm rounded-xl bg-background p-6 shadow-xl border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-foreground">{t("confirmClaimAll")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("confirmClaimAllDesc", { count: availableCount })}
+            </p>
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => setShowClaimAllConfirm(false)}
+                className="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() => handleClaimAll(claimsaleId)}
+                disabled={claimingAll}
+                className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors"
+              >
+                {claimingAll ? "..." : t("claimAll")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Claim all button */}
+      {!isOwner && hasSession && isLive && availableCount > 1 && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowClaimAllConfirm(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover transition-colors"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {t("claimAll")} ({availableCount})
+          </button>
+        </div>
+      )}
+
       {/* Filter bar */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -166,8 +254,21 @@ export function ClaimsaleItemsFilter({
           const front = images[0];
           const back = images[1];
 
+          if (editingItemId === item.id) {
+            return (
+              <ClaimsaleItemEdit
+                key={item.id}
+                itemId={item.id}
+                initialCardName={item.cardName}
+                initialCondition={item.condition}
+                initialPrice={item.price}
+                onClose={() => setEditingItemId(null)}
+              />
+            );
+          }
+
           return (
-            <div key={item.id} className="flex gap-3 rounded-xl border border-border p-3">
+            <div key={item.id} className={`flex gap-3 rounded-xl border border-border p-3 ${item.status === "DELETED" ? "opacity-50" : ""}`}>
               {/* Images: front + back */}
               <div className="shrink-0 flex gap-1.5">
                 <button
@@ -218,17 +319,46 @@ export function ClaimsaleItemsFilter({
                   <span className="text-lg font-bold text-foreground">
                     &euro;{item.price.toFixed(2)}
                   </span>
-                  {item.status === "AVAILABLE" && isLive && !isOwner && hasSession ? (
-                    <ClaimButton itemId={item.id} />
-                  ) : item.status === "SOLD" ? (
-                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                      {t("claimed")}
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
-                      {t("available")}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {/* Owner edit/delete controls */}
+                    {isOwner && isLive && item.status !== "SOLD" && item.status !== "DELETED" && (
+                      <>
+                        <button
+                          onClick={() => setEditingItemId(item.id)}
+                          className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          disabled={deletingItemId === item.id}
+                          className="rounded-md p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
+                    {/* Status badges */}
+                    {item.status === "AVAILABLE" && isLive && !isOwner && hasSession ? (
+                      <AddToCartButton itemId={item.id} cardName={item.cardName} />
+                    ) : item.status === "CLAIMED" ? (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                        {t("claimed")}
+                      </span>
+                    ) : item.status === "SOLD" ? (
+                      <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        {t("sold")}
+                      </span>
+                    ) : item.status === "DELETED" && isOwner ? (
+                      <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                        {t("deleted")}
+                      </span>
+                    ) : item.status !== "DELETED" ? (
+                      <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
+                        {t("available")}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>
@@ -261,6 +391,9 @@ export function ClaimsaleItemsFilter({
               <th className="px-3 py-3 text-center font-medium text-muted-foreground">
                 Status
               </th>
+              {isOwner && isLive && (
+                <th className="px-3 py-3 text-center font-medium text-muted-foreground w-20" />
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -269,8 +402,24 @@ export function ClaimsaleItemsFilter({
               const front = images[0];
               const back = images[1];
 
+              if (editingItemId === item.id) {
+                return (
+                  <tr key={item.id}>
+                    <td colSpan={isOwner && isLive ? 6 : 5} className="px-3 py-2">
+                      <ClaimsaleItemEdit
+                        itemId={item.id}
+                        initialCardName={item.cardName}
+                        initialCondition={item.condition}
+                        initialPrice={item.price}
+                        onClose={() => setEditingItemId(null)}
+                      />
+                    </td>
+                  </tr>
+                );
+              }
+
               return (
-                <tr key={item.id}>
+                <tr key={item.id} className={item.status === "DELETED" ? "opacity-50" : ""}>
                   <td className="px-3 py-2">
                     <div className="flex gap-1.5">
                       {front ? (
@@ -341,24 +490,53 @@ export function ClaimsaleItemsFilter({
                   </td>
                   <td className="px-3 py-2 text-center">
                     {item.status === "AVAILABLE" && isLive && !isOwner && hasSession ? (
-                      <ClaimButton itemId={item.id} />
-                    ) : item.status === "SOLD" ? (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      <AddToCartButton itemId={item.id} cardName={item.cardName} />
+                    ) : item.status === "CLAIMED" ? (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
                         {t("claimed")}
                       </span>
-                    ) : (
+                    ) : item.status === "SOLD" ? (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {t("sold")}
+                      </span>
+                    ) : item.status === "DELETED" && isOwner ? (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                        {t("deleted")}
+                      </span>
+                    ) : item.status !== "DELETED" ? (
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
                         {t("available")}
                       </span>
-                    )}
+                    ) : null}
                   </td>
+                  {isOwner && isLive && (
+                    <td className="px-3 py-2 text-center">
+                      {item.status !== "SOLD" && item.status !== "DELETED" && (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => setEditingItemId(item.id)}
+                            className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item.id)}
+                            disabled={deletingItemId === item.id}
+                            className="rounded-md p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
             {filteredItems.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={isOwner && isLive ? 6 : 5}
                   className="px-4 py-8 text-center text-sm text-muted-foreground"
                 >
                   {ts("noResultsHint")}

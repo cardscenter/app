@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Inbox, MessageSquare, Archive, Trash2 } from "lucide-react";
+import { Inbox, MessageSquare, Archive } from "lucide-react";
 import { ConversationList } from "./conversation-list";
 
-export type ChatTab = "inbox" | "active" | "archived" | "deleted";
+export type ChatTab = "inbox" | "active" | "archived";
 
 export type ConversationPreview = {
   id: string;
@@ -34,7 +34,6 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
     const conv = conversations.find((c) => c.id === activeConversationId);
     if (!conv) return "active";
     if (conv.participantStatus === "ARCHIVED") return "archived";
-    if (conv.participantStatus === "DELETED") return "deleted";
     return "active";
   };
 
@@ -45,7 +44,6 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
     { key: "inbox", label: t("inbox"), icon: Inbox },
     { key: "active", label: t("ongoing"), icon: MessageSquare },
     { key: "archived", label: t("archived"), icon: Archive },
-    { key: "deleted", label: t("deleted"), icon: Trash2 },
   ];
 
   // Filter conversations by tab
@@ -53,7 +51,6 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
     if (activeTab === "inbox") return c.participantStatus === "ACTIVE" && c.hasUnread;
     if (activeTab === "active") return c.participantStatus === "ACTIVE";
     if (activeTab === "archived") return c.participantStatus === "ARCHIVED";
-    if (activeTab === "deleted") return c.participantStatus === "DELETED";
     return false;
   });
 
@@ -69,13 +66,8 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
 
   // Count badges
   const unreadCount = conversations.filter((c) => c.participantStatus === "ACTIVE" && c.hasUnread).length;
-  const archivedCount = conversations.filter((c) => c.participantStatus === "ARCHIVED").length;
-  const deletedCount = conversations.filter((c) => c.participantStatus === "DELETED").length;
-
   function getBadge(tab: ChatTab): number | null {
     if (tab === "inbox" && unreadCount > 0) return unreadCount;
-    if (tab === "archived" && archivedCount > 0) return archivedCount;
-    if (tab === "deleted" && deletedCount > 0) return deletedCount;
     return null;
   }
 
@@ -123,6 +115,13 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
 
         {/* Conversation list */}
         <div className="flex-1 overflow-y-auto">
+          {activeTab === "archived" && (
+            <div className="mx-3 mt-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 px-3 py-2">
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                {t("archiveAutoDeleteNotice")}
+              </p>
+            </div>
+          )}
           {displayed.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               {t("noConversations")}
@@ -131,7 +130,7 @@ export function ChatLayout({ conversations, activeConversationId, children }: Ch
             <ConversationList
               conversations={displayed}
               activeId={activeConversationId}
-              showActions={activeTab === "archived" || activeTab === "deleted"}
+              showActions={activeTab === "archived"}
               tab={activeTab}
             />
           )}
