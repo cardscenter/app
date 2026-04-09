@@ -8,6 +8,7 @@ import { EUROPEAN_COUNTRIES } from "@/lib/shipping/countries";
 import { Info } from "lucide-react";
 import type { SellerShippingMethod } from "@prisma/client";
 import { getDefaultMaxPrice } from "@/lib/shipping/defaults";
+import { CarrierLogo } from "@/components/ui/carrier-logo";
 
 interface Props {
   method?: SellerShippingMethod;
@@ -74,7 +75,8 @@ export function ShippingMethodForm({ method, onDone }: Props) {
     <form action={handleSubmit} className="space-y-4">
       {/* Show method name when editing */}
       {method && (
-        <div className="flex items-center gap-2 text-foreground">
+        <div className="flex items-center gap-3 text-foreground">
+          <CarrierLogo carrierId={method.carrier} size={32} className="rounded" />
           <p className="text-base font-semibold">
             {carrierName} — {method.serviceName}
           </p>

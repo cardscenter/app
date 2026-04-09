@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import type { CartShippingMethod } from "@/actions/cart";
-import { Package, ShieldCheck, Shield, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Shield, AlertTriangle } from "lucide-react";
+import { CarrierLogo } from "@/components/ui/carrier-logo";
 import {
   requiresSignedShipping,
   recommendsSignedShipping,
@@ -118,24 +119,27 @@ export function ShippingMethodPicker({
             onChange={() => onChange(method.id)}
             className="sr-only"
           />
-          <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+          <CarrierLogo carrierId={method.carrier} size={32} className="shrink-0 rounded" />
           <div className="flex-1 min-w-0">
-            <span className="font-medium">{method.carrier}</span>
-            <span className="text-muted-foreground"> — {method.serviceName}</span>
-            {method.isSigned && (
-              <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs text-purple-600 dark:text-purple-400">
-                <ShieldCheck className="h-3 w-3" />
-                {ts("signed")}
-              </span>
-            )}
-            {method.isTracked && !method.isSigned && (
-              <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs text-amber-600 dark:text-amber-400">
-                <Shield className="h-3 w-3" />
-                {ts("tracked")}
-              </span>
-            )}
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{method.carrier} — {method.serviceName}</span>
+              <span className="font-semibold whitespace-nowrap">&euro;{method.price.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {method.isSigned && (
+                <span className="inline-flex items-center gap-0.5 text-xs text-purple-600 dark:text-purple-400">
+                  <ShieldCheck className="h-3 w-3" />
+                  {ts("signed")}
+                </span>
+              )}
+              {method.isTracked && !method.isSigned && (
+                <span className="inline-flex items-center gap-0.5 text-xs text-amber-600 dark:text-amber-400">
+                  <Shield className="h-3 w-3" />
+                  {ts("tracked")}
+                </span>
+              )}
+            </div>
           </div>
-          <span className="font-semibold whitespace-nowrap">&euro;{method.price.toFixed(2)}</span>
         </label>
       ))}
     </div>

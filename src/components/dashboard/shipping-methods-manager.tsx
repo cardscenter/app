@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2, Shield, ShieldCheck } from "lucide-react";
 import { ShippingMethodForm } from "./shipping-method-form";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
 import { getCountryName } from "@/lib/shipping/countries";
+import { CarrierLogo } from "@/components/ui/carrier-logo";
 import type { SellerShippingMethod } from "@prisma/client";
 
 export function ShippingMethodsManager({ methods }: { methods: SellerShippingMethod[] }) {
@@ -68,9 +69,10 @@ export function ShippingMethodsManager({ methods }: { methods: SellerShippingMet
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-foreground">
-                      {getCarrierName(method.carrier)} — {method.serviceName}
-                    </p>
+                    <div className="flex items-center gap-2.5 font-medium text-foreground">
+                      <CarrierLogo carrierId={method.carrier} size={28} className="rounded" />
+                      <span>{getCarrierName(method.carrier)} — {method.serviceName}</span>
+                    </div>
                     {method.isDefault && (
                       <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                         {t("defaultBadge")}

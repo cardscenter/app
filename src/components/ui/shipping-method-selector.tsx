@@ -5,6 +5,7 @@ import { getCountryName } from "@/lib/shipping/countries";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
 import { Link } from "@/i18n/navigation";
 import { AlertTriangle } from "lucide-react";
+import { CarrierLogo } from "@/components/ui/carrier-logo";
 import type { SellerShippingMethod } from "@prisma/client";
 
 const MAILBOX_KEYWORDS = ["brievenbuspakket", "brievenbus", "mailbox", "letterbox"];
@@ -82,9 +83,10 @@ export function ShippingMethodSelector({ methods, selected, onChange }: Props) {
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground">
-                  {getCarrierName(method.carrier)} — {method.serviceName}
-                </p>
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <CarrierLogo carrierId={method.carrier} size={16} />
+                  <span>{getCarrierName(method.carrier)} — {method.serviceName}</span>
+                </div>
                 <p className="text-sm font-medium text-primary">
                   €{method.price.toFixed(2)}
                 </p>
