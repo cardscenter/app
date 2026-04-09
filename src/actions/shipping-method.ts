@@ -30,6 +30,7 @@ export async function createShippingMethod(formData: FormData) {
 
   const isTracked = formData.get("isTracked") === "true";
   const isSigned = formData.get("isSigned") === "true";
+  const shippingType = (formData.get("shippingType") as string) || "PARCEL";
 
   await prisma.sellerShippingMethod.create({
     data: {
@@ -38,6 +39,7 @@ export async function createShippingMethod(formData: FormData) {
       serviceName: result.data.serviceName,
       price: result.data.price,
       countries: JSON.stringify(result.data.countries),
+      shippingType,
       isTracked,
       isSigned: isSigned ? true : false,
     },

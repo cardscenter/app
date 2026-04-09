@@ -7,7 +7,7 @@ import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { expireClaimedItems, unclaimItem } from "@/actions/claimsale";
-import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
+import { requiresSignedShipping, isUntrackedAllowed, LETTER_MAX_ITEMS } from "@/lib/shipping/tracked-threshold";
 
 /**
  * Remove item from cart. This also unclaims the item so it becomes available again.
@@ -43,6 +43,7 @@ export type CartShippingMethod = {
   serviceName: string;
   price: number;
   countries: string[];
+  shippingType: string;
   isTracked: boolean;
   isSigned: boolean;
 };
@@ -134,6 +135,7 @@ export async function getCart(): Promise<CartSellerGroup[]> {
         serviceName: csm.shippingMethod.serviceName,
         price: csm.price, // snapshot price
         countries,
+        shippingType: csm.shippingMethod.shippingType,
         isTracked: csm.shippingMethod.isTracked,
         isSigned: csm.shippingMethod.isSigned,
       });
@@ -339,8 +341,13 @@ export async function checkout(shippingSelections?: Record<string, string>) {
 
       const method = await prisma.sellerShippingMethod.findUnique({
         where: { id: methodId },
-        select: { isSigned: true, isTracked: true },
+        select: { isSigned: true, isTracked: true, shippingType: true },
       });
+
+      // Letter mail item count check
+      if (method?.shippingType === "LETTER" && items.length > LETTER_MAX_ITEMS) {
+        return { error: `Briefpost kan maximaal ${LETTER_MAX_ITEMS} kaarten bevatten. Kies een andere verzendmethode voor ${items.length} items.` };
+      }
 
       // Briefpost check: untracked not allowed above €25
       if (method && !method.isTracked && !isUntrackedAllowed(itemTotal)) {

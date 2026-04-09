@@ -47,38 +47,38 @@ async function createDefaultShippingMethods(sellerId: string, country: string) {
   if (country === "NL") {
     return Promise.all([
       prisma.sellerShippingMethod.create({
-        data: { sellerId, carrier: "POSTNL", serviceName: "Briefpost", price: 1.69, countries: JSON.stringify(["NL"]), isDefault: true, isTracked: false, isSigned: false },
+        data: { sellerId, carrier: "POSTNL", serviceName: "Briefpost", price: 1.69, countries: JSON.stringify(["NL"]), shippingType: "LETTER", isDefault: true, isTracked: false, isSigned: false },
       }),
       prisma.sellerShippingMethod.create({
-        data: { sellerId, carrier: "POSTNL", serviceName: "Brievenbuspakket", price: 4.85, countries: JSON.stringify(["NL"]), isDefault: true, isTracked: true, isSigned: false },
+        data: { sellerId, carrier: "POSTNL", serviceName: "Brievenbuspakket", price: 4.85, countries: JSON.stringify(["NL"]), shippingType: "MAILBOX_PARCEL", isDefault: true, isTracked: true, isSigned: false },
       }),
       prisma.sellerShippingMethod.create({
-        data: { sellerId, carrier: "POSTNL", serviceName: "Aangetekend pakket", price: 10.45, countries: JSON.stringify(["NL"]), isDefault: true, isTracked: true, isSigned: true },
+        data: { sellerId, carrier: "POSTNL", serviceName: "Aangetekend pakket", price: 10.45, countries: JSON.stringify(["NL"]), shippingType: "PARCEL", isDefault: true, isTracked: true, isSigned: true },
       }),
       prisma.sellerShippingMethod.create({
-        data: { sellerId, carrier: "POSTNL", serviceName: "EU Briefpost", price: 4.50, countries: JSON.stringify(EU_EXCEPT_NL), isDefault: true, isTracked: false, isSigned: false },
+        data: { sellerId, carrier: "POSTNL", serviceName: "EU Briefpost", price: 4.50, countries: JSON.stringify(EU_EXCEPT_NL), shippingType: "LETTER", isDefault: true, isTracked: false, isSigned: false },
       }),
       prisma.sellerShippingMethod.create({
-        data: { sellerId, carrier: "POSTNL", serviceName: "EU Pakket aangetekend", price: 15.50, countries: JSON.stringify(EU_EXCEPT_NL), isDefault: true, isTracked: true, isSigned: true },
+        data: { sellerId, carrier: "POSTNL", serviceName: "EU Pakket aangetekend", price: 15.50, countries: JSON.stringify(EU_EXCEPT_NL), shippingType: "PARCEL", isDefault: true, isTracked: true, isSigned: true },
       }),
     ]);
   }
   if (country === "BE") {
     return Promise.all([
       prisma.sellerShippingMethod.create({
-        data: { sellerId, carrier: "BPOST", serviceName: "Standaard Pakket", price: 5.50, countries: JSON.stringify(ALL_EU), isDefault: true, isTracked: true, isSigned: false },
+        data: { sellerId, carrier: "BPOST", serviceName: "Standaard Pakket", price: 5.50, countries: JSON.stringify(ALL_EU), shippingType: "PARCEL", isDefault: true, isTracked: true, isSigned: false },
       }),
       prisma.sellerShippingMethod.create({
-        data: { sellerId, carrier: "BPOST", serviceName: "Aangetekend Pakket", price: 9.80, countries: JSON.stringify(ALL_EU), isDefault: true, isTracked: true, isSigned: true },
+        data: { sellerId, carrier: "BPOST", serviceName: "Aangetekend Pakket", price: 9.80, countries: JSON.stringify(ALL_EU), shippingType: "PARCEL", isDefault: true, isTracked: true, isSigned: true },
       }),
     ]);
   }
   return Promise.all([
     prisma.sellerShippingMethod.create({
-      data: { sellerId, carrier: "OTHER", serviceName: "Standaard Verzending", price: 5.00, countries: JSON.stringify(ALL_EU), isDefault: true, isTracked: true, isSigned: false },
+      data: { sellerId, carrier: "OTHER", serviceName: "Standaard Verzending", price: 5.00, countries: JSON.stringify(ALL_EU), shippingType: "PARCEL", isDefault: true, isTracked: true, isSigned: false },
     }),
     prisma.sellerShippingMethod.create({
-      data: { sellerId, carrier: "OTHER", serviceName: "Aangetekende Verzending", price: 12.00, countries: JSON.stringify(ALL_EU), isDefault: true, isTracked: true, isSigned: true },
+      data: { sellerId, carrier: "OTHER", serviceName: "Aangetekende Verzending", price: 12.00, countries: JSON.stringify(ALL_EU), shippingType: "PARCEL", isDefault: true, isTracked: true, isSigned: true },
     }),
   ]);
 }

@@ -114,11 +114,30 @@ export function ShippingMethodForm({ method, onDone }: Props) {
           </select>
         </div>
       )}
+      {!isDefault && (
+        <div>
+          <label htmlFor="shippingType" className="block text-sm font-medium text-foreground">
+            {t("shippingTypeLabel")}
+          </label>
+          <select
+            id="shippingType"
+            name="shippingType"
+            required
+            defaultValue={method?.shippingType ?? "PARCEL"}
+            className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+          >
+            <option value="LETTER">{t("typeLetter")}</option>
+            <option value="MAILBOX_PARCEL">{t("typeMailboxParcel")}</option>
+            <option value="PARCEL">{t("typeParcel")}</option>
+          </select>
+        </div>
+      )}
       {isDefault && (
         <>
           <input type="hidden" name="carrier" value={method?.carrier} />
           <input type="hidden" name="serviceName" value={method?.serviceName} />
           <input type="hidden" name="countries" value={method?.countries} />
+          <input type="hidden" name="shippingType" value={method?.shippingType} />
           <input type="hidden" name="isTracked" value={method?.isTracked ? "true" : "false"} />
           <input type="hidden" name="isSigned" value={method?.isSigned ? "true" : "false"} />
         </>

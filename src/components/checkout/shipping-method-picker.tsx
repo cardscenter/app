@@ -10,6 +10,7 @@ import {
   SIGNED_REQUIRED_THRESHOLD,
   isUntrackedAllowed,
   UNTRACKED_MAX_ORDER_VALUE,
+  LETTER_MAX_ITEMS,
 } from "@/lib/shipping/tracked-threshold";
 
 interface ShippingMethodPickerProps {
@@ -17,6 +18,7 @@ interface ShippingMethodPickerProps {
   buyerCountry: string;
   sellerCountry?: string;
   itemTotal?: number;
+  itemCount?: number;
   selected: string | null;
   onChange: (methodId: string) => void;
 }
@@ -26,6 +28,7 @@ export function ShippingMethodPicker({
   buyerCountry,
   sellerCountry,
   itemTotal = 0,
+  itemCount = 1,
   selected,
   onChange,
 }: ShippingMethodPickerProps) {
@@ -36,10 +39,17 @@ export function ShippingMethodPicker({
   const signedRecommended = !signedRequired && recommendsSignedShipping(itemTotal);
   const untrackedAllowed = isUntrackedAllowed(itemTotal);
 
+  const letterExceedsByCount = itemCount > LETTER_MAX_ITEMS;
+
   // Filter methods available for buyer's country
   let available = methods.filter(
     (m) => m.countries.length === 0 || m.countries.includes(buyerCountry)
   );
+
+  // Filter out LETTER methods if too many items
+  if (letterExceedsByCount) {
+    available = available.filter((m) => m.shippingType !== "LETTER");
+  }
 
   // If untracked not allowed (>= €25), filter out untracked methods
   if (!untrackedAllowed) {
@@ -88,6 +98,12 @@ export function ShippingMethodPicker({
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
           <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{ts("signedRecommended")}</span>
+        </div>
+      )}
+      {letterExceedsByCount && (
+        <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-2.5 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{ts("letterNotAvailable", { count: itemCount, max: LETTER_MAX_ITEMS })}</span>
         </div>
       )}
       {!untrackedAllowed && (

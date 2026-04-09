@@ -142,6 +142,12 @@ export async function createListing(formData: FormData) {
       where: { id: { in: shippingMethodIds }, sellerId: userId },
     });
     methodSnapshots = methods.map((m) => ({ id: m.id, price: m.price }));
+
+    // Validate: must have at least one non-LETTER method
+    const hasNonLetter = methods.some((m) => m.shippingType !== "LETTER");
+    if (!hasNonLetter) {
+      return { error: "Je moet naast briefpost minimaal één pakket- of brievenbuspakket-optie aanbieden." };
+    }
   }
 
   // Atomic transaction: create listing + shipping methods + upsells + deduct balance

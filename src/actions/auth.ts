@@ -105,6 +105,7 @@ export async function register(formData: FormData) {
         serviceName: method.serviceName,
         price: method.price,
         countries: JSON.stringify(method.countries),
+        shippingType: method.shippingType,
         isDefault: true,
         isTracked: method.isTracked,
         isSigned: method.isSigned,

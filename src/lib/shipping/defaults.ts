@@ -24,6 +24,7 @@ export interface DefaultShippingMethod {
   serviceName: string;
   price: number;
   countries: string[];
+  shippingType: "LETTER" | "MAILBOX_PARCEL" | "PARCEL";
   isDefault: true;
   isTracked: boolean;
   isSigned: boolean;
@@ -42,6 +43,7 @@ export function getDefaultShippingMethods(
         serviceName: "Briefpost",
         price: 1.69,
         countries: ["NL"],
+        shippingType: "LETTER",
         isDefault: true,
         isTracked: false,
         isSigned: false,
@@ -51,6 +53,7 @@ export function getDefaultShippingMethods(
         serviceName: "Brievenbuspakket",
         price: 4.85,
         countries: ["NL"],
+        shippingType: "MAILBOX_PARCEL",
         isDefault: true,
         isTracked: true,
         isSigned: false,
@@ -60,6 +63,7 @@ export function getDefaultShippingMethods(
         serviceName: "Aangetekend pakket",
         price: 10.45,
         countries: ["NL"],
+        shippingType: "PARCEL",
         isDefault: true,
         isTracked: true,
         isSigned: true,
@@ -70,6 +74,7 @@ export function getDefaultShippingMethods(
         serviceName: "EU Briefpost",
         price: 4.5,
         countries: EU_COUNTRIES_EXCEPT_NL,
+        shippingType: "LETTER",
         isDefault: true,
         isTracked: false,
         isSigned: false,
@@ -79,6 +84,7 @@ export function getDefaultShippingMethods(
         serviceName: "EU Pakket aangetekend",
         price: 15.5,
         countries: EU_COUNTRIES_EXCEPT_NL,
+        shippingType: "PARCEL",
         isDefault: true,
         isTracked: true,
         isSigned: true,
@@ -93,6 +99,7 @@ export function getDefaultShippingMethods(
       serviceName: "Standaard Verzending",
       price: 0,
       countries: COUNTRY_CODES,
+      shippingType: "PARCEL",
       isDefault: true,
       isTracked: true,
       isSigned: false,
@@ -102,6 +109,7 @@ export function getDefaultShippingMethods(
       serviceName: "Aangetekende Verzending",
       price: 0,
       countries: COUNTRY_CODES,
+      shippingType: "PARCEL",
       isDefault: true,
       isTracked: true,
       isSigned: true,

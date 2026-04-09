@@ -105,6 +105,7 @@ model SellerShippingMethod {
   price       Float    // Price in EUR
   countries   String   // JSON array of ISO country codes: ["NL","BE","DE"]
 
+  shippingType String  @default("PARCEL") // LETTER | MAILBOX_PARCEL | PARCEL
   isDefault   Boolean  @default(false) // System-created at registration, cannot be deleted
   isTracked   Boolean  @default(false) // Has track & trace
   isSigned    Boolean  @default(false) // Tracked + signature on delivery (aangetekend)

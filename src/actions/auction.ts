@@ -98,6 +98,32 @@ export async function createAuction(formData: FormData) {
     },
   });
 
+  // Create shipping method links
+  const shippingMethodIdsJson = formData.get("shippingMethodIds") as string | null;
+  if (shippingMethodIdsJson) {
+    try {
+      const shippingMethodIds: string[] = JSON.parse(shippingMethodIdsJson);
+      if (shippingMethodIds.length > 0) {
+        const methods = await prisma.sellerShippingMethod.findMany({
+          where: { id: { in: shippingMethodIds }, sellerId: session.user.id },
+        });
+
+        // Validate: must have at least one non-LETTER method
+        const hasNonLetter = methods.some((m) => m.shippingType !== "LETTER");
+        if (!hasNonLetter) {
+          await prisma.auction.delete({ where: { id: auction.id } });
+          return { error: "Je moet naast briefpost minimaal één pakket- of brievenbuspakket-optie aanbieden." };
+        }
+
+        for (const method of methods) {
+          await prisma.auctionShippingMethod.create({
+            data: { auctionId: auction.id, shippingMethodId: method.id, price: method.price },
+          });
+        }
+      }
+    } catch { /* ignore invalid JSON */ }
+  }
+
   // Create upsell records and deduct balance
   if (upsellEntries.length > 0 && totalUpsellCost > 0) {
     const seller = await prisma.user.findUnique({

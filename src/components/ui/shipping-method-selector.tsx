@@ -59,6 +59,11 @@ export function ShippingMethodSelector({ methods, selected, onChange }: Props) {
     return m && isMailboxMethod(m);
   });
 
+  const onlyLetterSelected = selected.length > 0 && selected.every((id) => {
+    const m = activeMethods.find((am) => am.id === id);
+    return m?.shippingType === "LETTER";
+  });
+
   return (
     <div className="space-y-2">
       {activeMethods.map((method) => {
@@ -105,6 +110,12 @@ export function ShippingMethodSelector({ methods, selected, onChange }: Props) {
         );
       })}
 
+      {onlyLetterSelected && (
+        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{t("requireNonLetterMethod")}</span>
+        </div>
+      )}
       {hasMailboxSelected && (
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />

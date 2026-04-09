@@ -111,6 +111,7 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
                 <ShippingMethodPicker
                   methods={group.shippingMethods}
                   buyerCountry={buyerCountry}
+                  itemCount={group.items.length}
                   selected={shippingSelections[group.sellerId] || null}
                   onChange={(methodId) => selectMethod(group.sellerId, methodId)}
                 />

@@ -79,6 +79,15 @@ export function ShippingMethodsManager({ methods }: { methods: SellerShippingMet
                           {t("defaultBadge")}
                         </span>
                       )}
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                        method.shippingType === "LETTER"
+                          ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                          : method.shippingType === "MAILBOX_PARCEL"
+                            ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"
+                            : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                      }`}>
+                        {t(`type${method.shippingType === "LETTER" ? "Letter" : method.shippingType === "MAILBOX_PARCEL" ? "MailboxParcel" : "Parcel"}`)}
+                      </span>
                       {method.isSigned && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
                           <ShieldCheck className="h-3 w-3" />

@@ -62,6 +62,18 @@ export async function createClaimsale(formData: FormData) {
     } catch { /* ignore */ }
   }
 
+  // Validate: must have at least one non-LETTER method
+  if (shippingMethodIds.length > 0) {
+    const selectedMethods = await prisma.sellerShippingMethod.findMany({
+      where: { id: { in: shippingMethodIds } },
+      select: { shippingType: true },
+    });
+    const hasNonLetter = selectedMethods.some((m) => m.shippingType !== "LETTER");
+    if (!hasNonLetter) {
+      return { error: "Je moet naast briefpost minimaal één pakket- of brievenbuspakket-optie aanbieden." };
+    }
+  }
+
   // Lookup shipping methods for price snapshots
   let methodSnapshots: { id: string; price: number }[] = [];
   if (shippingMethodIds.length > 0) {
