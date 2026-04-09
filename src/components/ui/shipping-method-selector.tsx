@@ -14,9 +14,10 @@ interface Props {
   methods: SellerShippingMethod[];
   selected: string[];
   onChange: (selected: string[]) => void;
+  context?: "listing" | "claimsale" | "auction";
 }
 
-export function ShippingMethodSelector({ methods, selected, onChange }: Props) {
+export function ShippingMethodSelector({ methods, selected, onChange, context }: Props) {
   const t = useTranslations("shipping");
   const locale = useLocale();
 
@@ -99,7 +100,7 @@ export function ShippingMethodSelector({ methods, selected, onChange }: Props) {
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {countries.map((c) => getCountryName(c, locale)).join(", ")}
               </p>
-              {isMailbox && isSelected && (
+              {isMailbox && isSelected && context === "claimsale" && (
                 <div className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                   <span>{t("mailboxWarning")}</span>
@@ -116,7 +117,7 @@ export function ShippingMethodSelector({ methods, selected, onChange }: Props) {
           <span>{t("requireNonLetterMethod")}</span>
         </div>
       )}
-      {hasMailboxSelected && (
+      {hasMailboxSelected && context === "claimsale" && (
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{t("mailboxWarningDetail")}</span>

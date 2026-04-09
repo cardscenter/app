@@ -197,6 +197,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
           methods={shippingMethods.filter((m) => m.shippingType !== "LETTER")}
           selected={form.selectedShippingMethods}
           onChange={(v) => updateField("selectedShippingMethods", v)}
+          context="auction"
         />
       </section>
 

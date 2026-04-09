@@ -284,6 +284,7 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
                 methods={shippingMethods}
                 selected={selectedShippingMethods}
                 onChange={setSelectedShippingMethods}
+                context="claimsale"
               />
             </div>
           )}
