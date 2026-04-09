@@ -494,6 +494,113 @@ async function main() {
     });
   }
 
+  // ===== SHIPPING BUNDLES (purchases/sales for TestKoper) =====
+  console.log("Creating purchases and sales...");
+
+  // Helper to generate order numbers
+  function orderNum(i: number) {
+    return `ORD-20260409-${String(1000 + i)}`;
+  }
+
+  // Helper to safely get a shipping method
+  function getMethod(sellerId: string, index: number) {
+    return shippingMethods[sellerId]?.[index]?.id ?? null;
+  }
+
+  // TestKoper bought from PikachuTrader — COMPLETED
+  const bundle1 = await prisma.shippingBundle.create({
+    data: {
+      orderNumber: orderNum(1),
+      buyerId: buyer.id, sellerId: seller1.id,
+      shippingCost: 4.85, totalItemCost: 35, totalCost: 39.85,
+      status: "COMPLETED",
+      shippingMethodId: getMethod(seller1.id, 1), // brievenbuspakket
+      trackingUrl: "https://postnl.nl/tracktrace/T0001",
+      shippedAt: new Date("2026-04-02"), deliveredAt: new Date("2026-04-04"),
+      buyerStreet: "Hoofdweg", buyerHouseNumber: "1", buyerPostalCode: "1058BB", buyerCity: "Amsterdam", buyerCountry: "NL",
+    },
+  });
+
+  // TestKoper bought from CharizardKing — SHIPPED (in transit)
+  const bundle2 = await prisma.shippingBundle.create({
+    data: {
+      orderNumber: orderNum(2),
+      buyerId: buyer.id, sellerId: seller2.id,
+      shippingCost: 10.45, totalItemCost: 70, totalCost: 80.45,
+      status: "SHIPPED",
+      shippingMethodId: getMethod(seller2.id, 2), // aangetekend
+      trackingUrl: "https://postnl.nl/tracktrace/T0002",
+      shippedAt: new Date("2026-04-07"),
+      buyerStreet: "Hoofdweg", buyerHouseNumber: "1", buyerPostalCode: "1058BB", buyerCity: "Amsterdam", buyerCountry: "NL",
+    },
+  });
+
+  // TestKoper bought from EeveeCollector (BE) — PAID (awaiting shipment)
+  const bundle3 = await prisma.shippingBundle.create({
+    data: {
+      orderNumber: orderNum(3),
+      buyerId: buyer.id, sellerId: sellerBE.id,
+      shippingCost: 15.50, totalItemCost: 40, totalCost: 55.50,
+      status: "PAID",
+      shippingMethodId: getMethod(sellerBE.id, 1), // aangetekend
+      buyerStreet: "Hoofdweg", buyerHouseNumber: "1", buyerPostalCode: "1058BB", buyerCity: "Amsterdam", buyerCountry: "NL",
+    },
+  });
+
+  // TestKoper bought from MewtwoCollector — COMPLETED (briefpost, cheap card)
+  const bundle4 = await prisma.shippingBundle.create({
+    data: {
+      orderNumber: orderNum(4),
+      buyerId: buyer.id, sellerId: seller3.id,
+      shippingCost: 1.69, totalItemCost: 8, totalCost: 9.69,
+      status: "COMPLETED",
+      shippingMethodId: getMethod(seller3.id, 0), // briefpost
+      shippedAt: new Date("2026-04-01"), deliveredAt: new Date("2026-04-05"),
+      buyerStreet: "Hoofdweg", buyerHouseNumber: "1", buyerPostalCode: "1058BB", buyerCity: "Amsterdam", buyerCountry: "NL",
+    },
+  });
+
+  // BelgischeKoper bought from PikachuTrader — SHIPPED
+  const bundle5 = await prisma.shippingBundle.create({
+    data: {
+      orderNumber: orderNum(5),
+      buyerId: buyerBE.id, sellerId: seller1.id,
+      shippingCost: 15.50, totalItemCost: 55, totalCost: 70.50,
+      status: "SHIPPED",
+      shippingMethodId: getMethod(seller1.id, 4), // EU aangetekend
+      trackingUrl: "https://postnl.nl/tracktrace/T0005",
+      shippedAt: new Date("2026-04-06"),
+      buyerStreet: "Steenstraat", buyerHouseNumber: "7", buyerPostalCode: "8000", buyerCity: "Brugge", buyerCountry: "BE",
+    },
+  });
+
+  // Create some sold listings linked to bundles
+  // Mark a couple listings as SOLD and link to buyer
+  const soldListings = await prisma.listing.findMany({
+    where: { status: "ACTIVE", sellerId: { in: [seller1.id, seller2.id] } },
+    take: 2,
+  });
+  if (soldListings[0]) {
+    await prisma.listing.update({
+      where: { id: soldListings[0].id },
+      data: { status: "SOLD", buyerId: buyer.id },
+    });
+    await prisma.shippingBundle.update({
+      where: { id: bundle1.id },
+      data: { listingId: soldListings[0].id },
+    });
+  }
+  if (soldListings[1]) {
+    await prisma.listing.update({
+      where: { id: soldListings[1].id },
+      data: { status: "SOLD", buyerId: buyer.id },
+    });
+    await prisma.shippingBundle.update({
+      where: { id: bundle2.id },
+      data: { listingId: soldListings[1].id },
+    });
+  }
+
   console.log("Seeding complete!");
   console.log("Test accounts (wachtwoord: Test1234!):");
   console.log("  admin@cardscenter.nl (Admin - NL - ALL_EU)");
