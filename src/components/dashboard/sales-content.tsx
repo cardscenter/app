@@ -53,6 +53,7 @@ type SaleBundle = {
   totalCost: number;
   shippingMethodCarrier: string | null;
   shippingMethodService: string | null;
+  shippingMethodIsTracked: boolean;
   trackingUrl: string | null;
   shippedAt: string | null;
   refundedAmount: number;
@@ -575,7 +576,7 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
           {/* PAID: Ship bundle form + cancel option */}
           {bundle.status === "PAID" && (
             <div className="border-t border-border/50 px-4 py-3 space-y-4">
-              <ShipBundleForm bundleId={bundle.id} />
+              <ShipBundleForm bundleId={bundle.id} isBriefpost={!bundle.shippingMethodIsTracked} />
 
               <div className="border-t border-border/50 pt-3">
               {!showCancelConfirm ? (

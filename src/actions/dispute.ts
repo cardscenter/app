@@ -38,6 +38,17 @@ export async function openDispute(data: {
   if (bundle.status !== "SHIPPED") return { error: "Kan alleen geschil openen voor verzonden bestellingen" };
   if (bundle.dispute) return { error: "DISPUTE_EXISTS" };
 
+  // Block disputes for untracked shipping (briefpost)
+  if (bundle.shippingMethodId) {
+    const shippingMethod = await prisma.sellerShippingMethod.findUnique({
+      where: { id: bundle.shippingMethodId },
+      select: { isTracked: true },
+    });
+    if (shippingMethod && !shippingMethod.isTracked) {
+      return { error: "Bij bestellingen via briefpost (zonder tracking) kan geen geschil worden geopend. Dit risico is aangegeven bij het afrekenen." };
+    }
+  }
+
   // Check timing: must be 10+ days after shipment
   if (!bundle.shippedAt) return { error: "Verzenddatum onbekend" };
   const daysSinceShipped = (Date.now() - bundle.shippedAt.getTime()) / (1000 * 60 * 60 * 24);

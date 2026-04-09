@@ -119,30 +119,44 @@ export async function cancelOrderBySeller(bundleId: string) {
 }
 
 // Seller marks bundle as shipped with tracking URL
-export async function markAsShipped(bundleId: string, trackingUrl: string) {
+export async function markAsShipped(bundleId: string, trackingUrl: string, proofUrls?: string[]) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
-  if (!trackingUrl || !trackingUrl.trim()) {
-    return { error: "Een Track & Trace link is verplicht" };
-  }
-
-  const trimmedUrl = trackingUrl.trim();
-
   const bundle = await prisma.shippingBundle.findUnique({
     where: { id: bundleId },
-    include: { seller: { select: { displayName: true } } },
+    include: {
+      seller: { select: { displayName: true } },
+      shippingMethod: { select: { isTracked: true } },
+    },
   });
 
   if (!bundle) return { error: "Bestelling niet gevonden" };
   if (bundle.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
   if (bundle.status !== "PAID") return { error: "Kan alleen betaalde bestellingen als verzonden markeren" };
 
+  const isBriefpost = bundle.shippingMethod ? !bundle.shippingMethod.isTracked : false;
+
+  if (isBriefpost) {
+    // Briefpost: proof photos required, tracking URL optional
+    if (!proofUrls || proofUrls.length === 0) {
+      return { error: "Bij briefpost is minimaal 1 verzendbewijs foto verplicht (foto van brief met inhoud)." };
+    }
+  } else {
+    // Tracked: tracking URL required
+    if (!trackingUrl || !trackingUrl.trim()) {
+      return { error: "Een Track & Trace link is verplicht" };
+    }
+  }
+
+  const trimmedUrl = trackingUrl?.trim() || null;
+
   await prisma.shippingBundle.update({
     where: { id: bundleId },
     data: {
       status: "SHIPPED",
       trackingUrl: trimmedUrl,
+      shippingProofUrls: proofUrls && proofUrls.length > 0 ? JSON.stringify(proofUrls) : null,
       shippedAt: new Date(),
     },
   });
@@ -152,7 +166,7 @@ export async function markAsShipped(bundleId: string, trackingUrl: string) {
     bundle.buyerId,
     "ORDER_SHIPPED",
     "Je bestelling is verzonden!",
-    `${bundle.seller.displayName} heeft je bestelling verzonden.${trackingUrl ? " Volg je pakket via de trackinglink." : ""}`,
+    `${bundle.seller.displayName} heeft je bestelling verzonden.${trimmedUrl ? " Volg je pakket via de trackinglink." : ""}`,
     "/dashboard/aankopen"
   );
 

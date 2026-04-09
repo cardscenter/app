@@ -31,7 +31,7 @@ export default async function ClaimsaleClaimsPage({
               id: true, shippingCost: true, totalItemCost: true, totalCost: true, status: true,
               trackingUrl: true,
               buyerStreet: true, buyerHouseNumber: true, buyerPostalCode: true, buyerCity: true, buyerCountry: true,
-              shippingMethod: { select: { carrier: true, serviceName: true } },
+              shippingMethod: { select: { carrier: true, serviceName: true, isTracked: true } },
             },
           },
         },
@@ -57,6 +57,7 @@ export default async function ClaimsaleClaimsPage({
       trackingUrl: string | null;
       buyerAddress: { street: string; houseNumber: string; postalCode: string; city: string; country: string } | null;
       shippingMethodName: string | null;
+      isBriefpost: boolean;
     }
   >();
 
@@ -86,6 +87,7 @@ export default async function ClaimsaleClaimsPage({
         shippingMethodName: bundle?.shippingMethod
           ? `${bundle.shippingMethod.carrier} — ${bundle.shippingMethod.serviceName}`
           : null,
+        isBriefpost: bundle?.shippingMethod ? !bundle.shippingMethod.isTracked : false,
       });
     }
 
@@ -254,7 +256,7 @@ export default async function ClaimsaleClaimsPage({
               {/* Ship action or tracking info */}
               {group.bundleId && group.bundleStatus === "PAID" && (
                 <div className="border-t border-border px-5 py-3">
-                  <ShipBundleForm bundleId={group.bundleId} />
+                  <ShipBundleForm bundleId={group.bundleId} isBriefpost={group.isBriefpost} />
                 </div>
               )}
               {group.trackingUrl && (

@@ -7,7 +7,7 @@ import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { expireClaimedItems, unclaimItem } from "@/actions/claimsale";
-import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
+import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
 
 /**
  * Remove item from cart. This also unclaims the item so it becomes available again.
@@ -336,11 +336,19 @@ export async function checkout(shippingSelections?: Record<string, string>) {
         select: { country: true },
       });
       const isInternational = seller?.country !== user.country;
+
+      const method = await prisma.sellerShippingMethod.findUnique({
+        where: { id: methodId },
+        select: { isSigned: true, isTracked: true },
+      });
+
+      // Briefpost check: untracked not allowed above €25
+      if (method && !method.isTracked && !isUntrackedAllowed(itemTotal)) {
+        return { error: "Briefpost is niet beschikbaar voor bestellingen boven €25. Kies een verzendmethode met tracking." };
+      }
+
+      // Signed shipping check
       if (requiresSignedShipping(itemTotal, isInternational)) {
-        const method = await prisma.sellerShippingMethod.findUnique({
-          where: { id: methodId },
-          select: { isSigned: true },
-        });
         if (method && !method.isSigned) {
           const reason = isInternational
             ? "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen"

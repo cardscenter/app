@@ -937,6 +937,14 @@
     "shippingType": "Shipping type",
     "trackedDescription": "Track & Trace (package tracking)",
     "signedDescription": "Signed delivery (signature on receipt)",
+    "briefpostWarning": "Regular mail has no tracking. Disputes cannot be opened for untracked shipments.",
+    "briefpostNotAllowed": "Regular mail is not available for orders above €{amount}. Only tracked shipping methods are shown.",
+    "optional": "optional",
+    "proofPhotos": "Shipping proof photos",
+    "proofPhotosHintBriefpost": "Take a photo of the letter with contents and the sealed letter. This is required for regular mail.",
+    "proofPhotosHintTracked": "Optional: add photos of the package as extra proof.",
+    "proofRequired": "At least 1 photo is required for regular mail shipping.",
+    "addPhoto": "Add photo",
     "signedRecommended": "Signed delivery is recommended for this amount for extra protection.",
     "signedRequiredThreshold": "Signed delivery (with signature) is required for orders above €{amount}.",
     "signedRequiredInternational": "Signed delivery (with signature) is required for international shipments.",
@@ -972,6 +980,7 @@
     "confirmShipped": "Confirm shipment",
     "cancel": "Cancel",
     "viewTracking": "View tracking",
+    "shippingProof": "Shipping proof photos",
     "escrowInfo": "The amount is held in escrow until the buyer confirms delivery."
   },
   "seller": {

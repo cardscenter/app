@@ -937,6 +937,14 @@
     "shippingType": "Type verzending",
     "trackedDescription": "Track & Trace (pakket volgen)",
     "signedDescription": "Aangetekend (handtekening bij ontvangst)",
+    "briefpostWarning": "Briefpost is zonder tracking. Bij vermissing kan geen geschil worden geopend.",
+    "briefpostNotAllowed": "Briefpost is niet beschikbaar voor bestellingen boven €{amount}. Alleen verzendmethoden met tracking worden getoond.",
+    "optional": "optioneel",
+    "proofPhotos": "Verzendbewijs foto's",
+    "proofPhotosHintBriefpost": "Maak een foto van de brief met inhoud en de dichtgeplakte brief. Dit is verplicht bij briefpost.",
+    "proofPhotosHintTracked": "Optioneel: voeg foto's toe van het pakket als extra bewijs.",
+    "proofRequired": "Minimaal 1 foto is verplicht bij briefpost verzending.",
+    "addPhoto": "Foto toevoegen",
     "signedRecommended": "Aangetekende verzending wordt aanbevolen bij dit bedrag voor extra bescherming.",
     "signedRequiredThreshold": "Aangetekende verzending (met handtekening) is verplicht voor bestellingen boven €{amount}.",
     "signedRequiredInternational": "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen.",
@@ -972,6 +980,7 @@
     "confirmShipped": "Bevestig verzending",
     "cancel": "Annuleren",
     "viewTracking": "Tracking bekijken",
+    "shippingProof": "Verzendbewijs foto's",
     "escrowInfo": "Het bedrag wordt vastgehouden in escrow totdat de koper de ontvangst bevestigt."
   },
   "seller": {

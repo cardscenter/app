@@ -10,7 +10,7 @@ import { generateOrderNumber } from "@/lib/order-number";
 import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
 import { checkAmountAllowed } from "@/lib/account-age";
-import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
+import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
 
 
 export async function createListing(formData: FormData) {
@@ -253,18 +253,26 @@ export async function buyListing(listingId: string, shippingMethodId?: string) {
     return { error: "Vul eerst je adres in via Dashboard → Verzending" };
   }
 
-  // Signed shipping enforcement
+  // Shipping enforcement
   if (selectedMethodId) {
     const seller = await prisma.user.findUnique({
       where: { id: listing.sellerId },
       select: { country: true },
     });
     const isInternational = seller?.country !== buyer.country;
+
+    const shippingMethod = await prisma.sellerShippingMethod.findUnique({
+      where: { id: selectedMethodId },
+      select: { isSigned: true, isTracked: true },
+    });
+
+    // Briefpost check: untracked not allowed above €25
+    if (shippingMethod && !shippingMethod.isTracked && !isUntrackedAllowed(listing.price)) {
+      return { error: "Briefpost is niet beschikbaar voor bestellingen boven €25. Kies een verzendmethode met tracking." };
+    }
+
+    // Signed shipping check
     if (requiresSignedShipping(listing.price, isInternational)) {
-      const shippingMethod = await prisma.sellerShippingMethod.findUnique({
-        where: { id: selectedMethodId },
-        select: { isSigned: true },
-      });
       if (shippingMethod && !shippingMethod.isSigned) {
         const reason = isInternational
           ? "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen"

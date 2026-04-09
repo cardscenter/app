@@ -494,9 +494,10 @@ model ShippingBundle {
   shippingMethod   SellerShippingMethod? @relation(fields: [shippingMethodId], references: [id])
 
   // Tracking & dates
-  trackingUrl   String?
-  shippedAt     DateTime?
-  deliveredAt   DateTime?
+  trackingUrl        String?
+  shippingProofUrls  String?  // JSON array of proof photo URLs
+  shippedAt          DateTime?
+  deliveredAt        DateTime?
 
   // Buyer address snapshot at time of purchase
   buyerStreet      String?

@@ -7,6 +7,8 @@ import {
   requiresSignedShipping,
   recommendsSignedShipping,
   SIGNED_REQUIRED_THRESHOLD,
+  isUntrackedAllowed,
+  UNTRACKED_MAX_ORDER_VALUE,
 } from "@/lib/shipping/tracked-threshold";
 
 interface ShippingMethodPickerProps {
@@ -31,11 +33,20 @@ export function ShippingMethodPicker({
   const isInternational = !!sellerCountry && sellerCountry !== buyerCountry;
   const signedRequired = requiresSignedShipping(itemTotal, isInternational);
   const signedRecommended = !signedRequired && recommendsSignedShipping(itemTotal);
+  const untrackedAllowed = isUntrackedAllowed(itemTotal);
 
   // Filter methods available for buyer's country
   let available = methods.filter(
     (m) => m.countries.length === 0 || m.countries.includes(buyerCountry)
   );
+
+  // If untracked not allowed (>= €25), filter out untracked methods
+  if (!untrackedAllowed) {
+    const trackedMethods = available.filter((m) => m.isTracked);
+    if (trackedMethods.length > 0) {
+      available = trackedMethods;
+    }
+  }
 
   // If signed is required, only show signed methods
   if (signedRequired) {
@@ -44,6 +55,10 @@ export function ShippingMethodPicker({
       available = signedMethods;
     }
   }
+
+  // Check if user selected an untracked method (for warning)
+  const selectedMethod = available.find((m) => m.id === selected);
+  const showBriefpostWarning = untrackedAllowed && selectedMethod && !selectedMethod.isTracked;
 
   if (available.length === 0) {
     return (
@@ -72,6 +87,18 @@ export function ShippingMethodPicker({
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
           <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{ts("signedRecommended")}</span>
+        </div>
+      )}
+      {!untrackedAllowed && (
+        <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-2.5 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{ts("briefpostNotAllowed", { amount: UNTRACKED_MAX_ORDER_VALUE })}</span>
+        </div>
+      )}
+      {showBriefpostWarning && (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{ts("briefpostWarning")}</span>
         </div>
       )}
 

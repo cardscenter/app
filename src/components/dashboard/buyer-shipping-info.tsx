@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { MapPin, Package, User } from "lucide-react";
+import { MapPin, Package, User, Camera } from "lucide-react";
 import { ShipBundleForm } from "@/components/dashboard/ship-bundle-form";
 
 type BuyerShippingInfoProps = {
@@ -17,6 +17,8 @@ type BuyerShippingInfoProps = {
   } | null;
   shippingMethodName: string | null;
   trackingUrl: string | null;
+  shippingProofUrls?: string[];
+  isBriefpost?: boolean;
 };
 
 export function BuyerShippingInfo({
@@ -26,6 +28,8 @@ export function BuyerShippingInfo({
   address,
   shippingMethodName,
   trackingUrl,
+  shippingProofUrls,
+  isBriefpost,
 }: BuyerShippingInfoProps) {
   const t = useTranslations("sellerClaims");
   const tr = useTranslations("reputation");
@@ -86,7 +90,7 @@ export function BuyerShippingInfo({
       {/* Tracking / Ship action */}
       {bundleStatus === "PAID" && (
         <div className="px-5 py-3">
-          <ShipBundleForm bundleId={bundleId} />
+          <ShipBundleForm bundleId={bundleId} isBriefpost={isBriefpost} />
         </div>
       )}
 
@@ -100,6 +104,23 @@ export function BuyerShippingInfo({
           >
             {t("viewTracking")}
           </a>
+        </div>
+      )}
+
+      {/* Shipping proof photos */}
+      {shippingProofUrls && shippingProofUrls.length > 0 && (
+        <div className="border-t border-border/50 px-5 py-3">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-2">
+            <Camera className="h-3.5 w-3.5" />
+            {t("shippingProof")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {shippingProofUrls.map((url, i) => (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block h-20 w-20 overflow-hidden rounded-lg border border-border hover:ring-2 hover:ring-primary">
+                <img src={url} alt={`Verzendbewijs ${i + 1}`} className="h-full w-full object-cover" />
+              </a>
+            ))}
+          </div>
         </div>
       )}
 
