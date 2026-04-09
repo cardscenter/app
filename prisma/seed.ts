@@ -574,32 +574,90 @@ async function main() {
     },
   });
 
-  // Create some sold listings linked to bundles
-  // Mark a couple listings as SOLD and link to buyer
+  // Link some existing listings to bundles as SOLD
   const soldListings = await prisma.listing.findMany({
     where: { status: "ACTIVE", sellerId: { in: [seller1.id, seller2.id] } },
     take: 2,
   });
   if (soldListings[0]) {
-    await prisma.listing.update({
-      where: { id: soldListings[0].id },
-      data: { status: "SOLD", buyerId: buyer.id },
-    });
-    await prisma.shippingBundle.update({
-      where: { id: bundle1.id },
-      data: { listingId: soldListings[0].id },
-    });
+    await prisma.listing.update({ where: { id: soldListings[0].id }, data: { status: "SOLD", buyerId: buyer.id } });
+    await prisma.shippingBundle.update({ where: { id: bundle1.id }, data: { listingId: soldListings[0].id } });
   }
   if (soldListings[1]) {
-    await prisma.listing.update({
-      where: { id: soldListings[1].id },
-      data: { status: "SOLD", buyerId: buyer.id },
-    });
-    await prisma.shippingBundle.update({
-      where: { id: bundle2.id },
-      data: { listingId: soldListings[1].id },
-    });
+    await prisma.listing.update({ where: { id: soldListings[1].id }, data: { status: "SOLD", buyerId: buyer.id } });
+    await prisma.shippingBundle.update({ where: { id: bundle2.id }, data: { listingId: soldListings[1].id } });
   }
+
+  // ===== TestKoper als VERKOPER — bundles met status PAID (klaar om te verzenden) =====
+  // Eerst listings aanmaken van TestKoper
+  const koperListings = await Promise.all([
+    prisma.listing.create({
+      data: {
+        title: "Espeon VMAX Alt Art", description: "Prachtige Espeon VMAX Alt Art, NM conditie.",
+        listingType: "SINGLE_CARD", cardName: "Espeon VMAX", cardSetId: randomSet().id,
+        condition: "Near Mint", price: 45, pricingType: "FIXED",
+        imageUrls: imgJson(15, 2), sellerId: buyer.id, status: "SOLD", buyerId: seller1.id,
+        shippingCost: 4.85,
+      },
+    }),
+    prisma.listing.create({
+      data: {
+        title: "Gengar VMAX Alt Art", description: "Gengar VMAX Alt Art in perfecte staat.",
+        listingType: "SINGLE_CARD", cardName: "Gengar VMAX", cardSetId: randomSet().id,
+        condition: "Near Mint", price: 12, pricingType: "FIXED",
+        imageUrls: imgJson(7, 2), sellerId: buyer.id, status: "SOLD", buyerId: seller2.id,
+        shippingCost: 1.69,
+      },
+    }),
+    prisma.listing.create({
+      data: {
+        title: "Sylveon VMAX Alt Art", description: "Sylveon VMAX Alt Art, lichte speelsporen.",
+        listingType: "SINGLE_CARD", cardName: "Sylveon VMAX", cardSetId: randomSet().id,
+        condition: "Lightly Played", price: 35, pricingType: "FIXED",
+        imageUrls: imgJson(3, 2), sellerId: buyer.id, status: "SOLD", buyerId: sellerBE.id,
+        shippingCost: 15.50,
+      },
+    }),
+  ]);
+
+  // Bundle: PikachuTrader kocht van TestKoper — PAID (tracked, wacht op verzending)
+  await prisma.shippingBundle.create({
+    data: {
+      orderNumber: orderNum(6),
+      buyerId: seller1.id, sellerId: buyer.id,
+      shippingCost: 4.85, totalItemCost: 45, totalCost: 49.85,
+      status: "PAID",
+      shippingMethodId: getMethod(buyer.id, 1), // brievenbuspakket
+      listingId: koperListings[0].id,
+      buyerStreet: "Damstraat", buyerHouseNumber: "12", buyerPostalCode: "3011GH", buyerCity: "Rotterdam", buyerCountry: "NL",
+    },
+  });
+
+  // Bundle: CharizardKing kocht van TestKoper — PAID (briefpost, goedkope kaart → foto testen!)
+  await prisma.shippingBundle.create({
+    data: {
+      orderNumber: orderNum(7),
+      buyerId: seller2.id, sellerId: buyer.id,
+      shippingCost: 1.69, totalItemCost: 12, totalCost: 13.69,
+      status: "PAID",
+      shippingMethodId: getMethod(buyer.id, 0), // briefpost
+      listingId: koperListings[1].id,
+      buyerStreet: "Mariaplaats", buyerHouseNumber: "5", buyerPostalCode: "3511LK", buyerCity: "Utrecht", buyerCountry: "NL",
+    },
+  });
+
+  // Bundle: EeveeCollector (BE) kocht van TestKoper — PAID (internationaal, aangetekend verplicht)
+  await prisma.shippingBundle.create({
+    data: {
+      orderNumber: orderNum(8),
+      buyerId: sellerBE.id, sellerId: buyer.id,
+      shippingCost: 15.50, totalItemCost: 35, totalCost: 50.50,
+      status: "PAID",
+      shippingMethodId: getMethod(buyer.id, 4), // EU aangetekend
+      listingId: koperListings[2].id,
+      buyerStreet: "Meir", buyerHouseNumber: "22", buyerPostalCode: "2000", buyerCity: "Antwerpen", buyerCountry: "BE",
+    },
+  });
 
   console.log("Seeding complete!");
   console.log("Test accounts (wachtwoord: Test1234!):");
