@@ -119,7 +119,14 @@ export async function cancelOrderBySeller(bundleId: string) {
 }
 
 // Seller marks bundle as shipped with tracking URL
-export async function markAsShipped(bundleId: string, trackingUrl: string, proofUrls?: string[]) {
+export async function markAsShipped(
+  bundleId: string,
+  trackingNumber: string,
+  proofUrls?: string[],
+  carrierId?: string,
+  buyerCountry?: string,
+  buyerPostalCode?: string,
+) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -127,7 +134,7 @@ export async function markAsShipped(bundleId: string, trackingUrl: string, proof
     where: { id: bundleId },
     include: {
       seller: { select: { displayName: true } },
-      shippingMethod: { select: { isTracked: true } },
+      shippingMethod: { select: { isTracked: true, carrier: true } },
     },
   });
 
@@ -138,24 +145,39 @@ export async function markAsShipped(bundleId: string, trackingUrl: string, proof
   const isBriefpost = bundle.shippingMethod ? !bundle.shippingMethod.isTracked : false;
 
   if (isBriefpost) {
-    // Briefpost: proof photos required, tracking URL optional
+    // Briefpost: proof photos required, tracking number optional
     if (!proofUrls || proofUrls.length === 0) {
       return { error: "Bij briefpost is minimaal 1 verzendbewijs foto verplicht (foto van brief met inhoud)." };
     }
   } else {
-    // Tracked: tracking URL required
-    if (!trackingUrl || !trackingUrl.trim()) {
-      return { error: "Een Track & Trace link is verplicht" };
+    // Tracked: tracking number required
+    if (!trackingNumber || !trackingNumber.trim()) {
+      return { error: "Een trackingnummer is verplicht" };
     }
   }
 
-  const trimmedUrl = trackingUrl?.trim() || null;
+  const trimmedNumber = trackingNumber?.trim() || null;
+
+  // Build tracking URL from carrier + number + buyer address
+  const { buildTrackingUrl } = await import("@/lib/shipping/carriers");
+  const resolvedCarrier = carrierId ?? bundle.shippingMethod?.carrier ?? null;
+  const resolvedCountry = buyerCountry ?? bundle.buyerCountry ?? "NL";
+  const resolvedPostalCode = buyerPostalCode ?? bundle.buyerPostalCode ?? "";
+
+  let trackingUrl: string | null = null;
+  if (trimmedNumber && resolvedCarrier) {
+    trackingUrl = buildTrackingUrl(resolvedCarrier, trimmedNumber, resolvedCountry, resolvedPostalCode);
+  }
+  // Fallback: if no carrier URL pattern, store the number as-is
+  if (!trackingUrl && trimmedNumber) {
+    trackingUrl = trimmedNumber;
+  }
 
   await prisma.shippingBundle.update({
     where: { id: bundleId },
     data: {
       status: "SHIPPED",
-      trackingUrl: trimmedUrl,
+      trackingUrl,
       shippingProofUrls: proofUrls && proofUrls.length > 0 ? JSON.stringify(proofUrls) : null,
       shippedAt: new Date(),
     },
@@ -166,7 +188,7 @@ export async function markAsShipped(bundleId: string, trackingUrl: string, proof
     bundle.buyerId,
     "ORDER_SHIPPED",
     "Je bestelling is verzonden!",
-    `${bundle.seller.displayName} heeft je bestelling verzonden.${trimmedUrl ? " Volg je pakket via de trackinglink." : ""}`,
+    `${bundle.seller.displayName} heeft je bestelling verzonden.${trackingUrl ? " Volg je pakket via de trackinglink." : ""}`,
     "/dashboard/aankopen"
   );
 

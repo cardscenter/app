@@ -5,17 +5,35 @@ import { useState } from "react";
 import { markAsShipped } from "@/actions/purchase";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
-import { Truck, Link as LinkIcon, Camera, X, AlertTriangle } from "lucide-react";
+import { Truck, Hash, Camera, X, AlertTriangle } from "lucide-react";
+import { getCarrierById, looksLikeUrl } from "@/lib/shipping/carriers";
 
-export function ShipBundleForm({ bundleId, isBriefpost = false }: { bundleId: string; isBriefpost?: boolean }) {
+interface ShipBundleFormProps {
+  bundleId: string;
+  isBriefpost?: boolean;
+  carrierId?: string | null;
+  buyerCountry?: string | null;
+  buyerPostalCode?: string | null;
+}
+
+export function ShipBundleForm({
+  bundleId,
+  isBriefpost = false,
+  carrierId,
+  buyerCountry,
+  buyerPostalCode,
+}: ShipBundleFormProps) {
   const t = useTranslations("sellerClaims");
   const ts = useTranslations("shipping");
-  const [trackingUrl, setTrackingUrl] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
   const [proofUrls, setProofUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
+
+  const carrier = carrierId ? getCarrierById(carrierId) : null;
+  const showUrlWarning = looksLikeUrl(trackingNumber);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -52,13 +70,26 @@ export function ShipBundleForm({ bundleId, isBriefpost = false }: { bundleId: st
       return;
     }
 
-    if (!isBriefpost && !trackingUrl.trim()) {
-      toast.error(t("trackingUrlHint"));
+    if (!isBriefpost && !trackingNumber.trim()) {
+      toast.error(ts("trackingNumberRequired"));
       setLoading(false);
       return;
     }
 
-    const result = await markAsShipped(bundleId, trackingUrl, proofUrls.length > 0 ? proofUrls : undefined);
+    if (showUrlWarning) {
+      toast.error(ts("trackingNumberNotUrl"));
+      setLoading(false);
+      return;
+    }
+
+    const result = await markAsShipped(
+      bundleId,
+      trackingNumber.trim(),
+      proofUrls.length > 0 ? proofUrls : undefined,
+      carrierId ?? undefined,
+      buyerCountry ?? undefined,
+      buyerPostalCode ?? undefined,
+    );
 
     if (result?.error) {
       toast.error(result.error);
@@ -92,48 +123,36 @@ export function ShipBundleForm({ bundleId, isBriefpost = false }: { bundleId: st
         </div>
       )}
 
-      {/* Tracking URL — required for tracked, optional for briefpost */}
-      {!isBriefpost ? (
+      {/* Tracking number — required for tracked, hidden for briefpost */}
+      {!isBriefpost && (
         <div>
           <label htmlFor={`tracking-${bundleId}`} className="block text-sm font-medium text-foreground">
-            {t("trackingUrl")}
+            {ts("trackingNumber")} {carrier && <span className="text-muted-foreground font-normal">({carrier.name})</span>}
           </label>
           <div className="mt-1 flex items-center gap-2">
-            <LinkIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               id={`tracking-${bundleId}`}
-              type="url"
-              value={trackingUrl}
-              onChange={(e) => setTrackingUrl(e.target.value)}
-              placeholder={t("trackingUrlPlaceholder")}
+              type="text"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder={carrier?.trackingNumberPlaceholder ?? ts("trackingNumberPlaceholder")}
               className="block w-full glass-input px-3 py-2 text-sm text-foreground"
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{t("trackingUrlHint")}</p>
-        </div>
-      ) : (
-        <div>
-          <label htmlFor={`tracking-${bundleId}`} className="block text-sm font-medium text-foreground">
-            {t("trackingUrl")} <span className="text-muted-foreground font-normal">({ts("optional")})</span>
-          </label>
-          <div className="mt-1 flex items-center gap-2">
-            <LinkIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input
-              id={`tracking-${bundleId}`}
-              type="url"
-              value={trackingUrl}
-              onChange={(e) => setTrackingUrl(e.target.value)}
-              placeholder={t("trackingUrlPlaceholder")}
-              className="block w-full glass-input px-3 py-2 text-sm text-foreground"
-            />
-          </div>
+          {showUrlWarning && (
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{ts("trackingNumberNotUrl")}</p>
+          )}
+          {!showUrlWarning && (
+            <p className="mt-1 text-xs text-muted-foreground">{ts("trackingNumberHint")}</p>
+          )}
         </div>
       )}
 
       {/* Proof photos */}
       <div>
         <label className="block text-sm font-medium text-foreground">
-          {ts("proofPhotos")} {isBriefpost && <span className="text-red-500">*</span>}
+          {ts("proofPhotos")} {isBriefpost ? <span className="text-red-500">*</span> : <span className="text-muted-foreground font-normal">({ts("optional")})</span>}
         </label>
         <p className="mt-0.5 text-xs text-muted-foreground">
           {isBriefpost ? ts("proofPhotosHintBriefpost") : ts("proofPhotosHintTracked")}
@@ -176,7 +195,7 @@ export function ShipBundleForm({ bundleId, isBriefpost = false }: { bundleId: st
       <div className="flex gap-2">
         <button
           onClick={handleSubmit}
-          disabled={loading || (isBriefpost ? proofUrls.length === 0 : !trackingUrl.trim())}
+          disabled={loading || showUrlWarning || (isBriefpost ? proofUrls.length === 0 : !trackingNumber.trim())}
           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
         >
           <Truck className="h-4 w-4" />

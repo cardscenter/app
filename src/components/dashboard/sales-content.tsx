@@ -576,7 +576,13 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
           {/* PAID: Ship bundle form + cancel option */}
           {bundle.status === "PAID" && (
             <div className="border-t border-border/50 px-4 py-3 space-y-4">
-              <ShipBundleForm bundleId={bundle.id} isBriefpost={!bundle.shippingMethodIsTracked} />
+              <ShipBundleForm
+                bundleId={bundle.id}
+                isBriefpost={!bundle.shippingMethodIsTracked}
+                carrierId={bundle.shippingMethodCarrier}
+                buyerCountry={bundle.buyerCountry}
+                buyerPostalCode={bundle.buyerPostalCode}
+              />
 
               <div className="border-t border-border/50 pt-3">
               {!showCancelConfirm ? (

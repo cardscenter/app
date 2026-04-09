@@ -19,6 +19,9 @@ type BuyerShippingInfoProps = {
   trackingUrl: string | null;
   shippingProofUrls?: string[];
   isBriefpost?: boolean;
+  carrierId?: string | null;
+  buyerCountry?: string | null;
+  buyerPostalCode?: string | null;
 };
 
 export function BuyerShippingInfo({
@@ -30,6 +33,9 @@ export function BuyerShippingInfo({
   trackingUrl,
   shippingProofUrls,
   isBriefpost,
+  carrierId,
+  buyerCountry,
+  buyerPostalCode,
 }: BuyerShippingInfoProps) {
   const t = useTranslations("sellerClaims");
   const tr = useTranslations("reputation");
@@ -90,7 +96,7 @@ export function BuyerShippingInfo({
       {/* Tracking / Ship action */}
       {bundleStatus === "PAID" && (
         <div className="px-5 py-3">
-          <ShipBundleForm bundleId={bundleId} isBriefpost={isBriefpost} />
+          <ShipBundleForm bundleId={bundleId} isBriefpost={isBriefpost} carrierId={carrierId} buyerCountry={buyerCountry} buyerPostalCode={buyerPostalCode} />
         </div>
       )}
 
