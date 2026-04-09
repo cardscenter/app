@@ -204,6 +204,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           selected={selectedShippingMethods}
           onChange={setSelectedShippingMethods}
           context="listing"
+          freeShipping={form.freeShipping}
         />
 
         {/* Free shipping toggle */}

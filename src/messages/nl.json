@@ -950,6 +950,7 @@
     "proofPhotosHintTracked": "Optioneel: voeg foto's toe van het pakket als extra bewijs.",
     "proofRequired": "Minimaal 1 foto is verplicht bij briefpost verzending.",
     "addPhoto": "Foto toevoegen",
+    "free": "Gratis",
     "trackingNumber": "Trackingnummer",
     "trackingNumberPlaceholder": "Vul je trackingnummer in",
     "trackingNumberHint": "Vul hier alleen het trackingnummer in, geen volledige link. De trackinglink wordt automatisch gegenereerd.",

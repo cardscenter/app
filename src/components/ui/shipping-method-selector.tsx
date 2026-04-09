@@ -15,9 +15,10 @@ interface Props {
   selected: string[];
   onChange: (selected: string[]) => void;
   context?: "listing" | "claimsale" | "auction";
+  freeShipping?: boolean;
 }
 
-export function ShippingMethodSelector({ methods, selected, onChange, context }: Props) {
+export function ShippingMethodSelector({ methods, selected, onChange, context, freeShipping }: Props) {
   const t = useTranslations("shipping");
   const locale = useLocale();
 
@@ -94,7 +95,11 @@ export function ShippingMethodSelector({ methods, selected, onChange, context }:
                   <span>{getCarrierName(method.carrier)} — {method.serviceName}</span>
                 </div>
                 <p className="text-sm font-medium text-primary">
-                  €{method.price.toFixed(2)}
+                  {freeShipping ? (
+                    <span className="text-green-600 dark:text-green-400">{t("free")}</span>
+                  ) : (
+                    <>€{method.price.toFixed(2)}</>
+                  )}
                 </p>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">

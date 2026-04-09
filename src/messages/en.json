@@ -950,6 +950,7 @@
     "proofPhotosHintTracked": "Optional: add photos of the package as extra proof.",
     "proofRequired": "At least 1 photo is required for regular mail shipping.",
     "addPhoto": "Add photo",
+    "free": "Free",
     "trackingNumber": "Tracking number",
     "trackingNumberPlaceholder": "Enter your tracking number",
     "trackingNumberHint": "Enter only the tracking number, not a full link. The tracking link is generated automatically.",
