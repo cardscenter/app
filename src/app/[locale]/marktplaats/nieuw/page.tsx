@@ -31,6 +31,12 @@ export default async function NieuwListingPage({
     select: { balance: true, accountType: true },
   });
 
+  // Get seller's shipping methods
+  const shippingMethods = await prisma.sellerShippingMethod.findMany({
+    where: { sellerId: session.user.id!, isActive: true },
+    orderBy: { createdAt: "asc" },
+  });
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="text-2xl font-bold text-foreground mb-8">{t("createTitle")}</h1>
@@ -38,6 +44,7 @@ export default async function NieuwListingPage({
         seriesList={seriesList}
         userBalance={user?.balance ?? 0}
         userAccountType={user?.accountType ?? "FREE"}
+        shippingMethods={shippingMethods}
       />
     </div>
   );

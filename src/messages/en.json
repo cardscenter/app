@@ -632,6 +632,7 @@
     "stepDetails": "Details",
     "stepPricing": "Price",
     "stepShipping": "Shipping",
+    "shippingMethodsHint": "Select the shipping methods you want to offer for this listing.",
     "stepUpsells": "Options",
     "stepReview": "Overview",
     "next": "Next",

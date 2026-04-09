@@ -12,8 +12,9 @@ import { StepType } from "./steps/step-type";
 import { StepPhotos } from "./steps/step-photos";
 import { StepDetails } from "./steps/step-details";
 import { StepPricing } from "./steps/step-pricing";
-import { StepShipping } from "./steps/step-shipping";
 import { StepUpsells } from "./steps/step-upsells";
+import { ShippingMethodSelector } from "@/components/ui/shipping-method-selector";
+import type { SellerShippingMethod } from "@prisma/client";
 import { ListingPreview } from "./steps/step-review";
 
 type SeriesWithSets = Series & { cardSets: CardSet[] };
@@ -75,12 +76,14 @@ interface MultiStepListingFormProps {
   seriesList: SeriesWithSets[];
   userBalance: number;
   userAccountType: string;
+  shippingMethods?: SellerShippingMethod[];
 }
 
-export function MultiStepListingForm({ seriesList, userBalance, userAccountType }: MultiStepListingFormProps) {
+export function MultiStepListingForm({ seriesList, userBalance, userAccountType, shippingMethods = [] }: MultiStepListingFormProps) {
   const t = useTranslations("listing");
   const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
+  const [selectedShippingMethods, setSelectedShippingMethods] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const isPremium = userAccountType !== "FREE"; // For backward compat references
   const topRef = useRef<HTMLDivElement>(null);
@@ -120,6 +123,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType 
     if (form.cardSetId) formData.set("cardSetId", form.cardSetId);
     if (form.condition) formData.set("condition", form.condition);
     if (form.price !== null) formData.set("price", String(form.price));
+    if (selectedShippingMethods.length > 0) formData.set("shippingMethodIds", JSON.stringify(selectedShippingMethods));
     if (form.carriers.length > 0) formData.set("carriers", JSON.stringify(form.carriers));
     if (form.packageSize) formData.set("packageSize", form.packageSize);
     if (form.cardItems.length > 0) formData.set("cardItems", JSON.stringify(form.cardItems));
@@ -192,16 +196,28 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType 
 
       {/* Section 5: Shipping */}
       <section className="glass rounded-2xl p-6">
-        <StepShipping
-          listingType={form.listingType}
-          deliveryMethod={form.deliveryMethod}
-          freeShipping={form.freeShipping}
-          shippingCost={form.shippingCost}
-          carriers={form.carriers}
-          packageSize={form.packageSize}
-          packageCount={form.packageCount}
-          onChange={updateField}
-        />
+        <h2 className="text-lg font-semibold text-foreground mb-1">{t("stepShipping")}</h2>
+        <p className="text-sm text-muted-foreground mb-4">{t("shippingMethodsHint")}</p>
+
+        {/* Free shipping toggle */}
+        <div className="flex items-center justify-between glass-subtle rounded-xl p-4 mb-4">
+          <span className="text-sm font-medium text-foreground">{t("freeShipping")}</span>
+          <button
+            type="button"
+            onClick={() => updateField("freeShipping", !form.freeShipping)}
+            className={`relative h-6 w-11 rounded-full transition-colors ${form.freeShipping ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${form.freeShipping ? "translate-x-5" : ""}`} />
+          </button>
+        </div>
+
+        {!form.freeShipping && (
+          <ShippingMethodSelector
+            methods={shippingMethods}
+            selected={selectedShippingMethods}
+            onChange={setSelectedShippingMethods}
+          />
+        )}
       </section>
 
       {/* Section 6: Upsells */}
