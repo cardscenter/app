@@ -90,12 +90,11 @@ export function ListingCard({ listing, locale }: ListingCardProps) {
                 : "Bieden"
               }
             </span>
-            <span className="text-xs text-muted-foreground">
-              {listing.freeShipping
-                ? "Gratis verzending"
-                : `+ €${listing.shippingCost.toFixed(2)} verzending`
-              }
-            </span>
+            {listing.freeShipping ? (
+              <span className="text-xs font-medium text-green-600 dark:text-green-400">Gratis verzending</span>
+            ) : (
+              <span className="text-xs text-muted-foreground">+ €{listing.shippingCost.toFixed(2)}</span>
+            )}
           </div>
 
           <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">

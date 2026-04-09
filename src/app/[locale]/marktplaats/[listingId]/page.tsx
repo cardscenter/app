@@ -136,8 +136,12 @@ export default async function ListingDetailPage({
               )}
             </div>
 
-            <div className="mt-3 text-center text-sm text-muted-foreground">
-              + &euro;{listing.shippingCost.toFixed(2)} {t("shippingCost").toLowerCase()}
+            <div className="mt-3 text-center text-sm">
+              {listing.freeShipping ? (
+                <span className="font-medium text-green-600 dark:text-green-400">{t("freeShipping")}</span>
+              ) : (
+                <span className="text-muted-foreground">+ &euro;{listing.shippingCost.toFixed(2)} {t("shippingCost").toLowerCase()}</span>
+              )}
             </div>
 
             {/* Status badge */}
