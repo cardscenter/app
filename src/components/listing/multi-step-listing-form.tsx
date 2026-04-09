@@ -199,25 +199,28 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
         <h2 className="text-lg font-semibold text-foreground mb-1">{t("stepShipping")}</h2>
         <p className="text-sm text-muted-foreground mb-4">{t("shippingMethodsHint")}</p>
 
+        <ShippingMethodSelector
+          methods={shippingMethods}
+          selected={selectedShippingMethods}
+          onChange={setSelectedShippingMethods}
+        />
+
         {/* Free shipping toggle */}
-        <div className="flex items-center justify-between glass-subtle rounded-xl p-4 mb-4">
-          <span className="text-sm font-medium text-foreground">{t("freeShipping")}</span>
+        <div className="flex items-center justify-between glass-subtle rounded-xl p-4 mt-4">
+          <div>
+            <span className="text-sm font-medium text-foreground">{t("freeShipping")}</span>
+            {form.freeShipping && (
+              <p className="text-xs text-muted-foreground mt-0.5">{t("freeShippingNote")}</p>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => updateField("freeShipping", !form.freeShipping)}
-            className={`relative h-6 w-11 rounded-full transition-colors ${form.freeShipping ? "bg-primary" : "bg-muted"}`}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.freeShipping ? "bg-primary" : "bg-muted"}`}
           >
             <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${form.freeShipping ? "translate-x-5" : ""}`} />
           </button>
         </div>
-
-        {!form.freeShipping && (
-          <ShippingMethodSelector
-            methods={shippingMethods}
-            selected={selectedShippingMethods}
-            onChange={setSelectedShippingMethods}
-          />
-        )}
       </section>
 
       {/* Section 6: Upsells */}
