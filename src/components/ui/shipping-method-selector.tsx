@@ -4,7 +4,10 @@ import { useTranslations, useLocale } from "next-intl";
 import { getCountryName } from "@/lib/shipping/countries";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
 import { Link } from "@/i18n/navigation";
+import { AlertTriangle } from "lucide-react";
 import type { SellerShippingMethod } from "@prisma/client";
+
+const MAILBOX_KEYWORDS = ["brievenbuspakket", "brievenbus", "mailbox", "letterbox"];
 
 interface Props {
   methods: SellerShippingMethod[];
@@ -44,11 +47,23 @@ export function ShippingMethodSelector({ methods, selected, onChange }: Props) {
     );
   }
 
+  function isMailboxMethod(method: SellerShippingMethod) {
+    return MAILBOX_KEYWORDS.some((kw) =>
+      method.serviceName.toLowerCase().includes(kw)
+    );
+  }
+
+  const hasMailboxSelected = selected.some((id) => {
+    const m = activeMethods.find((am) => am.id === id);
+    return m && isMailboxMethod(m);
+  });
+
   return (
     <div className="space-y-2">
       {activeMethods.map((method) => {
         const countries: string[] = JSON.parse(method.countries);
         const isSelected = selected.includes(method.id);
+        const isMailbox = isMailboxMethod(method);
 
         return (
           <label
@@ -77,10 +92,23 @@ export function ShippingMethodSelector({ methods, selected, onChange }: Props) {
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {countries.map((c) => getCountryName(c, locale)).join(", ")}
               </p>
+              {isMailbox && isSelected && (
+                <div className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span>{t("mailboxWarning")}</span>
+                </div>
+              )}
             </div>
           </label>
         );
       })}
+
+      {hasMailboxSelected && (
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{t("mailboxWarningDetail")}</span>
+        </div>
+      )}
     </div>
   );
 }

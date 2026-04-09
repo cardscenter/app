@@ -16,6 +16,10 @@ export async function getBuyerCountry(): Promise<string | null> {
 export function getSellerCountryFilter(buyerCountry: string | null) {
   // NL buyers or unauthenticated visitors: show everything
   if (!buyerCountry || buyerCountry === "NL") return {};
-  // Non-NL buyers: filter out NL_ONLY sellers
-  return { seller: { sellingCountries: { not: "NL_ONLY" } } };
+  // BE buyers: filter out NL_ONLY sellers (NL_BE and ALL_EU both include BE)
+  if (buyerCountry === "BE") {
+    return { seller: { sellingCountries: { not: "NL_ONLY" } } };
+  }
+  // Other EU buyers: only show ALL_EU sellers
+  return { seller: { sellingCountries: "ALL_EU" } };
 }

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { updateSellingCountries } from "@/actions/shipping-method";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Globe, MapPin } from "lucide-react";
+import { Globe, MapPin, Users } from "lucide-react";
 
 export function SellingCountriesToggle({ current }: { current: string }) {
   const t = useTranslations("shipping");
@@ -36,6 +36,22 @@ export function SellingCountriesToggle({ current }: { current: string }) {
         <div>
           <p className="text-sm font-medium text-foreground">{t("nlOnly")}</p>
           <p className="text-xs text-muted-foreground">{t("nlOnlyDescription")}</p>
+        </div>
+      </button>
+      <button
+        type="button"
+        disabled={loading}
+        onClick={() => handleChange("NL_BE")}
+        className={`flex flex-1 items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors ${
+          value === "NL_BE"
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-muted-foreground/30"
+        }`}
+      >
+        <Users className={`h-5 w-5 shrink-0 ${value === "NL_BE" ? "text-primary" : "text-muted-foreground"}`} />
+        <div>
+          <p className="text-sm font-medium text-foreground">{t("nlBe")}</p>
+          <p className="text-xs text-muted-foreground">{t("nlBeDescription")}</p>
         </div>
       </button>
       <button

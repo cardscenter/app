@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { shippingMethodSchema } from "@/lib/validations/shipping-method";
+import { getDefaultMaxPrice } from "@/lib/shipping/defaults";
 
 export async function createShippingMethod(formData: FormData) {
   const session = await auth();
@@ -52,6 +53,23 @@ export async function updateShippingMethod(id: string, formData: FormData) {
   const method = await prisma.sellerShippingMethod.findUnique({ where: { id } });
   if (!method || method.sellerId !== session.user.id) {
     return { error: "Verzendmethode niet gevonden" };
+  }
+
+  // Default methods: only price can be changed (with max cap)
+  if (method.isDefault) {
+    const price = parseFloat(formData.get("price") as string);
+    if (isNaN(price) || price < 0) {
+      return { error: "Ongeldige prijs" };
+    }
+    const maxPrice = getDefaultMaxPrice(method.carrier, method.serviceName);
+    if (maxPrice != null && price > maxPrice) {
+      return { error: `De maximale prijs voor deze verzendmethode is €${maxPrice.toFixed(2)} (175% van de standaardprijs).` };
+    }
+    await prisma.sellerShippingMethod.update({
+      where: { id },
+      data: { price },
+    });
+    return { success: true };
   }
 
   const countriesRaw = formData.get("countries") as string;
@@ -157,7 +175,7 @@ export async function updateSellingCountries(preference: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
-  if (preference !== "NL_ONLY" && preference !== "ALL_EU") {
+  if (preference !== "NL_ONLY" && preference !== "NL_BE" && preference !== "ALL_EU") {
     return { error: "Ongeldige keuze" };
   }
 

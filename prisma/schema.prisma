@@ -51,7 +51,7 @@ model User {
   country       String?  // ISO 3166-1 alpha-2: "NL", "DE", "BE", etc.
 
   // Shipping preferences
-  sellingCountries  String    @default("ALL_EU") // "NL_ONLY" or "ALL_EU"
+  sellingCountries  String    @default("ALL_EU") // "NL_ONLY", "NL_BE" or "ALL_EU"
 
   // Registration preferences
   accountFocus      String?   // BUYING | SELLING | BOTH

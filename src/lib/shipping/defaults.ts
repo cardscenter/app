@@ -1,5 +1,24 @@
 import { COUNTRY_CODES } from "./countries";
 
+// Default methods can only be adjusted up to 250% of their original price
+export const DEFAULT_PRICE_MAX_MULTIPLIER = 1.75;
+
+// Lookup table for original default prices by carrier + serviceName
+const DEFAULT_PRICES: Record<string, number> = {
+  "POSTNL:Briefpost": 1.69,
+  "POSTNL:Brievenbuspakket": 4.85,
+  "POSTNL:Aangetekend pakket": 10.45,
+  "POSTNL:EU Briefpost": 4.5,
+  "POSTNL:EU Pakket aangetekend": 15.5,
+};
+
+export function getDefaultMaxPrice(carrier: string, serviceName: string): number | null {
+  const key = `${carrier}:${serviceName}`;
+  const original = DEFAULT_PRICES[key];
+  if (original == null) return null; // non-NL defaults have price 0, no cap
+  return Math.round(original * DEFAULT_PRICE_MAX_MULTIPLIER * 100) / 100;
+}
+
 export interface DefaultShippingMethod {
   carrier: string;
   serviceName: string;
