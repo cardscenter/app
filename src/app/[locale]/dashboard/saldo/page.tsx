@@ -43,8 +43,6 @@ export default async function BalancePage() {
 
   if (!user) return null;
 
-  const availableBalance = Math.max(0, user.balance - user.reservedBalance);
-
   return (
     <div>
       <h1 className="text-2xl font-bold text-foreground">

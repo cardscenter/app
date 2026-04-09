@@ -1,6 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { EscrowInfoButton, InfoPopup } from "@/components/ui/info-tooltip";
+import { Wallet, Lock, Landmark, ShieldCheck } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface BalanceSummaryProps {
   balance: number;
@@ -12,43 +15,69 @@ export function BalanceSummary({ balance, reservedBalance, heldBalance }: Balanc
   const t = useTranslations("wallet");
   const availableBalance = Math.max(0, balance - reservedBalance);
 
+  const cards: {
+    label: string;
+    value: number;
+    icon: typeof Wallet;
+    iconColor: string;
+    iconBg: string;
+    info: ReactNode;
+  }[] = [
+    {
+      label: t("availableBalance"),
+      value: availableBalance,
+      icon: Wallet,
+      iconColor: "text-green-600 dark:text-green-400",
+      iconBg: "bg-green-500/10",
+      info: <InfoPopup title={t("availableBalance")} text={t("availableBalanceHint")} />,
+    },
+    {
+      label: t("reservedBalance"),
+      value: reservedBalance,
+      icon: Lock,
+      iconColor: "text-blue-600 dark:text-blue-400",
+      iconBg: "bg-blue-500/10",
+      info: <InfoPopup title={t("reservedBalance")} text={t("reservedBalanceHint")} />,
+    },
+    {
+      label: t("totalBalance"),
+      value: balance,
+      icon: Landmark,
+      iconColor: "text-muted-foreground",
+      iconBg: "bg-muted",
+      info: <InfoPopup title={t("totalBalance")} text={t("totalBalanceHint")} />,
+    },
+    {
+      label: t("heldBalance"),
+      value: heldBalance,
+      icon: ShieldCheck,
+      iconColor: "text-amber-600 dark:text-amber-400",
+      iconBg: "bg-amber-500/10",
+      info: <EscrowInfoButton />,
+    },
+  ];
+
   return (
-    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {/* Available balance */}
-      <div className="glass rounded-2xl p-4">
-        <p className="text-sm text-muted-foreground">{t("availableBalance")}</p>
-        <p className="mt-1 text-3xl font-bold text-foreground">
-          &euro;{availableBalance.toFixed(2)}
-        </p>
-      </div>
-
-      {/* Reserved for bids */}
-      {reservedBalance > 0 && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-800 dark:bg-blue-900/10">
-          <p className="text-sm text-blue-600 dark:text-blue-400">{t("reservedBalance")}</p>
-          <p className="mt-1 text-3xl font-bold text-blue-700 dark:text-blue-300">
-            &euro;{reservedBalance.toFixed(2)}
-          </p>
-        </div>
-      )}
-
-      {/* Total balance */}
-      <div className="glass rounded-2xl p-4">
-        <p className="text-sm text-muted-foreground">{t("totalBalance")}</p>
-        <p className="mt-1 text-3xl font-bold text-foreground">
-          &euro;{balance.toFixed(2)}
-        </p>
-      </div>
-
-      {/* Held in escrow (for sellers) */}
-      {heldBalance > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/10">
-          <p className="text-sm text-amber-600 dark:text-amber-400">{t("heldBalance")}</p>
-          <p className="mt-1 text-3xl font-bold text-amber-700 dark:text-amber-300">
-            &euro;{heldBalance.toFixed(2)}
-          </p>
-        </div>
-      )}
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {cards.map((card) => {
+        const Icon = card.icon;
+        return (
+          <div key={card.label} className="glass rounded-2xl p-5 flex flex-col justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`shrink-0 rounded-lg p-1.5 ${card.iconBg}`}>
+                <Icon className={`h-4 w-4 ${card.iconColor}`} />
+              </div>
+              <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground leading-tight">
+                {card.label}
+                {card.info}
+              </p>
+            </div>
+            <p className="mt-3 text-3xl font-bold text-foreground">
+              &euro;{card.value.toFixed(2)}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }

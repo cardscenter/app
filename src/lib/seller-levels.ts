@@ -9,26 +9,20 @@ export type SellerLevel = {
 };
 
 export const SELLER_LEVELS: SellerLevel[] = [
-  { name: "Tin", nameKey: "tin", minXP: 0, color: "text-gray-500 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800", borderColor: "border-gray-300 dark:border-gray-600", icon: "🪨" },
-  { name: "Copper", nameKey: "copper", minXP: 50, color: "text-orange-700 dark:text-orange-500", bgColor: "bg-orange-50 dark:bg-orange-950/30", borderColor: "border-orange-300 dark:border-orange-700", icon: "🟤" },
-  { name: "Bronze", nameKey: "bronze", minXP: 150, color: "text-amber-700 dark:text-amber-500", bgColor: "bg-amber-50 dark:bg-amber-950/30", borderColor: "border-amber-300 dark:border-amber-700", icon: "🥉" },
-  { name: "Silver", nameKey: "silver", minXP: 350, color: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-100 dark:bg-slate-800/50", borderColor: "border-slate-400 dark:border-slate-600", icon: "🥈" },
-  { name: "Gold", nameKey: "gold", minXP: 700, color: "text-yellow-600 dark:text-yellow-400", bgColor: "bg-yellow-50 dark:bg-yellow-950/30", borderColor: "border-yellow-400 dark:border-yellow-600", icon: "🥇" },
-  { name: "Platinum", nameKey: "platinum", minXP: 1200, color: "text-cyan-600 dark:text-cyan-400", bgColor: "bg-cyan-50 dark:bg-cyan-950/30", borderColor: "border-cyan-400 dark:border-cyan-600", icon: "💠" },
-  { name: "Titanium", nameKey: "titanium", minXP: 2000, color: "text-zinc-600 dark:text-zinc-300", bgColor: "bg-zinc-100 dark:bg-zinc-800/50", borderColor: "border-zinc-400 dark:border-zinc-600", icon: "⚙️" },
-  { name: "Cobalt", nameKey: "cobalt", minXP: 3000, color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-50 dark:bg-blue-950/30", borderColor: "border-blue-400 dark:border-blue-600", icon: "🔵" },
-  { name: "Jade", nameKey: "jade", minXP: 4500, color: "text-emerald-700 dark:text-emerald-400", bgColor: "bg-emerald-50 dark:bg-emerald-950/30", borderColor: "border-emerald-400 dark:border-emerald-600", icon: "🟢" },
-  { name: "Amethyst", nameKey: "amethyst", minXP: 6500, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-50 dark:bg-purple-950/30", borderColor: "border-purple-400 dark:border-purple-600", icon: "🟣" },
-  { name: "Sapphire", nameKey: "sapphire", minXP: 9000, color: "text-blue-600 dark:text-blue-300", bgColor: "bg-blue-50 dark:bg-blue-950/30", borderColor: "border-blue-300 dark:border-blue-500", icon: "💎" },
-  { name: "Ruby", nameKey: "ruby", minXP: 12000, color: "text-red-600 dark:text-red-400", bgColor: "bg-red-50 dark:bg-red-950/30", borderColor: "border-red-400 dark:border-red-600", icon: "🔴" },
-  { name: "Emerald", nameKey: "emerald", minXP: 16000, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-50 dark:bg-green-950/30", borderColor: "border-green-400 dark:border-green-600", icon: "🟩" },
-  { name: "Diamond", nameKey: "diamond", minXP: 21000, color: "text-violet-600 dark:text-violet-400", bgColor: "bg-violet-50 dark:bg-violet-950/30", borderColor: "border-violet-400 dark:border-violet-600", icon: "💎" },
-  { name: "Obsidian", nameKey: "obsidian", minXP: 28000, color: "text-gray-800 dark:text-gray-200", bgColor: "bg-gray-900/10 dark:bg-gray-100/10", borderColor: "border-gray-700 dark:border-gray-300", icon: "🖤" },
-  { name: "Champion", nameKey: "champion", minXP: 37000, color: "text-amber-600 dark:text-amber-300", bgColor: "bg-amber-50 dark:bg-amber-950/30", borderColor: "border-amber-500 dark:border-amber-400", icon: "🏆" },
-  { name: "Elite", nameKey: "elite", minXP: 48000, color: "text-rose-600 dark:text-rose-400", bgColor: "bg-rose-50 dark:bg-rose-950/30", borderColor: "border-rose-400 dark:border-rose-600", icon: "⭐" },
-  { name: "Legend", nameKey: "legend", minXP: 62000, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-50 dark:bg-orange-950/30", borderColor: "border-orange-400 dark:border-orange-600", icon: "🔥" },
-  { name: "Mythic", nameKey: "mythic", minXP: 78000, color: "text-fuchsia-600 dark:text-fuchsia-400", bgColor: "bg-fuchsia-50 dark:bg-fuchsia-950/30", borderColor: "border-fuchsia-400 dark:border-fuchsia-600", icon: "✨" },
-  { name: "Transcendent", nameKey: "transcendent", minXP: 95000, color: "text-yellow-500 dark:text-yellow-300", bgColor: "bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950/30 dark:to-amber-950/30", borderColor: "border-yellow-500 dark:border-yellow-400", icon: "👑" },
+  { name: "Beginner", nameKey: "beginner", minXP: 0, color: "text-gray-500 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800", borderColor: "border-gray-300 dark:border-gray-600", icon: "🎒" },
+  { name: "Rookie", nameKey: "rookie", minXP: 100, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-50 dark:bg-green-950", borderColor: "border-green-300 dark:border-green-700", icon: "⚡" },
+  { name: "Scout", nameKey: "scout", minXP: 300, color: "text-teal-600 dark:text-teal-400", bgColor: "bg-teal-50 dark:bg-teal-950", borderColor: "border-teal-300 dark:border-teal-700", icon: "🔍" },
+  { name: "Trainer", nameKey: "trainer", minXP: 750, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-50 dark:bg-blue-950", borderColor: "border-blue-300 dark:border-blue-700", icon: "🎯" },
+  { name: "Challenger", nameKey: "challenger", minXP: 1500, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-50 dark:bg-orange-950", borderColor: "border-orange-300 dark:border-orange-700", icon: "🔥" },
+  { name: "Rival", nameKey: "rival", minXP: 3000, color: "text-red-600 dark:text-red-400", bgColor: "bg-red-50 dark:bg-red-950", borderColor: "border-red-300 dark:border-red-700", icon: "⚔️" },
+  { name: "Veteran", nameKey: "veteran", minXP: 5000, color: "text-stone-600 dark:text-stone-400", bgColor: "bg-stone-50 dark:bg-stone-950", borderColor: "border-stone-400 dark:border-stone-600", icon: "🛡️" },
+  { name: "Gym Leader", nameKey: "gymLeader", minXP: 8000, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-50 dark:bg-purple-950", borderColor: "border-purple-300 dark:border-purple-700", icon: "🏅" },
+  { name: "Elite", nameKey: "elite", minXP: 12000, color: "text-cyan-600 dark:text-cyan-400", bgColor: "bg-cyan-50 dark:bg-cyan-950", borderColor: "border-cyan-300 dark:border-cyan-700", icon: "💫" },
+  { name: "Expert", nameKey: "expert", minXP: 17000, color: "text-indigo-600 dark:text-indigo-400", bgColor: "bg-indigo-50 dark:bg-indigo-950", borderColor: "border-indigo-300 dark:border-indigo-700", icon: "🌟" },
+  { name: "Master", nameKey: "master", minXP: 23000, color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-50 dark:bg-amber-950", borderColor: "border-amber-400 dark:border-amber-600", icon: "👑" },
+  { name: "Grandmaster", nameKey: "grandmaster", minXP: 32000, color: "text-rose-600 dark:text-rose-400", bgColor: "bg-rose-50 dark:bg-rose-950", borderColor: "border-rose-400 dark:border-rose-600", icon: "💎" },
+  { name: "Legend", nameKey: "legend", minXP: 50000, color: "text-violet-600 dark:text-violet-400", bgColor: "bg-violet-50 dark:bg-violet-950", borderColor: "border-violet-400 dark:border-violet-600", icon: "🔱" },
+  { name: "Champion", nameKey: "champion", minXP: 100000, color: "text-yellow-500 dark:text-yellow-300", bgColor: "bg-yellow-50 dark:bg-yellow-950", borderColor: "border-yellow-500 dark:border-yellow-400", icon: "🏆" },
 ];
 
 export type XPBreakdown = {
@@ -36,20 +30,26 @@ export type XPBreakdown = {
   sales: number;
   purchases: number;
   positiveReviews: number;
+  reviewsGiven: number;
+  completedTransactions: number;
   total: number;
 };
 
-// XP rewards (revenue-based)
-const XP_PER_DAY = 1;              // 1 XP per day account exists
-const XP_PER_EUR_SOLD = 1;         // 1 XP per € sold
-const XP_PER_EUR_BOUGHT = 1;       // 1 XP per € bought
-const XP_PER_5STAR_REVIEW = 20;    // 20 XP per 5-star review
+// XP rewards
+const XP_PER_DAY = 1;                    // 1 XP per day account exists
+const XP_PER_EUR_SOLD = 1;               // 1 XP per € sold
+const XP_PER_EUR_BOUGHT = 1;             // 1 XP per € bought
+const XP_PER_5STAR_REVIEW = 20;          // 20 XP per 5-star review received
+const XP_PER_REVIEW_GIVEN = 5;           // 5 XP per review given
+const XP_PER_COMPLETED_TRANSACTION = 10; // 10 XP per completed shipping bundle
 
 export function calculateXP(stats: {
   accountCreatedAt: Date;
   totalSalesRevenue: number;
   totalPurchasesRevenue: number;
   fiveStarReviewCount: number;
+  reviewsGivenCount: number;
+  completedTransactionCount: number;
 }): XPBreakdown {
   const now = new Date();
   const ageInDays = Math.floor(
@@ -60,13 +60,17 @@ export function calculateXP(stats: {
   const sales = Math.floor(stats.totalSalesRevenue * XP_PER_EUR_SOLD);
   const purchases = Math.floor(stats.totalPurchasesRevenue * XP_PER_EUR_BOUGHT);
   const positiveReviews = stats.fiveStarReviewCount * XP_PER_5STAR_REVIEW;
+  const reviewsGiven = stats.reviewsGivenCount * XP_PER_REVIEW_GIVEN;
+  const completedTransactions = stats.completedTransactionCount * XP_PER_COMPLETED_TRANSACTION;
 
   return {
     accountAge,
     sales,
     purchases,
     positiveReviews,
-    total: accountAge + sales + purchases + positiveReviews,
+    reviewsGiven,
+    completedTransactions,
+    total: accountAge + sales + purchases + positiveReviews + reviewsGiven + completedTransactions,
   };
 }
 
@@ -83,6 +87,12 @@ export function getNextLevel(xp: number): SellerLevel | null {
     if (xp < l.minXP) return l;
   }
   return null;
+}
+
+export function getBannerUrl(nameKey: string): string {
+  // Convert camelCase nameKey to kebab-case for file lookup
+  const kebab = nameKey.replace(/([A-Z])/g, "-$1").toLowerCase();
+  return `/images/tier-banners/${kebab}-banner.jpg`;
 }
 
 export function getLevelProgress(xp: number): number {

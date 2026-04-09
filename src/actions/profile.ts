@@ -50,13 +50,49 @@ export async function updateProfile(formData: FormData) {
     }
   }
 
-  await prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id: session.user.id },
     data: {
       displayName,
       bio: bio ?? null,
       ...(avatarUrl !== undefined && { avatarUrl: avatarUrl || null }),
     },
+    select: { avatarUrl: true },
+  });
+
+  return { success: true, avatarUrl: updated.avatarUrl };
+}
+
+export async function updateProfileBanner(bannerKey: string | null) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  // Validate that bannerKey is a valid seller level nameKey (or null to remove)
+  if (bannerKey !== null) {
+    const { SELLER_LEVELS } = await import("@/lib/seller-levels");
+    const validKeys = SELLER_LEVELS.map((l) => l.nameKey);
+    if (!validKeys.includes(bannerKey)) {
+      return { error: "Ongeldige banner" };
+    }
+
+    // Check if user has unlocked this tier
+    const { getSellerStats } = await import("@/actions/review");
+    const stats = await getSellerStats(session.user.id);
+    if (!stats) return { error: "Kan verkopersstats niet ophalen" };
+
+    const { getLevel } = await import("@/lib/seller-levels");
+    const currentLevel = getLevel(stats.xp);
+    const currentLevelIndex = SELLER_LEVELS.findIndex((l) => l.nameKey === currentLevel.nameKey);
+    const requestedLevelIndex = SELLER_LEVELS.findIndex((l) => l.nameKey === bannerKey);
+
+    if (requestedLevelIndex > currentLevelIndex) {
+      return { error: "Je hebt deze rank nog niet bereikt" };
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { profileBanner: bannerKey },
   });
 
   return { success: true };

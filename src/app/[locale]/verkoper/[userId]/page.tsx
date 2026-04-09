@@ -3,10 +3,11 @@ import { getSellerStats, getSellerReviews } from "@/actions/review";
 import { auth } from "@/lib/auth";
 import { SellerReputationCard } from "@/components/ui/seller-reputation-card";
 import { ReviewList } from "@/components/ui/review-list";
-import { ReviewForm } from "@/components/ui/review-form";
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
+import { getBannerUrl } from "@/lib/seller-levels";
+import Image from "next/image";
 
 export default async function SellerProfilePage({
   params,
@@ -29,7 +30,11 @@ export default async function SellerProfilePage({
   const reviews = await getSellerReviews(userId);
   const isOwner = session?.user?.id === userId;
   const isLoggedIn = !!session?.user?.id;
-  const canReview = isLoggedIn && !isOwner;
+
+  const seller = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { profileBanner: true },
+  });
 
   // Get seller's active listings for the sidebar
   const activeListings = await prisma.listing.findMany({
@@ -61,6 +66,20 @@ export default async function SellerProfilePage({
         {t("backToHome")}
       </Link>
 
+      {/* Profile banner */}
+      {seller?.profileBanner && (
+        <div className="relative mb-6 aspect-[21/9] w-full overflow-hidden rounded-2xl">
+          <Image
+            src={getBannerUrl(seller.profileBanner)}
+            alt="Profile banner"
+            fill
+            className="object-cover"
+            sizes="(max-width: 1280px) 100vw, 1280px"
+            priority
+          />
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
@@ -85,10 +104,6 @@ export default async function SellerProfilePage({
             <ReviewList reviews={reviews} isOwner={isOwner} />
           </div>
 
-          {/* Review form */}
-          {canReview && (
-            <ReviewForm sellerId={userId} />
-          )}
         </div>
 
         {/* Sidebar */}

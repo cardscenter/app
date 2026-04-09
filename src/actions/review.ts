@@ -11,9 +11,9 @@ export async function createReview(formData: FormData) {
   const sellerId = formData.get("sellerId") as string;
   const rating = parseInt(formData.get("rating") as string);
   const comment = (formData.get("comment") as string) || null;
-  const auctionId = (formData.get("auctionId") as string) || null;
-  const claimsaleItemId = (formData.get("claimsaleItemId") as string) || null;
-  const listingId = (formData.get("listingId") as string) || null;
+  const auctionId = (formData.get("auctionId") as string)?.trim() || undefined;
+  const claimsaleItemId = (formData.get("claimsaleItemId") as string)?.trim() || undefined;
+  const listingId = (formData.get("listingId") as string)?.trim() || undefined;
 
   if (!sellerId || !rating || rating < 1 || rating > 5) {
     throw new Error("Ongeldige invoer");
@@ -23,15 +23,29 @@ export async function createReview(formData: FormData) {
     throw new Error("Je kunt jezelf geen review geven");
   }
 
+  // Check that buyer has at least one completed purchase from this seller
+  const hasPurchase = await prisma.shippingBundle.findFirst({
+    where: {
+      buyerId: session.user.id,
+      sellerId,
+      status: { in: ["SHIPPED", "COMPLETED"] },
+    },
+    select: { id: true },
+  });
+
+  if (!hasPurchase) {
+    throw new Error("Je kunt alleen een review plaatsen als je iets hebt gekocht bij deze verkoper");
+  }
+
   await prisma.review.create({
     data: {
       rating,
       comment,
       reviewerId: session.user.id,
       sellerId,
-      auctionId,
-      claimsaleItemId,
-      listingId,
+      ...(auctionId ? { auctionId } : {}),
+      ...(claimsaleItemId ? { claimsaleItemId } : {}),
+      ...(listingId ? { listingId } : {}),
     },
   });
 
@@ -77,8 +91,8 @@ export async function getSellerStats(userId: string) {
     select: { rating: true },
   });
 
-  // Fetch sales revenue data
-  const [auctionSalesData, claimsaleItemsData, listingSalesData, auctionPurchasesData, claimsalePurchasesData] = await Promise.all([
+  // Fetch sales revenue data + completed transactions + reviews given
+  const [auctionSalesData, claimsaleItemsData, listingSalesData, auctionPurchasesData, claimsalePurchasesData, listingPurchasesData, completedTransactionCount, reviewsGivenCount] = await Promise.all([
     prisma.auction.findMany({
       where: { sellerId: userId, status: { in: ["ENDED_SOLD", "BOUGHT_NOW"] } },
       select: { finalPrice: true },
@@ -99,6 +113,19 @@ export async function getSellerStats(userId: string) {
       where: { buyerId: userId, status: "SOLD" },
       select: { price: true },
     }),
+    prisma.shippingBundle.findMany({
+      where: { buyerId: userId, status: "COMPLETED", listingId: { not: null } },
+      select: { totalItemCost: true },
+    }),
+    prisma.shippingBundle.count({
+      where: {
+        OR: [{ buyerId: userId }, { sellerId: userId }],
+        status: "COMPLETED",
+      },
+    }),
+    prisma.review.count({
+      where: { reviewerId: userId },
+    }),
   ]);
 
   const totalSales = auctionSalesData.length + claimsaleItemsData.length + listingSalesData.length;
@@ -108,7 +135,8 @@ export async function getSellerStats(userId: string) {
     listingSalesData.reduce((sum, l) => sum + (l.price ?? 0), 0);
   const totalPurchasesRevenue =
     auctionPurchasesData.reduce((sum, a) => sum + (a.finalPrice ?? 0), 0) +
-    claimsalePurchasesData.reduce((sum, i) => sum + i.price, 0);
+    claimsalePurchasesData.reduce((sum, i) => sum + i.price, 0) +
+    listingPurchasesData.reduce((sum, l) => sum + l.totalItemCost, 0);
 
   const totalReviews = reviews.length;
   const avgRating = totalReviews > 0
@@ -127,6 +155,8 @@ export async function getSellerStats(userId: string) {
     totalSalesRevenue,
     totalPurchasesRevenue,
     fiveStarReviewCount,
+    reviewsGivenCount,
+    completedTransactionCount,
   });
 
   return {
@@ -140,7 +170,7 @@ export async function getSellerStats(userId: string) {
     totalReviews,
     positivePercent,
     totalSales,
-    totalPurchases: auctionPurchasesData.length + claimsalePurchasesData.length,
+    totalPurchases: auctionPurchasesData.length + claimsalePurchasesData.length + listingPurchasesData.length,
     memberSince: user.createdAt.toLocaleDateString("nl-NL", {
       month: "short",
       year: "numeric",

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { ShipBundleForm } from "./ship-bundle-form";
+import { SellerRefundForm } from "./seller-refund-form";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
 import { OrderDetailModal } from "./order-detail-modal";
 
@@ -32,6 +33,7 @@ type BundleItem = {
   imageUrl: string | null;
   reference: string | null;
   sellerNote: string | null;
+  refundedAt: string | null;
 };
 
 type DisputeInfo = {
@@ -53,6 +55,7 @@ type SaleBundle = {
   shippingMethodService: string | null;
   trackingUrl: string | null;
   shippedAt: string | null;
+  refundedAmount: number;
   createdAt: string;
   sourceType: "claimsale" | "auction" | "listing";
   sourceTitle: string | null;
@@ -622,9 +625,9 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
             </div>
           )}
 
-          {/* SHIPPED: tracking + auto-confirm info */}
+          {/* SHIPPED: tracking + auto-confirm info + refund */}
           {bundle.status === "SHIPPED" && (
-            <div className="border-t border-border/50 px-4 py-3 space-y-2">
+            <div className="border-t border-border/50 px-4 py-3 space-y-3">
               {bundle.trackingUrl && (
                 <a
                   href={bundle.trackingUrl}
@@ -642,6 +645,15 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
                   {t("autoConfirmInfo", { date: autoConfirmFormatted })}
                 </p>
               )}
+              <div className="border-t border-border/50 pt-3">
+                <SellerRefundForm
+                  bundleId={bundle.id}
+                  buyerName={bundle.buyerName}
+                  totalCost={bundle.totalCost}
+                  refundedAmount={bundle.refundedAmount}
+                  items={bundle.items}
+                />
+              </div>
             </div>
           )}
 

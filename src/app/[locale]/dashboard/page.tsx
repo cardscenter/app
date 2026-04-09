@@ -183,7 +183,17 @@ export default async function DashboardPage() {
       {/* Premium stats or locked preview */}
       <div className="mt-8">
         {hasPremium && premiumData ? (
-          <DashboardStats {...premiumData} />
+          <>
+            <DashboardStats {...premiumData} />
+            <div className="mt-4 text-center">
+              <Link
+                href="/dashboard/statistieken"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {t("statistics.viewDetailedStats")} →
+              </Link>
+            </div>
+          </>
         ) : (
           <DashboardStatsLocked />
         )}

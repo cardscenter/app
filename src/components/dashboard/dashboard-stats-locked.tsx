@@ -14,6 +14,7 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
+import { EscrowInfoButton } from "@/components/ui/info-tooltip";
 
 export function DashboardStatsLocked() {
   const t = useTranslations("dashboard");
@@ -53,7 +54,10 @@ export function DashboardStatsLocked() {
                   <Clock className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">{t("stats.inEscrow")}</p>
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {t("stats.inEscrow")}
+                    <EscrowInfoButton />
+                  </p>
                   <p className="text-xl font-bold">€89,00</p>
                 </div>
               </div>

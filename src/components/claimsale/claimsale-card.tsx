@@ -37,6 +37,7 @@ export function ClaimsaleCard({ claimsale }: { claimsale: ClaimsaleCardData }) {
               width={96}
               height={128}
               className="sm:hidden object-cover w-24 h-32"
+              sizes="96px"
             />
             {/* Desktop: fill */}
             <Image
@@ -44,6 +45,7 @@ export function ClaimsaleCard({ claimsale }: { claimsale: ClaimsaleCardData }) {
               alt={claimsale.title}
               fill
               className="hidden sm:block object-cover"
+              sizes="(max-width: 640px) 0px, (max-width: 1024px) 50vw, 25vw"
             />
           </>
         ) : (

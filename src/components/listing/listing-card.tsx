@@ -58,8 +58,8 @@ export function ListingCard({ listing, locale }: ListingCardProps) {
       <div className="shrink-0 sm:relative sm:w-full sm:aspect-square bg-muted flex items-center justify-center">
         {firstImage ? (
           <>
-            <Image src={firstImage} alt={listing.title} width={96} height={128} className="sm:hidden object-cover w-24 h-32" />
-            <Image src={firstImage} alt={listing.title} fill className="hidden sm:block object-cover" />
+            <Image src={firstImage} alt={listing.title} width={96} height={128} className="sm:hidden object-cover w-24 h-32" sizes="96px" />
+            <Image src={firstImage} alt={listing.title} fill className="hidden sm:block object-cover" sizes="(max-width: 640px) 0px, (max-width: 1024px) 50vw, 25vw" />
           </>
         ) : (
           <div className="flex w-24 h-32 sm:w-full sm:h-full items-center justify-center text-muted-foreground text-sm">

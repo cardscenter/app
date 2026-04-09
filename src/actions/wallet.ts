@@ -254,8 +254,15 @@ export async function releaseEscrow(userId: string, amount: number, description:
 
 // Internal: partial refund escrow → return partial funds to buyer, keep rest in escrow
 export async function partialRefundEscrow(sellerId: string, buyerId: string, refundAmount: number, escrowDeduction: number, description: string, relatedShippingBundleId?: string) {
-  const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
+  const [buyer, seller] = await Promise.all([
+    prisma.user.findUnique({ where: { id: buyerId } }),
+    prisma.user.findUnique({ where: { id: sellerId } }),
+  ]);
   if (!buyer) throw new Error("Buyer not found");
+  if (!seller) throw new Error("Seller not found");
+
+  // Ensure escrow deduction doesn't exceed held balance
+  const safeEscrowDeduction = Math.min(escrowDeduction, Math.max(seller.heldBalance, 0));
 
   const buyerBalanceBefore = buyer.balance;
   const buyerBalanceAfter = buyerBalanceBefore + refundAmount;
@@ -277,10 +284,10 @@ export async function partialRefundEscrow(sellerId: string, buyerId: string, ref
         relatedShippingBundleId,
       },
     }),
-    // Reduce seller's held balance by escrow deduction amount
+    // Reduce seller's held balance by escrow deduction amount (never below 0)
     prisma.user.update({
       where: { id: sellerId },
-      data: { heldBalance: { decrement: escrowDeduction } },
+      data: { heldBalance: { decrement: safeEscrowDeduction } },
     }),
   ]);
 }

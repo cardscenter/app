@@ -5,7 +5,7 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
 import { UserBalance } from "./user-balance";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X, MessageCircle, Search } from "lucide-react";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { SearchBar } from "@/components/search/search-bar";
@@ -16,6 +16,16 @@ function HeaderContent() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
+
+  useEffect(() => {
+    function handleAvatarUpdate(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      setAvatarOverride(detail?.avatarUrl ?? null);
+    }
+    window.addEventListener("avatar-updated", handleAvatarUpdate);
+    return () => window.removeEventListener("avatar-updated", handleAvatarUpdate);
+  }, []);
 
   const navLinks = [
     { href: "/veilingen" as const, label: t("auctions") },
@@ -88,9 +98,17 @@ function HeaderContent() {
                 href="/dashboard"
                 className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/20"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
-                  {session.user.name?.charAt(0).toUpperCase()}
-                </div>
+                {(avatarOverride || session.user.image) ? (
+                  <img
+                    src={avatarOverride || session.user.image!}
+                    alt=""
+                    className="h-6 w-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                    {session.user.name?.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 {session.user.name}
               </Link>
             </div>

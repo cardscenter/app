@@ -22,29 +22,24 @@ export function AuctionSortBar({ currentSort, seed }: { currentSort: string; see
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", sort);
     params.set("seed", String(seed));
-    params.delete("page"); // reset to page 1
+    params.delete("page");
     router.push(`?${params.toString()}`);
   }
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
-      <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <ArrowDownUp className="size-4" />
-        {t("sortBy")}
-      </span>
-      {SORT_OPTIONS.map((option) => (
-        <button
-          key={option}
-          onClick={() => handleSort(option)}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-            currentSort === option
-              ? "bg-primary text-white shadow-md"
-              : "glass-subtle text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10"
-          }`}
-        >
-          {t(SORT_KEYS[option])}
-        </button>
-      ))}
+    <div className="flex items-center gap-2">
+      <ArrowDownUp className="size-4 text-muted-foreground" />
+      <select
+        value={currentSort}
+        onChange={(e) => handleSort(e.target.value)}
+        className="glass-input rounded-lg px-3 py-1.5 text-sm font-medium text-foreground cursor-pointer"
+      >
+        {SORT_OPTIONS.map((option) => (
+          <option key={option} value={option}>
+            {t(SORT_KEYS[option])}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

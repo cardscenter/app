@@ -41,7 +41,7 @@ export function UserBalance() {
 
   return (
     <Link
-      href="/dashboard"
+      href="/dashboard/saldo"
       className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/20"
       title="Saldo"
     >

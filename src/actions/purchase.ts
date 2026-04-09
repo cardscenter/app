@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { refundEscrow, releaseEscrow } from "@/actions/wallet";
+import { refundEscrow, releaseEscrow, partialRefundEscrow } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 
 const CANCEL_DAYS = 7;
@@ -282,4 +282,70 @@ export async function autoConfirmDeliveries() {
   }
 
   return { confirmed };
+}
+
+// Seller issues a (partial) refund on a SHIPPED order
+export async function issueSellerRefund(bundleId: string, amount: number, itemIds?: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  if (!amount || amount <= 0) return { error: "Ongeldig bedrag" };
+
+  const bundle = await prisma.shippingBundle.findUnique({
+    where: { id: bundleId },
+    include: { buyer: { select: { displayName: true } } },
+  });
+
+  if (!bundle) return { error: "Bestelling niet gevonden" };
+  if (bundle.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (bundle.status !== "SHIPPED") return { error: "Kan alleen verzonden bestellingen terugbetalen" };
+
+  const maxRefundable = bundle.totalCost - bundle.refundedAmount;
+  if (maxRefundable <= 0) return { error: "Deze bestelling is al volledig terugbetaald" };
+
+  // Round to 2 decimals
+  const refundAmount = Math.min(Math.round(amount * 100) / 100, Math.round(maxRefundable * 100) / 100);
+
+  // Calculate how much to deduct from seller's escrow (proportional to item cost)
+  // If refunding full remaining amount, deduct remaining escrow. Otherwise, proportional.
+  const totalEscrowRemaining = bundle.totalItemCost - (bundle.refundedAmount > bundle.shippingCost
+    ? bundle.refundedAmount - bundle.shippingCost
+    : 0);
+  const escrowDeduction = refundAmount >= maxRefundable
+    ? totalEscrowRemaining
+    : Math.min(refundAmount, totalEscrowRemaining);
+
+  await partialRefundEscrow(
+    session.user.id,    // seller
+    bundle.buyerId,     // buyer gets refund
+    refundAmount,
+    escrowDeduction,
+    `Terugbetaling door verkoper: bestelling ${bundle.orderNumber}`,
+    bundle.id
+  );
+
+  // Update refunded amount on bundle
+  await prisma.shippingBundle.update({
+    where: { id: bundleId },
+    data: { refundedAmount: bundle.refundedAmount + refundAmount },
+  });
+
+  // Mark specific items as refunded
+  if (itemIds && itemIds.length > 0) {
+    await prisma.claimsaleItem.updateMany({
+      where: { id: { in: itemIds }, shippingBundleId: bundleId },
+      data: { refundedAt: new Date() },
+    });
+  }
+
+  // Notify buyer
+  await createNotification(
+    bundle.buyerId,
+    "ORDER_REFUND",
+    "Terugbetaling ontvangen",
+    `De verkoper heeft €${refundAmount.toFixed(2)} terugbetaald voor bestelling ${bundle.orderNumber}.`,
+    "/dashboard/aankopen"
+  );
+
+  return { success: true, refundedAmount: refundAmount };
 }

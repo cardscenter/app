@@ -19,6 +19,7 @@ model User {
   lastName      String?
   bio           String?
   avatarUrl     String?
+  profileBanner String?   // e.g. "beginner" — references tier banner image
 
   // Wallet
   balance         Float     @default(0)
@@ -48,6 +49,9 @@ model User {
   postalCode    String?
   city          String?
   country       String?  // ISO 3166-1 alpha-2: "NL", "DE", "BE", etc.
+
+  // Shipping preferences
+  sellingCountries  String    @default("ALL_EU") // "NL_ONLY" or "ALL_EU"
 
   // Registration preferences
   accountFocus      String?   // BUYING | SELLING | BOTH
@@ -101,6 +105,9 @@ model SellerShippingMethod {
   price       Float    // Price in EUR
   countries   String   // JSON array of ISO country codes: ["NL","BE","DE"]
 
+  isDefault   Boolean  @default(false) // System-created at registration, cannot be deleted
+  isTracked   Boolean  @default(false) // Has track & trace
+  isSigned    Boolean  @default(false) // Tracked + signature on delivery (aangetekend)
   isActive    Boolean  @default(true)
 
   createdAt   DateTime @default(now())
@@ -341,6 +348,8 @@ model ClaimsaleItem {
   claimedById  String?
   claimedBy    User?    @relation("ClaimedBy", fields: [claimedById], references: [id])
 
+  refundedAt   DateTime? // Set when seller refunds this item
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -495,6 +504,8 @@ model ShippingBundle {
   buyerPostalCode  String?
   buyerCity        String?
   buyerCountry     String?
+
+  refundedAmount Float   @default(0) // Total amount refunded to buyer so far
 
   status        String   @default("PENDING") // PENDING | PAID | SHIPPED | COMPLETED | CANCELLED | DISPUTED
 

@@ -53,9 +53,11 @@ export async function register(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(data.password, 12);
 
-  // Generate unique bank transfer reference
-  const digits = Array.from({ length: 10 }, () => Math.floor(Math.random() * 10)).join("");
-  const bankTransferReference = `${data.displayName.toLowerCase().replace(/[^a-z0-9]/g, "")}${digits}`;
+  // Generate unique bank transfer reference: username + 7 digits + 3 letters (no ambiguous chars)
+  const safeLetters = "ABCDEFGHJKMNPQRTUVWXY"; // no I, L, O, S, Z (look like 1, 1, 0, 5, 2)
+  const digits = Array.from({ length: 7 }, () => Math.floor(Math.random() * 10)).join("");
+  const letters = Array.from({ length: 3 }, () => safeLetters[Math.floor(Math.random() * safeLetters.length)]).join("");
+  const bankTransferReference = `${data.displayName.toUpperCase().replace(/[^A-Z0-9]/g, "")}${digits}${letters}`;
 
   // Handle avatar file upload
   let avatarUrl: string | null = null;

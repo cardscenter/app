@@ -28,6 +28,7 @@ export default async function MySalesPage() {
           imageUrls: true,
           reference: true,
           sellerNote: true,
+          refundedAt: true,
         },
       },
       auction: {
@@ -76,6 +77,7 @@ export default async function MySalesPage() {
     shippingMethodService: b.shippingMethod?.serviceName ?? null,
     trackingUrl: b.trackingUrl,
     shippedAt: b.shippedAt?.toISOString() ?? null,
+    refundedAmount: b.refundedAmount ?? 0,
     createdAt: b.createdAt.toISOString(),
     sourceType: b.auctionId ? "auction" as const : b.listingId ? "listing" as const : "claimsale" as const,
     sourceTitle: b.auction?.title ?? b.listing?.title ?? null,
@@ -102,6 +104,7 @@ export default async function MySalesPage() {
       })(),
       reference: i.reference ?? null,
       sellerNote: i.sellerNote ?? null,
+      refundedAt: i.refundedAt?.toISOString() ?? null,
     })),
   }));
 

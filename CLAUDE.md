@@ -53,7 +53,7 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 - **Anti-snipe** — bids in last 2 min → +2 min extension
 - **Bid increments** — per price tier (`src/lib/auction/bid-increments.ts`)
 - **Account tiers** — FREE / PRO / UNLIMITED (config in `src/lib/subscription-tiers.ts`). ADMIN is a role, not a tier — maps to UNLIMITED perks. Limits: auctions, claimsales, listings, items/claimsale. Commission deducted at escrow release. Subscription model tracks billing history.
-- **Seller levels** — 20-tier progression system (`src/lib/seller-levels.ts`). XP earned via: 1 XP/day account age, 1 XP/€ sold, 1 XP/€ bought, 20 XP per 5-star review. Tiers: Tin→Copper→Bronze→Silver→Gold→Platinum→Titanium→Cobalt→Jade→Amethyst→Sapphire→Ruby→Emerald→Diamond→Obsidian→Champion→Elite→Legend→Mythic→Transcendent (95k XP). Data fetching sums revenue amounts, not counts.
+- **Seller levels** — 14-tier Pokémon-themed progression system (`src/lib/seller-levels.ts`). XP earned via: 1 XP/day account age, 1 XP/€ sold, 1 XP/€ bought, 20 XP per 5-star review received, 5 XP per review given, 10 XP per completed transaction. Tiers: Beginner(0)→Rookie(100)→Scout(300)→Trainer(750)→Challenger(1.5k)→Rival(3k)→Veteran(5k)→Gym Leader(8k)→Elite(12k)→Expert(17k)→Master(23k)→Grandmaster(32k)→Legend(50k)→Champion(100k XP). Data fetching sums revenue amounts, not counts.
 - **Disputes** — buyer opens on SHIPPED bundle (10–30 days after shipment); seller responds; buyer accepts/rejects; mutual proposals; escalation (both parties agree) → admin resolves. Event-sourced timeline via `DisputeEvent` model. Auto-resolve cron for unresponded disputes. Actions in `dispute.ts`, UI in `dispute-detail-content.tsx`, page in `dashboard/geschillen/[disputeId]/page.tsx`
 - **Chat proposals** — Buyer/seller can make buy/sell price proposals in chat linked to a listing. Proposal model with PENDING/ACCEPTED/REJECTED status. 40% minimum balance rule applies. Accepted proposals: mark listing SOLD, create ShippingBundle, escrow flow. `withdrawProposal()` for retracting pending offers.
 - **Buy Now price** — Optional on auctions. Removed when bids reach 75% of buy now price (not after first bid). Check in both `placeBid()` and `resolveAutoBids()`.
@@ -187,8 +187,8 @@ User, Category, Series, CardSet, Auction, AuctionBid, AuctionShippingMethod, Auc
 
 | Fase | Onderwerp |
 |------|-----------|
-| 12 | Homepage verrijking |
 | 13 | Premium statistieken |
+| 14 | Verzendmogelijkheden verbeteren |
 | 15 | Admin panel |
 | 16 | Email notificaties |
 | 17 | Betaalmethoden (iDEAL/Stripe) |

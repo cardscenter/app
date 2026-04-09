@@ -19,7 +19,7 @@ export async function getSellerInfo(sellerId: string): Promise<SellerInfo | null
 
   if (!user) return null;
 
-  const [reviews, auctionSalesData, claimsaleItemsData, listingSalesData, auctionPurchasesData, claimsalePurchasesData] =
+  const [reviews, auctionSalesData, claimsaleItemsData, listingSalesData, auctionPurchasesData, claimsalePurchasesData, listingPurchasesData, completedTransactionCount, reviewsGivenCount] =
     await Promise.all([
       prisma.review.findMany({
         where: { sellerId },
@@ -45,6 +45,19 @@ export async function getSellerInfo(sellerId: string): Promise<SellerInfo | null
         where: { buyerId: sellerId, status: "SOLD" },
         select: { price: true },
       }),
+      prisma.shippingBundle.findMany({
+        where: { buyerId: sellerId, status: "COMPLETED", listingId: { not: null } },
+        select: { totalItemCost: true },
+      }),
+      prisma.shippingBundle.count({
+        where: {
+          OR: [{ buyerId: sellerId }, { sellerId }],
+          status: "COMPLETED",
+        },
+      }),
+      prisma.review.count({
+        where: { reviewerId: sellerId },
+      }),
     ]);
 
   const totalSales = auctionSalesData.length + claimsaleItemsData.length + listingSalesData.length;
@@ -54,7 +67,8 @@ export async function getSellerInfo(sellerId: string): Promise<SellerInfo | null
     listingSalesData.reduce((sum, l) => sum + (l.price ?? 0), 0);
   const totalPurchasesRevenue =
     auctionPurchasesData.reduce((sum, a) => sum + (a.finalPrice ?? 0), 0) +
-    claimsalePurchasesData.reduce((sum, i) => sum + i.price, 0);
+    claimsalePurchasesData.reduce((sum, i) => sum + i.price, 0) +
+    listingPurchasesData.reduce((sum, l) => sum + l.totalItemCost, 0);
 
   const totalReviews = reviews.length;
   const avgRating =
@@ -68,6 +82,8 @@ export async function getSellerInfo(sellerId: string): Promise<SellerInfo | null
     totalSalesRevenue,
     totalPurchasesRevenue,
     fiveStarReviewCount,
+    reviewsGivenCount,
+    completedTransactionCount,
   });
 
   return {

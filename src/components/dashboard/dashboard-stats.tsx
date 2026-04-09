@@ -20,6 +20,7 @@ import {
   Store,
   Wallet,
 } from "lucide-react";
+import { EscrowInfoButton } from "@/components/ui/info-tooltip";
 
 type DashboardStatsProps = {
   revenue: {
@@ -80,7 +81,10 @@ export function DashboardStats({
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{t("stats.inEscrow")}</p>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {t("stats.inEscrow")}
+                <EscrowInfoButton />
+              </p>
               <p className="text-xl font-bold text-foreground">€{revenue.inEscrow.toFixed(2)}</p>
             </div>
           </div>
@@ -155,36 +159,37 @@ export function DashboardStats({
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(v) => `€${v}`}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
+                    backgroundColor: "var(--background)",
+                    border: "1px solid var(--border)",
                     borderRadius: "0.5rem",
                     fontSize: "0.875rem",
+                    color: "var(--foreground)",
                   }}
                   formatter={(value) => [`€${Number(value).toFixed(2)}`, t("stats.revenue")]}
                 />
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="hsl(var(--primary))"
+                  stroke="var(--primary)"
                   strokeWidth={2}
                   fill="url(#revenueGradient)"
                 />

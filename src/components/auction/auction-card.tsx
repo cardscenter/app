@@ -34,8 +34,8 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
       <div className="shrink-0 sm:relative sm:w-full sm:aspect-square bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
         {firstImage ? (
           <>
-            <Image src={firstImage} alt={auction.title} width={96} height={128} className="sm:hidden object-cover w-24 h-32" />
-            <Image src={firstImage} alt={auction.title} fill className="hidden sm:block object-cover" />
+            <Image src={firstImage} alt={auction.title} width={96} height={128} className="sm:hidden object-cover w-24 h-32" sizes="96px" />
+            <Image src={firstImage} alt={auction.title} fill className="hidden sm:block object-cover" sizes="(max-width: 640px) 0px, (max-width: 1024px) 50vw, 25vw" />
           </>
         ) : (
           <Gavel className="h-10 w-10 text-slate-600" />
