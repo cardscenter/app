@@ -11,6 +11,7 @@
     "logout": "Uitloggen",
     "search": "Zoeken",
     "save": "Opslaan",
+    "edit": "Bewerken",
     "print": "Afdrukken",
     "cancel": "Annuleren",
     "delete": "Verwijderen",
@@ -901,6 +902,7 @@
   "shipping": {
     "addressTitle": "Verzendadres",
     "addressDescription": "Je adres wordt gedeeld met verkopers na aankoop.",
+    "primaryAddress": "Primair adres",
     "methodsTitle": "Verzendmethoden",
     "methodsDescription": "Stel de verzendmethoden in die kopers kunnen kiezen bij checkout.",
     "addMethod": "Verzendmethode toevoegen",

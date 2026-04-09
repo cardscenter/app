@@ -11,6 +11,7 @@
     "logout": "Logout",
     "search": "Search",
     "save": "Save",
+    "edit": "Edit",
     "print": "Print",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -901,6 +902,7 @@
   "shipping": {
     "addressTitle": "Shipping Address",
     "addressDescription": "Your address will be shared with sellers after purchase.",
+    "primaryAddress": "Primary address",
     "methodsTitle": "Shipping Methods",
     "methodsDescription": "Set up the shipping methods buyers can choose at checkout.",
     "addMethod": "Add shipping method",
