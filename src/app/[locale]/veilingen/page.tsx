@@ -7,6 +7,7 @@ import { SponsoredAuctionRow } from "@/components/auction/sponsored-row";
 import { Pagination } from "@/components/ui/pagination";
 import { AuctionCreatedToast } from "@/components/auction/auction-created-toast";
 import { AuctionSortBar } from "@/components/auction/auction-sort-bar";
+import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
 
 const PAGE_SIZE = 40;
 
@@ -59,10 +60,15 @@ export default async function AuctionsPage({
 
   const now = new Date();
 
+  // Filter by buyer's country
+  const buyerCountry = await getBuyerCountry();
+  const countryFilter = getSellerCountryFilter(buyerCountry);
+
   // Fetch all sponsored auctions and shuffle for fairness
   const sponsoredRaw = await prisma.auction.findMany({
     where: {
       status: "ACTIVE",
+      ...countryFilter,
       upsells: {
         some: {
           type: "CATEGORY_HIGHLIGHT",
@@ -82,7 +88,7 @@ export default async function AuctionsPage({
 
   // Count ALL active auctions (sponsored included in main grid now)
   const totalCount = await prisma.auction.count({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", ...countryFilter },
   });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -90,7 +96,7 @@ export default async function AuctionsPage({
   // Fetch paginated auctions (including sponsored ones)
   const orderBy = getOrderBy(sort);
   let auctions = await prisma.auction.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", ...countryFilter },
     ...(orderBy ? { orderBy } : { orderBy: { createdAt: "desc" } }),
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,

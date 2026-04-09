@@ -7,6 +7,7 @@ import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { expireClaimedItems, unclaimItem } from "@/actions/claimsale";
+import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
 
 /**
  * Remove item from cart. This also unclaims the item so it becomes available again.
@@ -42,6 +43,8 @@ export type CartShippingMethod = {
   serviceName: string;
   price: number;
   countries: string[];
+  isTracked: boolean;
+  isSigned: boolean;
 };
 
 export type CartSellerGroup = {
@@ -131,6 +134,8 @@ export async function getCart(): Promise<CartSellerGroup[]> {
         serviceName: csm.shippingMethod.serviceName,
         price: csm.price, // snapshot price
         countries,
+        isTracked: csm.shippingMethod.isTracked,
+        isSigned: csm.shippingMethod.isSigned,
       });
     }
     if (claimsaleMethods.size > 0) {
@@ -321,6 +326,27 @@ export async function checkout(shippingSelections?: Record<string, string>) {
       } else {
         // Legacy fallback: use claimsale's flat shippingCost
         shippingCost = items[0].claimsaleItem.claimsale.shippingCost;
+      }
+    }
+
+    // Signed shipping enforcement
+    if (methodId) {
+      const seller = await prisma.user.findUnique({
+        where: { id: sellerId },
+        select: { country: true },
+      });
+      const isInternational = seller?.country !== user.country;
+      if (requiresSignedShipping(itemTotal, isInternational)) {
+        const method = await prisma.sellerShippingMethod.findUnique({
+          where: { id: methodId },
+          select: { isSigned: true },
+        });
+        if (method && !method.isSigned) {
+          const reason = isInternational
+            ? "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen"
+            : `Aangetekende verzending is verplicht voor bestellingen boven €150`;
+          return { error: reason };
+        }
       }
     }
 

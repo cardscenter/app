@@ -6,12 +6,11 @@ export interface CarrierInfo {
 
 export const KNOWN_CARRIERS: CarrierInfo[] = [
   { id: "POSTNL", name: "PostNL", countries: ["NL", "BE"] },
-  { id: "DHL", name: "DHL", countries: ["NL", "BE", "DE", "AT", "FR", "IT", "ES", "PT", "LU", "IE", "DK", "SE", "FI", "NO", "PL", "CZ", "SK", "HU", "RO", "BG", "HR", "SI", "EE", "LV", "LT", "GR", "MT", "CY", "GB", "CH"] },
-  { id: "DPD", name: "DPD", countries: ["NL", "BE", "DE", "AT", "FR", "IT", "ES", "PT", "LU", "IE", "DK", "SE", "FI", "PL", "CZ", "SK", "HU", "RO", "BG", "HR", "SI", "EE", "LV", "LT", "GR", "GB", "CH"] },
+  { id: "DHL", name: "DHL", countries: ["NL", "BE", "DE", "AT", "FR", "IT", "ES", "PT", "LU", "IE", "DK", "SE", "FI", "PL", "CZ", "SK", "HU", "RO", "BG", "HR", "SI", "EE", "LV", "LT", "GR", "MT", "CY"] },
+  { id: "DPD", name: "DPD", countries: ["NL", "BE", "DE", "AT", "FR", "IT", "ES", "PT", "LU", "IE", "DK", "SE", "FI", "PL", "CZ", "SK", "HU", "RO", "BG", "HR", "SI", "EE", "LV", "LT", "GR"] },
   { id: "GLS", name: "GLS", countries: ["NL", "BE", "DE", "AT", "FR", "IT", "ES", "PT", "DK", "SE", "FI", "PL", "CZ", "SK", "HU", "RO", "BG", "HR", "SI", "EE", "LV", "LT", "GR", "IE"] },
-  { id: "UPS", name: "UPS", countries: ["NL", "BE", "DE", "AT", "FR", "IT", "ES", "PT", "LU", "IE", "DK", "SE", "FI", "NO", "PL", "CZ", "SK", "HU", "RO", "BG", "HR", "SI", "EE", "LV", "LT", "GR", "MT", "CY", "GB", "CH"] },
+  { id: "UPS", name: "UPS", countries: ["NL", "BE", "DE", "AT", "FR", "IT", "ES", "PT", "LU", "IE", "DK", "SE", "FI", "PL", "CZ", "SK", "HU", "RO", "BG", "HR", "SI", "EE", "LV", "LT", "GR", "MT", "CY"] },
   { id: "BPOST", name: "bpost", countries: ["BE"] },
-  { id: "ROYAL_MAIL", name: "Royal Mail", countries: ["GB"] },
   { id: "DEUTSCHE_POST", name: "Deutsche Post", countries: ["DE", "AT"] },
   { id: "LA_POSTE", name: "La Poste", countries: ["FR"] },
   { id: "OTHER", name: "Overig", countries: [] },

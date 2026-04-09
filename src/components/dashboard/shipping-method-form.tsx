@@ -131,6 +131,33 @@ export function ShippingMethodForm({ method, onDone }: Props) {
         </div>
       </div>
 
+      {/* Tracking & Signed options */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-foreground">
+          {t("shippingType")}
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            name="isTracked"
+            value="true"
+            defaultChecked={method?.isTracked ?? false}
+            className="rounded border-border"
+          />
+          <span className="text-foreground">{t("trackedDescription")}</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            name="isSigned"
+            value="true"
+            defaultChecked={method?.isSigned ?? false}
+            className="rounded border-border"
+          />
+          <span className="text-foreground">{t("signedDescription")}</span>
+        </label>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-foreground mb-2">
           {t("countries")}

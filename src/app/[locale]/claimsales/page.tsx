@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { ShoppingBag, Plus } from "lucide-react";
 import { ClaimsaleCard } from "@/components/claimsale/claimsale-card";
 import { Pagination } from "@/components/ui/pagination";
+import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
 
 const PAGE_SIZE = 40;
 
@@ -21,15 +22,19 @@ export default async function ClaimsalesPage({
 
   const currentPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
+  // Filter by buyer's country
+  const buyerCountry = await getBuyerCountry();
+  const countryFilter = getSellerCountryFilter(buyerCountry);
+
   const totalCount = await prisma.claimsale.count({
-    where: { status: "LIVE" },
+    where: { status: "LIVE", ...countryFilter },
   });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
 
   const claimsales = await prisma.claimsale.findMany({
-    where: { status: "LIVE" },
+    where: { status: "LIVE", ...countryFilter },
     orderBy: { publishedAt: "desc" },
     skip: (safePage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,

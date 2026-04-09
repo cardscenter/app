@@ -6,6 +6,7 @@ import { registerSchema } from "@/lib/validations/auth";
 import { signIn } from "@/lib/auth";
 import { AuthError } from "next-auth";
 import { saveUploadedFile } from "@/lib/upload";
+import { getDefaultShippingMethods } from "@/lib/shipping/defaults";
 
 export async function register(formData: FormData) {
   const raw = {
@@ -70,7 +71,7 @@ export async function register(formData: FormData) {
     }
   }
 
-  await prisma.user.create({
+  const newUser = await prisma.user.create({
     data: {
       email: data.email,
       displayName: data.displayName,
@@ -93,6 +94,23 @@ export async function register(formData: FormData) {
       termsAcceptedAt: new Date(),
     },
   });
+
+  // Create default shipping methods based on user's country
+  const defaults = getDefaultShippingMethods(data.country);
+  if (defaults.length > 0) {
+    await prisma.sellerShippingMethod.createMany({
+      data: defaults.map((method) => ({
+        sellerId: newUser.id,
+        carrier: method.carrier,
+        serviceName: method.serviceName,
+        price: method.price,
+        countries: JSON.stringify(method.countries),
+        isDefault: true,
+        isTracked: method.isTracked,
+        isSigned: method.isSigned,
+      })),
+    });
+  }
 
   // Auto sign in after registration (no redirect — handled client-side)
   try {

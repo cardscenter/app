@@ -10,6 +10,7 @@ import { generateOrderNumber } from "@/lib/order-number";
 import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
 import { checkAmountAllowed } from "@/lib/account-age";
+import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
 
 
 export async function createListing(formData: FormData) {
@@ -250,6 +251,27 @@ export async function buyListing(listingId: string, shippingMethodId?: string) {
   // Check buyer has address
   if (!buyer.street || !buyer.postalCode || !buyer.city) {
     return { error: "Vul eerst je adres in via Dashboard → Verzending" };
+  }
+
+  // Signed shipping enforcement
+  if (selectedMethodId) {
+    const seller = await prisma.user.findUnique({
+      where: { id: listing.sellerId },
+      select: { country: true },
+    });
+    const isInternational = seller?.country !== buyer.country;
+    if (requiresSignedShipping(listing.price, isInternational)) {
+      const shippingMethod = await prisma.sellerShippingMethod.findUnique({
+        where: { id: selectedMethodId },
+        select: { isSigned: true },
+      });
+      if (shippingMethod && !shippingMethod.isSigned) {
+        const reason = isInternational
+          ? "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen"
+          : `Aangetekende verzending is verplicht voor bestellingen boven €150`;
+        return { error: reason };
+      }
+    }
   }
 
   // Deduct from buyer

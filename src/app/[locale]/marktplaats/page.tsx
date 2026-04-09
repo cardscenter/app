@@ -6,6 +6,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Link } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
 import { ListingSortBar } from "@/components/listing/listing-sort-bar";
+import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
 
 const PAGE_SIZE = 40;
 
@@ -36,10 +37,15 @@ export default async function MarktplaatsPage({
   const orderBy = getListingOrderBy(sort);
   const now = new Date();
 
+  // Filter by buyer's country (non-NL buyers don't see NL_ONLY sellers)
+  const buyerCountry = await getBuyerCountry();
+  const countryFilter = getSellerCountryFilter(buyerCountry);
+
   // Fetch sponsored listings (active CATEGORY_HIGHLIGHT upsell)
   const sponsoredListings = await prisma.listing.findMany({
     where: {
       status: "ACTIVE",
+      ...countryFilter,
       upsells: {
         some: {
           type: "CATEGORY_HIGHLIGHT",
@@ -61,6 +67,7 @@ export default async function MarktplaatsPage({
   const totalCount = await prisma.listing.count({
     where: {
       status: "ACTIVE",
+      ...countryFilter,
       ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
     },
   });
@@ -72,6 +79,7 @@ export default async function MarktplaatsPage({
   const listings = await prisma.listing.findMany({
     where: {
       status: "ACTIVE",
+      ...countryFilter,
       ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
     },
     orderBy,

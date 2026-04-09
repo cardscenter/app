@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { ShippingMethodsManager } from "@/components/dashboard/shipping-methods-manager";
+import { SellingCountriesToggle } from "@/components/dashboard/selling-countries-toggle";
 
 export default async function ShippingPage() {
   const session = await auth();
@@ -29,6 +30,15 @@ export default async function ShippingPage() {
         <p className="mt-1 text-sm text-muted-foreground">{t("addressDescription")}</p>
         <div className="mt-4 glass rounded-2xl p-5">
           <AddressForm user={user} />
+        </div>
+      </section>
+
+      {/* Selling countries section */}
+      <section>
+        <h2 className="text-lg font-semibold text-foreground">{t("sellingCountriesTitle")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("sellingCountriesDescription")}</p>
+        <div className="mt-4">
+          <SellingCountriesToggle current={user.sellingCountries} />
         </div>
       </section>
 
