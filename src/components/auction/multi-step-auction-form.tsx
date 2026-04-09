@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useActionState, useState, useRef, useEffect, useTransition } from "react";
 import { createAuction } from "@/actions/auction";
 import { useRouter } from "@/i18n/navigation";
+import { toast } from "sonner";
 import { Eye } from "lucide-react";
 import type { SellerShippingMethod } from "@prisma/client";
 import type { AuctionType, UpsellType } from "@/types";
@@ -115,7 +116,11 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
     if (form.hasReserve && form.reservePrice !== null) formData.set("reservePrice", String(form.reservePrice));
     if (form.hasBuyNow && form.buyNowPrice !== null) formData.set("buyNowPrice", String(form.buyNowPrice));
-    if (form.selectedShippingMethods.length > 0) formData.set("shippingMethodIds", JSON.stringify(form.selectedShippingMethods));
+    if (form.selectedShippingMethods.length === 0) {
+      toast.error(ts("selectAtLeastOneMethod"));
+      return;
+    }
+    formData.set("shippingMethodIds", JSON.stringify(form.selectedShippingMethods));
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
 
     startTransition(() => {
@@ -189,7 +194,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
         <h2 className="text-lg font-semibold text-foreground mb-1">{ts("selectShippingMethods")}</h2>
         <p className="text-sm text-muted-foreground mb-4">{ts("selectShippingMethodsHint")}</p>
         <ShippingMethodSelector
-          methods={shippingMethods}
+          methods={shippingMethods.filter((m) => m.shippingType !== "LETTER")}
           selected={form.selectedShippingMethods}
           onChange={(v) => updateField("selectedShippingMethods", v)}
         />

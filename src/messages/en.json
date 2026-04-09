@@ -957,6 +957,7 @@
     "typeParcel": "Parcel",
     "letterNotAvailable": "Letter mail is not available for {count} items (max {max}).",
     "requireNonLetterMethod": "You must offer at least one parcel or mailbox parcel option alongside letter mail.",
+    "selectAtLeastOneMethod": "Select at least one shipping method.",
     "signedRecommended": "Signed delivery is recommended for this amount for extra protection.",
     "signedRequiredThreshold": "Signed delivery (with signature) is required for orders above €{amount}.",
     "signedRequiredInternational": "Signed delivery (with signature) is required for international shipments.",

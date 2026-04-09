@@ -957,6 +957,7 @@
     "typeParcel": "Pakket",
     "letterNotAvailable": "Briefpost is niet beschikbaar voor {count} items (max {max}).",
     "requireNonLetterMethod": "Je moet naast briefpost minimaal één pakket- of brievenbuspakket-optie aanbieden.",
+    "selectAtLeastOneMethod": "Selecteer minimaal één verzendmethode.",
     "signedRecommended": "Aangetekende verzending wordt aanbevolen bij dit bedrag voor extra bescherming.",
     "signedRequiredThreshold": "Aangetekende verzending (met handtekening) is verplicht voor bestellingen boven €{amount}.",
     "signedRequiredInternational": "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen.",
