@@ -634,6 +634,7 @@
     "stepShipping": "Verzending",
     "shippingMethodsHint": "Selecteer de verzendmethoden die je wilt aanbieden voor deze advertentie.",
     "freeShippingNote": "De koper betaalt geen verzendkosten. Selecteer hierboven wel je verzendmethode.",
+    "noShippingSelected": "Geen verzendmethode geselecteerd",
     "stepUpsells": "Opties",
     "stepReview": "Overzicht",
     "next": "Volgende",

@@ -98,26 +98,8 @@ export const createListingSchema = z.object({
 
   // OTHER has no extra required fields
 
-  // Shipping cost required if not free shipping and delivery includes shipping
-  if (data.deliveryMethod !== "PICKUP" && !data.freeShipping && data.shippingCost <= 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Verzendkosten zijn verplicht", path: ["shippingCost"] });
-  }
-
-  // Carriers required if shipping
-  if (data.deliveryMethod !== "PICKUP") {
-    if (!data.carriers) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecteer minimaal één vervoerder", path: ["carriers"] });
-    } else {
-      try {
-        const parsed = JSON.parse(data.carriers);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecteer minimaal één vervoerder", path: ["carriers"] });
-        }
-      } catch {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ongeldige vervoerdersgegevens", path: ["carriers"] });
-      }
-    }
-  }
+  // Legacy shippingCost validation removed — shipping methods handle pricing now
+  // Legacy carriers validation removed — ShippingMethodSelector handles this now
 
   // At least 1 image required
   if (!data.imageUrls) {

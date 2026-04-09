@@ -634,6 +634,7 @@
     "stepShipping": "Shipping",
     "shippingMethodsHint": "Select the shipping methods you want to offer for this listing.",
     "freeShippingNote": "The buyer pays no shipping costs. Still select your shipping method above.",
+    "noShippingSelected": "No shipping method selected",
     "stepUpsells": "Options",
     "stepReview": "Overview",
     "next": "Next",

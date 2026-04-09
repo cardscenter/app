@@ -142,6 +142,8 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
       <ListingPreview
         form={form}
         accountType={userAccountType}
+        selectedShippingMethods={selectedShippingMethods}
+        shippingMethods={shippingMethods}
         onBack={() => setShowPreview(false)}
         onPublish={handleSubmit}
         pending={pending}

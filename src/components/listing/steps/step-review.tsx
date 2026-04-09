@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap } from "lucide-react";
 import { calculateUpsellCost } from "@/lib/upsell-config";
+import { CarrierLogo } from "@/components/ui/carrier-logo";
+import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
+import type { SellerShippingMethod } from "@prisma/client";
 import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType, CardItemEntry } from "@/types";
 
 interface UpsellEntry {
@@ -38,6 +41,8 @@ interface FormData {
 interface ListingPreviewProps {
   form: FormData;
   accountType: string;
+  selectedShippingMethods: string[];
+  shippingMethods: SellerShippingMethod[];
   onBack: () => void;
   onPublish: () => void;
   pending: boolean;
@@ -56,7 +61,7 @@ const UPSELL_KEYS: Record<UpsellType, string> = {
   URGENT_LABEL: "upsellUrgent",
 };
 
-export function ListingPreview({ form, accountType, onBack, onPublish, pending, error }: ListingPreviewProps) {
+export function ListingPreview({ form, accountType, selectedShippingMethods, shippingMethods, onBack, onPublish, pending, error }: ListingPreviewProps) {
   const t = useTranslations("listing");
   const [current, setCurrent] = useState(0);
   const [lightbox, setLightbox] = useState(false);
@@ -282,23 +287,31 @@ export function ListingPreview({ form, accountType, onBack, onPublish, pending, 
               )}
             </div>
 
-            <div className="mt-3 text-center text-sm text-muted-foreground">
-              {form.freeShipping
-                ? t("freeShipping")
-                : form.deliveryMethod === "PICKUP"
-                  ? t("deliveryPickup")
-                  : `+ \u20AC${form.shippingCost.toFixed(2)} ${t("shippingCost").toLowerCase()}`
-              }
-            </div>
-
-            {/* Carrier badges */}
-            {form.carriers.length > 0 && (
-              <div className="mt-3 flex justify-center gap-2">
-                {form.carriers.map((c) => (
-                  <span key={c} className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                    {c}
-                  </span>
-                ))}
+            {/* Shipping info */}
+            {form.freeShipping ? (
+              <div className="mt-3 text-center text-sm font-medium text-green-600 dark:text-green-400">
+                {t("freeShipping")}
+              </div>
+            ) : selectedShippingMethods.length > 0 ? (
+              <div className="mt-3 space-y-1.5">
+                {shippingMethods
+                  .filter((m) => selectedShippingMethods.includes(m.id))
+                  .map((m) => {
+                    const carrierName = KNOWN_CARRIERS.find((c) => c.id === m.carrier)?.name ?? m.carrier;
+                    return (
+                      <div key={m.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <CarrierLogo carrierId={m.carrier} size={16} />
+                          <span>{carrierName} — {m.serviceName}</span>
+                        </div>
+                        <span className="font-medium text-foreground">€{m.price.toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : (
+              <div className="mt-3 text-center text-sm text-amber-600 dark:text-amber-400">
+                {t("noShippingSelected")}
               </div>
             )}
 
