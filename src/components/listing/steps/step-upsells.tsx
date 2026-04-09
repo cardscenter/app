@@ -133,26 +133,28 @@ export function StepUpsells({ upsells, userBalance, accountType, onChange }: Ste
         </div>
       )}
 
-      {/* Cost summary */}
-      <div className="glass-subtle rounded-xl p-4 space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">{t("upsellTotal")}</span>
-          <span className="font-semibold text-foreground">&euro;{totalCost.toFixed(2)}</span>
+      {/* Cost summary — only shown when upsells are selected */}
+      {upsells.length > 0 && (
+        <div className="glass-subtle rounded-xl p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">{t("upsellTotal")}</span>
+            <span className="font-semibold text-foreground">&euro;{totalCost.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">{t("currentBalance")}</span>
+            <span className="text-foreground">&euro;{userBalance.toFixed(2)}</span>
+          </div>
+          <div className="border-t border-border/50 pt-2 flex justify-between text-sm">
+            <span className="text-muted-foreground">{t("remainingBalance")}</span>
+            <span className={`font-semibold ${insufficientBalance ? "text-red-500" : "text-foreground"}`}>
+              &euro;{remainingBalance.toFixed(2)}
+            </span>
+          </div>
+          {insufficientBalance && (
+            <div className="text-xs text-red-500 mt-1">{t("insufficientBalance")}</div>
+          )}
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">{t("currentBalance")}</span>
-          <span className="text-foreground">&euro;{userBalance.toFixed(2)}</span>
-        </div>
-        <div className="border-t border-border/50 pt-2 flex justify-between text-sm">
-          <span className="text-muted-foreground">{t("remainingBalance")}</span>
-          <span className={`font-semibold ${insufficientBalance ? "text-red-500" : "text-foreground"}`}>
-            &euro;{remainingBalance.toFixed(2)}
-          </span>
-        </div>
-        {insufficientBalance && (
-          <div className="text-xs text-red-500 mt-1">{t("insufficientBalance")}</div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
