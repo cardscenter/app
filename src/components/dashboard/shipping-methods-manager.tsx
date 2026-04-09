@@ -67,43 +67,45 @@ export function ShippingMethodsManager({ methods }: { methods: SellerShippingMet
               className={`glass-subtle rounded-2xl p-4 ${!method.isActive ? "opacity-60" : ""}`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-2.5 font-medium text-foreground">
-                      <CarrierLogo carrierId={method.carrier} size={28} className="rounded" />
-                      <span>{getCarrierName(method.carrier)} — {method.serviceName}</span>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <CarrierLogo carrierId={method.carrier} size={38} className="shrink-0 rounded" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-foreground">
+                        {getCarrierName(method.carrier)} — {method.serviceName}
+                      </span>
+                      {method.isDefault && (
+                        <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                          {t("defaultBadge")}
+                        </span>
+                      )}
+                      {method.isSigned && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                          <ShieldCheck className="h-3 w-3" />
+                          {t("signed")}
+                        </span>
+                      )}
+                      {method.isTracked && !method.isSigned && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                          <Shield className="h-3 w-3" />
+                          {t("tracked")}
+                        </span>
+                      )}
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                        method.isActive
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {method.isActive ? t("active") : t("inactive")}
+                      </span>
                     </div>
-                    {method.isDefault && (
-                      <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                        {t("defaultBadge")}
-                      </span>
-                    )}
-                    {method.isSigned && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                        <ShieldCheck className="h-3 w-3" />
-                        {t("signed")}
-                      </span>
-                    )}
-                    {method.isTracked && !method.isSigned && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                        <Shield className="h-3 w-3" />
-                        {t("tracked")}
-                      </span>
-                    )}
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                      method.isActive
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-muted text-muted-foreground"
-                    }`}>
-                      {method.isActive ? t("active") : t("inactive")}
-                    </span>
+                    <p className="mt-0.5 text-sm font-medium text-primary">
+                      €{method.price.toFixed(2)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {countries.map((c) => getCountryName(c, locale)).join(", ")}
+                    </p>
                   </div>
-                  <p className="mt-0.5 text-sm font-medium text-primary">
-                    €{method.price.toFixed(2)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {countries.map((c) => getCountryName(c, locale)).join(", ")}
-                  </p>
                 </div>
 
                 <div className="flex items-center gap-1.5">
