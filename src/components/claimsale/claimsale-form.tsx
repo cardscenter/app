@@ -5,6 +5,8 @@ import { createClaimsale } from "@/actions/claimsale";
 import { useState, useCallback } from "react";
 import { CARD_CONDITIONS } from "@/types";
 import { Upload, X, ImageIcon, Copy } from "lucide-react";
+import { ShippingMethodSelector } from "@/components/ui/shipping-method-selector";
+import type { SellerShippingMethod } from "@prisma/client";
 
 type CardItem = {
   id: string;
@@ -16,8 +18,6 @@ type CardItem = {
   frontImage: string | null;
   backImage: string | null;
 };
-
-type ShippingMethod = { id: string; carrier: string; serviceName: string; price: number };
 
 function SingleImageUpload({
   image,
@@ -130,13 +130,14 @@ function DuplicateButton({ onDuplicate, remaining }: { onDuplicate: (count: numb
   );
 }
 
-export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number; shippingMethods?: ShippingMethod[] }) {
+export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number; shippingMethods?: SellerShippingMethod[] }) {
   const t = useTranslations("claimsale");
   const tc = useTranslations("common");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [selectedShippingMethods, setSelectedShippingMethods] = useState<string[]>([]);
   const [items, setItems] = useState<CardItem[]>([
     { id: "1", cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null },
   ]);
@@ -208,9 +209,9 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
       formData.set("coverImage", coverImage);
     }
 
-    // Include all shipping methods if available
-    if (shippingMethods && shippingMethods.length > 0) {
-      formData.set("shippingMethodIds", JSON.stringify(shippingMethods.map((m) => m.id)));
+    // Include selected shipping methods
+    if (selectedShippingMethods.length > 0) {
+      formData.set("shippingMethodIds", JSON.stringify(selectedShippingMethods));
     }
 
     const result = await createClaimsale(formData);
@@ -275,13 +276,17 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
             <label htmlFor="description" className="block text-sm font-medium text-foreground">{t("description")}</label>
             <textarea id="description" name="description" rows={3} className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground" />
           </div>
-          <div>
-            <label htmlFor="shippingCost" className="block text-sm font-medium text-foreground">{t("shippingCost")}</label>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="text-muted-foreground">€</span>
-              <input id="shippingCost" name="shippingCost" type="number" step="0.01" min="0" required className="block w-32 glass-input px-3 py-2.5 text-foreground" />
+          {/* Shipping methods selector */}
+          {shippingMethods && shippingMethods.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">{t("shippingMethods")}</label>
+              <ShippingMethodSelector
+                methods={shippingMethods}
+                selected={selectedShippingMethods}
+                onChange={setSelectedShippingMethods}
+              />
             </div>
-          </div>
+          )}
         </div>
       </div>
 

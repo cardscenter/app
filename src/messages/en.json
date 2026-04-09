@@ -322,6 +322,7 @@
     "title": "Title",
     "description": "Description",
     "shippingCost": "Shipping cost",
+    "shippingMethods": "Shipping methods",
     "addCard": "Add card",
     "removeCard": "Remove card",
     "duplicate": "Duplicate",

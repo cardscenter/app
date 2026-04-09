@@ -26,12 +26,18 @@ export async function createClaimsale(formData: FormData) {
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || null;
   const coverImage = (formData.get("coverImage") as string) || null;
-  const shippingCost = parseFloat(formData.get("shippingCost") as string);
+  const shippingCostRaw = formData.get("shippingCost") as string | null;
+  const shippingCost = shippingCostRaw ? parseFloat(shippingCostRaw) : 0;
   const itemsJson = formData.get("items") as string;
   const shippingMethodIdsJson = formData.get("shippingMethodIds") as string | null;
 
   if (!title || title.length < 3) return { error: "Titel is te kort" };
   if (isNaN(shippingCost) || shippingCost < 0) return { error: "Ongeldige verzendkosten" };
+
+  // Require at least one shipping method
+  if (!shippingMethodIdsJson || JSON.parse(shippingMethodIdsJson).length === 0) {
+    return { error: "Selecteer minimaal één verzendmethode" };
+  }
 
   let items: z.infer<typeof claimsaleItemSchema>[];
   try {
