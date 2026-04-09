@@ -40,18 +40,20 @@ export function ShipBundleForm({
     if (!files || files.length === 0) return;
 
     setUploading(true);
+    const formData = new FormData();
     for (const file of Array.from(files)) {
-      const formData = new FormData();
-      formData.append("file", file);
-      try {
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (data.url) {
-          setProofUrls((prev) => [...prev, data.url]);
-        }
-      } catch {
-        toast.error("Upload mislukt");
+      formData.append("files", file);
+    }
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.urls && data.urls.length > 0) {
+        setProofUrls((prev) => [...prev, ...data.urls]);
+      } else if (data.error) {
+        toast.error(data.error);
       }
+    } catch {
+      toast.error("Upload mislukt");
     }
     setUploading(false);
     e.target.value = "";
