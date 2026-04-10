@@ -6,7 +6,8 @@ import { ReviewList } from "@/components/ui/review-list";
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getBannerUrl } from "@/lib/seller-levels";
+import { getBannerUrl, SELLER_LEVELS } from "@/lib/seller-levels";
+import { CosmeticBannerImage } from "@/components/customization/cosmetic-banner-image";
 import Image from "next/image";
 
 export default async function SellerProfilePage({
@@ -33,7 +34,7 @@ export default async function SellerProfilePage({
 
   const seller = await prisma.user.findUnique({
     where: { id: userId },
-    select: { profileBanner: true },
+    select: { profileBanner: true, profileEmblem: true, profileBackground: true },
   });
 
   // Get seller's active listings for the sidebar
@@ -67,18 +68,29 @@ export default async function SellerProfilePage({
       </Link>
 
       {/* Profile banner */}
-      {seller?.profileBanner && (
-        <div className="relative mb-6 aspect-[21/9] w-full overflow-hidden rounded-2xl">
-          <Image
-            src={getBannerUrl(seller.profileBanner)}
-            alt="Profile banner"
-            fill
-            className="object-cover"
-            sizes="(max-width: 1280px) 100vw, 1280px"
-            priority
-          />
-        </div>
-      )}
+      {seller?.profileBanner && (() => {
+        // Check if it's a level banner or a cosmetic banner
+        const isLevelBanner = SELLER_LEVELS.some((l) => l.nameKey === seller.profileBanner);
+        const bannerSrc = isLevelBanner
+          ? getBannerUrl(seller.profileBanner!)
+          : null; // Cosmetic banner resolved below
+        return (
+          <div className="relative mb-6 aspect-[21/9] w-full overflow-hidden rounded-2xl">
+            {bannerSrc ? (
+              <Image
+                src={bannerSrc}
+                alt="Profile banner"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                priority
+              />
+            ) : (
+              <CosmeticBannerImage bannerKey={seller.profileBanner!} />
+            )}
+          </div>
+        );
+      })()}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}

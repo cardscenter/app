@@ -159,6 +159,10 @@ export async function createAuction(formData: FormData) {
     );
   }
 
+  // Award Ember for creating a listing (auctions count too)
+  const { logActivity: logAuctionActivity } = await import("@/actions/activity");
+  logAuctionActivity(session.user.id, "CREATE_LISTING", { auctionId: auction.id });
+
   return { success: true, auctionId: auction.id };
 }
 
@@ -252,6 +256,10 @@ export async function placeBid(auctionId: string, amount: number) {
       data: { currentBid: result.finalBid },
     });
   }
+
+  // Award Ember for placing a bid
+  const { logActivity } = await import("@/actions/activity");
+  logActivity(session.user.id, "PLACE_BID", { auctionId });
 
   return { success: true };
 }

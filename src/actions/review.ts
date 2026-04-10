@@ -49,6 +49,10 @@ export async function createReview(formData: FormData) {
     },
   });
 
+  // Award Ember for giving a review
+  const { logActivity } = await import("@/actions/activity");
+  logActivity(session.user.id, "GIVE_REVIEW", { sellerId });
+
   revalidatePath(`/verkoper/${sellerId}`);
   revalidatePath("/dashboard/reviews");
 }
@@ -80,6 +84,7 @@ export async function getSellerStats(userId: string) {
       avatarUrl: true,
       accountType: true,
       isVerified: true,
+      bonusXP: true,
       createdAt: true,
     },
   });
@@ -157,6 +162,7 @@ export async function getSellerStats(userId: string) {
     fiveStarReviewCount,
     reviewsGivenCount,
     completedTransactionCount,
+    bonusXP: user.bonusXP,
   });
 
   return {

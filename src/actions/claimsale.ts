@@ -147,6 +147,10 @@ export async function publishClaimsale(claimsaleId: string) {
     data: { status: "LIVE", publishedAt: new Date() },
   });
 
+  // Award Ember for publishing a claimsale
+  const { logActivity } = await import("@/actions/activity");
+  logActivity(session.user.id, "CREATE_LISTING", { claimsaleId });
+
   return { success: true };
 }
 

@@ -217,7 +217,7 @@ export default async function StatistiekenPage({ searchParams }: Props) {
     };
   } else {
     xpData = {
-      xp: { accountAge: 0, sales: 0, purchases: 0, positiveReviews: 0, reviewsGiven: 0, completedTransactions: 0, total: 0 },
+      xp: { accountAge: 0, sales: 0, purchases: 0, positiveReviews: 0, reviewsGiven: 0, completedTransactions: 0, bonus: 0, total: 0 },
       currentLevel: { name: "Beginner", icon: "🎒", color: "text-gray-500", minXP: 0 },
       nextLevel: { name: "Rookie", minXP: 100 },
       progress: 0,

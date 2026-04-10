@@ -13,6 +13,7 @@ export async function getSellerInfo(sellerId: string): Promise<SellerInfo | null
       country: true,
       accountType: true,
       isVerified: true,
+      bonusXP: true,
       createdAt: true,
     },
   });
@@ -84,6 +85,7 @@ export async function getSellerInfo(sellerId: string): Promise<SellerInfo | null
     fiveStarReviewCount,
     reviewsGivenCount,
     completedTransactionCount,
+    bonusXP: user.bonusXP,
   });
 
   return {

@@ -263,6 +263,11 @@ export async function confirmDelivery(
     "/dashboard/claimsales"
   );
 
+  // Award Ember for completed purchase (buyer) and sale (seller)
+  const { logActivity } = await import("@/actions/activity");
+  logActivity(session.user.id, "COMPLETE_PURCHASE", { bundleId });
+  logActivity(bundle.sellerId, "COMPLETE_SALE", { bundleId });
+
   return { success: true };
 }
 

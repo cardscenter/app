@@ -117,6 +117,7 @@ export async function fetchXPData(userId: string) {
     select: {
       createdAt: true,
       accountType: true,
+      bonusXP: true,
     },
   });
 
@@ -165,6 +166,7 @@ export async function fetchXPData(userId: string) {
   return {
     accountCreatedAt: user.createdAt,
     accountType: user.accountType,
+    bonusXP: user.bonusXP,
     totalSalesRevenue:
       (auctionSalesRevenue._sum.finalPrice ?? 0) +
       (claimsaleSalesRevenue._sum.price ?? 0) +

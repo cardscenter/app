@@ -32,6 +32,7 @@ export type XPBreakdown = {
   positiveReviews: number;
   reviewsGiven: number;
   completedTransactions: number;
+  bonus: number;
   total: number;
 };
 
@@ -50,6 +51,7 @@ export function calculateXP(stats: {
   fiveStarReviewCount: number;
   reviewsGivenCount: number;
   completedTransactionCount: number;
+  bonusXP?: number;
 }): XPBreakdown {
   const now = new Date();
   const ageInDays = Math.floor(
@@ -62,6 +64,7 @@ export function calculateXP(stats: {
   const positiveReviews = stats.fiveStarReviewCount * XP_PER_5STAR_REVIEW;
   const reviewsGiven = stats.reviewsGivenCount * XP_PER_REVIEW_GIVEN;
   const completedTransactions = stats.completedTransactionCount * XP_PER_COMPLETED_TRANSACTION;
+  const bonus = stats.bonusXP ?? 0;
 
   return {
     accountAge,
@@ -70,7 +73,8 @@ export function calculateXP(stats: {
     positiveReviews,
     reviewsGiven,
     completedTransactions,
-    total: accountAge + sales + purchases + positiveReviews + reviewsGiven + completedTransactions,
+    bonus,
+    total: accountAge + sales + purchases + positiveReviews + reviewsGiven + completedTransactions + bonus,
   };
 }
 

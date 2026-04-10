@@ -212,6 +212,10 @@ export async function createListing(formData: FormData) {
     return newListing;
   });
 
+  // Award Ember for creating a listing
+  const { logActivity } = await import("@/actions/activity");
+  logActivity(session.user.id, "CREATE_LISTING", { listingId: listing.id });
+
   return { success: true, listingId: listing.id };
 }
 
