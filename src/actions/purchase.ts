@@ -268,6 +268,11 @@ export async function confirmDelivery(
   logActivity(session.user.id, "COMPLETE_PURCHASE", { bundleId });
   logActivity(bundle.sellerId, "COMPLETE_SALE", { bundleId });
 
+  // Recompute achievements for both parties
+  const { checkAchievements } = await import("@/lib/achievements");
+  void checkAchievements(session.user.id);
+  void checkAchievements(bundle.sellerId);
+
   return { success: true };
 }
 
@@ -318,6 +323,11 @@ export async function autoConfirmDeliveries() {
       "Een bestelling is automatisch als bezorgd gemarkeerd na 30 dagen. Het bedrag is vrijgegeven.",
       "/dashboard/claimsales"
     );
+
+    // Recompute achievements for both parties
+    const { checkAchievements } = await import("@/lib/achievements");
+    void checkAchievements(bundle.buyerId);
+    void checkAchievements(bundle.sellerId);
 
     confirmed++;
   }

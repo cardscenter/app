@@ -53,6 +53,11 @@ export async function createReview(formData: FormData) {
   const { logActivity } = await import("@/actions/activity");
   logActivity(session.user.id, "GIVE_REVIEW", { sellerId });
 
+  // Recompute achievements for reviewer (gave) and seller (received)
+  const { checkAchievements } = await import("@/lib/achievements");
+  void checkAchievements(session.user.id);
+  void checkAchievements(sellerId);
+
   revalidatePath(`/verkoper/${sellerId}`);
   revalidatePath("/dashboard/reviews");
 }

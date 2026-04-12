@@ -105,6 +105,9 @@ export async function claimDailyLogin() {
     }),
   ]);
 
+  const { checkAchievements } = await import("@/lib/achievements");
+  void checkAchievements(session.user.id);
+
   return {
     success: true,
     reward,

@@ -101,6 +101,7 @@ model User {
   ownedItems          OwnedItem[]
   emberTransactions   EmberTransaction[]
   activityLogs        ActivityLog[]
+  achievements        UserAchievement[]
 }
 
 // ============================================================
@@ -1020,4 +1021,38 @@ model ActivityLog {
 
   @@index([userId, createdAt])
   @@index([userId, action, createdAt])
+}
+
+// Catalog of achievements (source of truth in src/lib/achievements.ts;
+// DB mirror exists so UserAchievement can FK to it and progress is queryable).
+model Achievement {
+  id                String   @id @default(cuid())
+  key               String   @unique   // e.g. "archive-account-90d"
+  name              String
+  description       String
+  category          String              // ARCHIVE | VAULT | TRADER | SOCIAL | FOUNDER | MILESTONE
+  threshold         Int      @default(1) // target count or amount
+  rewardEmber       Int?
+  rewardXP          Int?
+  rewardCosmeticKey String?             // optional CosmeticItem.key granted on unlock
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  userAchievements  UserAchievement[]
+
+  @@index([category])
+}
+
+model UserAchievement {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  achievementKey String
+  achievement    Achievement @relation(fields: [achievementKey], references: [key], onDelete: Cascade)
+  progress       Int         @default(0)
+  unlockedAt     DateTime?
+
+  @@unique([userId, achievementKey])
+  @@index([userId])
+  @@index([achievementKey])
 }

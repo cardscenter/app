@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
-import { Package, Backpack, Paintbrush, User, ChevronRight } from "lucide-react";
+import { Package, Backpack, Paintbrush, User, ChevronRight, Trophy } from "lucide-react";
 import { EmberBalance } from "@/components/customization/ember-balance";
 import { EmberIcon } from "@/components/customization/ember-icon";
 import { LoginStreak } from "@/components/customization/login-streak";
@@ -50,7 +50,21 @@ export default async function CustomizationPage() {
         </div>
       </div>
 
-      <div className="mb-10 grid gap-4 sm:grid-cols-3">
+      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link
+          href="/customization/achievements"
+          className="group glass rounded-2xl p-5 transition-all hover:ring-2 hover:ring-amber-500/30"
+        >
+          <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+            <Trophy className="size-6" />
+          </div>
+          <p className="font-semibold">{t("achievements")}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t("achievementsSubtitle")}</p>
+          <div className="mt-3 flex items-center gap-1 text-sm font-medium text-amber-500">
+            {t("viewAchievements")}
+            <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          </div>
+        </Link>
         <Link
           href="/customization/packs"
           className="group glass rounded-2xl p-5 transition-all hover:ring-2 hover:ring-purple-500/30"

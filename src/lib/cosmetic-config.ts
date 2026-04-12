@@ -4,10 +4,12 @@
 // RARITY SYSTEM
 // ============================================================
 
+// Schema keys kept as-is (UNCOMMON, RARE, ...) for DB stability; labels use
+// Cards Center's in-brand terminology inspired by real TCG collector slang.
 export const RARITIES = {
   UNCOMMON: {
     key: "UNCOMMON",
-    label: "Uncommon",
+    label: "Pull",
     color: "#22c55e",
     textColor: "text-green-500",
     bgColor: "bg-green-500/10",
@@ -15,11 +17,10 @@ export const RARITIES = {
     glowColor: "shadow-green-500/50",
     glowClass: "glow-uncommon",
     gradientFrom: "from-green-500/20",
-    recycleRate: 0.10,
   },
   RARE: {
     key: "RARE",
-    label: "Rare",
+    label: "Hit",
     color: "#3b82f6",
     textColor: "text-blue-400",
     bgColor: "bg-blue-500/10",
@@ -27,11 +28,10 @@ export const RARITIES = {
     glowColor: "shadow-blue-500/50",
     glowClass: "glow-rare",
     gradientFrom: "from-blue-500/20",
-    recycleRate: 0.15,
   },
   EPIC: {
     key: "EPIC",
-    label: "Epic",
+    label: "Chase",
     color: "#a855f7",
     textColor: "text-purple-400",
     bgColor: "bg-purple-500/10",
@@ -39,11 +39,10 @@ export const RARITIES = {
     glowColor: "shadow-purple-500/50",
     glowClass: "glow-epic",
     gradientFrom: "from-purple-500/20",
-    recycleRate: 0.20,
   },
   LEGENDARY: {
     key: "LEGENDARY",
-    label: "Legendary",
+    label: "Grail",
     color: "#eab308",
     textColor: "text-yellow-400",
     bgColor: "bg-yellow-500/10",
@@ -51,11 +50,10 @@ export const RARITIES = {
     glowColor: "shadow-yellow-500/50",
     glowClass: "glow-legendary",
     gradientFrom: "from-yellow-500/20",
-    recycleRate: 0.30,
   },
   UNIQUE: {
     key: "UNIQUE",
-    label: "Unique",
+    label: "One-of-One",
     color: "#ef4444",
     textColor: "text-red-400",
     bgColor: "bg-red-500/10",
@@ -63,11 +61,10 @@ export const RARITIES = {
     glowColor: "shadow-red-500/50",
     glowClass: "glow-unique",
     gradientFrom: "from-red-500/20",
-    recycleRate: 0.40,
   },
   SHINY: {
     key: "SHINY",
-    label: "Shiny",
+    label: "Rainbow",
     color: "#f0c040",
     textColor: "shiny-text",
     bgColor: "bg-gradient-to-br from-red-500/10 via-blue-500/10 to-purple-500/10",
@@ -75,7 +72,6 @@ export const RARITIES = {
     glowColor: "shadow-red-500/60",
     glowClass: "glow-shiny",
     gradientFrom: "from-red-400/30",
-    recycleRate: 0.50,
   },
 } as const;
 
