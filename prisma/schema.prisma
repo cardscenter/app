@@ -99,7 +99,6 @@ model User {
 
   // Cosmetic / Ember relations
   ownedItems          OwnedItem[]
-  lootboxOpenings     LootboxOpening[]
   emberTransactions   EmberTransaction[]
   activityLogs        ActivityLog[]
 }
@@ -949,16 +948,15 @@ model UsernameHistory {
 
 model CosmeticBundle {
   id          String   @id @default(cuid())
-  key         String   @unique       // "customization-bundle-1", "level-banners"
-  name        String                 // Display name
+  key         String   @unique       // "chapter-1-origins"
+  name        String                 // Display name (e.g. "Chapter 1: Origins")
   description String?
-  imageUrl    String?                // Bundle cover art
+  imageUrl    String?                // Chapter cover art
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
 
   items       CosmeticItem[]
-  lootboxes   Lootbox[]
 }
 
 model CosmeticItem {
@@ -966,59 +964,19 @@ model CosmeticItem {
   key         String   @unique       // e.g. "flame-dragon-banner", "gold-frame-emblem"
   type        String                 // BANNER | EMBLEM | BACKGROUND | XP_REWARD | EMBER_REWARD
   name        String                 // Display name (i18n nameKey)
-  rarity      String                 // UNCOMMON | RARE | EPIC | LEGENDARY | UNIQUE
+  rarity      String                 // UNCOMMON | RARE | EPIC | LEGENDARY | UNIQUE | SHINY
   bundleId    String
   bundle      CosmeticBundle @relation(fields: [bundleId], references: [id])
   assetPath      String?                // Path under /public for visual items
   rewardValue    Int?                   // XP amount or ember amount for reward types
   weight         Int      @default(100) // Relative drop weight within rarity tier
-  artistKey      String?                // Key referencing fan-artist in src/lib/fan-artists.ts
   createdAt      DateTime @default(now())
 
   ownedItems   OwnedItem[]
-  lootboxItems LootboxItem[]
 
   @@index([bundleId])
   @@index([type])
   @@index([rarity])
-}
-
-model Lootbox {
-  id              String   @id @default(cuid())
-  key             String   @unique       // "bundle-1-standard", "bundle-1-premium"
-  name            String
-  description     String?
-  imageUrl        String?
-  emberCost       Int                    // Price in Ember
-  bundleId        String
-  bundle          CosmeticBundle @relation(fields: [bundleId], references: [id])
-  isActive        Boolean  @default(true)
-
-  // Rarity probability weights (out of 10000 for precision)
-  weightUncommon  Int      @default(5000)
-  weightRare      Int      @default(3000)
-  weightEpic      Int      @default(1500)
-  weightLegendary Int      @default(450)
-  weightUnique    Int      @default(50)
-  weightShiny     Int      @default(0)
-
-  createdAt       DateTime @default(now())
-
-  items           LootboxItem[]
-  openings        LootboxOpening[]
-
-  @@index([bundleId])
-}
-
-model LootboxItem {
-  id         String       @id @default(cuid())
-  lootboxId  String
-  lootbox    Lootbox      @relation(fields: [lootboxId], references: [id], onDelete: Cascade)
-  itemId     String
-  item       CosmeticItem @relation(fields: [itemId], references: [id])
-
-  @@unique([lootboxId, itemId])
-  @@index([lootboxId])
 }
 
 model OwnedItem {
@@ -1028,26 +986,10 @@ model OwnedItem {
   itemId     String
   item       CosmeticItem @relation(fields: [itemId], references: [id])
   obtainedAt DateTime     @default(now())
-  source     String                   // LOOTBOX
+  source     String                   // ACHIEVEMENT | LOGIN_STREAK | FOUNDER | ADMIN
 
   @@unique([userId, itemId])
   @@index([userId])
-}
-
-model LootboxOpening {
-  id                  String   @id @default(cuid())
-  userId              String
-  user                User     @relation(fields: [userId], references: [id])
-  lootboxId           String
-  lootbox             Lootbox  @relation(fields: [lootboxId], references: [id])
-  resultItemId        String   // What they got
-  wasDuplicate        Boolean  @default(false)
-  recycledForXP       Int?     // XP awarded if recycled
-  recycledForEmber    Int?     // Ember refunded if recycled
-  createdAt           DateTime @default(now())
-
-  @@index([userId])
-  @@index([lootboxId])
 }
 
 model EmberTransaction {

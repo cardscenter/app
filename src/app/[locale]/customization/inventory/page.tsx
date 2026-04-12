@@ -7,7 +7,6 @@ import { ArrowLeft, Package } from "lucide-react";
 import { RarityBadge } from "@/components/customization/rarity-badge";
 import { EmberBalance } from "@/components/customization/ember-balance";
 import { getRarity } from "@/lib/cosmetic-config";
-import { getArtist, countryFlag } from "@/lib/fan-artists";
 import { cn } from "@/lib/utils";
 
 const RARITY_ORDER: Record<string, number> = {
@@ -181,7 +180,7 @@ export default async function InventoryPage({
             href="/customization/packs"
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2.5 font-semibold text-white shadow-lg shadow-orange-500/20 transition-all hover:shadow-orange-500/40"
           >
-            {t("packs")}
+            {t("chapters")}
           </Link>
         </div>
       ) : (
@@ -212,14 +211,6 @@ export default async function InventoryPage({
                 )}
                 <div className="p-2.5">
                   <p className="text-sm font-semibold">{owned.item.name}</p>
-                  {owned.item.artistKey && (() => {
-                    const artist = getArtist(owned.item.artistKey);
-                    return artist ? (
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {countryFlag(artist.country)} {artist.name}
-                      </p>
-                    ) : null;
-                  })()}
                   <div className="mt-1.5 flex items-center justify-between">
                     <RarityBadge rarity={owned.item.rarity} />
                     <span className="text-[10px] text-muted-foreground">{owned.item.bundle.name}</span>

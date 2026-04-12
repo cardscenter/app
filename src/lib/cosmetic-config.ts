@@ -1,4 +1,4 @@
-// Cosmetic system configuration — Ember currency, rarities, lootbox pricing
+// Cosmetic system configuration — Ember currency, rarities, activity rewards
 
 // ============================================================
 // RARITY SYSTEM
@@ -84,24 +84,6 @@ export type RarityKey = keyof typeof RARITIES;
 export function getRarity(key: string) {
   return RARITIES[key as RarityKey] ?? RARITIES.UNCOMMON;
 }
-
-// ============================================================
-// EMBER PRICING
-// ============================================================
-
-export const EMBER_CONFIG = {
-  // Wallet → Ember conversion
-  eurToEmber: 100,              // 1 EUR = 100 Ember
-  minPurchase: 100,             // Minimum 100 Ember (€1)
-  maxPurchasePerDay: 5000,      // Maximum 5000 Ember (€50) per day
-
-  // Lootbox pricing
-  standardPackCost: 150,        // 150 Ember
-  premiumPackCost: 400,         // 400 Ember
-
-  // Duplicate recycling
-  recycleXP: 5,                 // Flat 5 XP for any duplicate
-} as const;
 
 // ============================================================
 // ACTIVITY REWARDS

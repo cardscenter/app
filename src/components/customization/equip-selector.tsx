@@ -260,7 +260,7 @@ export function EquipSelector({
           onEquip={handleEquip}
           emptyMessage={t("noItems")}
           packsLink="/customization/packs"
-          packsLabel={t("getFromPacks")}
+          packsLabel={t("chapters")}
         />
       )}
 
@@ -273,7 +273,7 @@ export function EquipSelector({
           onEquip={handleEquip}
           emptyMessage={t("noItems")}
           packsLink="/customization/packs"
-          packsLabel={t("getFromPacks")}
+          packsLabel={t("chapters")}
         />
       )}
     </div>
