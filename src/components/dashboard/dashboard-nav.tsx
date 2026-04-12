@@ -20,6 +20,7 @@ import {
   Scale,
   CreditCard,
   ShieldCheck,
+  Paintbrush,
   Menu,
   X,
 } from "lucide-react";
@@ -85,6 +86,12 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
         { href: "/dashboard/verificatie", labelKey: "myVerification", icon: ShieldCheck },
         { href: "/dashboard/reviews", labelKey: "myReviews", icon: Star },
         { href: "/dashboard/meldingen", labelKey: "myNotifications", icon: Bell },
+      ],
+    },
+    {
+      label: "sectionPersonalization",
+      items: [
+        { href: "/customization", labelKey: "personalization", icon: Paintbrush },
       ],
     },
     {

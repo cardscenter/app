@@ -31,7 +31,6 @@ function HeaderContent() {
     { href: "/veilingen" as const, label: t("auctions") },
     { href: "/claimsales" as const, label: t("claimsales") },
     { href: "/marktplaats" as const, label: t("marketplace") },
-    { href: "/customization" as const, label: t("customization") },
   ];
 
   return (

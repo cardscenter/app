@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { EMBER_CONFIG, getRarity } from "@/lib/cosmetic-config";
+import { EMBER_CONFIG, getRarity, getLoginStreakReward, LOGIN_STREAK_REWARDS } from "@/lib/cosmetic-config";
 import {
   purchaseEmberSchema,
   openLootboxSchema,
@@ -26,46 +26,156 @@ export async function getEmberBalance() {
   return user?.emberBalance ?? 0;
 }
 
-export async function purchaseEmber(amount: number) {
+// ============================================================
+// LOGIN STREAK
+// ============================================================
+
+export async function getLoginStreakInfo() {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Niet ingelogd" };
-
-  const parsed = purchaseEmberSchema.safeParse({ amount });
-  if (!parsed.success) return { error: "Ongeldig bedrag" };
-
-  const eurCost = amount / EMBER_CONFIG.eurToEmber;
-
-  // Check daily purchase limit
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-
-  const purchasedToday = await prisma.emberTransaction.aggregate({
-    where: {
-      userId: session.user.id,
-      type: "WALLET_PURCHASE",
-      amount: { gt: 0 },
-      createdAt: { gte: startOfDay },
-    },
-    _sum: { amount: true },
-  });
-
-  const alreadyPurchased = purchasedToday._sum.amount ?? 0;
-  if (alreadyPurchased + amount > EMBER_CONFIG.maxPurchasePerDay) {
-    return { error: "Dagelijks aankooplimiet bereikt" };
-  }
+  if (!session?.user?.id) return null;
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { balance: true, reservedBalance: true, emberBalance: true },
+    select: { loginStreak: true, lastLoginDate: true, emberBalance: true },
+  });
+
+  if (!user) return null;
+
+  const today = new Date().toISOString().split("T")[0];
+  const alreadyClaimed = user.lastLoginDate === today;
+
+  // Check if streak is still valid (yesterday or today)
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  const streakValid = user.lastLoginDate === yesterdayStr || user.lastLoginDate === today;
+  const currentStreak = streakValid ? user.loginStreak : 0;
+  const nextStreak = alreadyClaimed ? currentStreak : currentStreak + 1;
+  const nextReward = getLoginStreakReward(nextStreak);
+
+  return {
+    currentStreak,
+    nextStreak,
+    nextReward,
+    alreadyClaimed,
+    rewards: LOGIN_STREAK_REWARDS as unknown as number[],
+  };
+}
+
+export async function claimDailyLogin() {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { loginStreak: true, lastLoginDate: true, emberBalance: true },
   });
 
   if (!user) return { error: "Gebruiker niet gevonden" };
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // Already claimed today
+  if (user.lastLoginDate === today) {
+    return { error: "Al geclaimd vandaag" };
+  }
+
+  // Check if streak continues (last login was yesterday)
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  const streakContinues = user.lastLoginDate === yesterdayStr;
+  const newStreak = streakContinues ? user.loginStreak + 1 : 1;
+  const reward = getLoginStreakReward(newStreak);
+
+  const balanceBefore = user.emberBalance;
+  const balanceAfter = balanceBefore + reward;
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        loginStreak: newStreak,
+        lastLoginDate: today,
+        emberBalance: balanceAfter,
+      },
+    }),
+    prisma.emberTransaction.create({
+      data: {
+        userId: session.user.id,
+        amount: reward,
+        type: "ACTIVITY_REWARD",
+        description: `Dagelijkse login dag ${Math.min(newStreak, 7)}+ (${reward} Ember)`,
+        balanceBefore,
+        balanceAfter,
+      },
+    }),
+  ]);
+
+  return {
+    success: true,
+    reward,
+    newStreak,
+    newBalance: balanceAfter,
+  };
+}
+
+// ============================================================
+// EMBER PURCHASE
+// ============================================================
+
+// Volume bonus tiers (server-side source of truth)
+const PURCHASE_BONUSES: Record<number, number> = {
+  500: 5,
+  1000: 10,
+  2500: 15,
+  5000: 20,
+};
+
+function getBonusPercent(baseAmount: number): number {
+  let bonus = 0;
+  for (const [threshold, pct] of Object.entries(PURCHASE_BONUSES)) {
+    if (baseAmount >= Number(threshold)) bonus = pct;
+  }
+  return bonus;
+}
+
+export async function purchaseEmber(baseAmount: number) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const parsed = purchaseEmberSchema.safeParse({ amount: baseAmount });
+  if (!parsed.success) return { error: "Ongeldig bedrag" };
+
+  // Only PRO and UNLIMITED (and ADMIN) can purchase Ember
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { balance: true, reservedBalance: true, emberBalance: true, accountType: true },
+  });
+
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  if (user.accountType === "FREE") {
+    return { error: "Ember kopen is beschikbaar vanaf PRO" };
+  }
+
+  // Calculate bonus server-side (prevents client manipulation)
+  const bonusPct = getBonusPercent(baseAmount);
+  const bonusAmount = Math.floor(baseAmount * (bonusPct / 100));
+  const totalEmber = baseAmount + bonusAmount;
+
+  // EUR cost is only on base amount — bonus is free
+  const eurCost = baseAmount / EMBER_CONFIG.eurToEmber;
 
   const availableBalance = user.balance - user.reservedBalance;
   if (availableBalance < eurCost) return { error: "Onvoldoende saldo" };
 
   const balanceBefore = user.emberBalance;
-  const balanceAfter = balanceBefore + amount;
+  const balanceAfter = balanceBefore + totalEmber;
+
+  const bonusText = bonusAmount > 0 ? ` (+${bonusAmount} bonus)` : "";
 
   await prisma.$transaction([
     prisma.user.update({
@@ -82,15 +192,15 @@ export async function purchaseEmber(amount: number) {
         amount: -eurCost,
         balanceBefore: user.balance,
         balanceAfter: user.balance - eurCost,
-        description: `${amount} Ember gekocht`,
+        description: `${totalEmber} Ember gekocht${bonusText}`,
       },
     }),
     prisma.emberTransaction.create({
       data: {
         userId: session.user.id,
-        amount,
+        amount: totalEmber,
         type: "WALLET_PURCHASE",
-        description: `${amount} Ember gekocht voor €${eurCost.toFixed(2)}`,
+        description: `${totalEmber} Ember gekocht voor €${eurCost.toFixed(2)}${bonusText}`,
         balanceBefore,
         balanceAfter,
       },
@@ -165,8 +275,30 @@ export async function openLootbox(lootboxId: string) {
       },
     });
 
-    // Add to owned items if not duplicate
-    if (!wasDuplicate) {
+    // Handle reward types (Ember/XP) — credit immediately, don't add to inventory
+    if (resultItem.type === "EMBER_REWARD" && resultItem.rewardValue) {
+      const rewardEmber = resultItem.rewardValue;
+      await tx.user.update({
+        where: { id: userId },
+        data: { emberBalance: { increment: rewardEmber } },
+      });
+      await tx.emberTransaction.create({
+        data: {
+          userId,
+          amount: rewardEmber,
+          type: "LOOTBOX_SPEND",
+          description: `${resultItem.name} uit ${lootbox.name}`,
+          balanceBefore: balanceAfter,
+          balanceAfter: balanceAfter + rewardEmber,
+        },
+      });
+    } else if (resultItem.type === "XP_REWARD" && resultItem.rewardValue) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { bonusXP: { increment: resultItem.rewardValue } },
+      });
+    } else if (!wasDuplicate) {
+      // Add cosmetic to owned items if not duplicate
       await tx.ownedItem.create({
         data: {
           userId,
@@ -201,11 +333,14 @@ export async function openLootbox(lootboxId: string) {
       rarity: resultItem.rarity,
       assetPath: resultItem.assetPath,
       rewardValue: resultItem.rewardValue,
+      artistKey: resultItem.artistKey,
     },
     wasDuplicate,
     carouselItems,
     resultIndex: Math.floor(decoyCount * 0.8), // Place result near the end
-    newEmberBalance: balanceAfter,
+    newEmberBalance: resultItem.type === "EMBER_REWARD" && resultItem.rewardValue
+      ? balanceAfter + resultItem.rewardValue
+      : balanceAfter,
     lootboxCost: lootbox.emberCost,
   };
 }
@@ -216,7 +351,8 @@ function selectRandomItem(lootbox: {
   weightEpic: number;
   weightLegendary: number;
   weightUnique: number;
-  items: Array<{ item: { id: string; key: string; type: string; name: string; rarity: string; assetPath: string | null; rewardValue: number | null; weight: number } }>;
+  weightShiny: number;
+  items: Array<{ item: { id: string; key: string; type: string; name: string; rarity: string; assetPath: string | null; rewardValue: number | null; weight: number; artistKey: string | null } }>;
 }) {
   const items = lootbox.items.map((li) => li.item);
 
@@ -226,7 +362,8 @@ function selectRandomItem(lootbox: {
     lootbox.weightRare +
     lootbox.weightEpic +
     lootbox.weightLegendary +
-    lootbox.weightUnique;
+    lootbox.weightUnique +
+    lootbox.weightShiny;
 
   const randomBytes = new Uint32Array(1);
   crypto.getRandomValues(randomBytes);
@@ -241,8 +378,10 @@ function selectRandomItem(lootbox: {
     selectedRarity = "EPIC";
   } else if ((roll -= lootbox.weightEpic) < lootbox.weightLegendary) {
     selectedRarity = "LEGENDARY";
-  } else {
+  } else if ((roll -= lootbox.weightLegendary) < lootbox.weightUnique) {
     selectedRarity = "UNIQUE";
+  } else {
+    selectedRarity = "SHINY";
   }
 
   // Step 2: Pick an item within that rarity tier
@@ -266,9 +405,9 @@ function selectRandomItem(lootbox: {
 
 function buildCarousel(
   lootbox: {
-    items: Array<{ item: { id: string; key: string; name: string; rarity: string; assetPath: string | null } }>;
+    items: Array<{ item: { id: string; key: string; name: string; rarity: string; type: string; assetPath: string | null; artistKey: string | null } }>;
   },
-  resultItem: { id: string; key: string; name: string; rarity: string; assetPath: string | null },
+  resultItem: { id: string; key: string; name: string; rarity: string; type: string; assetPath: string | null; artistKey: string | null },
   count: number
 ) {
   const allItems = lootbox.items.map((li) => ({
@@ -276,7 +415,9 @@ function buildCarousel(
     key: li.item.key,
     name: li.item.name,
     rarity: li.item.rarity,
+    type: li.item.type,
     assetPath: li.item.assetPath,
+    artistKey: li.item.artistKey,
   }));
 
   const carousel = [];
@@ -289,7 +430,9 @@ function buildCarousel(
         key: resultItem.key,
         name: resultItem.name,
         rarity: resultItem.rarity,
+        type: resultItem.type,
         assetPath: resultItem.assetPath,
+        artistKey: resultItem.artistKey,
       });
     } else {
       const randomItem = allItems[Math.floor(Math.random() * allItems.length)];

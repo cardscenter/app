@@ -26,6 +26,8 @@ model User {
   // Ember (cosmetic currency)
   emberBalance      Int       @default(0)
   bonusXP           Int       @default(0)  // XP from recycled duplicates
+  loginStreak       Int       @default(0)  // Current consecutive login days (0-7)
+  lastLoginDate     String?               // ISO date string of last login reward (YYYY-MM-DD)
 
   // Wallet
   balance         Float     @default(0)
@@ -967,10 +969,11 @@ model CosmeticItem {
   rarity      String                 // UNCOMMON | RARE | EPIC | LEGENDARY | UNIQUE
   bundleId    String
   bundle      CosmeticBundle @relation(fields: [bundleId], references: [id])
-  assetPath   String?                // Path under /public for visual items
-  rewardValue Int?                   // XP amount or ember amount for reward types
-  weight      Int      @default(100) // Relative drop weight within rarity tier
-  createdAt   DateTime @default(now())
+  assetPath      String?                // Path under /public for visual items
+  rewardValue    Int?                   // XP amount or ember amount for reward types
+  weight         Int      @default(100) // Relative drop weight within rarity tier
+  artistKey      String?                // Key referencing fan-artist in src/lib/fan-artists.ts
+  createdAt      DateTime @default(now())
 
   ownedItems   OwnedItem[]
   lootboxItems LootboxItem[]
@@ -997,6 +1000,7 @@ model Lootbox {
   weightEpic      Int      @default(1500)
   weightLegendary Int      @default(450)
   weightUnique    Int      @default(50)
+  weightShiny     Int      @default(0)
 
   createdAt       DateTime @default(now())
 

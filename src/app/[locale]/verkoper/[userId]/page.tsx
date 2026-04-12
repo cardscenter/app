@@ -34,8 +34,16 @@ export default async function SellerProfilePage({
 
   const seller = await prisma.user.findUnique({
     where: { id: userId },
-    select: { profileBanner: true, profileEmblem: true, profileBackground: true },
+    select: { profileBanner: true, profileEmblem: true, profileBackground: true, avatarUrl: true, displayName: true },
   });
+
+  // Resolve emblem asset path
+  const emblemItem = seller?.profileEmblem
+    ? await prisma.cosmeticItem.findUnique({
+        where: { key: seller.profileEmblem },
+        select: { assetPath: true },
+      })
+    : null;
 
   // Get seller's active listings for the sidebar
   const activeListings = await prisma.listing.findMany({
@@ -57,8 +65,31 @@ export default async function SellerProfilePage({
     include: { _count: { select: { items: { where: { status: "AVAILABLE" } } } } },
   });
 
+  // Resolve background asset path
+  const backgroundItem = seller?.profileBackground
+    ? await prisma.cosmeticItem.findUnique({
+        where: { key: seller.profileBackground },
+        select: { assetPath: true },
+      })
+    : null;
+
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8">
+    <div className="relative min-h-screen">
+      {/* Profile background */}
+      {backgroundItem?.assetPath && (
+        <div className="pointer-events-none fixed inset-0 -z-10">
+          <Image
+            src={backgroundItem.assetPath}
+            alt="Profile background"
+            fill
+            className="object-cover opacity-60 dark:opacity-40"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background" />
+        </div>
+      )}
+
+      <div className="container mx-auto max-w-7xl px-4 py-8">
       <Link
         href="/"
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -69,11 +100,10 @@ export default async function SellerProfilePage({
 
       {/* Profile banner */}
       {seller?.profileBanner && (() => {
-        // Check if it's a level banner or a cosmetic banner
         const isLevelBanner = SELLER_LEVELS.some((l) => l.nameKey === seller.profileBanner);
         const bannerSrc = isLevelBanner
           ? getBannerUrl(seller.profileBanner!)
-          : null; // Cosmetic banner resolved below
+          : null;
         return (
           <div className="relative mb-6 aspect-[21/9] w-full overflow-hidden rounded-2xl">
             {bannerSrc ? (
@@ -87,6 +117,36 @@ export default async function SellerProfilePage({
               />
             ) : (
               <CosmeticBannerImage bannerKey={seller.profileBanner!} />
+            )}
+
+            {/* Emblem + avatar overlay */}
+            {emblemItem?.assetPath && (
+              <div className="absolute bottom-4 left-4 z-10 h-24 w-40 sm:bottom-12 sm:left-12 sm:h-40 sm:w-72">
+                {/* Avatar clipped into the emblem circle */}
+                <div className="absolute left-[8%] top-[16%] flex h-[68%] w-[37%] items-center justify-center overflow-hidden rounded-full">
+                  {seller.avatarUrl ? (
+                    <Image
+                      src={seller.avatarUrl}
+                      alt={seller.displayName ?? ""}
+                      fill
+                      className="object-cover"
+                      sizes="120px"
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center bg-primary/20 text-lg font-bold text-primary sm:text-2xl">
+                      {seller.displayName?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                {/* Emblem frame on top */}
+                <Image
+                  src={emblemItem.assetPath}
+                  alt="Emblem"
+                  fill
+                  className="pointer-events-none object-contain drop-shadow-lg"
+                  sizes="220px"
+                />
+              </div>
             )}
           </div>
         );
@@ -184,6 +244,7 @@ export default async function SellerProfilePage({
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

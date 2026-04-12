@@ -228,7 +228,93 @@
     50% { transform: translate(-5px, -40px) scale(0.9); opacity: 0.4; }
     75% { transform: translate(15px, -20px) scale(1.05); opacity: 0.7; }
   }
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
 }
+
+/* Rarity glow animations for cosmetic items */
+@keyframes glow-uncommon {
+  0%, 100% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.2), inset 0 0 8px rgba(34, 197, 94, 0.05); }
+  50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.4), inset 0 0 12px rgba(34, 197, 94, 0.1); }
+}
+@keyframes glow-rare {
+  0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.2), inset 0 0 8px rgba(59, 130, 246, 0.05); }
+  50% { box-shadow: 0 0 24px rgba(59, 130, 246, 0.5), inset 0 0 12px rgba(59, 130, 246, 0.1); }
+}
+@keyframes glow-epic {
+  0%, 100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.3), inset 0 0 10px rgba(168, 85, 247, 0.05); }
+  50% { box-shadow: 0 0 30px rgba(168, 85, 247, 0.6), inset 0 0 15px rgba(168, 85, 247, 0.1); }
+}
+@keyframes glow-legendary {
+  0%, 100% { box-shadow: 0 0 12px rgba(234, 179, 8, 0.3), inset 0 0 10px rgba(234, 179, 8, 0.05); }
+  50% { box-shadow: 0 0 35px rgba(234, 179, 8, 0.7), inset 0 0 18px rgba(234, 179, 8, 0.15); }
+}
+@keyframes glow-unique {
+  0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 12px rgba(239, 68, 68, 0.05); }
+  50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.8), inset 0 0 20px rgba(239, 68, 68, 0.15); }
+}
+
+@keyframes glow-shiny {
+  0%   { box-shadow: 0 0 18px rgba(239, 68, 68, 0.5),  inset 0 0 14px rgba(239, 68, 68, 0.08); }
+  17%  { box-shadow: 0 0 30px rgba(234, 179, 8, 0.6),   inset 0 0 18px rgba(234, 179, 8, 0.12); }
+  33%  { box-shadow: 0 0 35px rgba(34, 197, 94, 0.6),   inset 0 0 20px rgba(34, 197, 94, 0.12); }
+  50%  { box-shadow: 0 0 40px rgba(59, 130, 246, 0.7),  inset 0 0 22px rgba(59, 130, 246, 0.15); }
+  67%  { box-shadow: 0 0 35px rgba(168, 85, 247, 0.6),  inset 0 0 20px rgba(168, 85, 247, 0.12); }
+  83%  { box-shadow: 0 0 30px rgba(236, 72, 153, 0.6),  inset 0 0 18px rgba(236, 72, 153, 0.12); }
+  100% { box-shadow: 0 0 18px rgba(239, 68, 68, 0.5),  inset 0 0 14px rgba(239, 68, 68, 0.08); }
+}
+
+@keyframes rainbow-border {
+  0%   { border-color: rgba(239, 68, 68, 0.7); }
+  17%  { border-color: rgba(234, 179, 8, 0.7); }
+  33%  { border-color: rgba(34, 197, 94, 0.7); }
+  50%  { border-color: rgba(59, 130, 246, 0.7); }
+  67%  { border-color: rgba(168, 85, 247, 0.7); }
+  83%  { border-color: rgba(236, 72, 153, 0.7); }
+  100% { border-color: rgba(239, 68, 68, 0.7); }
+}
+
+@keyframes rainbow-text {
+  0%   { color: #ef4444; }
+  17%  { color: #eab308; }
+  33%  { color: #22c55e; }
+  50%  { color: #3b82f6; }
+  67%  { color: #a855f7; }
+  83%  { color: #ec4899; }
+  100% { color: #ef4444; }
+}
+@keyframes rainbow-bg {
+  0%   { background-color: #ef4444; }
+  17%  { background-color: #eab308; }
+  33%  { background-color: #22c55e; }
+  50%  { background-color: #3b82f6; }
+  67%  { background-color: #a855f7; }
+  83%  { background-color: #ec4899; }
+  100% { background-color: #ef4444; }
+}
+
+@keyframes reveal-scale {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Confetti uses JS-driven individual trajectories — no CSS keyframe needed */
+
+/* Rarity glow utility classes */
+.glow-uncommon { animation: glow-uncommon 2.5s ease-in-out infinite; }
+.glow-rare { animation: glow-rare 2.5s ease-in-out infinite; }
+.glow-epic { animation: glow-epic 2s ease-in-out infinite; }
+.glow-legendary { animation: glow-legendary 1.8s ease-in-out infinite; }
+.glow-unique { animation: glow-unique 1.5s ease-in-out infinite; }
+.glow-shiny { animation: glow-shiny 6s ease-in-out infinite, rainbow-border 6s ease-in-out infinite; }
+.shiny-text { animation: rainbow-text 6s ease-in-out infinite; }
+.shiny-dot { animation: rainbow-bg 6s ease-in-out infinite; }
+.shiny-bar { animation: rainbow-bg 6s ease-in-out infinite; }
 
 body {
   font-family: var(--font-sans);
