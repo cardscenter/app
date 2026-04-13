@@ -102,6 +102,9 @@ model User {
   emberTransactions   EmberTransaction[]
   activityLogs        ActivityLog[]
   achievements        UserAchievement[]
+
+  // Card-database (Fase 4)
+  cardWatchlist       CardWatchlist[]
 }
 
 // ============================================================
@@ -182,8 +185,62 @@ model CardSet {
   auctions       Auction[]
   claimsaleItems ClaimsaleItem[]
   listings       Listing[]
+  cards          Card[]
 
   @@index([seriesId])
+}
+
+// Mirror of TCGdex card data — populated via prisma/seed-tcgdex-cards.ts and
+// kept fresh by the price-sync cron. Each Card.id == TCGdex id (e.g.
+// "base1-4") so existing tcgdexId fields on Auction/Listing/ClaimsaleItem
+// join naturally without an extra mapping table.
+model Card {
+  id              String   @id              // TCGdex id, e.g. "base1-4"
+  localId         String                     // "4" within the set
+  name            String
+  cardSetId       String
+  cardSet         CardSet  @relation(fields: [cardSetId], references: [id])
+  rarity          String?
+  hp              Int?
+  types           String?                    // JSON array (e.g. ["Fire"])
+  illustrator     String?
+  variants        String?                    // JSON: {firstEdition, holo, normal, reverse, wPromo}
+  imageUrl        String?                    // TCGdex base URL (append /high.webp at render time)
+
+  // Cached CardMarket EUR pricing snapshot — refreshed by sync-cron
+  priceAvg        Float?
+  priceLow        Float?
+  priceTrend      Float?
+  priceAvg7       Float?
+  priceAvg30      Float?
+  priceUpdatedAt  DateTime?
+
+  // Lightweight popularity signal for cron prioritization
+  viewCount       Int      @default(0)
+  lastViewedAt    DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  watchlistEntries CardWatchlist[]
+
+  @@index([cardSetId])
+  @@index([name])
+  @@index([priceUpdatedAt])
+  @@index([lastViewedAt])
+}
+
+model CardWatchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, cardId])
+  @@index([userId])
+  @@index([cardId])
 }
 
 // ============================================================
