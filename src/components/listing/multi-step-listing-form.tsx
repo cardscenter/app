@@ -198,7 +198,12 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
 
       {/* Section 4: Pricing */}
       <section className="glass rounded-2xl p-6">
-        <StepPricing pricingType={form.pricingType} price={form.price} onChange={updateField} />
+        <StepPricing
+          pricingType={form.pricingType}
+          price={form.price}
+          pricing={form.tcgdex?.pricing ?? null}
+          onChange={updateField}
+        />
       </section>
 
       {/* Section 5: Shipping */}

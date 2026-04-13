@@ -17,6 +17,8 @@ import { LiveAuctionContent } from "@/components/auction/live-auction-content";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
 import { SellerInfoBlock } from "@/components/ui/seller-info-block";
 import { getSellerInfo } from "@/lib/seller-info";
+import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
+import { getCard } from "@/lib/tcgdex/client";
 
 export default async function AuctionDetailPage({
   params,
@@ -60,7 +62,7 @@ export default async function AuctionDetailPage({
     ? currentUser.balance - currentUser.reservedBalance
     : 0;
 
-  const [watched, existingAutoBid, sellerInfo, sellerItems, similarItems] = await Promise.all([
+  const [watched, existingAutoBid, sellerInfo, sellerItems, similarItems, tcgdexCard] = await Promise.all([
     session?.user ? isWatched({ auctionId: auction.id }) : false,
     session?.user && !isOwner ? getAutoBid(auction.id) : null,
     getSellerInfo(auction.sellerId),
@@ -72,7 +74,10 @@ export default async function AuctionDetailPage({
       excludeId: auction.id,
       itemType: "auction",
     }),
+    auction.tcgdexId ? getCard(auction.tcgdexId) : Promise.resolve(null),
   ]);
+
+  const pricing = tcgdexCard?.pricing?.cardmarket ?? null;
 
   const initialBids = auction.bids.map((b) => ({
     id: b.id,
@@ -134,6 +139,11 @@ export default async function AuctionDetailPage({
               <p className="font-medium text-foreground">{auction.cardName}</p>
               {auction.condition && <p className="text-sm text-muted-foreground mt-1">{t("condition")}: {auction.condition}</p>}
             </div>
+          )}
+
+          {/* CardMarket marktwaarde */}
+          {pricing && pricing.avg !== null && (
+            <PricingInfoBlock pricing={pricing} variant="full" label="CardMarket marktwaarde" />
           )}
 
           {auction.description && (

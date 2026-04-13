@@ -1,14 +1,17 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
+import type { CardPricingSnapshot } from "@/components/ui/card-search-select";
 
 interface StepPricingProps {
   pricingType: string;
   price: number | null;
+  pricing?: CardPricingSnapshot | null;
   onChange: (field: string, value: unknown) => void;
 }
 
-export function StepPricing({ pricingType, price, onChange }: StepPricingProps) {
+export function StepPricing({ pricingType, price, pricing, onChange }: StepPricingProps) {
   const t = useTranslations("listing");
 
   return (
@@ -38,6 +41,11 @@ export function StepPricing({ pricingType, price, onChange }: StepPricingProps) 
           ))}
         </div>
       </div>
+
+      {/* CardMarket suggested price — shows when a TCGdex card is picked */}
+      {pricing && pricing.avg !== null && (
+        <PricingInfoBlock pricing={pricing} variant="full" label="CardMarket-prijs (richtprijs)" />
+      )}
 
       {/* Price input (only for FIXED) */}
       {pricingType === "FIXED" && (

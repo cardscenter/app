@@ -190,6 +190,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
           reservePrice={form.reservePrice}
           hasBuyNow={form.hasBuyNow}
           buyNowPrice={form.buyNowPrice}
+          pricing={form.tcgdex?.pricing ?? null}
           onChange={updateField}
         />
       </section>

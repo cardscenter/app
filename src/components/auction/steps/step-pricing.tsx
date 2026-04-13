@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { Clock } from "lucide-react";
+import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
+import type { CardPricingSnapshot } from "@/components/ui/card-search-select";
 
 interface StepPricingProps {
   startingBid: number | null;
@@ -10,6 +12,7 @@ interface StepPricingProps {
   reservePrice: number | null;
   hasBuyNow: boolean;
   buyNowPrice: number | null;
+  pricing?: CardPricingSnapshot | null;
   onChange: (field: string, value: unknown) => void;
 }
 
@@ -22,6 +25,7 @@ export function StepPricing({
   reservePrice,
   hasBuyNow,
   buyNowPrice,
+  pricing,
   onChange,
 }: StepPricingProps) {
   const t = useTranslations("auction");
@@ -29,6 +33,11 @@ export function StepPricing({
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-foreground">{t("stepPricing")}</h2>
+
+      {/* CardMarket suggested price — shows when a TCGdex card is picked */}
+      {pricing && pricing.avg !== null && (
+        <PricingInfoBlock pricing={pricing} variant="full" label="CardMarket-prijs (richtprijs)" />
+      )}
 
       {/* Starting bid */}
       <div>

@@ -12,6 +12,15 @@ export interface CardSearchSuggestion {
   thumbnailUrl: string | null;
 }
 
+export interface CardPricingSnapshot {
+  avg: number | null;
+  low: number | null;
+  trend: number | null;
+  avg7: number | null;
+  avg30: number | null;
+  updated: string | null;
+}
+
 export interface CardSearchSelectValue extends CardSearchSuggestion {
   /** Full image URL (high quality) — only filled after detail fetch on select. */
   imageUrl?: string | null;
@@ -21,6 +30,8 @@ export interface CardSearchSelectValue extends CardSearchSuggestion {
   setId?: string | null;
   /** Card rarity from detail fetch. */
   rarity?: string | null;
+  /** CardMarket EUR pricing — only filled after detail fetch on select. */
+  pricing?: CardPricingSnapshot | null;
 }
 
 interface Props {
@@ -126,6 +137,7 @@ export function CardSearchSelect({
         setName: detail.set?.name ?? null,
         setId: detail.set?.id ?? null,
         rarity: detail.rarity ?? null,
+        pricing: detail.pricing ?? null,
       });
     } catch {
       // Keep optimistic value if detail fetch fails — user already sees a result
