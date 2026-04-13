@@ -6,6 +6,7 @@ import { checkClaimsaleLimit } from "@/lib/account-limits";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { checkAmountAllowed } from "@/lib/account-age";
+import { resolveLocalCardSetId } from "@/lib/tcgdex/resolve-set";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -95,15 +96,24 @@ export async function createClaimsale(formData: FormData) {
         sellerId: userId,
         status: "DRAFT",
         items: {
-          create: items.map((item) => ({
-            cardName: item.cardName || "Kaart",
-            ...(item.cardSetId ? { cardSetId: item.cardSetId } : {}),
-            ...(item.cardNumber ? { reference: item.cardNumber } : {}),
-            ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
-            ...(item.tcgdexId ? { tcgdexId: item.tcgdexId } : {}),
-            condition: item.condition,
-            price: item.price,
-            imageUrls: JSON.stringify(item.imageUrls ?? []),
+          create: await Promise.all(items.map(async (item) => {
+            const autoCardSetId = item.tcgdexId && !item.cardSetId
+              ? await resolveLocalCardSetId(item.tcgdexId)
+              : null;
+            return {
+              cardName: item.cardName || "Kaart",
+              ...(item.cardSetId
+                ? { cardSetId: item.cardSetId }
+                : autoCardSetId
+                  ? { cardSetId: autoCardSetId }
+                  : {}),
+              ...(item.cardNumber ? { reference: item.cardNumber } : {}),
+              ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
+              ...(item.tcgdexId ? { tcgdexId: item.tcgdexId } : {}),
+              condition: item.condition,
+              price: item.price,
+              imageUrls: JSON.stringify(item.imageUrls ?? []),
+            };
           })),
         },
       },

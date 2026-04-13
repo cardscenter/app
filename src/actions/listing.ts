@@ -11,6 +11,7 @@ import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
+import { resolveLocalCardSetId } from "@/lib/tcgdex/resolve-set";
 
 
 export async function createListing(formData: FormData) {
@@ -108,9 +109,16 @@ export async function createListing(formData: FormData) {
   switch (data.listingType) {
     case "SINGLE_CARD":
       listingData.cardName = data.cardName;
-      listingData.cardSetId = data.cardSetId;
       listingData.condition = data.condition;
-      if (data.tcgdexId) listingData.tcgdexId = data.tcgdexId;
+      if (data.tcgdexId) {
+        listingData.tcgdexId = data.tcgdexId;
+        // Auto-link to local CardSet via TCGdex set mapping
+        if (!data.cardSetId) {
+          const resolved = await resolveLocalCardSetId(data.tcgdexId);
+          if (resolved) listingData.cardSetId = resolved;
+        }
+      }
+      if (data.cardSetId && !listingData.cardSetId) listingData.cardSetId = data.cardSetId;
       break;
     case "MULTI_CARD":
       listingData.cardItems = data.cardItems;

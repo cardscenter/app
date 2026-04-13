@@ -150,8 +150,10 @@ model Category {
 }
 
 model Series {
-  id          String   @id @default(cuid())
-  name        String   // "Base Set Era", "Sword & Shield Era"
+  id            String   @id @default(cuid())
+  name          String   // "Base Set Era", "Sword & Shield Era"
+  tcgdexSeriesId String? @unique          // TCGdex series id, e.g. "base", "swsh"
+  logoUrl       String?                    // TCGdex series logo URL
 
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
@@ -164,8 +166,13 @@ model Series {
 }
 
 model CardSet {
-  id          String   @id @default(cuid())
-  name        String   // "Base Set", "Jungle", "Fossil"
+  id           String   @id @default(cuid())
+  name         String   // "Base Set", "Jungle", "Fossil"
+  tcgdexSetId  String?  @unique           // TCGdex set id, e.g. "base1"
+  logoUrl      String?                     // TCGdex set logo URL
+  symbolUrl    String?                     // TCGdex set symbol URL
+  releaseDate  String?                     // ISO date string (kept as text — TCGdex returns "1999-01-09")
+  cardCount    Int?                        // Total cards in set (official count)
 
   seriesId    String
   series      Series   @relation(fields: [seriesId], references: [id])

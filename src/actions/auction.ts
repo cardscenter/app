@@ -12,6 +12,7 @@ import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from
 import { calculateAuctionUpsellCost } from "@/lib/upsell-config";
 import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
+import { resolveLocalCardSetId } from "@/lib/tcgdex/resolve-set";
 import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
 
@@ -79,6 +80,9 @@ export async function createAuction(formData: FormData) {
     }
   }
 
+  // Auto-link cardSetId via TCGdex set mapping when present
+  const autoCardSetId = data.tcgdexId ? await resolveLocalCardSetId(data.tcgdexId) : null;
+
   const auction = await prisma.auction.create({
     data: {
       title: data.title,
@@ -88,6 +92,7 @@ export async function createAuction(formData: FormData) {
       cardName: data.cardName,
       condition: data.condition,
       tcgdexId: data.tcgdexId || null,
+      cardSetId: autoCardSetId,
       estimatedCardCount: data.estimatedCardCount || null,
       conditionRange: data.conditionRange || null,
       productType: data.productType || null,

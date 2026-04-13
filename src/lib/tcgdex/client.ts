@@ -79,3 +79,14 @@ export function buildCardImageUrl(
   if (!base) return null;
   return `${base}/${quality}.${format}`;
 }
+
+/**
+ * Extract the set-id portion of a TCGdex card id.
+ *   "base1-4" → "base1"
+ *   "swsh10.5-010" → "swsh10.5"
+ */
+export function extractSetIdFromCardId(tcgdexCardId: string): string | null {
+  const idx = tcgdexCardId.lastIndexOf("-");
+  if (idx <= 0) return null;
+  return tcgdexCardId.slice(0, idx);
+}
