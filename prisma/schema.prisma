@@ -197,6 +197,7 @@ model Auction {
   cardSetId     String?
   cardSet       CardSet? @relation(fields: [cardSetId], references: [id])
   condition     String?  // "Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"
+  tcgdexId      String?  // Stable TCGdex card identifier, e.g. "base1-4"
 
   // Multi-card details (for MULTI_CARD)
   cardItems     String?  // JSON array: [{cardName, condition, quantity}]
@@ -249,6 +250,7 @@ model Auction {
   @@index([sellerId])
   @@index([status])
   @@index([cardSetId])
+  @@index([tcgdexId])
 }
 
 model AuctionUpsell {
@@ -346,6 +348,7 @@ model ClaimsaleItem {
   reference    String?  // Card number / set reference (e.g. "#4", "SV1-199")
   sellerNote   String?  // Seller's personal note (e.g. binder location, inventory code)
   imageUrls    String   @default("[]") // JSON array of image URLs
+  tcgdexId     String?  // Stable TCGdex card identifier, e.g. "base1-4"
 
   cardSetId    String?
   cardSet      CardSet?  @relation(fields: [cardSetId], references: [id])
@@ -379,6 +382,7 @@ model ClaimsaleItem {
   @@index([buyerId])
   @@index([claimedById])
   @@index([status])
+  @@index([tcgdexId])
 }
 
 // ============================================================
@@ -399,6 +403,7 @@ model Listing {
   cardSetId     String?
   cardSet       CardSet? @relation(fields: [cardSetId], references: [id])
   condition     String?  // "Near Mint", "Lightly Played", etc.
+  tcgdexId      String?  // Stable TCGdex card identifier, e.g. "base1-4"
 
   // Multi-card details (for MULTI_CARD)
   cardItems     String?  // JSON array: [{cardName, cardSetId, condition, quantity}]
@@ -450,6 +455,7 @@ model Listing {
   @@index([status])
   @@index([cardSetId])
   @@index([listingType])
+  @@index([tcgdexId])
 }
 
 model ListingShippingMethod {

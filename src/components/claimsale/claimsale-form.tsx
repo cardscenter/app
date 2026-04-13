@@ -6,6 +6,7 @@ import { useState, useCallback } from "react";
 import { CARD_CONDITIONS } from "@/types";
 import { Upload, X, ImageIcon, Copy } from "lucide-react";
 import { ShippingMethodSelector } from "@/components/ui/shipping-method-selector";
+import { CardSearchSelect, type CardSearchSelectValue } from "@/components/ui/card-search-select";
 import type { SellerShippingMethod } from "@prisma/client";
 
 type CardItem = {
@@ -17,6 +18,7 @@ type CardItem = {
   price: string;
   frontImage: string | null;
   backImage: string | null;
+  tcgdex: CardSearchSelectValue | null;
 };
 
 function SingleImageUpload({
@@ -139,12 +141,12 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
   const [coverUploading, setCoverUploading] = useState(false);
   const [selectedShippingMethods, setSelectedShippingMethods] = useState<string[]>([]);
   const [items, setItems] = useState<CardItem[]>([
-    { id: "1", cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null },
+    { id: "1", cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null, tcgdex: null },
   ]);
 
   function addItem() {
     if (items.length >= maxItems) return;
-    setItems([...items, { id: Date.now().toString(), cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null }]);
+    setItems([...items, { id: Date.now().toString(), cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null, tcgdex: null }]);
   }
 
   function duplicateItem(item: CardItem, count: number = 1) {
@@ -165,6 +167,23 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
 
   function updateItem(id: string, field: keyof CardItem, value: string | null) {
     setItems(items.map((i) => i.id !== id ? i : { ...i, [field]: value }));
+  }
+
+  function setItemTcgdex(id: string, tcgdex: CardSearchSelectValue | null) {
+    setItems((prev) => prev.map((i) => {
+      if (i.id !== id) return i;
+      // When picking a card, auto-fill name + number if empty so seller doesn't
+      // re-type. If they cleared the picker, leave manual fields intact.
+      if (tcgdex) {
+        return {
+          ...i,
+          tcgdex,
+          cardName: i.cardName || tcgdex.name,
+          cardNumber: i.cardNumber || tcgdex.localId,
+        };
+      }
+      return { ...i, tcgdex: null };
+    }));
   }
 
   async function uploadCover(file: File) {
@@ -195,13 +214,17 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
       const imageUrls: string[] = [];
       if (i.frontImage) imageUrls.push(i.frontImage);
       if (i.backImage) imageUrls.push(i.backImage);
+      // If the seller picked a TCGdex card and uploaded no own image, fall back
+      // to the official artwork so the listing isn't blank.
+      if (imageUrls.length === 0 && i.tcgdex?.imageUrl) imageUrls.push(i.tcgdex.imageUrl);
       return {
-        cardName: i.cardName || `Kaart ${items.indexOf(i) + 1}`,
-        cardNumber: i.cardNumber || undefined,
+        cardName: i.cardName || i.tcgdex?.name || `Kaart ${items.indexOf(i) + 1}`,
+        cardNumber: i.cardNumber || i.tcgdex?.localId || undefined,
         sellerNote: i.sellerNote || undefined,
         condition: i.condition,
         price: parseFloat(i.price),
         imageUrls,
+        tcgdexId: i.tcgdex?.id || undefined,
       };
     })));
 
@@ -317,6 +340,14 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* TCGdex card picker — auto-fills name + number, attaches stable id */}
+            <div className="mb-4">
+              <CardSearchSelect
+                value={item.tcgdex}
+                onChange={(v) => setItemTcgdex(item.id, v)}
+              />
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
