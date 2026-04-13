@@ -7,6 +7,8 @@ import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { AchievementUnlockListener } from "@/components/customization/achievement-unlock-listener";
+import { auth } from "@/lib/auth";
 import { Toaster } from "sonner";
 import "../globals.css";
 
@@ -53,6 +55,7 @@ export default async function LocaleLayout({
 
   setRequestLocale(locale);
   const messages = await getMessages();
+  const session = await auth();
 
   return (
     <html
@@ -67,6 +70,7 @@ export default async function LocaleLayout({
             <main className="flex-1">{children}</main>
             <Footer />
             <Toaster position="bottom-center" richColors />
+            <AchievementUnlockListener isAuthenticated={!!session?.user?.id} />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

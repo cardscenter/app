@@ -1057,14 +1057,15 @@ model AchievementTier {
 }
 
 model UserAchievement {
-  id             String      @id @default(cuid())
-  userId         String
-  user           User        @relation(fields: [userId], references: [id])
-  achievementKey String
-  achievement    Achievement @relation(fields: [achievementKey], references: [key], onDelete: Cascade)
-  currentTier    Int         @default(0)  // 0 = not started, N = highest tier unlocked
-  progress       Int         @default(0)  // raw metric value (days, count, amount)
-  lastUnlockedAt DateTime?
+  id               String      @id @default(cuid())
+  userId           String
+  user             User        @relation(fields: [userId], references: [id])
+  achievementKey   String
+  achievement      Achievement @relation(fields: [achievementKey], references: [key], onDelete: Cascade)
+  currentTier      Int         @default(0)  // 0 = not started, N = highest tier unlocked
+  acknowledgedTier Int         @default(0)  // highest tier the user has seen a celebration for
+  progress         Int         @default(0)  // raw metric value (days, count, amount)
+  lastUnlockedAt   DateTime?
 
   @@unique([userId, achievementKey])
   @@index([userId])

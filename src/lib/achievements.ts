@@ -429,6 +429,84 @@ export async function checkAchievements(userId: string): Promise<TierUnlock[]> {
 }
 
 // ============================================================
+// PENDING CELEBRATIONS
+// ============================================================
+
+export interface PendingUnlock {
+  achievementKey: string;
+  achievementName: string;
+  category: AchievementCategory;
+  tier: number;
+  maxTier: number;
+  rewardEmber: number;
+  rewardXP: number;
+}
+
+/**
+ * Returns any tier unlocks that still need to be celebrated for the user
+ * (currentTier > acknowledgedTier). Ordered oldest-first so toasts appear in
+ * unlock order. Does NOT acknowledge — call acknowledgeAllUnlocks() after
+ * display.
+ */
+export async function getPendingUnlocks(userId: string): Promise<PendingUnlock[]> {
+  const records = await prisma.userAchievement.findMany({
+    where: { userId, currentTier: { gt: 0 } },
+    select: {
+      achievementKey: true,
+      currentTier: true,
+      acknowledgedTier: true,
+      lastUnlockedAt: true,
+    },
+  });
+
+  const pending: Array<PendingUnlock & { _ts: number }> = [];
+  for (const r of records) {
+    if (r.currentTier <= r.acknowledgedTier) continue;
+    const def = getAchievementDef(r.achievementKey);
+    if (!def) continue;
+    for (let tier = r.acknowledgedTier + 1; tier <= r.currentTier; tier++) {
+      const tierDef = def.tiers.find((t) => t.tier === tier);
+      if (!tierDef) continue;
+      pending.push({
+        achievementKey: r.achievementKey,
+        achievementName: def.name,
+        category: def.category,
+        tier,
+        maxTier: def.tiers.length,
+        rewardEmber: tierDef.rewardEmber ?? 0,
+        rewardXP: tierDef.rewardXP ?? 0,
+        _ts: r.lastUnlockedAt?.getTime() ?? 0,
+      });
+    }
+  }
+  pending.sort((a, b) => a._ts - b._ts);
+  return pending.map(({ _ts: _, ...rest }) => rest);
+}
+
+export async function acknowledgeAllUnlocks(userId: string) {
+  const records = await prisma.userAchievement.findMany({
+    where: { userId, currentTier: { gt: 0 } },
+    select: { achievementKey: true, currentTier: true, acknowledgedTier: true },
+  });
+  const toUpdate = records.filter((r) => r.currentTier > r.acknowledgedTier);
+  if (toUpdate.length === 0) return 0;
+  await prisma.$transaction(
+    toUpdate.map((r) =>
+      prisma.userAchievement.update({
+        where: {
+          userId_achievementKey: {
+            userId,
+            achievementKey: r.achievementKey,
+          },
+        },
+        data: { acknowledgedTier: r.currentTier },
+      })
+    )
+  );
+  return toUpdate.length;
+}
+
+// ============================================================
 // QUERY
 // ============================================================
 
