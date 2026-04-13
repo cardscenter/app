@@ -8,7 +8,8 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
 import { cardSlug, localIdFromSlug } from "@/lib/tcgdex/slug";
 import { enrichCard } from "@/lib/tcgdex/enrich-card";
-import { ChevronLeft, ChevronRight, Tag, Hash, Palette, Heart } from "lucide-react";
+import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
+import { ChevronLeft, ChevronRight, Tag, Hash, Palette } from "lucide-react";
 
 export const revalidate = 1800; // re-render every 30min so prices stay fresh
 
@@ -188,21 +189,9 @@ export default async function CardDetailPage({ params }: Props) {
             <PricingInfoBlock pricing={pricing} variant="full" label="CardMarket marktwaarde" />
           )}
 
-          {/* Watchlist (placeholder UI — wired in Fase 4.6) */}
+          {/* Card-level watchlist */}
           {session?.user?.id && (
-            <div className="glass-subtle rounded-xl p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {isWatched ? "Op je watchlist" : "Volg deze kaart"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Krijg een melding zodra iemand deze kaart aanbiedt op Cards Center.
-                  </p>
-                </div>
-                <Heart className={`size-6 ${isWatched ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
-              </div>
-            </div>
+            <CardWatchlistButton cardId={card.id} initialWatching={!!isWatched} />
           )}
 
           {/* Active marketplace items */}

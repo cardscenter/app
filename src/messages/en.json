@@ -22,6 +22,7 @@
     "error": "Something went wrong",
     "contactSeller": "Contact seller",
     "marketplace": "Marketplace",
+    "cards": "Cards",
     "customization": "Customization"
   },
   "auth": {
