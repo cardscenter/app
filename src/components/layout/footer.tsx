@@ -93,7 +93,7 @@ export function Footer() {
             {/* Finn & Sage — decorative, desktop only, stuck upward so it peeks over the footer top edge */}
             <div className="pointer-events-none hidden lg:block lg:-mt-24" aria-hidden="true">
               <Image
-                src="/images/mascotte/Footer/footer.png"
+                src="/images/mascotte/footer/footer.png"
                 alt=""
                 width={280}
                 height={348}
