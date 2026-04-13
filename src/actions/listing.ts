@@ -292,17 +292,31 @@ export async function buyListing(listingId: string, shippingMethodId?: string) {
     }
   }
 
-  // Deduct from buyer
-  await deductBalance(session.user.id, totalCost, "PURCHASE", `Gekocht: ${listing.title}`, undefined, undefined, listingId);
-
-  // Hold in escrow for seller
-  await escrowCredit(listing.sellerId, totalCost, `Verkocht (escrow): ${listing.title}`);
-
-  // Mark listing as sold
-  await prisma.listing.update({
-    where: { id: listingId },
+  // Atomically claim the listing — guards against two concurrent buyers passing
+  // the status check above. updateMany returns count=0 if another transaction
+  // beat us to it, and we abort before touching wallets.
+  const claimed = await prisma.listing.updateMany({
+    where: { id: listingId, status: "ACTIVE" },
     data: { status: "SOLD", buyerId: session.user.id },
   });
+  if (claimed.count === 0) {
+    return { error: "Advertentie is net door iemand anders gekocht" };
+  }
+
+  try {
+    // Deduct from buyer
+    await deductBalance(session.user.id, totalCost, "PURCHASE", `Gekocht: ${listing.title}`, undefined, undefined, listingId);
+
+    // Hold in escrow for seller
+    await escrowCredit(listing.sellerId, totalCost, `Verkocht (escrow): ${listing.title}`);
+  } catch (e) {
+    // Roll back the status claim so the listing becomes buyable again
+    await prisma.listing.updateMany({
+      where: { id: listingId, status: "SOLD", buyerId: session.user.id },
+      data: { status: "ACTIVE", buyerId: null },
+    });
+    throw e;
+  }
 
   // Create ShippingBundle
   await prisma.shippingBundle.create({

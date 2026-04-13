@@ -11,6 +11,7 @@ import { createNotification } from "@/actions/notification";
 import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
 import { calculateAuctionUpsellCost } from "@/lib/upsell-config";
 import { generateOrderNumber } from "@/lib/order-number";
+import { checkAmountAllowed } from "@/lib/account-age";
 import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
 
@@ -194,7 +195,14 @@ export async function placeBid(auctionId: string, amount: number) {
 
   // Check available balance (40% reserve model)
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || getAvailableBalance(user) < calculateReserveAmount(amount)) {
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  // Account-age cap: a bid is a financial commitment up to `amount`, so cap on
+  // the bid amount itself (not just the reserve).
+  const ageCheck = checkAmountAllowed(user, amount);
+  if (!ageCheck.allowed) return { error: ageCheck.error! };
+
+  if (getAvailableBalance(user) < calculateReserveAmount(amount)) {
     return { error: "Onvoldoende saldo" };
   }
 

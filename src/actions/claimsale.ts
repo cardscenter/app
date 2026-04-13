@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { checkClaimsaleLimit } from "@/lib/account-limits";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { checkAmountAllowed } from "@/lib/account-age";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -162,11 +163,16 @@ export async function deleteClaimsale(claimsaleId: string) {
   if (!claimsale) return { error: "Niet gevonden" };
   if (claimsale.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
 
-  // Check if any items are sold
-  const soldCount = await prisma.claimsaleItem.count({
-    where: { claimsaleId, status: "SOLD" },
+  // Check if any items are sold or currently claimed
+  const blockingCount = await prisma.claimsaleItem.count({
+    where: { claimsaleId, status: { in: ["SOLD", "CLAIMED"] } },
   });
-  if (soldCount > 0) return { error: "Kan niet verwijderen: er zijn al kaarten verkocht" };
+  if (blockingCount > 0) {
+    return {
+      error:
+        "Kan niet verwijderen: er zijn kaarten verkocht of momenteel geclaimd. Wacht tot lopende claims verlopen.",
+    };
+  }
 
   await prisma.claimsale.delete({ where: { id: claimsaleId } });
   redirect("/nl/dashboard/claimsales");
@@ -232,6 +238,13 @@ export async function claimItem(claimsaleItemId: string) {
   if (item.claimsale.status !== "LIVE") return { error: "Claimsale is niet actief" };
   if (item.claimsale.sellerId === userId) return { error: "Je kunt niet je eigen kaarten claimen" };
 
+  // Account-age cap: claiming reserves a financial commitment, so apply the
+  // same cap as direct purchases.
+  const buyer = await prisma.user.findUnique({ where: { id: userId } });
+  if (!buyer) return { error: "Gebruiker niet gevonden" };
+  const ageCheck = checkAmountAllowed(buyer, item.price);
+  if (!ageCheck.allowed) return { error: ageCheck.error! };
+
   // Check if already in user's cart
   const existingCartItem = await prisma.cartItem.findUnique({
     where: { userId_claimsaleItemId: { userId, claimsaleItemId } },
@@ -253,15 +266,9 @@ export async function claimItem(claimsaleItemId: string) {
         throw new Error("ALREADY_CLAIMED");
       }
 
-      // Reset ALL existing claim timers for this user
-      await tx.claimsaleItem.updateMany({
-        where: {
-          claimedById: userId,
-          status: "CLAIMED",
-          id: { not: claimsaleItemId },
-        },
-        data: { claimedAt: now },
-      });
+      // Note: each claim keeps its own per-item timer. We intentionally do NOT
+      // refresh other claimed items' timers — that would let a user keep an
+      // unlimited cart open indefinitely by claiming a new item every 14m.
 
       // Create cart item with snapshot
       await tx.cartItem.create({
@@ -415,6 +422,7 @@ export async function updateClaimsaleItem(
   if (!item) return { error: "Item niet gevonden" };
   if (item.claimsale.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
   if (item.status === "SOLD") return { error: "Kan een verkocht item niet bewerken" };
+  if (item.status === "CLAIMED") return { error: "Kan een geclaimd item niet bewerken \u2014 wacht tot de claim verloopt of de koper afrekent" };
   if (item.claimsale.status !== "LIVE") return { error: "Claimsale is niet actief" };
 
   const updateData: Record<string, unknown> = {};
@@ -425,10 +433,15 @@ export async function updateClaimsaleItem(
 
   if (Object.keys(updateData).length === 0) return { error: "Niets om bij te werken" };
 
-  await prisma.claimsaleItem.update({
-    where: { id: itemId },
+  // Atomic guard: only update if still AVAILABLE (defends against a race where
+  // a buyer claims the item between our read above and this write).
+  const result = await prisma.claimsaleItem.updateMany({
+    where: { id: itemId, status: "AVAILABLE" },
     data: updateData,
   });
+  if (result.count === 0) {
+    return { error: "Item is niet meer beschikbaar voor bewerken" };
+  }
 
   return { success: true };
 }
@@ -449,6 +462,7 @@ export async function deleteClaimsaleItem(itemId: string) {
   if (!item) return { error: "Item niet gevonden" };
   if (item.claimsale.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
   if (item.status === "SOLD") return { error: "Kan een verkocht item niet verwijderen" };
+  if (item.status === "CLAIMED") return { error: "Kan een geclaimd item niet verwijderen \u2014 wacht tot de claim verloopt of de koper afrekent" };
   if (item.claimsale.status !== "LIVE") return { error: "Claimsale is niet actief" };
 
   await prisma.$transaction([
