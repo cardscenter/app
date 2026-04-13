@@ -8,6 +8,7 @@ export const createAuctionSchema = z
     cardName: z.string().max(200).optional(),
     cardSetId: z.string().optional(),
     condition: z.string().optional(),
+    tcgdexId: z.string().optional(),
     // Multi-card
     cardItems: z.string().optional(), // JSON array
     // Collection

@@ -16,6 +16,7 @@ import { StepPricing } from "./steps/step-pricing";
 import { StepUpsells } from "./steps/step-upsells";
 import { AuctionPreview } from "./steps/step-review";
 import { ShippingMethodSelector } from "@/components/ui/shipping-method-selector";
+import type { CardSearchSelectValue } from "@/components/ui/card-search-select";
 
 interface UpsellEntry {
   type: UpsellType;
@@ -29,6 +30,7 @@ interface FormState {
   description: string;
   cardName: string;
   condition: string;
+  tcgdex: CardSearchSelectValue | null;
   estimatedCardCount: number | null;
   conditionRange: string;
   productType: string;
@@ -50,6 +52,7 @@ const INITIAL_STATE: FormState = {
   description: "",
   cardName: "",
   condition: "Near Mint",
+  tcgdex: null,
   estimatedCardCount: null,
   conditionRange: "",
   productType: "",
@@ -110,6 +113,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
 
     if (form.cardName) formData.set("cardName", form.cardName);
     if (form.condition) formData.set("condition", form.condition);
+    if (form.tcgdex?.id) formData.set("tcgdexId", form.tcgdex.id);
     if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
     if (form.conditionRange) formData.set("conditionRange", form.conditionRange);
     if (form.productType) formData.set("productType", form.productType);
@@ -168,6 +172,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
           description={form.description}
           cardName={form.cardName}
           condition={form.condition}
+          tcgdex={form.tcgdex}
           estimatedCardCount={form.estimatedCardCount}
           conditionRange={form.conditionRange}
           productType={form.productType}

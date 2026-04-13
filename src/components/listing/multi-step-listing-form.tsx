@@ -16,6 +16,7 @@ import { StepUpsells } from "./steps/step-upsells";
 import { ShippingMethodSelector } from "@/components/ui/shipping-method-selector";
 import type { SellerShippingMethod } from "@prisma/client";
 import { ListingPreview } from "./steps/step-review";
+import type { CardSearchSelectValue } from "@/components/ui/card-search-select";
 
 type SeriesWithSets = Series & { cardSets: CardSet[] };
 
@@ -33,6 +34,7 @@ interface FormState {
   cardSetId: string;
   selectedSeries: string;
   condition: string;
+  tcgdex: CardSearchSelectValue | null;
   cardItems: CardItemEntry[];
   estimatedCardCount: number | null;
   productType: string;
@@ -57,6 +59,7 @@ const INITIAL_STATE: FormState = {
   cardSetId: "",
   selectedSeries: "",
   condition: "Near Mint",
+  tcgdex: null,
   cardItems: [],
   estimatedCardCount: null,
   productType: "",
@@ -122,6 +125,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     if (form.cardName) formData.set("cardName", form.cardName);
     if (form.cardSetId) formData.set("cardSetId", form.cardSetId);
     if (form.condition) formData.set("condition", form.condition);
+    if (form.tcgdex?.id) formData.set("tcgdexId", form.tcgdex.id);
     if (form.price !== null) formData.set("price", String(form.price));
     if (selectedShippingMethods.length > 0) formData.set("shippingMethodIds", JSON.stringify(selectedShippingMethods));
     if (form.carriers.length > 0) formData.set("carriers", JSON.stringify(form.carriers));
@@ -182,6 +186,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           cardSetId={form.cardSetId}
           selectedSeries={form.selectedSeries}
           condition={form.condition}
+          tcgdex={form.tcgdex}
           cardItems={form.cardItems}
           estimatedCardCount={form.estimatedCardCount}
 

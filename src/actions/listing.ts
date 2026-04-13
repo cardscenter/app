@@ -29,6 +29,7 @@ export async function createListing(formData: FormData) {
     description: formData.get("description"),
     cardName: formData.get("cardName") || undefined,
     cardSetId: formData.get("cardSetId") || undefined,
+    tcgdexId: formData.get("tcgdexId") || undefined,
     cardItems: formData.get("cardItems") || undefined,
     estimatedCardCount: formData.get("estimatedCardCount") || undefined,
     conditionRange: formData.get("conditionRange") || undefined,
@@ -109,6 +110,7 @@ export async function createListing(formData: FormData) {
       listingData.cardName = data.cardName;
       listingData.cardSetId = data.cardSetId;
       listingData.condition = data.condition;
+      if (data.tcgdexId) listingData.tcgdexId = data.tcgdexId;
       break;
     case "MULTI_CARD":
       listingData.cardItems = data.cardItems;

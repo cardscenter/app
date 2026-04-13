@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { CARD_CONDITIONS, SEALED_PRODUCT_TYPES } from "@/types";
 import type { AuctionType } from "@/types";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { CardSearchSelect, type CardSearchSelectValue } from "@/components/ui/card-search-select";
 
 interface StepDetailsProps {
   auctionType: AuctionType;
@@ -11,6 +12,7 @@ interface StepDetailsProps {
   description: string;
   cardName: string;
   condition: string;
+  tcgdex: CardSearchSelectValue | null;
   estimatedCardCount: number | null;
   conditionRange: string;
   productType: string;
@@ -24,6 +26,7 @@ export function StepDetails({
   description,
   cardName,
   condition,
+  tcgdex,
   estimatedCardCount,
   conditionRange,
   productType,
@@ -63,6 +66,16 @@ export function StepDetails({
       {/* SINGLE_CARD specific */}
       {auctionType === "SINGLE_CARD" && (
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Zoek kaart</label>
+            <CardSearchSelect
+              value={tcgdex}
+              onChange={(v) => {
+                onChange("tcgdex", v);
+                if (v && !cardName) onChange("cardName", v.name);
+              }}
+            />
+          </div>
           <div>
             <label htmlFor="cardName" className="block text-sm font-medium text-foreground">{t("cardName")}</label>
             <input

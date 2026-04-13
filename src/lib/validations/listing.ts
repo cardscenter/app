@@ -20,6 +20,7 @@ export const createListingSchema = z.object({
   // Details (type-specific, all optional at schema level — validated via superRefine)
   cardName: z.string().optional(),
   cardSetId: z.string().optional(),
+  tcgdexId: z.string().optional(),
   cardItems: z.string().optional(), // JSON array for MULTI_CARD
   estimatedCardCount: z.coerce.number().int().min(1).optional(),
   conditionRange: z.string().optional(),

@@ -6,6 +6,7 @@ import { CARD_CONDITIONS, SEALED_PRODUCT_TYPES } from "@/types";
 import type { ListingType, CardItemEntry } from "@/types";
 import type { Series, CardSet } from "@prisma/client";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { CardSearchSelect, type CardSearchSelectValue } from "@/components/ui/card-search-select";
 
 type SeriesWithSets = Series & { cardSets: CardSet[] };
 
@@ -19,6 +20,7 @@ interface StepDetailsProps {
   cardSetId: string;
   selectedSeries: string;
   condition: string;
+  tcgdex: CardSearchSelectValue | null;
   // MULTI_CARD
   cardItems: CardItemEntry[];
   // COLLECTION
@@ -37,6 +39,7 @@ export function StepDetails({
   description,
   cardName,
   condition,
+  tcgdex,
   cardItems,
   estimatedCardCount,
   productType,
@@ -91,26 +94,39 @@ export function StepDetails({
 
       {/* SINGLE_CARD specific */}
       {listingType === "SINGLE_CARD" && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-4">
+          {/* TCGdex card picker — auto-fills cardName when selected */}
           <div>
-            <label htmlFor="cardName" className="block text-sm font-medium text-foreground">{t("cardName")}</label>
-            <input
-              id="cardName"
-              type="text"
-              value={cardName}
-              onChange={(e) => onChange("cardName", e.target.value)}
-              className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+            <label className="block text-sm font-medium text-foreground mb-1">Zoek kaart</label>
+            <CardSearchSelect
+              value={tcgdex}
+              onChange={(v) => {
+                onChange("tcgdex", v);
+                if (v && !cardName) onChange("cardName", v.name);
+              }}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground">{t("condition")}</label>
-            <select
-              value={condition}
-              onChange={(e) => onChange("condition", e.target.value)}
-              className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
-            >
-              {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="cardName" className="block text-sm font-medium text-foreground">{t("cardName")}</label>
+              <input
+                id="cardName"
+                type="text"
+                value={cardName}
+                onChange={(e) => onChange("cardName", e.target.value)}
+                className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground">{t("condition")}</label>
+              <select
+                value={condition}
+                onChange={(e) => onChange("condition", e.target.value)}
+                className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+              >
+                {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
           </div>
         </div>
       )}
