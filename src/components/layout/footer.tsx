@@ -88,10 +88,31 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Settings: theme + language */}
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <LanguageSwitcher />
+          {/* Settings: Finn & Sage + caption + theme/language toggles, all anchored bottom-right */}
+          <div className="flex flex-col items-end justify-end gap-2">
+            {/* Finn & Sage — decorative, desktop only, stuck upward so it peeks over the footer top edge */}
+            <div className="pointer-events-none hidden lg:block lg:-mt-24" aria-hidden="true">
+              <Image
+                src="/images/mascotte/Footer/footer.png"
+                alt=""
+                width={280}
+                height={348}
+                sizes="280px"
+                className="drop-shadow-xl"
+                style={{ width: 280, height: 348, maxWidth: "none" }}
+                priority={false}
+              />
+              <p
+                className="-mt-6 text-center text-xs font-medium italic text-muted-foreground"
+                style={{ width: 280 }}
+              >
+                {t("mascotCaption")}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              <LanguageSwitcher />
+            </div>
           </div>
         </div>
 

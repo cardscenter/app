@@ -871,7 +871,8 @@
     "legal": "Juridisch",
     "privacyPolicy": "Privacybeleid",
     "terms": "Algemene voorwaarden",
-    "copyright": "© {year} Cards Center. Alle rechten voorbehouden."
+    "copyright": "© {year} Cards Center. Alle rechten voorbehouden.",
+    "mascotCaption": "Duimpje van Finn & Sage \u2014 succes met je volgende vondst!"
   },
   "cart": {
     "title": "Winkelwagen",
