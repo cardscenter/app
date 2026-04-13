@@ -6,7 +6,7 @@ import { ReviewList } from "@/components/ui/review-list";
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getBannerUrl, SELLER_LEVELS } from "@/lib/seller-levels";
+import { getLevelByKey } from "@/lib/seller-levels";
 import { CosmeticBannerImage } from "@/components/customization/cosmetic-banner-image";
 import Image from "next/image";
 
@@ -100,21 +100,15 @@ export default async function SellerProfilePage({
 
       {/* Profile banner */}
       {seller?.profileBanner && (() => {
-        const isLevelBanner = SELLER_LEVELS.some((l) => l.nameKey === seller.profileBanner);
-        const bannerSrc = isLevelBanner
-          ? getBannerUrl(seller.profileBanner!)
-          : null;
+        const levelBanner = getLevelByKey(seller.profileBanner);
         return (
           <div className="relative mb-6 aspect-[21/9] w-full overflow-hidden rounded-2xl">
-            {bannerSrc ? (
-              <Image
-                src={bannerSrc}
-                alt="Profile banner"
-                fill
-                className="object-cover"
-                sizes="(max-width: 1280px) 100vw, 1280px"
-                priority
-              />
+            {levelBanner ? (
+              <div className={`size-full bg-gradient-to-br ${levelBanner.gradient}`}>
+                <div className="flex size-full items-center justify-center text-6xl opacity-30 select-none">
+                  {levelBanner.icon}
+                </div>
+              </div>
             ) : (
               <CosmeticBannerImage bannerKey={seller.profileBanner!} />
             )}

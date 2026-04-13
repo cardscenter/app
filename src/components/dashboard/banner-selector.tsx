@@ -3,10 +3,9 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { SELLER_LEVELS, getBannerUrl } from "@/lib/seller-levels";
+import { SELLER_LEVELS } from "@/lib/seller-levels";
 import { updateProfileBanner } from "@/actions/profile";
 import { Lock, Check, X } from "lucide-react";
-import Image from "next/image";
 
 type Props = {
   currentBanner: string | null;
@@ -61,14 +60,10 @@ export function BannerSelector({ currentBanner, currentLevelIndex }: Props) {
                     : "border-border hover:border-foreground/30"
               }`}
             >
-              <div className="relative aspect-[21/9] w-full">
-                <Image
-                  src={getBannerUrl(level.nameKey)}
-                  alt={level.name}
-                  fill
-                  className={`object-cover ${isLocked ? "grayscale blur-[1px]" : ""}`}
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                />
+              <div className={`relative aspect-[21/9] w-full bg-gradient-to-br ${level.gradient} ${isLocked ? "grayscale opacity-60" : ""}`}>
+                <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-40 select-none">
+                  {level.icon}
+                </div>
 
                 {/* Lock overlay */}
                 {isLocked && (

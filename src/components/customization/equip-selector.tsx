@@ -12,7 +12,7 @@ type LevelBanner = {
   key: string;
   name: string;
   icon: string;
-  bannerUrl: string;
+  gradient: string;
   minXP: number;
   isUnlocked: boolean;
 };
@@ -176,8 +176,8 @@ export function EquipSelector({
                         !banner.isUnlocked && "cursor-not-allowed opacity-60"
                       )}
                     >
-                      <div className="aspect-[21/9] bg-muted">
-                        <img src={banner.bannerUrl} alt={banner.name} className="size-full object-cover" />
+                      <div className={cn("aspect-[21/9] bg-gradient-to-br flex items-center justify-center", banner.gradient)}>
+                        <span className="text-3xl opacity-40 select-none">{banner.icon}</span>
                       </div>
                       {!banner.isUnlocked && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40">

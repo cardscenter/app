@@ -1023,24 +1023,37 @@ model ActivityLog {
   @@index([userId, action, createdAt])
 }
 
-// Catalog of achievements (source of truth in src/lib/achievements.ts;
-// DB mirror exists so UserAchievement can FK to it and progress is queryable).
+// Tiered achievements (CoD-style progression). Each Achievement is one trackable
+// metric (e.g. "days-online", "purchases-completed") with 1..N tiers.
+// Source of truth in src/lib/achievements.ts; DB mirrors so progress/unlocks
+// can be queried and FK'd from UserAchievement.
 model Achievement {
-  id                String   @id @default(cuid())
-  key               String   @unique   // e.g. "archive-account-90d"
-  name              String
-  description       String
-  category          String              // ARCHIVE | VAULT | TRADER | SOCIAL | FOUNDER | MILESTONE
-  threshold         Int      @default(1) // target count or amount
-  rewardEmber       Int?
-  rewardXP          Int?
-  rewardCosmeticKey String?             // optional CosmeticItem.key granted on unlock
-  sortOrder         Int      @default(0)
-  createdAt         DateTime @default(now())
+  id          String   @id @default(cuid())
+  key         String   @unique  // e.g. "days-online"
+  name        String
+  description String
+  category    String            // ARCHIVE | VAULT | TRADER | SOCIAL | MILESTONE | FOUNDER
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
 
+  tiers             AchievementTier[]
   userAchievements  UserAchievement[]
 
   @@index([category])
+}
+
+model AchievementTier {
+  id                String      @id @default(cuid())
+  achievementKey    String
+  achievement       Achievement @relation(fields: [achievementKey], references: [key], onDelete: Cascade)
+  tier              Int         // 1..N
+  threshold         Int
+  rewardEmber       Int?
+  rewardXP          Int?
+  rewardCosmeticKey String?     // optional CosmeticItem.key granted when this tier unlocks
+
+  @@unique([achievementKey, tier])
+  @@index([achievementKey])
 }
 
 model UserAchievement {
@@ -1049,8 +1062,9 @@ model UserAchievement {
   user           User        @relation(fields: [userId], references: [id])
   achievementKey String
   achievement    Achievement @relation(fields: [achievementKey], references: [key], onDelete: Cascade)
-  progress       Int         @default(0)
-  unlockedAt     DateTime?
+  currentTier    Int         @default(0)  // 0 = not started, N = highest tier unlocked
+  progress       Int         @default(0)  // raw metric value (days, count, amount)
+  lastUnlockedAt DateTime?
 
   @@unique([userId, achievementKey])
   @@index([userId])

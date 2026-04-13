@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { EquipSelector } from "@/components/customization/equip-selector";
-import { SELLER_LEVELS, calculateXP, getBannerUrl } from "@/lib/seller-levels";
+import { SELLER_LEVELS } from "@/lib/seller-levels";
 
 export default async function EquipPage() {
   const t = await getTranslations("customization");
@@ -52,7 +52,7 @@ export default async function EquipPage() {
     key: level.nameKey,
     name: level.name,
     icon: level.icon,
-    bannerUrl: getBannerUrl(level.nameKey),
+    gradient: level.gradient,
     minXP: level.minXP,
     isUnlocked: currentXP >= level.minXP,
   }));

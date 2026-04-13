@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 // ============================================================
-// ACHIEVEMENT DEFINITIONS (source of truth — DB is mirrored)
+// TIERED ACHIEVEMENT DEFINITIONS (source of truth — DB is mirrored)
 // ============================================================
 
 export type AchievementCategory =
@@ -9,58 +9,186 @@ export type AchievementCategory =
   | "VAULT"     // purchase volume
   | "TRADER"    // sales activity
   | "SOCIAL"    // reviews
-  | "MILESTONE" // login streak + other one-off
+  | "MILESTONE" // login streak, one-offs
   | "FOUNDER";  // early adopter (time-bound)
+
+// Metric keys map to values computed in fetchUserStats(); used to wire each
+// achievement to the stat it tracks.
+export type MetricKey =
+  | "accountAgeDays"
+  | "loginStreak"
+  | "purchaseCount"
+  | "purchaseTotal"
+  | "saleCount"
+  | "saleTotal"
+  | "reviewsGiven"
+  | "fiveStarReceived"
+  | "isFounder";
+
+export interface TierDef {
+  tier: number;          // 1..N
+  threshold: number;
+  rewardEmber?: number;
+  rewardXP?: number;
+  rewardCosmeticKey?: string;
+}
 
 export interface AchievementDef {
   key: string;
   name: string;
   description: string;
   category: AchievementCategory;
-  threshold: number;
-  rewardEmber?: number;
-  rewardXP?: number;
-  rewardCosmeticKey?: string;
+  metric: MetricKey;
   sortOrder: number;
+  tiers: TierDef[];
 }
 
-// Cutoff: anyone registered on or before this date qualifies as Founder.
+// Anyone registered on or before this date qualifies as Founder.
 export const FOUNDER_CUTOFF_DATE = new Date("2026-06-01T00:00:00Z");
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  // ARCHIVE — longevity
-  { key: "archive-first-week",    name: "First Week",          description: "7 dagen lid van Cards Center",        category: "ARCHIVE", threshold: 7,    rewardEmber: 50,   sortOrder: 10 },
-  { key: "archive-one-month",     name: "One Month Deep",      description: "30 dagen lid",                        category: "ARCHIVE", threshold: 30,   rewardEmber: 100,  sortOrder: 11 },
-  { key: "archive-three-months",  name: "Quarterly Collector", description: "90 dagen lid",                        category: "ARCHIVE", threshold: 90,   rewardEmber: 200,  sortOrder: 12 },
-  { key: "archive-one-year",      name: "Veteran",             description: "1 jaar lid",                          category: "ARCHIVE", threshold: 365,  rewardEmber: 1000, rewardXP: 500, sortOrder: 13 },
+  // --- ARCHIVE ---
+  {
+    key: "days-online",
+    name: "Days on Cards Center",
+    description: "Totaal aantal dagen dat je account bestaat",
+    category: "ARCHIVE",
+    metric: "accountAgeDays",
+    sortOrder: 10,
+    tiers: [
+      { tier: 1, threshold: 7,   rewardEmber: 25 },
+      { tier: 2, threshold: 30,  rewardEmber: 75 },
+      { tier: 3, threshold: 90,  rewardEmber: 200 },
+      { tier: 4, threshold: 180, rewardEmber: 500,  rewardXP: 250 },
+      { tier: 5, threshold: 365, rewardEmber: 1000, rewardXP: 500 },
+    ],
+  },
 
-  // VAULT — purchases
-  { key: "vault-first-purchase",  name: "First Pull",          description: "Je eerste aankoop voltooid",          category: "VAULT",   threshold: 1,    rewardEmber: 25,   sortOrder: 20 },
-  { key: "vault-ten-purchases",   name: "Active Collector",    description: "10 aankopen voltooid",                category: "VAULT",   threshold: 10,   rewardEmber: 100,  sortOrder: 21 },
-  { key: "vault-fifty-purchases", name: "Binder Keeper",       description: "50 aankopen voltooid",                category: "VAULT",   threshold: 50,   rewardEmber: 500,  sortOrder: 22 },
-  { key: "vault-100-spent",       name: "Hundred Club",        description: "€100 besteed op het platform",        category: "VAULT",   threshold: 100,  rewardEmber: 50,   sortOrder: 23 },
-  { key: "vault-1000-spent",      name: "Grail Hunter",        description: "€1.000 besteed op het platform",      category: "VAULT",   threshold: 1000, rewardEmber: 500,  rewardXP: 250, sortOrder: 24 },
-  { key: "vault-10000-spent",     name: "Vault Master",        description: "€10.000 besteed op het platform",     category: "VAULT",   threshold: 10000,rewardEmber: 2500, rewardXP: 1000, sortOrder: 25 },
+  // --- VAULT ---
+  {
+    key: "purchases-completed",
+    name: "Purchases Completed",
+    description: "Aantal afgeronde aankopen",
+    category: "VAULT",
+    metric: "purchaseCount",
+    sortOrder: 20,
+    tiers: [
+      { tier: 1, threshold: 1,   rewardEmber: 25 },
+      { tier: 2, threshold: 10,  rewardEmber: 100 },
+      { tier: 3, threshold: 25,  rewardEmber: 250 },
+      { tier: 4, threshold: 50,  rewardEmber: 500 },
+      { tier: 5, threshold: 100, rewardEmber: 1000, rewardXP: 500 },
+    ],
+  },
+  {
+    key: "total-spent",
+    name: "Total Spent",
+    description: "Totaalbedrag aan voltooide aankopen (€)",
+    category: "VAULT",
+    metric: "purchaseTotal",
+    sortOrder: 21,
+    tiers: [
+      { tier: 1, threshold: 100,   rewardEmber: 50 },
+      { tier: 2, threshold: 500,   rewardEmber: 200 },
+      { tier: 3, threshold: 1000,  rewardEmber: 500 },
+      { tier: 4, threshold: 5000,  rewardEmber: 1500, rewardXP: 500 },
+      { tier: 5, threshold: 10000, rewardEmber: 3000, rewardXP: 1000 },
+    ],
+  },
 
-  // TRADER — sales
-  { key: "trader-first-sale",     name: "First Flip",          description: "Je eerste verkoop voltooid",          category: "TRADER",  threshold: 1,    rewardEmber: 25,   sortOrder: 30 },
-  { key: "trader-ten-sales",      name: "Shop Open",           description: "10 verkopen voltooid",                category: "TRADER",  threshold: 10,   rewardEmber: 100,  sortOrder: 31 },
-  { key: "trader-fifty-sales",    name: "Established Seller",  description: "50 verkopen voltooid",                category: "TRADER",  threshold: 50,   rewardEmber: 500,  rewardXP: 250, sortOrder: 32 },
-  { key: "trader-100-sales",      name: "Master Trader",       description: "100 verkopen voltooid",               category: "TRADER",  threshold: 100,  rewardEmber: 1000, rewardXP: 500, sortOrder: 33 },
-  { key: "trader-1000-earned",    name: "First Thousand",      description: "€1.000 verdiend aan verkopen",        category: "TRADER",  threshold: 1000, rewardEmber: 500,  sortOrder: 34 },
+  // --- TRADER ---
+  {
+    key: "sales-completed",
+    name: "Sales Completed",
+    description: "Aantal afgeronde verkopen",
+    category: "TRADER",
+    metric: "saleCount",
+    sortOrder: 30,
+    tiers: [
+      { tier: 1, threshold: 1,   rewardEmber: 25 },
+      { tier: 2, threshold: 10,  rewardEmber: 100 },
+      { tier: 3, threshold: 25,  rewardEmber: 300 },
+      { tier: 4, threshold: 50,  rewardEmber: 600, rewardXP: 250 },
+      { tier: 5, threshold: 100, rewardEmber: 1200, rewardXP: 500 },
+    ],
+  },
+  {
+    key: "total-earned",
+    name: "Total Earned",
+    description: "Totaalbedrag aan verkopen (€)",
+    category: "TRADER",
+    metric: "saleTotal",
+    sortOrder: 31,
+    tiers: [
+      { tier: 1, threshold: 100,   rewardEmber: 50 },
+      { tier: 2, threshold: 1000,  rewardEmber: 300 },
+      { tier: 3, threshold: 5000,  rewardEmber: 1000 },
+      { tier: 4, threshold: 25000, rewardEmber: 2500, rewardXP: 1000 },
+      { tier: 5, threshold: 50000, rewardEmber: 5000, rewardXP: 2000 },
+    ],
+  },
 
-  // SOCIAL — reviews
-  { key: "social-first-review",   name: "First Word",          description: "Je eerste review gegeven",            category: "SOCIAL",  threshold: 1,    rewardEmber: 15,   sortOrder: 40 },
-  { key: "social-ten-reviews",    name: "Voice of the Guild",  description: "10 reviews gegeven",                  category: "SOCIAL",  threshold: 10,   rewardEmber: 100,  sortOrder: 41 },
-  { key: "social-five-stars",     name: "Five-Star Seller",    description: "10× een 5-sterren review ontvangen",  category: "SOCIAL",  threshold: 10,   rewardEmber: 200,  rewardXP: 100, sortOrder: 42 },
+  // --- SOCIAL ---
+  {
+    key: "reviews-given",
+    name: "Reviews Given",
+    description: "Aantal reviews dat je geschreven hebt",
+    category: "SOCIAL",
+    metric: "reviewsGiven",
+    sortOrder: 40,
+    tiers: [
+      { tier: 1, threshold: 1,   rewardEmber: 15 },
+      { tier: 2, threshold: 10,  rewardEmber: 75 },
+      { tier: 3, threshold: 25,  rewardEmber: 200 },
+      { tier: 4, threshold: 50,  rewardEmber: 400 },
+      { tier: 5, threshold: 100, rewardEmber: 800, rewardXP: 250 },
+    ],
+  },
+  {
+    key: "five-stars-received",
+    name: "Five-Star Reviews Received",
+    description: "Aantal 5-sterren reviews die je hebt ontvangen",
+    category: "SOCIAL",
+    metric: "fiveStarReceived",
+    sortOrder: 41,
+    tiers: [
+      { tier: 1, threshold: 1,  rewardEmber: 25 },
+      { tier: 2, threshold: 10, rewardEmber: 150 },
+      { tier: 3, threshold: 25, rewardEmber: 400 },
+      { tier: 4, threshold: 50, rewardEmber: 800, rewardXP: 250 },
+      { tier: 5, threshold: 100,rewardEmber: 1500, rewardXP: 500 },
+    ],
+  },
 
-  // MILESTONE — login streaks
-  { key: "milestone-streak-7",    name: "Week Warrior",        description: "7 dagen op rij ingelogd",             category: "MILESTONE", threshold: 7,  rewardEmber: 50,   sortOrder: 50 },
-  { key: "milestone-streak-14",   name: "Fortnight Fighter",   description: "14 dagen op rij ingelogd",            category: "MILESTONE", threshold: 14, rewardEmber: 150,  sortOrder: 51 },
-  { key: "milestone-streak-28",   name: "Monthly Devotee",     description: "28 dagen op rij ingelogd",            category: "MILESTONE", threshold: 28, rewardEmber: 500,  rewardXP: 250, sortOrder: 52 },
+  // --- MILESTONE ---
+  {
+    key: "login-streak",
+    name: "Login Streak",
+    description: "Aaneengesloten dagen ingelogd",
+    category: "MILESTONE",
+    metric: "loginStreak",
+    sortOrder: 50,
+    tiers: [
+      { tier: 1, threshold: 3,  rewardEmber: 25 },
+      { tier: 2, threshold: 7,  rewardEmber: 75 },
+      { tier: 3, threshold: 14, rewardEmber: 200 },
+      { tier: 4, threshold: 21, rewardEmber: 350 },
+      { tier: 5, threshold: 28, rewardEmber: 750, rewardXP: 250 },
+    ],
+  },
 
-  // FOUNDER — time-bound
-  { key: "founder-member",        name: "Founder",             description: "Account aangemaakt voor de officiële launch", category: "FOUNDER", threshold: 1, rewardEmber: 500, rewardXP: 500, sortOrder: 60 },
+  // --- FOUNDER ---
+  {
+    key: "founder-member",
+    name: "Founder",
+    description: "Account aangemaakt voor de officiële launch",
+    category: "FOUNDER",
+    metric: "isFounder",
+    sortOrder: 60,
+    tiers: [
+      { tier: 1, threshold: 1, rewardEmber: 500, rewardXP: 500 },
+    ],
+  },
 ];
 
 export function getAchievementDef(key: string): AchievementDef | undefined {
@@ -68,10 +196,22 @@ export function getAchievementDef(key: string): AchievementDef | undefined {
 }
 
 // ============================================================
-// PROGRESS COMPUTATION
+// STATS COMPUTATION
 // ============================================================
 
-async function fetchUserStats(userId: string) {
+type UserStats = {
+  accountAgeDays: number;
+  loginStreak: number;
+  purchaseCount: number;
+  purchaseTotal: number;
+  saleCount: number;
+  saleTotal: number;
+  reviewsGiven: number;
+  fiveStarReceived: number;
+  isFounder: number;
+};
+
+async function fetchUserStats(userId: string): Promise<UserStats | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { createdAt: true, loginStreak: true },
@@ -135,7 +275,6 @@ async function fetchUserStats(userId: string) {
   );
 
   return {
-    createdAt: user.createdAt,
     accountAgeDays,
     loginStreak: user.loginStreak,
     purchaseCount,
@@ -144,182 +283,223 @@ async function fetchUserStats(userId: string) {
     saleTotal: Math.floor(saleTotal),
     reviewsGiven,
     fiveStarReceived,
+    isFounder: user.createdAt <= FOUNDER_CUTOFF_DATE ? 1 : 0,
   };
 }
 
-function computeProgress(
-  def: AchievementDef,
-  stats: Awaited<ReturnType<typeof fetchUserStats>>
-): number {
-  if (!stats) return 0;
-  switch (def.key) {
-    case "archive-first-week":
-    case "archive-one-month":
-    case "archive-three-months":
-    case "archive-one-year":
-      return stats.accountAgeDays;
-    case "vault-first-purchase":
-    case "vault-ten-purchases":
-    case "vault-fifty-purchases":
-      return stats.purchaseCount;
-    case "vault-100-spent":
-    case "vault-1000-spent":
-    case "vault-10000-spent":
-      return stats.purchaseTotal;
-    case "trader-first-sale":
-    case "trader-ten-sales":
-    case "trader-fifty-sales":
-    case "trader-100-sales":
-      return stats.saleCount;
-    case "trader-1000-earned":
-      return stats.saleTotal;
-    case "social-first-review":
-    case "social-ten-reviews":
-      return stats.reviewsGiven;
-    case "social-five-stars":
-      return stats.fiveStarReceived;
-    case "milestone-streak-7":
-    case "milestone-streak-14":
-    case "milestone-streak-28":
-      return stats.loginStreak;
-    case "founder-member":
-      return stats.createdAt <= FOUNDER_CUTOFF_DATE ? 1 : 0;
-    default:
-      return 0;
+function metricValue(def: AchievementDef, stats: UserStats): number {
+  return stats[def.metric];
+}
+
+function tierForProgress(def: AchievementDef, progress: number): number {
+  let reached = 0;
+  for (const t of def.tiers) {
+    if (progress >= t.threshold) reached = t.tier;
   }
+  return reached;
 }
 
 // ============================================================
 // CHECK & UNLOCK
 // ============================================================
 
-export interface UnlockResult {
+export interface TierUnlock {
   achievementKey: string;
-  name: string;
+  achievementName: string;
+  tier: number;
   rewardEmber: number;
   rewardXP: number;
   rewardCosmeticKey: string | null;
 }
 
 /**
- * Recomputes all achievement progress for a user and unlocks any that hit their
- * threshold. Returns newly unlocked achievements so callers can notify the user.
+ * Recomputes progress for all achievements and promotes the user through any
+ * newly-reached tiers. Returns every tier that unlocked during this call so
+ * callers can show a celebration.
  */
-export async function checkAchievements(userId: string): Promise<UnlockResult[]> {
+export async function checkAchievements(userId: string): Promise<TierUnlock[]> {
   const stats = await fetchUserStats(userId);
   if (!stats) return [];
 
   const existing = await prisma.userAchievement.findMany({
     where: { userId },
-    select: { achievementKey: true, unlockedAt: true },
+    select: { achievementKey: true, currentTier: true },
   });
-  const existingMap = new Map(existing.map((e) => [e.achievementKey, e]));
+  const existingMap = new Map(existing.map((e) => [e.achievementKey, e.currentTier]));
 
-  const newlyUnlocked: UnlockResult[] = [];
+  const newlyUnlocked: TierUnlock[] = [];
 
   for (const def of ACHIEVEMENTS) {
-    const progress = computeProgress(def, stats);
-    const prior = existingMap.get(def.key);
-    const alreadyUnlocked = !!prior?.unlockedAt;
-    const reachedThreshold = progress >= def.threshold;
+    const progress = metricValue(def, stats);
+    const reachedTier = tierForProgress(def, progress);
+    const priorTier = existingMap.get(def.key) ?? 0;
 
-    if (alreadyUnlocked) {
-      if (prior && progress !== undefined) {
-        await prisma.userAchievement.update({
-          where: { userId_achievementKey: { userId, achievementKey: def.key } },
-          data: { progress },
-        });
-      }
-      continue;
-    }
-
-    if (!reachedThreshold) {
+    if (reachedTier === priorTier) {
+      // No tier change — still update raw progress for display.
       await prisma.userAchievement.upsert({
         where: { userId_achievementKey: { userId, achievementKey: def.key } },
-        create: { userId, achievementKey: def.key, progress },
+        create: { userId, achievementKey: def.key, currentTier: reachedTier, progress },
         update: { progress },
       });
       continue;
     }
 
-    // Unlock: mark and grant rewards atomically.
+    // Promoted — grant rewards for every newly-crossed tier (priorTier+1 .. reachedTier).
+    const tiersToGrant = def.tiers.filter(
+      (t) => t.tier > priorTier && t.tier <= reachedTier
+    );
+
     await prisma.$transaction(async (tx) => {
       await tx.userAchievement.upsert({
         where: { userId_achievementKey: { userId, achievementKey: def.key } },
         create: {
           userId,
           achievementKey: def.key,
+          currentTier: reachedTier,
           progress,
-          unlockedAt: new Date(),
+          lastUnlockedAt: new Date(),
         },
-        update: { progress, unlockedAt: new Date() },
+        update: {
+          currentTier: reachedTier,
+          progress,
+          lastUnlockedAt: new Date(),
+        },
       });
 
-      if (def.rewardEmber && def.rewardEmber > 0) {
-        const user = await tx.user.findUnique({
-          where: { id: userId },
-          select: { emberBalance: true },
-        });
-        const before = user?.emberBalance ?? 0;
-        const after = before + def.rewardEmber;
-        await tx.user.update({
-          where: { id: userId },
-          data: { emberBalance: after },
-        });
-        await tx.emberTransaction.create({
-          data: {
-            userId,
-            amount: def.rewardEmber,
-            type: "ACTIVITY_REWARD",
-            description: `Achievement: ${def.name}`,
-            balanceBefore: before,
-            balanceAfter: after,
-          },
-        });
-      }
-
-      if (def.rewardXP && def.rewardXP > 0) {
-        await tx.user.update({
-          where: { id: userId },
-          data: { bonusXP: { increment: def.rewardXP } },
-        });
-      }
-
-      if (def.rewardCosmeticKey) {
-        const item = await tx.cosmeticItem.findUnique({
-          where: { key: def.rewardCosmeticKey },
-          select: { id: true },
-        });
-        if (item) {
-          await tx.ownedItem.upsert({
-            where: { userId_itemId: { userId, itemId: item.id } },
-            create: { userId, itemId: item.id, source: "ACHIEVEMENT" },
-            update: {},
+      for (const t of tiersToGrant) {
+        if (t.rewardEmber && t.rewardEmber > 0) {
+          const user = await tx.user.findUnique({
+            where: { id: userId },
+            select: { emberBalance: true },
           });
+          const before = user?.emberBalance ?? 0;
+          const after = before + t.rewardEmber;
+          await tx.user.update({
+            where: { id: userId },
+            data: { emberBalance: after },
+          });
+          await tx.emberTransaction.create({
+            data: {
+              userId,
+              amount: t.rewardEmber,
+              type: "ACTIVITY_REWARD",
+              description: `Achievement: ${def.name} — Tier ${t.tier}`,
+              balanceBefore: before,
+              balanceAfter: after,
+            },
+          });
+        }
+
+        if (t.rewardXP && t.rewardXP > 0) {
+          await tx.user.update({
+            where: { id: userId },
+            data: { bonusXP: { increment: t.rewardXP } },
+          });
+        }
+
+        if (t.rewardCosmeticKey) {
+          const item = await tx.cosmeticItem.findUnique({
+            where: { key: t.rewardCosmeticKey },
+            select: { id: true },
+          });
+          if (item) {
+            await tx.ownedItem.upsert({
+              where: { userId_itemId: { userId, itemId: item.id } },
+              create: { userId, itemId: item.id, source: "ACHIEVEMENT" },
+              update: {},
+            });
+          }
         }
       }
     });
 
-    newlyUnlocked.push({
-      achievementKey: def.key,
-      name: def.name,
-      rewardEmber: def.rewardEmber ?? 0,
-      rewardXP: def.rewardXP ?? 0,
-      rewardCosmeticKey: def.rewardCosmeticKey ?? null,
-    });
+    for (const t of tiersToGrant) {
+      newlyUnlocked.push({
+        achievementKey: def.key,
+        achievementName: def.name,
+        tier: t.tier,
+        rewardEmber: t.rewardEmber ?? 0,
+        rewardXP: t.rewardXP ?? 0,
+        rewardCosmeticKey: t.rewardCosmeticKey ?? null,
+      });
+    }
   }
 
   return newlyUnlocked;
 }
 
 // ============================================================
+// QUERY
+// ============================================================
+
+export interface AchievementWithProgress {
+  key: string;
+  name: string;
+  description: string;
+  category: AchievementCategory;
+  sortOrder: number;
+  tiers: TierDef[];
+  progress: number;        // raw metric value (capped at max threshold)
+  currentTier: number;     // 0 if none unlocked
+  maxTier: number;
+  nextTier: TierDef | null; // null if all tiers unlocked
+  nextTierProgressPercent: number; // 0-100 toward next tier (100 if maxed)
+}
+
+export async function getUserAchievements(
+  userId: string
+): Promise<AchievementWithProgress[]> {
+  const stats = await fetchUserStats(userId);
+
+  const existing = await prisma.userAchievement.findMany({
+    where: { userId },
+    select: { achievementKey: true, currentTier: true, progress: true },
+  });
+  const map = new Map(
+    existing.map((e) => [e.achievementKey, e])
+  );
+
+  return ACHIEVEMENTS.map((def): AchievementWithProgress => {
+    const record = map.get(def.key);
+    const rawProgress = stats ? metricValue(def, stats) : record?.progress ?? 0;
+    const currentTier = tierForProgress(def, rawProgress);
+    const maxTier = def.tiers.length;
+    const maxThreshold = def.tiers[maxTier - 1].threshold;
+    const displayProgress = Math.min(rawProgress, maxThreshold);
+
+    const nextTier = def.tiers.find((t) => t.tier === currentTier + 1) ?? null;
+
+    let nextTierProgressPercent = 100;
+    if (nextTier) {
+      const prevThreshold =
+        currentTier === 0 ? 0 : def.tiers[currentTier - 1].threshold;
+      const range = nextTier.threshold - prevThreshold;
+      const within = rawProgress - prevThreshold;
+      nextTierProgressPercent = range > 0
+        ? Math.max(0, Math.min(100, Math.round((within / range) * 100)))
+        : 100;
+    }
+
+    return {
+      key: def.key,
+      name: def.name,
+      description: def.description,
+      category: def.category,
+      sortOrder: def.sortOrder,
+      tiers: def.tiers,
+      progress: displayProgress,
+      currentTier,
+      maxTier,
+      nextTier,
+      nextTierProgressPercent,
+    };
+  });
+}
+
+// ============================================================
 // SEEDING (mirror code definitions to DB)
 // ============================================================
 
-/**
- * Upserts all code-defined achievements into the Achievement table.
- * Call at startup or from a seed script.
- */
 export async function syncAchievementCatalog() {
   for (const def of ACHIEVEMENTS) {
     await prisma.achievement.upsert({
@@ -329,46 +509,31 @@ export async function syncAchievementCatalog() {
         name: def.name,
         description: def.description,
         category: def.category,
-        threshold: def.threshold,
-        rewardEmber: def.rewardEmber ?? null,
-        rewardXP: def.rewardXP ?? null,
-        rewardCosmeticKey: def.rewardCosmeticKey ?? null,
         sortOrder: def.sortOrder,
       },
       update: {
         name: def.name,
         description: def.description,
         category: def.category,
-        threshold: def.threshold,
-        rewardEmber: def.rewardEmber ?? null,
-        rewardXP: def.rewardXP ?? null,
-        rewardCosmeticKey: def.rewardCosmeticKey ?? null,
         sortOrder: def.sortOrder,
       },
     });
+
+    // Replace tiers for this achievement.
+    await prisma.achievementTier.deleteMany({
+      where: { achievementKey: def.key },
+    });
+    for (const t of def.tiers) {
+      await prisma.achievementTier.create({
+        data: {
+          achievementKey: def.key,
+          tier: t.tier,
+          threshold: t.threshold,
+          rewardEmber: t.rewardEmber ?? null,
+          rewardXP: t.rewardXP ?? null,
+          rewardCosmeticKey: t.rewardCosmeticKey ?? null,
+        },
+      });
+    }
   }
-}
-
-// ============================================================
-// QUERY
-// ============================================================
-
-export async function getUserAchievements(userId: string) {
-  const stats = await fetchUserStats(userId);
-  const existing = await prisma.userAchievement.findMany({
-    where: { userId },
-    select: { achievementKey: true, progress: true, unlockedAt: true },
-  });
-  const map = new Map(existing.map((e) => [e.achievementKey, e]));
-
-  return ACHIEVEMENTS.map((def) => {
-    const record = map.get(def.key);
-    const progress = stats ? computeProgress(def, stats) : record?.progress ?? 0;
-    return {
-      ...def,
-      progress: Math.min(progress, def.threshold),
-      unlocked: !!record?.unlockedAt,
-      unlockedAt: record?.unlockedAt ?? null,
-    };
-  });
 }
