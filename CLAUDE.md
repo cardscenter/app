@@ -53,7 +53,10 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 - **Anti-snipe** — bids in last 2 min → +2 min extension
 - **Bid increments** — per price tier (`src/lib/auction/bid-increments.ts`)
 - **Account tiers** — FREE / PRO / UNLIMITED (config in `src/lib/subscription-tiers.ts`). ADMIN is a role, not a tier — maps to UNLIMITED perks. Limits: auctions, claimsales, listings, items/claimsale. Commission deducted at escrow release. Subscription model tracks billing history.
-- **Seller levels** — 14-tier Pokémon-themed progression system (`src/lib/seller-levels.ts`). XP earned via: 1 XP/day account age, 1 XP/€ sold, 1 XP/€ bought, 20 XP per 5-star review received, 5 XP per review given, 10 XP per completed transaction. Tiers: Beginner(0)→Rookie(100)→Scout(300)→Trainer(750)→Challenger(1.5k)→Rival(3k)→Veteran(5k)→Gym Leader(8k)→Elite(12k)→Expert(17k)→Master(23k)→Grandmaster(32k)→Legend(50k)→Champion(100k XP). Data fetching sums revenue amounts, not counts.
+- **Seller levels** — 14-tier brand-neutral collector progression (`src/lib/seller-levels.ts`). XP earned via: 1 XP/day account age, 1 XP/€ sold, 1 XP/€ bought, 20 XP per 5-star review received, 5 XP per review given, 10 XP per completed transaction. Tiers: Beginner(0)→Rookie(100)→Scout(300)→Collector(750)→Hunter(1.5k)→Trader(3k)→Veteran(5k)→Curator(8k)→Elite(12k)→Appraiser(17k)→Master(23k)→Grandmaster(32k)→Legend(50k)→Champion(100k XP). `nameKey` field stays stable across renames so existing `User.profileBanner` references keep working. Banner image assets removed; level banners now render as branded gradients with the level icon. Data fetching sums revenue amounts, not counts.
+- **Customization & Ember** — Earn-only currency (`User.emberBalance`); paid Ember purchases removed (gambling-risk pivot). Earn paths: completed purchase/sale (15), review given (10), review received (5), bid (3), listing (5), daily login (10–500 via `LOGIN_STREAK_REWARDS`). Daily caps per tier in `MAX_DAILY_EMBER_BY_TIER`. `EmberTransaction` logs every flow. Cosmetic items (`CosmeticItem`) live in named **Chapters** (`CosmeticBundle`); rarity display labels are TCG slang (Pull/Hit/Chase/Grail/One-of-One/Rainbow) but DB keys stay UNCOMMON–SHINY. Equipped via `User.profileBanner/profileEmblem/profileBackground` keys.
+- **Achievements (tiered, CoD-style)** — `Achievement` (parent) + `AchievementTier` (1..N tiers per achievement). Engine in `src/lib/achievements.ts` defines 9 achievements (days-online, purchases-completed, total-spent, sales-completed, total-earned, reviews-given, five-stars-received, login-streak, founder-member) with up to 5 tiers each. `checkAchievements(userId)` recomputes raw progress and grants rewards (Ember + XP + optional cosmetic) for **every** newly-crossed tier in one transaction — handles back-fills cleanly. Triggered on purchase complete, sale complete (auto-confirm too), review submit, login-streak claim. Per-user state in `UserAchievement` (currentTier, acknowledgedTier, progress). Unshown unlocks (currentTier > acknowledgedTier) surface as Trophy-styled `sonner` toasts via `<AchievementUnlockListener>` in the locale layout — fires on mount + after each navigation. Catalog seeded via `prisma/seed-achievements.ts`.
+- **Mascots** — Finn (red fox) and Sage (raccoon) live in `public/images/mascotte/`. `main/` holds canonical references (NOT used in UI directly). `Footer/footer.png` is the only production-active asset right now (rendered bottom-right of the desktop footer with a brand caption). Future poses + cosmetic-art will be added as transparent assets later.
 - **Disputes** — buyer opens on SHIPPED bundle (10–30 days after shipment); seller responds; buyer accepts/rejects; mutual proposals; escalation (both parties agree) → admin resolves. Event-sourced timeline via `DisputeEvent` model. Auto-resolve cron for unresponded disputes. Actions in `dispute.ts`, UI in `dispute-detail-content.tsx`, page in `dashboard/geschillen/[disputeId]/page.tsx`
 - **Chat proposals** — Buyer/seller can make buy/sell price proposals in chat linked to a listing. Proposal model with PENDING/ACCEPTED/REJECTED status. 40% minimum balance rule applies. Accepted proposals: mark listing SOLD, create ShippingBundle, escrow flow. `withdrawProposal()` for retracting pending offers.
 - **Buy Now price** — Optional on auctions. Removed when bids reach 75% of buy now price (not after first bid). Check in both `placeBid()` and `resolveAutoBids()`.
@@ -91,6 +94,8 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `address.ts` | Update user address |
 | `shipping-method.ts` | CRUD seller shipping methods |
 | `subscription.ts` | Upgrade/cancel/downgrade tier, subscription info |
+| `customization.ts` | Ember balance, login-streak claim, owned items, equip/unequip cosmetic slots, list active chapters/bundles |
+| `achievements.ts` | `getPendingUnlocks` + `acknowledgeAllUnlocks` for the celebration listener |
 
 ### Pages (`src/app/[locale]/`)
 | Route | Page |
@@ -120,6 +125,11 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `…/geschillen` | Disputes overview + detail |
 | `…/verificatie` | Account verification upload/status |
 | `…/abonnement` | Subscription tier management |
+| **Customization** `/customization/` | Hub: Ember balance, login streak, nav cards |
+| `…/achievements` | Tiered achievements overview, progress per category |
+| `…/packs` | Chapters overview (cosmetic collections) |
+| `…/inventory` | Owned cosmetic items grid, filter/sort |
+| `…/equip` | Equip banner / emblem / background slots |
 
 ### Components (`src/components/`)
 | Folder | Key files |
@@ -131,7 +141,8 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `checkout/` | `shipping-method-picker` |
 | `message/` | `chat-layout`, `conversation-list`, `message-thread`, `contact-seller-button`, `chat-actions`, `proposal-button`, `proposal-message` |
 | `search/` | `search-bar`, `search-filters`, `search-result-card`, `search-sort-bar` |
-| `dashboard/` | `dashboard-nav`, `dashboard-stats`, `dashboard-stats-locked`, `profile-form`, `address-form`, `purchases-content`, `sales-content`, `shipping-methods-manager`, `shipping-method-form`, `ship-bundle-form`, `buyer-shipping-info`, `disputes-overview`, `dispute-detail-content`, `open-dispute-form`, `admin-disputes-list`, `balance-summary`, `deposit-methods`, `pending-auction-payments`, `verification-form`, `admin-verification-list` |
+| `dashboard/` | `dashboard-nav`, `dashboard-stats`, `dashboard-stats-locked`, `profile-form`, `address-form`, `purchases-content`, `sales-content`, `shipping-methods-manager`, `shipping-method-form`, `ship-bundle-form`, `buyer-shipping-info`, `disputes-overview`, `dispute-detail-content`, `open-dispute-form`, `admin-disputes-list`, `balance-summary`, `deposit-methods`, `pending-auction-payments`, `verification-form`, `admin-verification-list`, `banner-selector` |
+| `customization/` | `ember-balance`, `ember-icon`, `login-streak`, `equip-selector`, `rarity-badge`, `cosmetic-banner-image`, `achievement-unlock-listener` |
 | `home/` | `hero-email-form`, `pricing-section` |
 | `layout/` | `header`, `footer`, `language-switcher`, `user-balance` |
 | `ui/` | `button`, `card`, `cart-icon`, `chart`, `checkbox`, `input`, `select`, `slider`, `label`, `switch`, `image-gallery`, `image-uploader`, `rich-text-editor`, `item-carousel`, `breadcrumbs`, `social-share`, `notification-bell`, `notification-list`, `pagination`, `review-form`, `review-list`, `seller-level-badge`, `seller-reputation-card`, `seller-info-block`, `username-history-tooltip`, `shipping-method-selector`, `star-rating`, `watchlist-button`, `verified-badge` |
@@ -156,16 +167,18 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `auction/autobid.ts` | Autobid resolution (with 40% reserve on each bid step) |
 | `shipping/countries.ts` | EU country list (code, name NL, name EN) |
 | `shipping/carriers.ts` | Carrier suggestions per country |
-| `validations/` | Zod schemas: `auth`, `auction`, `listing`, `address`, `shipping-method`, `cart` |
+| `validations/` | Zod schemas: `auth`, `auction`, `listing`, `address`, `shipping-method`, `cart`, `customization` |
+| `cosmetic-config.ts` | Rarity table (display labels = TCG slang, schema keys stable), activity rewards, login-streak rewards |
+| `achievements.ts` | Tiered achievement definitions, `checkAchievements`, `getUserAchievements`, `getPendingUnlocks`, `acknowledgeAllUnlocks`, `syncAchievementCatalog` |
 
 ### Database (`prisma/schema.prisma`)
-User, Category, Series, CardSet, Auction, AuctionBid, AuctionShippingMethod, AuctionUpsell, Claimsale, ClaimsaleItem, ClaimsaleShippingMethod, Listing, ListingShippingMethod, ListingUpsell, SellerShippingMethod, ShippingBundle, Transaction, Subscription, Conversation, ConversationParticipant, Message, Proposal, Watchlist, Notification, Review, AppConfig, AutoBid, CartItem, Dispute, DisputeEvent, UsernameHistory, VerificationRequest
+User, Category, Series, CardSet, Auction, AuctionBid, AuctionShippingMethod, AuctionUpsell, Claimsale, ClaimsaleItem, ClaimsaleShippingMethod, Listing, ListingShippingMethod, ListingUpsell, SellerShippingMethod, ShippingBundle, Transaction, Subscription, Conversation, ConversationParticipant, Message, Proposal, Watchlist, Notification, Review, AppConfig, AutoBid, CartItem, Dispute, DisputeEvent, UsernameHistory, VerificationRequest, CosmeticBundle, CosmeticItem, OwnedItem, EmberTransaction, ActivityLog, Achievement, AchievementTier, UserAchievement
 
 ### i18n (`src/i18n/`)
 `routing.ts` (locales: nl default, en) · `request.ts` (translations per request) · `navigation.ts` (i18n Link/redirect) · Middleware: `src/middleware.ts`
 
 ### i18n Namespaces (`src/messages/`)
-`common`, `auth`, `home`, `auction`, `claimsale`, `wallet`, `dashboard`, `profile`, `chat`, `proposal`, `listing`, `watchlist`, `notifications`, `bids`, `search`, `reputation`, `carousel`, `breadcrumbs`, `seller`, `cart`, `shipping`, `sellerClaims`, `subscription`, `verification`, `sales`, `purchases`, `disputes`
+`common`, `auth`, `home`, `auction`, `claimsale`, `wallet`, `dashboard`, `profile`, `chat`, `proposal`, `listing`, `watchlist`, `notifications`, `bids`, `search`, `reputation`, `carousel`, `breadcrumbs`, `seller`, `cart`, `shipping`, `sellerClaims`, `subscription`, `verification`, `sales`, `purchases`, `disputes`, `customization`, `footer`
 
 ### API Routes (`src/app/api/`)
 | Route | Purpose |
@@ -188,8 +201,7 @@ User, Category, Series, CardSet, Auction, AuctionBid, AuctionShippingMethod, Auc
 | Fase | Onderwerp |
 |------|-----------|
 | 13 | Premium statistieken |
-| 14 | Verzendmogelijkheden verbeteren |
-| 15 | Admin panel |
+| 15 | Admin panel (gecentraliseerd dashboard voor users/disputes/verificaties/payouts) |
 | 16 | Email notificaties |
 | 17 | Betaalmethoden (iDEAL/Stripe) |
 | 18 | Veiling eindetijden pagina |
@@ -197,8 +209,10 @@ User, Category, Series, CardSet, Auction, AuctionBid, AuctionShippingMethod, Auc
 | 20 | Geavanceerd zoeken & filters |
 | 21 | Mobile responsive polish |
 | 22 | SEO & meta tags |
+| 23 | Customization Chapter 1 — eigen cosmetic-art (banners/emblems/backgrounds) seeden + via `rewardCosmeticKey` koppelen aan achievement-tiers |
+| 24 | Mascotte-uitbreiding — Finn & Sage poses transparant maken en integreren in empty-states, 404-page, achievement-celebration-toast, profile-page |
 
-Fases 0–11, 14 (3-tier abonnementssysteem) zijn afgerond. Update deze tabel na elke afgeronde fase.
+Fases 0–12, 14 (3-tier abonnementssysteem) en de customization/achievement/IP-cleanup pivot zijn afgerond. Update deze tabel na elke afgeronde fase.
 
 ## Workflow
 - Na elke grote verandering: herstart de dev server (`npm run dev`) en controleer of alles correct werkt voordat je verdergaat.
