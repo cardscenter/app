@@ -58,7 +58,11 @@ async function main() {
   let createdSets = 0;
   let updatedSets = 0;
 
+  // Series we never want (different product, not the TCG we track).
+  const EXCLUDED_SERIES = new Set(["tcgp"]); // Pokémon TCG Pocket (mobile game)
+
   for (const seriesBrief of seriesList) {
+    if (EXCLUDED_SERIES.has(seriesBrief.id)) continue;
     // Fetch series detail (includes sets array)
     const seriesFull = await fetchJson<TCGdexSeriesFull>(
       `/series/${encodeURIComponent(seriesBrief.id)}`
@@ -116,7 +120,7 @@ async function main() {
           where: { id: existing.id },
           data: {
             name: set.name,
-            logoUrl: set.logo ?? null,
+            logoUrl: set.logo ? `${set.logo}.webp` : null,
             symbolUrl: set.symbol ?? null,
             releaseDate: set.releaseDate ?? null,
             cardCount: set.cardCount.official ?? null,
@@ -138,7 +142,7 @@ async function main() {
             where: { id: legacySet.id },
             data: {
               tcgdexSetId: set.id,
-              logoUrl: set.logo ?? null,
+              logoUrl: set.logo ? `${set.logo}.webp` : null,
               symbolUrl: set.symbol ?? null,
               releaseDate: set.releaseDate ?? null,
               cardCount: set.cardCount.official ?? null,
@@ -150,7 +154,7 @@ async function main() {
             data: {
               name: set.name,
               tcgdexSetId: set.id,
-              logoUrl: set.logo ?? null,
+              logoUrl: set.logo ? `${set.logo}.webp` : null,
               symbolUrl: set.symbol ?? null,
               releaseDate: set.releaseDate ?? null,
               cardCount: set.cardCount.official ?? null,

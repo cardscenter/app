@@ -206,6 +206,7 @@ model Card {
   illustrator     String?
   variants        String?                    // JSON: {firstEdition, holo, normal, reverse, wPromo}
   imageUrl        String?                    // TCGdex base URL (append /high.webp at render time)
+  imageUrlFull    String?                    // Full image URL from a fallback source (pokemontcg.io) — used when TCGdex has no image
 
   // Cached CardMarket EUR pricing snapshot — refreshed by sync-cron
   priceAvg        Float?
@@ -223,11 +224,28 @@ model Card {
   updatedAt       DateTime @updatedAt
 
   watchlistEntries CardWatchlist[]
+  priceHistory    CardPriceHistory[]
 
   @@index([cardSetId])
   @@index([name])
   @@index([priceUpdatedAt])
   @@index([lastViewedAt])
+}
+
+// Per-day price snapshot captured when the Card is enriched (via page view
+// or cron). One row per (card, day). Enables real 30-day trend charts.
+model CardPriceHistory {
+  id           String   @id @default(cuid())
+  cardId       String
+  card         Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  date         DateTime                 // UTC midnight of the day
+  priceNormal  Float?                   // CardMarket "avg" (normal printing)
+  priceReverse Float?                   // CardMarket "avg-holo" (reverse-holo / holo variant)
+  createdAt    DateTime @default(now())
+
+  @@unique([cardId, date])
+  @@index([cardId])
+  @@index([date])
 }
 
 model CardWatchlist {

@@ -10,6 +10,11 @@ export interface CardSearchSuggestion {
   name: string;
   localId: string;       // card-number within set, e.g. "4"
   thumbnailUrl: string | null;
+  setName?: string | null;
+  setId?: string | null;
+  releaseDate?: string | null;
+  rarity?: string | null;
+  variants?: string[];
 }
 
 export interface CardPricingSnapshot {
@@ -24,12 +29,6 @@ export interface CardPricingSnapshot {
 export interface CardSearchSelectValue extends CardSearchSuggestion {
   /** Full image URL (high quality) — only filled after detail fetch on select. */
   imageUrl?: string | null;
-  /** Set name from detail fetch. */
-  setName?: string | null;
-  /** Set id from detail fetch. */
-  setId?: string | null;
-  /** Card rarity from detail fetch. */
-  rarity?: string | null;
   /** CardMarket EUR pricing — only filled after detail fetch on select. */
   pricing?: CardPricingSnapshot | null;
 }
@@ -45,14 +44,23 @@ interface Props {
 const DEBOUNCE_MS = 300;
 const MIN_QUERY = 2;
 
+const VARIANT_LABEL: Record<string, string> = {
+  normal: "Normal",
+  holo: "Holo",
+  reverse: "Reverse",
+  firstEdition: "1st Ed.",
+  wPromo: "W Promo",
+};
+
 /**
- * Typeahead card picker backed by the TCGdex proxy route.
- * On select, fetches full card detail to populate setName/imageUrl/rarity.
+ * Typeahead card picker — searches our local Card table (via the /api/tcgdex/search
+ * proxy). On select, fetches full TCGdex detail to add the high-res image and
+ * live pricing snapshot.
  */
 export function CardSearchSelect({
   value,
   onChange,
-  placeholder = "Zoek een kaart (bv. Charizard)…",
+  placeholder = "Zoek een kaart (bv. \"Charizard\" of \"Weedle Vivid Voltage\")…",
   disabled,
   className,
 }: Props) {
@@ -81,15 +89,13 @@ export function CardSearchSelect({
       setError(null);
       try {
         const res = await fetch(
-          `/api/tcgdex/search?q=${encodeURIComponent(query.trim())}&limit=20`,
+          `/api/tcgdex/search?q=${encodeURIComponent(query.trim())}&limit=24`,
           { signal: controller.signal }
         );
         if (!res.ok) {
-          if (res.status === 401) {
-            setError("Je moet ingelogd zijn om kaarten te zoeken.");
-          } else {
-            setError("Zoekopdracht mislukt.");
-          }
+          setError(res.status === 401
+            ? "Je moet ingelogd zijn om kaarten te zoeken."
+            : "Zoekopdracht mislukt.");
           setResults([]);
           setOpen(true);
           return;
@@ -123,10 +129,8 @@ export function CardSearchSelect({
     setOpen(false);
     setQuery("");
     setResults([]);
-    // Optimistic value with what we know — caller can render immediately
     onChange(suggestion);
 
-    // Fetch detail for setName + high-res image + rarity
     try {
       const res = await fetch(`/api/tcgdex/card/${encodeURIComponent(suggestion.id)}`);
       if (!res.ok) return;
@@ -134,9 +138,9 @@ export function CardSearchSelect({
       onChange({
         ...suggestion,
         imageUrl: detail.imageUrl ?? null,
-        setName: detail.set?.name ?? null,
-        setId: detail.set?.id ?? null,
-        rarity: detail.rarity ?? null,
+        setName: detail.set?.name ?? suggestion.setName ?? null,
+        setId: detail.set?.id ?? suggestion.setId ?? null,
+        rarity: detail.rarity ?? suggestion.rarity ?? null,
         pricing: detail.pricing ?? null,
       });
     } catch {
@@ -151,7 +155,7 @@ export function CardSearchSelect({
     setOpen(false);
   }
 
-  // Selected state: show compact card preview with clear button
+  // Selected state
   if (value) {
     return (
       <div className={cn("flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-2.5", className)}>
@@ -211,42 +215,67 @@ export function CardSearchSelect({
       </div>
 
       {open && (
-        <div className="absolute z-50 mt-1 max-h-80 w-full overflow-y-auto rounded-xl border border-border bg-popover shadow-lg">
+        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-lg sm:w-[min(640px,calc(100vw-2rem))]">
           {error && (
             <p className="p-3 text-sm text-red-500">{error}</p>
           )}
           {!error && results.length === 0 && !loading && query.trim().length >= MIN_QUERY && (
-            <p className="p-3 text-sm text-muted-foreground">Geen kaarten gevonden voor &quot;{query}&quot;.</p>
+            <p className="p-3 text-sm text-muted-foreground">
+              Geen kaarten gevonden voor &quot;{query}&quot;.
+            </p>
           )}
-          {!error && results.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => handleSelect(r)}
-              className="flex w-full items-center gap-3 border-b border-border/40 p-2 text-left transition-colors last:border-b-0 hover:bg-muted/60"
-            >
-              {r.thumbnailUrl ? (
-                <Image
-                  src={r.thumbnailUrl}
-                  alt={r.name}
-                  width={36}
-                  height={50}
-                  className="rounded object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-[50px] w-[36px] shrink-0 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
-                  -
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{r.name}</p>
-                <p className="text-[11px] text-muted-foreground truncate">
-                  {r.id} · #{r.localId}
-                </p>
-              </div>
-            </button>
-          ))}
+          {!error && results.length > 0 && (
+            // Mobile: vertical list. sm+: 2-col grid, lg+: 3-col grid.
+            <div className="grid max-h-[70vh] grid-cols-1 gap-1 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3">
+              {results.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => handleSelect(r)}
+                  className="flex items-start gap-2 rounded-lg p-2 text-left transition-colors hover:bg-muted/60"
+                >
+                  {r.thumbnailUrl ? (
+                    <Image
+                      src={r.thumbnailUrl}
+                      alt={r.name}
+                      width={44}
+                      height={62}
+                      className="shrink-0 rounded object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-[62px] w-[44px] shrink-0 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+                      -
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {r.name}
+                      <span className="ml-1 font-normal text-muted-foreground">#{r.localId}</span>
+                    </p>
+                    {r.setName && (
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {r.setName}
+                        {r.releaseDate && ` · ${r.releaseDate.slice(0, 4)}`}
+                      </p>
+                    )}
+                    <div className="mt-0.5 flex flex-wrap gap-1">
+                      {r.rarity && (
+                        <span className="rounded bg-muted/70 px-1.5 py-0.5 text-[9px] text-muted-foreground">
+                          {r.rarity}
+                        </span>
+                      )}
+                      {r.variants?.slice(0, 3).map((v) => (
+                        <span key={v} className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">
+                          {VARIANT_LABEL[v] ?? v}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

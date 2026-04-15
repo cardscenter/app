@@ -141,9 +141,9 @@ export default async function AuctionDetailPage({
             </div>
           )}
 
-          {/* CardMarket marktwaarde */}
+          {/* Marktwaarde */}
           {pricing && pricing.avg !== null && (
-            <PricingInfoBlock pricing={pricing} variant="full" label="CardMarket marktwaarde" />
+            <PricingInfoBlock pricing={pricing} variant="full" label="Marktwaarde" />
           )}
 
           {auction.description && (

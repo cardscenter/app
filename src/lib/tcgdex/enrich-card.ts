@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCard } from "./client";
+import { getMergedPricing } from "./pricing";
 
 /**
  * Ensures a Card row has full metadata + a recent pricing snapshot.
@@ -31,7 +32,15 @@ export async function enrichCard(
   const tcgCard = await getCard(cardId);
   if (!tcgCard) return existing;
 
-  const cardmarket = tcgCard.pricing?.cardmarket ?? null;
+  // Pricing goes through the merged helper: TCGdex first, pokemontcg.io
+  // fallback for cards TCGdex doesn't mirror.
+  const pricing = await getMergedPricing(cardId);
+
+  // Snapshot today's prices into CardPriceHistory for long-term trend charts.
+  // Idempotent per day via the unique (cardId, date) constraint.
+  if (pricing && (pricing.avg !== null || pricing["avg-holo"] !== null)) {
+    await snapshotPrice(cardId, pricing.avg ?? null, pricing["avg-holo"] ?? null);
+  }
 
   return prisma.card.update({
     where: { id: cardId },
@@ -41,12 +50,32 @@ export async function enrichCard(
       types: tcgCard.types ? JSON.stringify(tcgCard.types) : existing.types,
       illustrator: tcgCard.illustrator ?? existing.illustrator,
       variants: tcgCard.variants ? JSON.stringify(tcgCard.variants) : existing.variants,
-      priceAvg: cardmarket?.avg ?? null,
-      priceLow: cardmarket?.low ?? null,
-      priceTrend: cardmarket?.trend ?? null,
-      priceAvg7: cardmarket?.avg7 ?? null,
-      priceAvg30: cardmarket?.avg30 ?? null,
-      priceUpdatedAt: cardmarket ? new Date(cardmarket.updated) : new Date(),
+      priceAvg: pricing?.avg ?? null,
+      priceLow: pricing?.low ?? null,
+      priceTrend: pricing?.trend ?? null,
+      priceAvg7: pricing?.avg7 ?? null,
+      priceAvg30: pricing?.avg30 ?? null,
+      priceUpdatedAt: pricing ? new Date(pricing.updated) : new Date(),
     },
+  });
+}
+
+function todayUtcMidnight(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+/** Upsert today's price snapshot. Safe to call repeatedly — the unique
+ * (cardId, date) constraint makes it idempotent within a day. */
+export async function snapshotPrice(
+  cardId: string,
+  priceNormal: number | null,
+  priceReverse: number | null
+) {
+  const date = todayUtcMidnight();
+  await prisma.cardPriceHistory.upsert({
+    where: { cardId_date: { cardId, date } },
+    create: { cardId, date, priceNormal, priceReverse },
+    update: { priceNormal, priceReverse },
   });
 }

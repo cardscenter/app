@@ -15,7 +15,7 @@ interface Props {
   /** "compact" hides the meta line; "full" shows updated date + breakdown. */
   variant?: "compact" | "full";
   className?: string;
-  /** Optional label override (default: "CardMarket"). */
+  /** Optional label override (default: "Marktwaarde"). */
   label?: string;
 }
 
@@ -32,7 +32,7 @@ function trendDelta(current: number | null, previous: number | null): { pct: num
   return { pct: 0, dir: "flat" };
 }
 
-export function PricingInfoBlock({ pricing, variant = "compact", className, label = "CardMarket" }: Props) {
+export function PricingInfoBlock({ pricing, variant = "compact", className, label = "Marktwaarde" }: Props) {
   if (!pricing || pricing.avg === null) {
     return null;
   }

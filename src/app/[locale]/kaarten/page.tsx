@@ -14,16 +14,17 @@ export const metadata: Metadata = {
 export const revalidate = 3600; // re-render hourly
 
 export default async function CardsOverviewPage() {
-  // Only series that actually have cards in our local DB
+  // Only series that actually have cards in our local DB.
+  // "tcgp" = Pokémon TCG Pocket (mobile game) — different product, excluded.
   const series = await prisma.series.findMany({
     where: {
-      tcgdexSeriesId: { not: null },
+      tcgdexSeriesId: { not: null, notIn: ["tcgp"] },
       cardSets: { some: { cards: { some: {} } } },
     },
     include: {
       cardSets: {
         where: { cards: { some: {} } },
-        orderBy: [{ releaseDate: "desc" }, { name: "asc" }],
+        orderBy: [{ releaseDate: { sort: "desc", nulls: "last" } }, { name: "asc" }],
         select: {
           id: true,
           name: true,
@@ -36,12 +37,16 @@ export default async function CardsOverviewPage() {
     },
   });
 
-  // Sort series by their newest set's release date (most recent series first)
+  // Sort series by the max release-date across all their sets (handles nulls
+  // reliably). Most-recent series first.
   const sortedSeries = series
-    .map((s) => ({
-      ...s,
-      latestRelease: s.cardSets[0]?.releaseDate ?? "0000-00-00",
-    }))
+    .map((s) => {
+      const latest = s.cardSets.reduce<string>((max, set) => {
+        const d = set.releaseDate ?? "";
+        return d > max ? d : max;
+      }, "");
+      return { ...s, latestRelease: latest || "0000-00-00" };
+    })
     .sort((a, b) => b.latestRelease.localeCompare(a.latestRelease));
 
   return (
@@ -79,18 +84,18 @@ export default async function CardsOverviewPage() {
                   href={`/kaarten/${set.tcgdexSetId}`}
                   className="glass-subtle group flex flex-col gap-3 rounded-2xl p-4 transition-all hover:ring-2 hover:ring-primary/30"
                 >
-                  <div className="relative flex h-20 items-center justify-center rounded-xl bg-muted/40">
+                  <div className="relative flex h-32 items-center justify-center rounded-xl bg-muted/40 p-3">
                     {set.logoUrl ? (
                       <Image
-                        src={`${set.logoUrl}.webp`}
+                        src={set.logoUrl}
                         alt={set.name}
-                        width={120}
-                        height={60}
-                        className="max-h-16 w-auto object-contain"
+                        width={200}
+                        height={110}
+                        className="max-h-full w-auto object-contain"
                         unoptimized
                       />
                     ) : (
-                      <Layers className="size-6 text-muted-foreground/40" />
+                      <Layers className="size-8 text-muted-foreground/40" />
                     )}
                   </div>
                   <div className="min-w-0">

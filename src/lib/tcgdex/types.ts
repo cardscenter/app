@@ -39,8 +39,26 @@ export interface TCGdexPricing {
   tcgplayer?: unknown | null;
 }
 
+export interface TCGdexAttack {
+  cost?: string[];
+  name: string;
+  effect?: string;
+  damage?: number | string;
+}
+
+export interface TCGdexAbility {
+  type: string;
+  name: string;
+  effect: string;
+}
+
+export interface TCGdexWeakness {
+  type: string;
+  value: string;
+}
+
 export interface TCGdexCardFull extends TCGdexCardBrief {
-  category: string;
+  category: string;            // "Pokemon" | "Trainer" | "Energy"
   illustrator?: string;
   rarity?: string;
   set: {
@@ -48,6 +66,7 @@ export interface TCGdexCardFull extends TCGdexCardBrief {
     name: string;
     cardCount: { official: number; total: number };
     logo?: string;
+    releaseDate?: string;
   };
   variants?: {
     firstEdition?: boolean;
@@ -60,7 +79,17 @@ export interface TCGdexCardFull extends TCGdexCardBrief {
   hp?: number;
   types?: string[];
   evolveFrom?: string;
-  stage?: string;
+  stage?: string;               // "Basic" | "Stage1" | "Stage2" | "Mega" | ...
+  attacks?: TCGdexAttack[];
+  abilities?: TCGdexAbility[];
+  weaknesses?: TCGdexWeakness[];
+  resistances?: TCGdexWeakness[];
+  retreat?: number;
+  regulationMark?: string;      // "A".."I"
+  legal?: { standard?: boolean; expanded?: boolean };
+  trainerType?: string;         // Item | Supporter | Stadium | ...
+  energyType?: string;          // Basic | Special
+  effect?: string;              // Trainer / Energy text
   pricing?: TCGdexPricing;
   updated?: string;
 }

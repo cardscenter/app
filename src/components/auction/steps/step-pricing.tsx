@@ -34,9 +34,9 @@ export function StepPricing({
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-foreground">{t("stepPricing")}</h2>
 
-      {/* CardMarket suggested price — shows when a TCGdex card is picked */}
+      {/* Market price — shows when a TCGdex card is picked */}
       {pricing && pricing.avg !== null && (
-        <PricingInfoBlock pricing={pricing} variant="full" label="CardMarket-prijs (richtprijs)" />
+        <PricingInfoBlock pricing={pricing} variant="full" label="Marktwaarde (richtprijs)" />
       )}
 
       {/* Starting bid */}

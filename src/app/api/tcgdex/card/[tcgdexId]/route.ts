@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildCardImageUrl, getCard } from "@/lib/tcgdex/client";
+import { getCardImageUrl } from "@/lib/tcgdex/card-image";
+import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
 export async function GET(
@@ -32,8 +34,24 @@ export async function GET(
       illustrator: card.illustrator ?? null,
       variants: card.variants ?? null,
       set: card.set,
-      imageUrl: buildCardImageUrl(card.image, "high", "webp"),
-      thumbnailUrl: buildCardImageUrl(card.image, "low", "webp"),
+      imageUrl: await (async () => {
+        const tcgImg = buildCardImageUrl(card.image, "high", "webp");
+        if (tcgImg) return tcgImg;
+        const local = await prisma.card.findUnique({
+          where: { id: card.id },
+          select: { imageUrl: true, imageUrlFull: true },
+        });
+        return local ? getCardImageUrl(local, "high") : null;
+      })(),
+      thumbnailUrl: await (async () => {
+        const tcgImg = buildCardImageUrl(card.image, "low", "webp");
+        if (tcgImg) return tcgImg;
+        const local = await prisma.card.findUnique({
+          where: { id: card.id },
+          select: { imageUrl: true, imageUrlFull: true },
+        });
+        return local ? getCardImageUrl(local, "low") : null;
+      })(),
       pricing: card.pricing?.cardmarket
         ? {
             avg: card.pricing.cardmarket.avg,

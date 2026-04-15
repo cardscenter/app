@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cardSlug } from "@/lib/tcgdex/slug";
+import { getCardImageUrl } from "@/lib/tcgdex/card-image";
 import { Layers } from "lucide-react";
 
 export const revalidate = 3600;
@@ -34,19 +35,28 @@ export default async function SetDetailPage({ params }: Props) {
     include: {
       series: { select: { name: true } },
       cards: {
-        orderBy: { localId: "asc" },
         select: {
           id: true,
           name: true,
           localId: true,
           rarity: true,
           imageUrl: true,
+          imageUrlFull: true,
         },
       },
     },
   });
 
   if (!set) notFound();
+
+  // Natural sort by localId: "1" < "2" < "10" (not "1" < "10" < "2"). Falls
+  // back to string compare for non-numeric prefixes like "SWSH004".
+  set.cards.sort((a, b) => {
+    const na = parseInt(a.localId, 10);
+    const nb = parseInt(b.localId, 10);
+    if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
+    return a.localId.localeCompare(b.localId, undefined, { numeric: true });
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -61,7 +71,7 @@ export default async function SetDetailPage({ params }: Props) {
         {set.logoUrl ? (
           <div className="flex h-24 items-center rounded-2xl bg-muted/40 px-5">
             <Image
-              src={`${set.logoUrl}.webp`}
+              src={set.logoUrl}
               alt={set.name}
               width={200}
               height={80}
@@ -87,16 +97,18 @@ export default async function SetDetailPage({ params }: Props) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {set.cards.map((card) => (
+          {set.cards.map((card) => {
+            const imgSrc = getCardImageUrl(card, "low");
+            return (
             <Link
               key={card.id}
               href={`/kaarten/${setSlug}/${cardSlug(card.name, card.localId)}`}
               className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:scale-[1.02] hover:shadow-lg"
             >
               <div className="relative aspect-[5/7] bg-muted">
-                {card.imageUrl ? (
+                {imgSrc ? (
                   <Image
-                    src={`${card.imageUrl}/low.webp`}
+                    src={imgSrc}
                     alt={card.name}
                     fill
                     className="object-cover"
@@ -117,7 +129,8 @@ export default async function SetDetailPage({ params }: Props) {
                 </p>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
