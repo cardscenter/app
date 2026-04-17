@@ -143,3 +143,41 @@ export const DISPUTE_RESOLUTIONS = [
   "ADMIN_DECISION",
 ] as const;
 export type DisputeResolution = (typeof DISPUTE_RESOLUTIONS)[number];
+
+// Buyback / Inkoop
+export const BUYBACK_TYPES = ["COLLECTION", "BULK"] as const;
+export type BuybackType = (typeof BUYBACK_TYPES)[number];
+
+export const PAYOUT_METHODS = ["BANK", "STORE_CREDIT"] as const;
+export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
+
+export const BUYBACK_STATUSES = [
+  "PENDING",
+  "RECEIVED",
+  "INSPECTING",
+  "APPROVED",
+  "PARTIALLY_APPROVED",
+  "REJECTED",
+  "PAID",
+  "CANCELLED",
+] as const;
+export type BuybackStatus = (typeof BUYBACK_STATUSES)[number];
+
+export const BUYBACK_ITEM_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
+export type BuybackItemStatus = (typeof BUYBACK_ITEM_STATUSES)[number];
+
+export const BULK_CATEGORIES = [
+  "COMMON",
+  "UNCOMMON",
+  "RARE",
+  "HOLO",
+  "REVERSE_HOLO",
+  "ULTRA_RARE",
+  "POKEBALL_REVERSE",
+  "MASTER_BALL_REVERSE",
+  "CODE_CARD",
+  "COIN",
+  "SLEEVES",
+  "ENERGY",
+] as const;
+export type BulkCategory = (typeof BULK_CATEGORIES)[number];

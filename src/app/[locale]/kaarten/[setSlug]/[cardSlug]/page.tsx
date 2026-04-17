@@ -7,9 +7,6 @@ import { auth } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cardSlug, localIdFromSlug } from "@/lib/tcgdex/slug";
 import { enrichCard } from "@/lib/tcgdex/enrich-card";
-import { getCard } from "@/lib/tcgdex/client";
-import { mergeGameplayDetails } from "@/lib/tcgdex/gameplay";
-import { getMergedPricing } from "@/lib/tcgdex/pricing";
 import { getCardImageUrl } from "@/lib/tcgdex/card-image";
 import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
 import { CardPricePanel, type VariantPricing } from "@/components/card/card-price-panel";
@@ -30,7 +27,10 @@ async function lookupCard(setSlug: string, cardSlug: string) {
 
   const set = await prisma.cardSet.findUnique({
     where: { tcgdexSetId: setSlug },
-    select: { id: true, name: true, tcgdexSetId: true, series: { select: { name: true } } },
+    select: {
+      id: true, name: true, tcgdexSetId: true, releaseDate: true,
+      series: { select: { name: true } },
+    },
   });
   if (!set) return null;
 
@@ -76,63 +76,93 @@ export default async function CardDetailPage({ params }: Props) {
   if (!result) notFound();
 
   const { card: initialCard, set } = result;
+  const session = await auth();
 
-  // Lazy-enrich on first view (or every 24h); mostly returns instantly from
-  // the TCGdex client cache. Bump local view-count + lastViewedAt for cron
-  // prioritization.
-  const [enriched] = await Promise.all([
-    enrichCard(initialCard.id),
+  // First-visit enrichment: only triggers external API calls if gameplayJson
+  // is still null (never fully enriched). Otherwise this short-circuits
+  // immediately. Pricing refresh is the cron's job.
+  if (!initialCard.gameplayJson) {
+    await enrichCard(initialCard.id);
+  }
+
+  // Now everything is pure DB — one query batch, no external API calls.
+  const [
+    card,
+    _viewUpdate,
+    activeListings,
+    activeAuctions,
+    activeClaims,
+    recentSales,
+    siblingCards,
+    isWatched,
+    priceHistoryRows,
+  ] = await Promise.all([
+    prisma.card.findUnique({ where: { id: initialCard.id } }),
     prisma.card.update({
       where: { id: initialCard.id },
       data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
     }),
+    prisma.listing.findMany({
+      where: { tcgdexId: initialCard.id, status: "ACTIVE" },
+      include: { seller: { select: { displayName: true, id: true } } },
+      orderBy: { price: "asc" },
+      take: 10,
+    }),
+    prisma.auction.findMany({
+      where: { tcgdexId: initialCard.id, status: "ACTIVE" },
+      include: { seller: { select: { displayName: true, id: true } } },
+      orderBy: { endTime: "asc" },
+      take: 10,
+    }),
+    prisma.claimsaleItem.findMany({
+      where: { tcgdexId: initialCard.id, status: "AVAILABLE", claimsale: { status: "LIVE" } },
+      include: { claimsale: { select: { id: true, title: true, sellerId: true, seller: { select: { displayName: true } } } } },
+      orderBy: { price: "asc" },
+      take: 10,
+    }),
+    prisma.shippingBundle.findMany({
+      where: { listing: { tcgdexId: initialCard.id }, status: "COMPLETED" },
+      select: { totalItemCost: true, deliveredAt: true },
+      orderBy: { deliveredAt: "desc" },
+      take: 10,
+    }),
+    prisma.card.findMany({
+      where: { cardSetId: set.id },
+      select: { name: true, localId: true },
+    }),
+    session?.user?.id
+      ? prisma.cardWatchlist.findUnique({
+          where: { userId_cardId: { userId: session.user.id, cardId: initialCard.id } },
+        })
+      : Promise.resolve(null),
+    prisma.cardPriceHistory.findMany({
+      where: { cardId: initialCard.id },
+      orderBy: { date: "asc" },
+      take: 60,
+    }),
   ]);
-  const card = enriched ?? initialCard;
+  if (!card) notFound();
 
-  // Active marketplace items + prev/next + watchlist state in parallel
-  const session = await auth();
-  const [activeListings, activeAuctions, activeClaims, recentSales, siblingCards, _unused, isWatched] =
-    await Promise.all([
-      prisma.listing.findMany({
-        where: { tcgdexId: card.id, status: "ACTIVE" },
-        include: { seller: { select: { displayName: true, id: true } } },
-        orderBy: { price: "asc" },
-        take: 10,
-      }),
-      prisma.auction.findMany({
-        where: { tcgdexId: card.id, status: "ACTIVE" },
-        include: { seller: { select: { displayName: true, id: true } } },
-        orderBy: { endTime: "asc" },
-        take: 10,
-      }),
-      prisma.claimsaleItem.findMany({
-        where: { tcgdexId: card.id, status: "AVAILABLE", claimsale: { status: "LIVE" } },
-        include: { claimsale: { select: { id: true, title: true, sellerId: true, seller: { select: { displayName: true } } } } },
-        orderBy: { price: "asc" },
-        take: 10,
-      }),
-      prisma.shippingBundle.findMany({
-        where: { listing: { tcgdexId: card.id }, status: "COMPLETED" },
-        select: { totalItemCost: true, deliveredAt: true },
-        orderBy: { deliveredAt: "desc" },
-        take: 10,
-      }),
-      // Prev/next: load all siblings and pick neighbours in JS — needed
-      // because SQLite would string-sort localId ("10" < "2") and TCGdex
-      // mixes numeric + alphanumeric ids (e.g. "SWSH004").
-      prisma.card.findMany({
-        where: { cardSetId: set.id },
-        select: { name: true, localId: true },
-      }),
-      Promise.resolve(null),
-      session?.user?.id
-        ? prisma.cardWatchlist.findUnique({
-            where: { userId_cardId: { userId: session.user.id, cardId: card.id } },
-          })
-        : Promise.resolve(null),
-    ]);
+  // Parse the cached gameplay blob — no external API calls needed.
+  const gameplay = card.gameplayJson ? JSON.parse(card.gameplayJson) as {
+    category?: string;
+    attacks?: { cost?: string[]; name: string; effect?: string; damage?: number | string }[];
+    abilities?: { type: string; name: string; effect: string }[];
+    weaknesses?: { type: string; value: string }[];
+    resistances?: { type: string; value: string }[];
+    retreat?: number;
+    stage?: string;
+    evolveFrom?: string;
+    dexId?: number[];
+    regulationMark?: string;
+    legal?: { standard?: boolean; expanded?: boolean };
+    trainerType?: string;
+    energyType?: string;
+    effect?: string;
+  } : null;
+  const spriteUrl = card.spriteUrl;
 
-  // Natural-sort siblings, then find prev/next relative to this card.
+  // Natural-sort siblings
   const sortedSiblings = [...siblingCards].sort((a, b) => {
     const na = parseInt(a.localId, 10);
     const nb = parseInt(b.localId, 10);
@@ -145,95 +175,28 @@ export default async function CardDetailPage({ params }: Props) {
     ? sortedSiblings[currentIdx + 1]
     : null;
 
-  // Full card for gameplay details — TCGdex first, pokemontcg.io fallback
-   // for any fields TCGdex left empty. Both are cached 24h.
-  const tcgCardRaw = await getCard(card.id);
-  const tcgCard = await mergeGameplayDetails(tcgCardRaw, card.id);
+  const setWithDate = set as { releaseDate: string | null };
 
-  // PokéAPI animated sprite. TCGdex's dexId is sometimes wrong (e.g. Mega
-   // Absol ex was tagged dexId 351 / Castform), so we prefer to look up the
-   // species by its cleaned card name and only fall back to dexId when the
-   // name lookup fails. Mega / VMAX / G-Max forms resolve their own variety
-   // id via /pokemon-species/{id}/varieties.
-  const spriteUrl = await (async () => {
-    const rawName = tcgCard?.name ?? card.name;
-    const stage = (tcgCard?.stage ?? "").toLowerCase();
-    const lowerName = rawName.toLowerCase();
+  // Pricing for the UI — reconstruct the cardmarket-shaped blob from DB fields
+  const cm = card.priceUpdatedAt ? {
+    updated: card.priceUpdatedAt.toISOString(),
+    avg: card.priceAvg, low: card.priceLow, trend: card.priceTrend,
+    avg1: null, avg7: card.priceAvg7, avg30: card.priceAvg30,
+    "avg-holo": card.priceReverseAvg, "low-holo": card.priceReverseLow,
+    "trend-holo": card.priceReverseTrend,
+    "avg1-holo": null, "avg7-holo": card.priceReverseAvg7, "avg30-holo": card.priceReverseAvg30,
+  } : null;
 
-    // Form detection
-    let targetSuffix: string | null = null;
-    if (/\bmega\b/.test(lowerName) || stage === "mega") targetSuffix = "mega";
-    else if (/\bvmax\b/.test(lowerName) || stage === "vmax") targetSuffix = "gmax";
-    else if (/\bgigantamax\b|\bg-?max\b/.test(lowerName)) targetSuffix = "gmax";
-
-    // Clean the card name to the plain Pokémon species slug.
-    //   "Mega Absol ex" → "absol"
-    //   "Charizard VMAX" → "charizard"
-    //   "Mr. Mime" → "mr-mime", "Farfetch'd" → "farfetchd"
-    const speciesSlug = rawName
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")   // strip diacritics (Flabébé)
-      .replace(/\b(mega|vmax|vstar|v-?union|gx|ex|v|break|lv\.?x|tag team|prime|legend)\b/gi, "")
-      .replace(/[♀♂]/g, "")
-      .toLowerCase()
-      .trim()
-      .replace(/[.']/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "")
-      .replace(/-+/g, "-")
-      .replace(/^-+|-+$/g, "");
-
-    async function resolveViaSpecies(speciesRef: string | number): Promise<number | null> {
-      try {
-        const res = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${speciesRef}`, {
-          next: { revalidate: 86400 },
-        });
-        if (!res.ok) return null;
-        const data = await res.json() as {
-          id: number;
-          varieties?: { pokemon: { name: string; url: string } }[];
-        };
-        if (!targetSuffix) return data.id;
-        const match = data.varieties?.find((v) => v.pokemon.name.endsWith(`-${targetSuffix}`));
-        if (!match) return data.id;
-        const varietyId = match.pokemon.url.match(/\/pokemon\/(\d+)\/?$/)?.[1];
-        return varietyId ? parseInt(varietyId, 10) : data.id;
-      } catch { return null; }
-    }
-
-    // 1) Try species by slug (most reliable)
-    let id: number | null = speciesSlug ? await resolveViaSpecies(speciesSlug) : null;
-    // 2) Fallback to TCGdex's dexId if slug lookup failed
-    if (!id && tcgCard?.dexId?.[0]) {
-      id = await resolveViaSpecies(tcgCard.dexId[0]);
-    }
-    if (!id) return null;
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`;
-  })();
-  const setWithDate = await prisma.cardSet.findUnique({
-    where: { id: set.id },
-    select: { releaseDate: true },
-  });
-
-  // Daily price-history for the chart — last 30 entries, ascending by date.
-  const priceHistoryRows = await prisma.cardPriceHistory.findMany({
-    where: { cardId: card.id },
-    orderBy: { date: "asc" },
-    take: 60, // safety cap
-  });
   const priceHistory = priceHistoryRows.map((r) => ({
     date: r.date.toISOString().slice(0, 10),
     normal: r.priceNormal,
     reverse: r.priceReverse,
   }));
 
-  // "Meer kaarten van [base]" — extract the plain Pokémon/Trainer name.
-  // For Pokémon cards we also strip possessive + thematic prefixes so
-  // "Team Aqua's Kyogre", "Lillie's Clefairy", "Dark Gyarados", "Shining
-  // Magikarp" all resolve back to the base species ("Kyogre", "Clefairy"...).
-  // Trainer/Energy names are left intact — "Professor's Research" is a
-  // complete card name, not a possessive.
-  const isPokemon = tcgCard?.category === "Pokemon" || !tcgCard?.category; // assume Pokémon if unknown
-  let baseName = (tcgCard?.name ?? card.name)
+  // "Meer kaarten van [base]" — strip suffixes, plus possessive + thematic
+  // prefixes for Pokémon cards so "Team Aqua's Kyogre" etc. find siblings.
+  const isPokemon = gameplay?.category === "Pokemon" || !gameplay?.category;
+  let baseName = card.name
     .replace(/\b(mega|vmax|vstar|v-?union|gx|ex|v|break|lv\.?x|tag team|prime|legend)\b/gi, "")
     .replace(/[♀♂]/g, "");
   if (isPokemon) {
@@ -275,48 +238,64 @@ export default async function CardDetailPage({ params }: Props) {
     }))
     .filter((c) => c.setSlug);
 
-  const types: string[] = tcgCard?.types ?? (card.types ? JSON.parse(card.types) : []);
+  const types: string[] = card.types ? JSON.parse(card.types) : [];
   const variants: Record<string, boolean> = card.variants ? JSON.parse(card.variants) : {};
   const variantLabels = Object.entries(variants)
     .filter(([, v]) => v)
     .map(([k]) => ({ holo: "Holo", normal: "Normal", reverse: "Reverse Holo", firstEdition: "1st Edition", wPromo: "W Promo" }[k] ?? k));
 
-  // Variant-aware pricing via the merged helper (TCGdex first, pokemontcg.io
-  // fallback). Variant labels are inferred from rarity + which fields are
-  // populated, not from TCGdex's `variants.reverse` flag (unreliable on
-  // modern sets).
-  const cm = await getMergedPricing(card.id);
+  // `cm` already fetched in the big Promise.all above.
+  //
+  // "Inherently foil" cards (ex / V / VMAX / VSTAR / Double Rare / Illustration
+  // Rare / Ultra Rare / etc.) only exist as foil on CardMarket. TCGdex still
+  // surfaces an `avg` value for those — but it's noise from mis-SKU'd /
+  // heavily damaged listings, not a real non-foil print. For these cards we
+  // ignore `avg` entirely and use `avg-holo` as the single market price.
   const pricingVariants: VariantPricing[] = [];
   if (cm) {
     const rarity = (card.rarity ?? "").toLowerCase();
     const hasBase = cm.avg !== null || cm.low !== null;
     const hasFoil = cm["avg-holo"] !== null || cm["low-holo"] !== null;
 
-    // "avg" is always the non-reverse-holo printing. Its label depends on
-    // rarity: Common/Uncommon/plain-Rare → Normal; Holo Rare / ex / special
-    // → the card's actual foil variant (no separate flat version exists).
     const isInherentlyFoil =
       variants.holo ||
       /\b(holo|hyper|ultra|full art|illustration|special|double|amazing|radiant|shiny|secret|rainbow)\b/.test(rarity);
 
-    if (hasBase) {
-      pricingVariants.push({
-        key: "normal",
-        label: isInherentlyFoil ? "Holo" : "Normal",
-        avg: cm.avg, low: cm.low, trend: cm.trend,
-        avg1: cm.avg1, avg7: cm.avg7, avg30: cm.avg30,
-      });
-    }
-
-    // "avg-holo" is the Reverse Holo printing for commons/uncommons/plain-rares,
-    // and the Reverse-Holo-of-Holo for cards that are inherently foil (rare).
-    if (hasFoil) {
-      pricingVariants.push({
-        key: "reverse",
-        label: "Reverse Holo",
-        avg: cm["avg-holo"], low: cm["low-holo"], trend: cm["trend-holo"],
-        avg1: cm["avg1-holo"], avg7: cm["avg7-holo"], avg30: cm["avg30-holo"],
-      });
+    if (isInherentlyFoil) {
+      // Prefer the foil fields; fall back to base only if foil is missing
+      if (hasFoil) {
+        pricingVariants.push({
+          key: "normal",
+          label: "Holo",
+          avg: cm["avg-holo"], low: cm["low-holo"], trend: cm["trend-holo"],
+          avg1: cm["avg1-holo"], avg7: cm["avg7-holo"], avg30: cm["avg30-holo"],
+        });
+      } else if (hasBase) {
+        pricingVariants.push({
+          key: "normal",
+          label: "Holo",
+          avg: cm.avg, low: cm.low, trend: cm.trend,
+          avg1: cm.avg1, avg7: cm.avg7, avg30: cm.avg30,
+        });
+      }
+    } else {
+      // Regular card: Normal (avg) + Reverse Holo (avg-holo) when both exist
+      if (hasBase) {
+        pricingVariants.push({
+          key: "normal",
+          label: "Normal",
+          avg: cm.avg, low: cm.low, trend: cm.trend,
+          avg1: cm.avg1, avg7: cm.avg7, avg30: cm.avg30,
+        });
+      }
+      if (hasFoil) {
+        pricingVariants.push({
+          key: "reverse",
+          label: "Reverse Holo",
+          avg: cm["avg-holo"], low: cm["low-holo"], trend: cm["trend-holo"],
+          avg1: cm["avg1-holo"], avg7: cm["avg7-holo"], avg30: cm["avg30-holo"],
+        });
+      }
     }
   }
 
@@ -387,14 +366,13 @@ export default async function CardDetailPage({ params }: Props) {
               <span>{card.name}</span>
               {types.length > 0 && <TypeIconList types={types} size={30} />}
             </h1>
-            {/* Chips: localId, rarity, HP, illustrator — prefer merged values
-                from tcgCard which include pokemontcg.io fallback fields. */}
+            {/* Chips: localId, rarity, HP, illustrator. All from DB cache. */}
             {(() => {
               const cleanStr = (v: string | null | undefined) =>
                 !v || v === "None" || v === "" ? null : v;
-              const rarity = cleanStr(tcgCard?.rarity) ?? cleanStr(card.rarity);
-              const hp = tcgCard?.hp ?? card.hp;
-              const illustrator = cleanStr(tcgCard?.illustrator) ?? cleanStr(card.illustrator);
+              const rarity = cleanStr(card.rarity);
+              const hp = card.hp;
+              const illustrator = cleanStr(card.illustrator);
               return (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground">
@@ -444,25 +422,40 @@ export default async function CardDetailPage({ params }: Props) {
             </div>
           )}
 
+          {/* Sell to us CTA */}
+          <Link
+            href="/verkoop-calculator/collectie"
+            className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/50"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/><path d="M2 12h20"/></svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Verkoop deze kaart aan ons</p>
+              <p className="text-xs text-emerald-600/70 dark:text-emerald-500/70">Ontvang direct een eerlijke prijs via onze verkoop calculator</p>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-emerald-500"><path d="m9 18 6-6-6-6"/></svg>
+          </Link>
+
           {/* Gameplay details (attacks, abilities, weakness, etc.) */}
-          {tcgCard && (
+          {gameplay && (
             <section>
               <h2 className="mb-3 text-lg font-bold text-foreground">Speelgegevens</h2>
               <CardGameplayBlock
-                category={tcgCard.category}
-                stage={tcgCard.stage}
-                evolveFrom={tcgCard.evolveFrom}
-                dexId={tcgCard.dexId}
-                attacks={tcgCard.attacks}
-                abilities={tcgCard.abilities}
-                weaknesses={tcgCard.weaknesses}
-                resistances={tcgCard.resistances}
-                retreat={tcgCard.retreat}
-                regulationMark={tcgCard.regulationMark}
-                legal={tcgCard.legal}
-                trainerType={tcgCard.trainerType}
-                energyType={tcgCard.energyType}
-                effect={tcgCard.effect}
+                category={gameplay.category}
+                stage={gameplay.stage}
+                evolveFrom={gameplay.evolveFrom}
+                dexId={gameplay.dexId}
+                attacks={gameplay.attacks}
+                abilities={gameplay.abilities}
+                weaknesses={gameplay.weaknesses}
+                resistances={gameplay.resistances}
+                retreat={gameplay.retreat}
+                regulationMark={gameplay.regulationMark}
+                legal={gameplay.legal}
+                trainerType={gameplay.trainerType}
+                energyType={gameplay.energyType}
+                effect={gameplay.effect}
               />
             </section>
           )}

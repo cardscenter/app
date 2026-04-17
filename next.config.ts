@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
         hostname: "images.pokemontcg.io",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "cards-center.nl",
+        pathname: "/cdn/**",
+      },
     ],
   },
 };

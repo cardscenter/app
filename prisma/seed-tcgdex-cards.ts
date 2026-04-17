@@ -1,6 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
+function normalizeForSearch(input: string): string {
+  return input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['\-.:]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 // Bulk-imports all Pokémon cards from TCGdex into the local Card table.
 // Iterates over every CardSet that has a `tcgdexSetId` (synced via
 // seed-tcgdex-sets.ts) and pulls /v2/en/sets/{tcgdexSetId} which returns
@@ -86,12 +90,14 @@ async function main() {
               id: card.id,
               localId: card.localId,
               name: card.name,
+              searchName: normalizeForSearch(card.name),
               cardSetId: localSet.id,
               imageUrl: card.image ?? null,
             },
             update: {
               localId: card.localId,
               name: card.name,
+              searchName: normalizeForSearch(card.name),
               cardSetId: localSet.id,
               imageUrl: card.image ?? null,
             },

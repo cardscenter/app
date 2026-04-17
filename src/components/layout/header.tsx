@@ -27,12 +27,23 @@ function HeaderContent() {
     return () => window.removeEventListener("avatar-updated", handleAvatarUpdate);
   }, []);
 
-  const navLinks = [
-    { href: "/veilingen" as const, label: t("auctions") },
-    { href: "/claimsales" as const, label: t("claimsales") },
-    { href: "/marktplaats" as const, label: t("marketplace") },
+  // Primary sections get subtle brand accents matching their page colors
+  // (blue / amber / emerald). "Kaarten" and any later additions are
+  // secondary — separated by a vertical divider.
+  const primaryLinks = [
+    { href: "/veilingen" as const, label: t("auctions"),    accent: "blue" as const },
+    { href: "/claimsales" as const, label: t("claimsales"), accent: "amber" as const },
+    { href: "/marktplaats" as const, label: t("marketplace"), accent: "emerald" as const },
+  ];
+  const secondaryLinks = [
     { href: "/kaarten" as const, label: t("cards") },
   ];
+
+  const accentClasses: Record<"blue" | "amber" | "emerald", { active: string; idle: string; dot: string }> = {
+    blue:    { active: "bg-blue-500/20 text-blue-100",    idle: "text-slate-300 hover:bg-blue-500/10 hover:text-blue-200",    dot: "bg-blue-400" },
+    amber:   { active: "bg-amber-500/20 text-amber-100",  idle: "text-slate-300 hover:bg-amber-500/10 hover:text-amber-200",  dot: "bg-amber-400" },
+    emerald: { active: "bg-emerald-500/20 text-emerald-100", idle: "text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-200", dot: "bg-emerald-400" },
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-slate-950 text-white">
@@ -51,7 +62,27 @@ function HeaderContent() {
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 md:flex ml-8">
-          {navLinks.map((link) => {
+          {primaryLinks.map((link) => {
+            const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+            const a = accentClasses[link.accent];
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  isActive ? a.active : a.idle
+                }`}
+              >
+                <span className={`inline-block size-1.5 rounded-full ${a.dot}`} />
+                {link.label}
+              </Link>
+            );
+          })}
+
+          {/* Divider separating primary sections from auxiliary links */}
+          <span aria-hidden className="mx-2 h-5 w-px bg-white/15" />
+
+          {secondaryLinks.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
               <Link
@@ -69,11 +100,11 @@ function HeaderContent() {
           })}
         </nav>
 
-        {/* Search bar — desktop */}
-        <SearchBar variant="header" />
-
         {/* Right side */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 ml-auto">
+          {/* Search icon (desktop) — expands on click */}
+          <SearchBar variant="header" />
+
           {session?.user ? (
             <div className="hidden items-center gap-2 md:flex">
               {/* Balance */}
@@ -151,7 +182,7 @@ function HeaderContent() {
           {/* Mobile search */}
           <MobileSearchBar />
           <nav className="mt-2 space-y-1">
-            {navLinks.map((link) => {
+            {[...primaryLinks, ...secondaryLinks].map((link) => {
               const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
               return (
                 <Link

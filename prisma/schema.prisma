@@ -105,6 +105,9 @@ model User {
 
   // Card-database (Fase 4)
   cardWatchlist       CardWatchlist[]
+
+  // Buyback / Inkoop
+  buybackRequests     BuybackRequest[]
 }
 
 // ============================================================
@@ -198,6 +201,7 @@ model Card {
   id              String   @id              // TCGdex id, e.g. "base1-4"
   localId         String                     // "4" within the set
   name            String
+  searchName      String?                    // Normalized name for accent/diacritics-insensitive search
   cardSetId       String
   cardSet         CardSet  @relation(fields: [cardSetId], references: [id])
   rarity          String?
@@ -214,7 +218,23 @@ model Card {
   priceTrend      Float?
   priceAvg7       Float?
   priceAvg30      Float?
+  // Reverse-holo variant pricing (pokemontcg.io reverseHolo* fields)
+  priceReverseAvg   Float?
+  priceReverseLow   Float?
+  priceReverseTrend Float?
+  priceReverseAvg7  Float?
+  priceReverseAvg30 Float?
   priceUpdatedAt  DateTime?
+
+  // Full immutable gameplay snapshot — JSON blob so the detail page can
+  // render attacks/abilities/weakness/resistance/retreat/stage/legal/etc.
+  // without any external API calls. Populated by enrichCard and refreshed
+  // by the daily cron. Shape: {category, attacks, abilities, weaknesses,
+  // resistances, retreat, stage, evolveFrom, dexId, regulationMark, legal,
+  // trainerType, energyType, effect}.
+  gameplayJson    String?
+  // PokéAPI Showdown sprite URL — resolved once per card, never changes
+  spriteUrl       String?
 
   // Lightweight popularity signal for cron prioritization
   viewCount       Int      @default(0)
@@ -228,6 +248,7 @@ model Card {
 
   @@index([cardSetId])
   @@index([name])
+  @@index([searchName])
   @@index([priceUpdatedAt])
   @@index([lastViewedAt])
 }
@@ -1158,4 +1179,87 @@ model UserAchievement {
   @@unique([userId, achievementKey])
   @@index([userId])
   @@index([achievementKey])
+}
+
+// ============================================================
+// BUYBACK / INKOOP
+// ============================================================
+
+model BuybackRequest {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+
+  type             String   @default("COLLECTION") // COLLECTION | BULK
+  payoutMethod     String   @default("BANK")        // BANK | STORE_CREDIT
+  iban             String?                           // Required when payoutMethod = BANK
+  accountHolder    String?                           // Required when payoutMethod = BANK
+
+  totalItems       Int
+  estimatedPayout  Float
+  storeCreditBonus Float?                            // 20% bonus when payoutMethod = STORE_CREDIT
+  finalPayout      Float?                            // Set after inspection (may differ from estimate)
+
+  status           String   @default("PENDING")
+  // PENDING → RECEIVED → INSPECTING → APPROVED / PARTIALLY_APPROVED / REJECTED → PAID
+  adminNotes       String?
+  inspectedById    String?
+
+  receivedAt       DateTime?
+  inspectedAt      DateTime?
+  paidAt           DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  items            BuybackItem[]
+  bulkItems        BulkBuybackItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Individual card items for COLLECTION type buyback requests
+model BuybackItem {
+  id                String   @id @default(cuid())
+  buybackRequestId  String
+  buybackRequest    BuybackRequest @relation(fields: [buybackRequestId], references: [id], onDelete: Cascade)
+
+  cardId            String            // TCGdex Card.id
+  cardName          String            // Snapshot at submission
+  cardLocalId       String            // e.g. "054"
+  setName           String            // Snapshot
+  rarity            String?
+  imageUrl          String?
+
+  quantity          Int      @default(1)
+  marketPrice       Float             // priceAvg7 (or priceAvg fallback) at submission
+  buybackPrice      Float             // marketPrice * 0.85
+  isReverse         Boolean  @default(false)
+
+  inspectionStatus  String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  rejectionReason   String?
+
+  createdAt         DateTime @default(now())
+
+  @@index([buybackRequestId])
+}
+
+// Category-based items for BULK type buyback requests
+model BulkBuybackItem {
+  id                String   @id @default(cuid())
+  buybackRequestId  String
+  buybackRequest    BuybackRequest @relation(fields: [buybackRequestId], references: [id], onDelete: Cascade)
+
+  category          String            // COMMON | UNCOMMON | RARE | HOLO | REVERSE_HOLO | ULTRA_RARE | POKEBALL_REVERSE | MASTER_BALL_REVERSE | CODE_CARD | COIN | SLEEVES | ENERGY
+  quantity          Int      @default(0)
+  unitPrice         Float             // Snapshot of per-unit price at submission
+  subtotal          Float             // quantity * unitPrice
+
+  approvedQuantity  Int?              // Set after inspection
+
+  createdAt         DateTime @default(now())
+
+  @@index([buybackRequestId])
 }

@@ -33,6 +33,7 @@ export interface PtcgCard {
   rarity?: string;
   artist?: string;
   cardmarket?: { url?: string; updatedAt?: string; prices?: Record<string, number> };
+  tcgplayer?: { url?: string; updatedAt?: string; prices?: Record<string, Record<string, number>> };
   set?: { id: string; name: string };
 }
 
@@ -74,9 +75,9 @@ function transformId(tcgdexCardId: string): string {
   return `${setPart}-${cleanLocal}`;
 }
 
-/** Escape quotes in a pokemontcg.io query value. */
+/** Escape special chars in a pokemontcg.io query value. */
 function q(v: string): string {
-  return v.replace(/"/g, '\\"');
+  return v.replace(/"/g, '\\"').replace(/[()]/g, "");
 }
 
 /**
@@ -100,6 +101,36 @@ export async function resolvePtcgCard(input: {
     if (viaTransform) return viaTransform;
   }
 
+  // 2b. Trainer Gallery / Gallery subset:
+  //     TCGdex: "swsh11-TG06" → pokemontcg.io: "swsh11tg-TG06"
+  //     TCGdex: "swsh12-GG01" → pokemontcg.io: "swsh12gg-GG01"
+  //     Applies to TG (Trainer Gallery) and GG (Galarian Gallery) prefixed localIds.
+  const localId = input.localId ?? "";
+  const galleryMatch = localId.match(/^(TG|GG)(\d+)$/);
+  if (galleryMatch) {
+    const idx = input.tcgdexId.lastIndexOf("-");
+    if (idx > 0) {
+      const setPart = input.tcgdexId.slice(0, idx);
+      const prefix = galleryMatch[1].toLowerCase(); // "tg" or "gg"
+      const galleryId = `${setPart}${prefix}-${localId}`;
+      const viaGallery = await fetchById(galleryId);
+      if (viaGallery) return viaGallery;
+    }
+  }
+
+  // 2c. Classic Collection variant: "cel25-109A" → "cel25c-109_A"
+  //     pokemontcg.io uses "c" suffix on the set and "_A" instead of "A" for
+  //     Celebrations Classic Collection cards.
+  if (/^\d+A\d*$/.test(localId)) {
+    const idx = input.tcgdexId.lastIndexOf("-");
+    if (idx > 0) {
+      const setPart = input.tcgdexId.slice(0, idx);
+      const classicId = `${setPart}c-${localId.replace(/A(\d*)$/, "_A$1")}`;
+      const viaClassic = await fetchById(classicId);
+      if (viaClassic) return viaClassic;
+    }
+  }
+
   // 3. Search by name + set.name + number
   if (input.name && input.setName && input.localId) {
     const number = input.localId.replace(/^0+(?=\d)/, "");
@@ -107,6 +138,12 @@ export async function resolvePtcgCard(input: {
       `name:"${q(input.name)}" set.name:"${q(input.setName)}" number:${number}`
     );
     if (result) return result;
+
+    // 3b. Fallback: search by name + set only (number format may differ)
+    const byNameSet = await search(
+      `name:"${q(input.name)}" set.name:"${q(input.setName)}"`
+    );
+    if (byNameSet) return byNameSet;
   }
 
   return null;

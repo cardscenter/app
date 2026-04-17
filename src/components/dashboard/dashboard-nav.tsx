@@ -23,6 +23,7 @@ import {
   Paintbrush,
   Menu,
   X,
+  ArrowDownToLine,
 } from "lucide-react";
 
 interface NavSection {
@@ -76,6 +77,7 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
       items: [
         { href: "/dashboard/saldo", labelKey: "myBalance", icon: Wallet },
         { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
+        { href: "/dashboard/inkoop", labelKey: "myBuyback", icon: ArrowDownToLine },
       ],
     },
     {
@@ -99,7 +101,10 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
       items: [
         { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
         ...(isAdmin
-          ? [{ href: "/dashboard/geschillen/admin", labelKey: "adminDisputes", icon: Scale }]
+          ? [
+              { href: "/dashboard/geschillen/admin", labelKey: "adminDisputes", icon: Scale },
+              { href: "/dashboard/inkoop/admin", labelKey: "adminBuyback", icon: ArrowDownToLine },
+            ]
           : []),
       ],
     },
