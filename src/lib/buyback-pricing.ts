@@ -102,13 +102,41 @@ export function getAvailableVariants(card: BuybackPriceFields): VariantPrice[] {
     }
   }
 
-  // Reverse holo variant — rely purely on CardMarket's avg-holo price as the
-  // signal that a reverse variant physically exists. We used to also check
-  // TCGdex's `variants.reverse` flag, but it's wrong for whole modern sets
-  // (e.g. sv06 Twilight Masquerade, sv08.5 Prismatic Evolutions).
-  const rp = bestAvailablePrice(card.priceReverseAvg, card.priceReverseAvg30);
-  if (rp != null && rp > 0) {
-    variants.push({ price: rp, isReverse: true, label: variantLabel(card.rarity, true) });
+  // Reverse holo only physically exists on cards that ALSO have a non-foil
+  // print (the "reverse holo" is the alternate-finish version of the non-
+  // foil base). If TCGdex says variants.normal === false (holo-only promo
+  // like SWSH020 Black Star Pikachu, XY84, etc.), stray rolling averages
+  // from CardMarket are mis-labeled listings, not real product prices.
+  //
+  // Signal tiers:
+  //   1. Active avg — strong evidence, always trust.
+  //   2. Historical avg30 only — accept if variants.normal !== false AND
+  //      variants.holo !== false. Modern sets (Twilight Masquerade,
+  //      Prismatic Evolutions) have active avg so they pass tier 1; the
+  //      tier-2 gate protects us against false-positive phantom reverses.
+  const activeReverse = card.priceReverseAvg != null && card.priceReverseAvg > 0
+    ? card.priceReverseAvg
+    : null;
+  const historicalReverse = card.priceReverseAvg30 != null && card.priceReverseAvg30 > 0
+    ? card.priceReverseAvg30
+    : null;
+  let variantsNormalFlag: boolean | null = null;
+  let variantsHoloFlag: boolean | null = null;
+  if (card.variants) {
+    try {
+      const v = JSON.parse(card.variants) as Record<string, unknown>;
+      if (typeof v.normal === "boolean") variantsNormalFlag = v.normal;
+      if (typeof v.holo === "boolean") variantsHoloFlag = v.holo;
+    } catch { /* ignore malformed */ }
+  }
+  const holoOnlyCard = variantsNormalFlag === false;
+  const historicalOk = !holoOnlyCard && variantsHoloFlag !== false;
+  const reverseBaseline = activeReverse ?? (historicalOk ? historicalReverse : null);
+  if (reverseBaseline != null) {
+    const rp = Math.round(reverseBaseline * MARKET_VALUE_RATE * 100) / 100;
+    if (rp > 0) {
+      variants.push({ price: rp, isReverse: true, label: variantLabel(card.rarity, true) });
+    }
   }
 
   // For inherently-foil cards where reverse pricing is empty,

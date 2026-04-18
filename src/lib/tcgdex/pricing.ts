@@ -163,10 +163,29 @@ export async function getMergedPricing(
   const setId = tcgdexCardId.split("-")[0] ?? "";
   const unreliableTcgdexSets = new Set([
     "sv03.5",   // 151 — Ditto #132 and others mis-mapped
-    "sv08.5",   // Prismatic Evolutions — Poké/Master Ball variants confuse mapping
     "sv10.5b",  // Black Bolt — idProduct collisions between cards
     "sv10.5w",  // White Flare — sibling of Black Bolt, same issue
-    "me02.5",   // Ascended Heroes — Ball/Energy variant sets, mapping still settling
+    "me02.5",   // Ascended Heroes — Pikachu ex #276 + Victini etc. mis-mapped
+    // Black Star Promo sets — TCGdex maps each card to an idProduct that
+    // points at an unrelated (usually more expensive) CardMarket listing.
+    // Confirmed cases: XY84 Pikachu EX, SWSH020 + SWSH039 Pikachu promo.
+    // pokemontcg.io has correct per-card data for these.
+    "xyp",      // XY Black Star Promos
+    "swshp",    // Sword & Shield Black Star Promos
+    //
+    // Earlier versions of this list included smp / svp / mep — removed
+    // because (a) no user-reported broken card for those sets yet, and
+    // (b) TCGdex is often the *only* source that has pricing for older
+    // promos (pokemontcg.io doesn't cover smp at all; mep has TCGdex
+    // pricing that would be discarded if we routed around it).
+    //
+    // NOT in this list (deliberately):
+    // - sv08.5 Prismatic Evolutions: TCGdex has correct per-card pricing
+    //   including reverse-holo (avg-holo) — pokemontcg.io's CardMarket
+    //   payload returns reverseHoloSell=0 for these cards, losing that
+    //   signal. The Poké Ball / Master Ball variants come from our
+    //   separate pricecharting-variants.ts scrape, so TCGdex's base
+    //   pricing isn't affected.
   ]);
   const isUnreliableSet = unreliableTcgdexSets.has(setId);
 

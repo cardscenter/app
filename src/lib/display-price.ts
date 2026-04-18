@@ -26,18 +26,13 @@ function medianOf(values: number[]): number {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-const DISCREPANCY_RATIO = 5; // >5× gap between CardMarket and PriceCharting
-
-/** True when CardMarket priceAvg and PriceCharting disagree by more than
- * the discrepancy ratio — implies the CardMarket idProduct is mapped to a
- * sealed product or wrong card. Callers should treat priceAvg / priceAvg7
- * / priceAvg30 as unreliable for this card. */
-export function hasCardMarketDiscrepancy(card: DisplayPriceFields): boolean {
-  const avg = card.priceAvg;
-  const pc = card.pricePriceChartingEur;
-  if (avg == null || avg <= 0 || pc == null || pc <= 0) return false;
-  return avg > pc * DISCREPANCY_RATIO || pc > avg * DISCREPANCY_RATIO;
-}
+// The old hasCardMarketDiscrepancy early-return was too blunt: it treated
+// a >5× PC-vs-CM gap as "CM is wrong, use PC", but the wrong side is
+// ambiguous. Classic false positives: Umbreon ex SIR 161 sits at €1000+
+// on CardMarket (correct) while PriceCharting's fuzzy scraper matched
+// the regular Umbreon ex at €0.92. Forcing PC would show €0.92 on a
+// €1000 card. The median-of-3 below handles both directions robustly —
+// it picks the middle value, so one outlier never wins.
 
 /** The price we show to users and use as the "current" in trend math. */
 export function getDisplayPrice(card: DisplayPriceFields): number | null {
@@ -47,22 +42,13 @@ export function getDisplayPrice(card: DisplayPriceFields): number | null {
 
   if (avg == null) return trend ?? pc ?? null;
 
-  // CardMarket idProduct sometimes maps an individual card to a sealed
-  // product or an unrelated listing (e.g. XY Black Star Promos all reading
-  // €5550). When priceAvg and PriceCharting disagree by >5×, CardMarket is
-  // almost certainly wrong and PriceCharting gets the truth. This check
-  // runs before blending so median-of-3 doesn't get dragged by two
-  // correlated-bad values (avg + trend both from the same broken product).
-  if (pc != null && (avg > pc * DISCREPANCY_RATIO || pc > avg * DISCREPANCY_RATIO)) {
-    return pc;
-  }
-
   if (avg >= EXPENSIVE_BLEND_THRESHOLD) {
-    // Blend all three sources. Median absorbs one outlier (a noisy avg, a
-    // stale trend, or a regional PriceCharting price).
+    // Blend all three sources via median. The middle value wins, so a
+    // single outlier (wrong CM idProduct, stale trend, or mis-matched
+    // PriceCharting fuzzy search) never dominates. With three consistent
+    // sources the median matches the true market.
     const sources = [avg, trend, pc].filter((v): v is number => v != null);
     if (sources.length >= 2) return medianOf(sources);
-    // Only avg available — fall back to it
   }
 
   if (avg >= MIDPRICE_TREND_THRESHOLD && trend != null) {
@@ -74,12 +60,8 @@ export function getDisplayPrice(card: DisplayPriceFields): number | null {
 
 /** 7-day delta as a percentage. Uses the blended display price as the
  * "current" so trend % agrees with what the user sees as the market
- * value. Returns null when either side isn't meaningful — including
- * when CardMarket data is discordant with PriceCharting (the 7-day
- * rolling avg is derived from the same wrong product so it can't be
- * trusted as a baseline). */
+ * value. Returns null when either side isn't meaningful. */
 export function computeWeeklyDeltaPct(card: DisplayPriceFields): number | null {
-  if (hasCardMarketDiscrepancy(card)) return null;
   const current = getDisplayPrice(card);
   const baseline = card.priceAvg7;
   if (current == null || baseline == null || baseline <= 0) return null;

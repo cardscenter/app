@@ -13,7 +13,7 @@ import { CardPricePanel, type VariantPricing, type ExtraVariant } from "@/compon
 import { getSpecialVariantsForSet, parseExtraVariants } from "@/lib/tcgdex/special-variants";
 import { basePokemonName } from "@/lib/pokeapi/base-name";
 import { pokedexSlug } from "@/lib/pokeapi/slug";
-import { getDisplayPrice, hasCardMarketDiscrepancy } from "@/lib/display-price";
+import { getDisplayPrice } from "@/lib/display-price";
 import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
@@ -247,24 +247,29 @@ export default async function CardDetailPage({ params }: Props) {
   // heavily damaged listings, not a real non-foil print. For these cards we
   // ignore `avg` entirely and use `avg-holo` as the single market price.
   const pricingVariants: VariantPricing[] = [];
-  // Bad-data guard: when CardMarket's priceAvg disagrees with PriceCharting
-  // by >5x, the whole CardMarket product is pointing at the wrong listing
-  // (sealed box, different card, etc.) and every cm.* field is unreliable.
-  // In that case null out the low/trend/avg1/avg7/avg30 stats so the panel
-  // doesn't flash misleading history alongside the corrected main price.
-  const cmUnreliable = hasCardMarketDiscrepancy({
-    priceAvg: card.priceAvg,
-    priceTrend: card.priceTrend,
-    pricePriceChartingEur: card.pricePriceChartingEur,
-    priceAvg7: card.priceAvg7,
-  });
   if (cm) {
     const rarity = (card.rarity ?? "").toLowerCase();
     // "Has base" / "has foil" should require a meaningful price (avg or avg30),
     // not just any field. Without this, sparse foil data (e.g. only low-holo
     // filled) tricks the UI into showing an empty "Holo" variant.
     const hasBase = (cm.avg !== null && cm.avg > 0) || (cm.avg30 !== null && cm.avg30 > 0);
-    const hasFoil = (cm["avg-holo"] !== null && cm["avg-holo"] > 0) || (cm["avg30-holo"] !== null && cm["avg30-holo"] > 0);
+    // Reverse holo only physically exists on cards that ALSO have a non-
+    // foil print. When TCGdex says variants.normal === false (holo-only
+    // promo like SWSH020, XY84), CardMarket's stray rolling averages are
+    // mis-labeled listings — ignore them entirely.
+    //
+    // Among cards that CAN have a reverse, the signal has two tiers:
+    //   1. Active avg-holo — strong evidence, always accept.
+    //   2. Historical avg30-holo only — weaker, accept only when TCGdex's
+    //      variants.holo !== false. Modern sets (Twilight Masquerade,
+    //      Prismatic Evolutions) pass tier 1; the tier-2 gate protects
+    //      against phantom reverses on older promo sets.
+    const canHaveReverse = variants.normal !== false;
+    const hasActiveFoil = cm["avg-holo"] !== null && cm["avg-holo"] > 0;
+    const hasHistoricalFoil = cm["avg30-holo"] !== null && cm["avg30-holo"] > 0;
+    const hasFoil = canHaveReverse && (
+      hasActiveFoil || (hasHistoricalFoil && variants.holo !== false)
+    );
 
     // "Inherently foil" = the card ONLY exists as foil (no non-foil print).
     // We need `holo=true` AND `normal=false` — if BOTH holo+normal are true
@@ -318,11 +323,11 @@ export default async function CardDetailPage({ params }: Props) {
           key: "normal",
           label: "Holo",
           avg: baseDisplay ?? cm.avg,
-          low: cmUnreliable ? null : cm.low,
-          trend: cmUnreliable ? null : cm.trend,
-          avg1: cmUnreliable ? null : cm.avg1,
-          avg7: cmUnreliable ? null : cm.avg7,
-          avg30: cmUnreliable ? null : cm.avg30,
+          low: cm.low,
+          trend: cm.trend,
+          avg1: cm.avg1,
+          avg7: cm.avg7,
+          avg30: cm.avg30,
         });
       }
     } else {
@@ -338,11 +343,11 @@ export default async function CardDetailPage({ params }: Props) {
           key: "normal",
           label: "Normal",
           avg: baseDisplay ?? cm.avg,
-          low: cmUnreliable ? null : cm.low,
-          trend: cmUnreliable ? null : cm.trend,
-          avg1: cmUnreliable ? null : cm.avg1,
-          avg7: cmUnreliable ? null : cm.avg7,
-          avg30: cmUnreliable ? null : cm.avg30,
+          low: cm.low,
+          trend: cm.trend,
+          avg1: cm.avg1,
+          avg7: cm.avg7,
+          avg30: cm.avg30,
         });
       }
       if (hasFoil) {
