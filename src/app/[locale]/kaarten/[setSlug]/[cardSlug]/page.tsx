@@ -13,6 +13,7 @@ import { CardPricePanel, type VariantPricing, type ExtraVariant } from "@/compon
 import { getSpecialVariantsForSet, parseExtraVariants } from "@/lib/tcgdex/special-variants";
 import { basePokemonName } from "@/lib/pokeapi/base-name";
 import { pokedexSlug } from "@/lib/pokeapi/slug";
+import { getDisplayPrice, hasCardMarketDiscrepancy } from "@/lib/display-price";
 import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
@@ -246,6 +247,17 @@ export default async function CardDetailPage({ params }: Props) {
   // heavily damaged listings, not a real non-foil print. For these cards we
   // ignore `avg` entirely and use `avg-holo` as the single market price.
   const pricingVariants: VariantPricing[] = [];
+  // Bad-data guard: when CardMarket's priceAvg disagrees with PriceCharting
+  // by >5x, the whole CardMarket product is pointing at the wrong listing
+  // (sealed box, different card, etc.) and every cm.* field is unreliable.
+  // In that case null out the low/trend/avg1/avg7/avg30 stats so the panel
+  // doesn't flash misleading history alongside the corrected main price.
+  const cmUnreliable = hasCardMarketDiscrepancy({
+    priceAvg: card.priceAvg,
+    priceTrend: card.priceTrend,
+    pricePriceChartingEur: card.pricePriceChartingEur,
+    priceAvg7: card.priceAvg7,
+  });
   if (cm) {
     const rarity = (card.rarity ?? "").toLowerCase();
     // "Has base" / "has foil" should require a meaningful price (avg or avg30),
@@ -254,9 +266,18 @@ export default async function CardDetailPage({ params }: Props) {
     const hasBase = (cm.avg !== null && cm.avg > 0) || (cm.avg30 !== null && cm.avg30 > 0);
     const hasFoil = (cm["avg-holo"] !== null && cm["avg-holo"] > 0) || (cm["avg30-holo"] !== null && cm["avg30-holo"] > 0);
 
-    const isInherentlyFoil =
-      variants.holo ||
-      /\b(holo|hyper|ultra|full art|illustration|special|double|amazing|radiant|shiny|secret|rainbow)\b/.test(rarity);
+    // "Inherently foil" = the card ONLY exists as foil (no non-foil print).
+    // We need `holo=true` AND `normal=false` — if BOTH holo+normal are true
+    // the card has a dual print (common for promos like McDonald's Pikachu)
+    // and both should render as separate variants.
+    const variantsSayHoloOnly = variants.holo === true && variants.normal === false;
+    const raritySaysHoloOnly =
+      /\b(hyper|ultra|full art|illustration|special|double|amazing|radiant|shiny|secret|rainbow)\b/.test(rarity);
+    const isInherentlyFoil = variantsSayHoloOnly || raritySaysHoloOnly;
+    // Dual holo/normal promos want a "Holo" label rather than "Reverse Holo"
+    // — reverse-holo is specifically the partial-foil finish on commons/
+    // uncommons, not the glossy-card treatment of these promos.
+    const isDualHoloPromo = variants.holo === true && variants.normal === true;
     // We used to gate reverse-holo display on `variants.reverse`, but TCGdex
     // returns `false` incorrectly for whole modern sets (e.g. sv06 Twilight
     // Masquerade, sv08.5 Prismatic Evolutions). `hasFoil` already requires
@@ -270,35 +291,71 @@ export default async function CardDetailPage({ params }: Props) {
       // data (low-holo, avg30-holo). In that case base is the single source.
       const foilHasAvg = cm["avg-holo"] !== null && cm["avg-holo"] > 0;
       if (foilHasAvg) {
+        // For inherently-foil cards, the single variant represents the
+        // foil product — blend with PriceCharting / priceTrend when it
+        // crosses the expensive threshold.
+        const holoDisplay = getDisplayPrice({
+          priceAvg: cm["avg-holo"],
+          priceTrend: cm["trend-holo"],
+          pricePriceChartingEur: card.pricePriceChartingEur,
+          priceAvg7: cm["avg7-holo"],
+        });
         pricingVariants.push({
           key: "normal",
           label: "Holo",
-          avg: cm["avg-holo"], low: cm["low-holo"], trend: cm["trend-holo"],
+          avg: holoDisplay ?? cm["avg-holo"],
+          low: cm["low-holo"], trend: cm["trend-holo"],
           avg1: cm["avg1-holo"], avg7: cm["avg7-holo"], avg30: cm["avg30-holo"],
         });
       } else if (hasBase) {
+        const baseDisplay = getDisplayPrice({
+          priceAvg: cm.avg,
+          priceTrend: cm.trend,
+          pricePriceChartingEur: card.pricePriceChartingEur,
+          priceAvg7: cm.avg7,
+        });
         pricingVariants.push({
           key: "normal",
           label: "Holo",
-          avg: cm.avg, low: cm.low, trend: cm.trend,
-          avg1: cm.avg1, avg7: cm.avg7, avg30: cm.avg30,
+          avg: baseDisplay ?? cm.avg,
+          low: cmUnreliable ? null : cm.low,
+          trend: cmUnreliable ? null : cm.trend,
+          avg1: cmUnreliable ? null : cm.avg1,
+          avg7: cmUnreliable ? null : cm.avg7,
+          avg30: cmUnreliable ? null : cm.avg30,
         });
       }
     } else {
       // Regular card: Normal (avg) + Reverse Holo (avg-holo) when both exist
       if (hasBase) {
+        const baseDisplay = getDisplayPrice({
+          priceAvg: cm.avg,
+          priceTrend: cm.trend,
+          pricePriceChartingEur: card.pricePriceChartingEur,
+          priceAvg7: cm.avg7,
+        });
         pricingVariants.push({
           key: "normal",
           label: "Normal",
-          avg: cm.avg, low: cm.low, trend: cm.trend,
-          avg1: cm.avg1, avg7: cm.avg7, avg30: cm.avg30,
+          avg: baseDisplay ?? cm.avg,
+          low: cmUnreliable ? null : cm.low,
+          trend: cmUnreliable ? null : cm.trend,
+          avg1: cmUnreliable ? null : cm.avg1,
+          avg7: cmUnreliable ? null : cm.avg7,
+          avg30: cmUnreliable ? null : cm.avg30,
         });
       }
       if (hasFoil) {
+        // Fall back to avg30-holo as displayed price if avg-holo is null
+        // (happens on thinly-traded promos where the rolling 30d average
+        // survives but the daily avg rolled off).
+        const foilAvg = cm["avg-holo"] ?? cm["avg30-holo"];
         pricingVariants.push({
           key: "reverse",
-          label: "Reverse Holo",
-          avg: cm["avg-holo"], low: cm["low-holo"], trend: cm["trend-holo"],
+          label: isDualHoloPromo ? "Holo" : "Reverse Holo",
+          avg: foilAvg,
+          low: cm["low-holo"],
+          trend: cm["trend-holo"],
           avg1: cm["avg1-holo"], avg7: cm["avg7-holo"], avg30: cm["avg30-holo"],
         });
       }

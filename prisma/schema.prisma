@@ -257,6 +257,12 @@ model Card {
   // Shape: {"poke_ball"?: number, "master_ball"?: number, "ball"?: number, "energy"?: number}
   extraVariantsJson      String?
 
+  // PriceCharting "Ungraded" NM price in EUR — only populated for expensive
+  // cards (>=€250) where CardMarket's daily avg swings wildly on individual
+  // sales. Blended with priceAvg + priceTrend via getDisplayPrice() to make
+  // trend % and market value calmer on illiquid chase cards.
+  pricePriceChartingEur  Float?
+
   watchlistEntries CardWatchlist[]
   priceHistory    CardPriceHistory[]
 

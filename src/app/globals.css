@@ -305,6 +305,19 @@
 
 /* Confetti uses JS-driven individual trajectories — no CSS keyframe needed */
 
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  animation: marquee-scroll 80s linear infinite;
+  width: max-content;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
 /* Rarity glow utility classes */
 .glow-uncommon { animation: glow-uncommon 2.5s ease-in-out infinite; }
 .glow-rare { animation: glow-rare 2.5s ease-in-out infinite; }

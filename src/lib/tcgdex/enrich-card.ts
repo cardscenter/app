@@ -6,6 +6,11 @@ import { resolveSpriteUrl } from "./sprite";
 import { resolvePriceCharting } from "./pricecharting";
 import { fetchExtraVariants } from "./pricecharting-variants";
 import { getSpecialVariantsForSet } from "./special-variants";
+import { fetchPriceChartingBase, pcSetSlug } from "./pricecharting-base";
+
+// Only bother scraping PriceCharting for cards above this threshold —
+// below it, the extra HTTP roundtrip isn't worth the signal.
+const HIGH_VALUE_EUR_THRESHOLD = 250;
 
 /**
  * Writes EVERYTHING we know about a card to the DB in one pass — gameplay
@@ -27,7 +32,7 @@ export async function enrichCard(
 
   const existing = await prisma.card.findUnique({
     where: { id: cardId },
-    include: { cardSet: { select: { tcgdexSetId: true } } },
+    include: { cardSet: { select: { tcgdexSetId: true, name: true } } },
   });
   if (!existing) return null;
 
@@ -141,6 +146,31 @@ export async function enrichCard(
     }
   }
 
+  // PriceCharting Ungraded price (EUR) for expensive cards only. Used
+  // downstream by getDisplayPrice() to blend with CardMarket avg + trend
+  // and produce a calmer market value for illiquid chase cards. Only
+  // worth the extra HTTP roundtrip above ~€250 where CardMarket's daily
+  // avg is most volatile.
+  let pricePriceChartingEur: number | null = existing.pricePriceChartingEur;
+  const currentAvg = pricing?.avg ?? null;
+  if (currentAvg != null && currentAvg >= HIGH_VALUE_EUR_THRESHOLD) {
+    const setSlug = pcSetSlug(existing.cardSet?.tcgdexSetId ?? null, existing.cardSet?.name ?? "");
+    if (setSlug) {
+      try {
+        pricePriceChartingEur = await fetchPriceChartingBase(
+          setSlug,
+          tcgCardRaw?.name ?? existing.name,
+          tcgCardRaw?.localId ?? existing.localId
+        );
+      } catch {
+        // Silent failure — blending gracefully degrades if PriceCharting is missing
+      }
+    }
+  } else if (currentAvg != null && currentAvg < HIGH_VALUE_EUR_THRESHOLD) {
+    // Price dropped below the threshold — clear any stale PC value.
+    pricePriceChartingEur = null;
+  }
+
   return prisma.card.update({
     where: { id: cardId },
     data: {
@@ -160,6 +190,7 @@ export async function enrichCard(
       priceReverseAvg30: useOverrideReverse ? overrideReverseAvg : (pricing?.["avg30-holo"] ?? null),
       priceUpdatedAt: pricing ? new Date(pricing.updated) : new Date(),
       extraVariantsJson,
+      pricePriceChartingEur,
     },
   });
 }

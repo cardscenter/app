@@ -155,7 +155,22 @@ export async function getMergedPricing(
   const localId = tcg?.localId ?? tcgdexCardId.split("-").pop() ?? "";
   const isGalleryCard = /^(TG|GG)\d+$/.test(localId);
 
-  if (!isGalleryCard) {
+  // Sets where TCGdex's CardMarket idProduct mapping is known to be broken
+  // — either multiple cards share one idProduct (Black Bolt Klink #139 ==
+  // Pawniard #142 both → idProduct 836199), or individual cards are pinned
+  // to the wrong product (151 Ditto #132 reads €3 while the actual card is
+  // ~€0.25). Force pokemontcg.io as the primary source for these sets.
+  const setId = tcgdexCardId.split("-")[0] ?? "";
+  const unreliableTcgdexSets = new Set([
+    "sv03.5",   // 151 — Ditto #132 and others mis-mapped
+    "sv08.5",   // Prismatic Evolutions — Poké/Master Ball variants confuse mapping
+    "sv10.5b",  // Black Bolt — idProduct collisions between cards
+    "sv10.5w",  // White Flare — sibling of Black Bolt, same issue
+    "me02.5",   // Ascended Heroes — Ball/Energy variant sets, mapping still settling
+  ]);
+  const isUnreliableSet = unreliableTcgdexSets.has(setId);
+
+  if (!isGalleryCard && !isUnreliableSet) {
     const cm = tcg?.pricing?.cardmarket;
     const tp = tcg?.pricing?.tcgplayer as { prices?: Record<string, Record<string, number>> } | null | undefined;
 
