@@ -162,7 +162,6 @@ export async function getMergedPricing(
   // ~€0.25). Force pokemontcg.io as the primary source for these sets.
   const setId = tcgdexCardId.split("-")[0] ?? "";
   const unreliableTcgdexSets = new Set([
-    "sv03.5",   // 151 — Ditto #132 and others mis-mapped
     "sv10.5b",  // Black Bolt — idProduct collisions between cards
     "sv10.5w",  // White Flare — sibling of Black Bolt, same issue
     "me02.5",   // Ascended Heroes — Pikachu ex #276 + Victini etc. mis-mapped
@@ -173,11 +172,17 @@ export async function getMergedPricing(
     "xyp",      // XY Black Star Promos
     "swshp",    // Sword & Shield Black Star Promos
     //
-    // Earlier versions of this list included smp / svp / mep — removed
-    // because (a) no user-reported broken card for those sets yet, and
-    // (b) TCGdex is often the *only* source that has pricing for older
-    // promos (pokemontcg.io doesn't cover smp at all; mep has TCGdex
-    // pricing that would be discarded if we routed around it).
+    // NOT in this list (deliberately):
+    // - sv03.5 151: TCGdex is correct for chase cards (Charizard ex SIR
+    //   #199 reads €372 on TCGdex, €22 on pokemontcg.io). Commons have
+    //   reverse-holo data in TCGdex's avg-holo that pokemontcg.io loses.
+    //   Ditto #132 remains €3.04 on TCGdex — use manual priceOverrideAvg
+    //   for that specific card if needed.
+    // - sv08.5 Prismatic Evolutions: same story — TCGdex's reverse-holo
+    //   pricing (avg-holo) is the only source. Poké Ball / Master Ball
+    //   variants come from our pricecharting-variants scrape, unrelated.
+    // - smp / svp / mep: no confirmed broken card; TCGdex is often the
+    //   only source with any pricing, so routing around it hurts.
     //
     // NOT in this list (deliberately):
     // - sv08.5 Prismatic Evolutions: TCGdex has correct per-card pricing
