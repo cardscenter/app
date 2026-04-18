@@ -861,7 +861,30 @@
     "home": "Home",
     "auctions": "Auctions",
     "claimsales": "Claimsales",
-    "marketplace": "Marketplace"
+    "marketplace": "Marketplace",
+    "pokedex": "Pokédex"
+  },
+  "pokedex": {
+    "entryButton": "View Pokédex Entry",
+    "height": "Height",
+    "weight": "Weight",
+    "habitat": "Habitat",
+    "legendary": "Legendary",
+    "mythical": "Mythical",
+    "noArtwork": "No artwork",
+    "baseStats": "Base Stats",
+    "total": "Total",
+    "statHp": "HP",
+    "statAttack": "Attack",
+    "statDefense": "Defense",
+    "statSpecialAttack": "Sp. Attack",
+    "statSpecialDefense": "Sp. Defense",
+    "statSpeed": "Speed",
+    "evolution": "Evolution",
+    "noEvolution": "This Pokémon does not evolve.",
+    "allCardsOf": "All {name} cards in our database ({count})",
+    "allCardsOfEmpty": "All {name} cards",
+    "noCardsYet": "No cards of this Pokémon in our database yet."
   },
   "share": {
     "share": "Share",

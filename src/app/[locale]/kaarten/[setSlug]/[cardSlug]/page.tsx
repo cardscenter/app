@@ -11,6 +11,8 @@ import { getCardImageUrl } from "@/lib/tcgdex/card-image";
 import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
 import { CardPricePanel, type VariantPricing, type ExtraVariant } from "@/components/card/card-price-panel";
 import { getSpecialVariantsForSet, parseExtraVariants } from "@/lib/tcgdex/special-variants";
+import { basePokemonName } from "@/lib/pokeapi/base-name";
+import { pokedexSlug } from "@/lib/pokeapi/slug";
 import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
@@ -196,16 +198,7 @@ export default async function CardDetailPage({ params }: Props) {
 
   // "Meer kaarten van [base]" — strip suffixes, plus possessive + thematic
   // prefixes for Pokémon cards so "Team Aqua's Kyogre" etc. find siblings.
-  const isPokemon = gameplay?.category === "Pokemon" || !gameplay?.category;
-  let baseName = card.name
-    .replace(/\b(mega|vmax|vstar|v-?union|gx|ex|v|break|lv\.?x|tag team|prime|legend)\b/gi, "")
-    .replace(/[♀♂]/g, "");
-  if (isPokemon) {
-    baseName = baseName
-      .replace(/^.+?'s\s+/i, "")                          // "Team Aqua's ", "Lillie's "
-      .replace(/^(dark|light|shining|radiant|shiny)\s+/i, ""); // "Dark Gyarados", "Shining Magikarp"
-  }
-  baseName = baseName.replace(/\s+/g, " ").trim();
+  const baseName = basePokemonName(card.name, gameplay?.category);
   const relatedCardsRaw = baseName.length >= 3
     ? await prisma.card.findMany({
         where: {
@@ -482,6 +475,11 @@ export default async function CardDetailPage({ params }: Props) {
                 trainerType={gameplay.trainerType}
                 energyType={gameplay.energyType}
                 effect={gameplay.effect}
+                pokedexHref={
+                  gameplay.category === "Pokemon" && gameplay.dexId && gameplay.dexId.length > 0
+                    ? `/pokedex/${pokedexSlug(baseName, gameplay.dexId[0])}`
+                    : null
+                }
               />
             </section>
           )}

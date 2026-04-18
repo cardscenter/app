@@ -1,5 +1,6 @@
 import { TypeIcon } from "./type-icon";
-import { Shield, ShieldCheck, ArrowRight, Zap } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import { Shield, ShieldCheck, ArrowRight, Zap, BookOpen } from "lucide-react";
 import type {
   TCGdexAttack,
   TCGdexAbility,
@@ -19,6 +20,7 @@ interface Props {
   trainerType?: string | null;
   energyType?: string | null;
   effect?: string | null;
+  pokedexHref?: string | null; // Link to the Pokédex entry for this Pokémon
 }
 
 function formatStage(stage: string | null | undefined): string | null {
@@ -41,6 +43,7 @@ export function CardGameplayBlock({
   trainerType,
   energyType,
   effect,
+  pokedexHref,
 }: Props) {
   const isPokemon = category === "Pokemon";
   const stageLabel = formatStage(stage);
@@ -65,6 +68,15 @@ export function CardGameplayBlock({
             <span className="text-xs">
               Pokédex #{dexId.join(", #")}
             </span>
+          )}
+          {pokedexHref && (
+            <Link
+              href={pokedexHref}
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+            >
+              <BookOpen className="size-3.5" />
+              Pokédex Entry Bekijken
+            </Link>
           )}
         </div>
       )}

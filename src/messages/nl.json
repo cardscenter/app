@@ -861,7 +861,30 @@
     "home": "Home",
     "auctions": "Veilingen",
     "claimsales": "Claimsales",
-    "marketplace": "Marktplaats"
+    "marketplace": "Marktplaats",
+    "pokedex": "Pokédex"
+  },
+  "pokedex": {
+    "entryButton": "Pokédex Entry Bekijken",
+    "height": "Hoogte",
+    "weight": "Gewicht",
+    "habitat": "Habitat",
+    "legendary": "Legendary",
+    "mythical": "Mythical",
+    "noArtwork": "Geen artwork",
+    "baseStats": "Base Stats",
+    "total": "Totaal",
+    "statHp": "HP",
+    "statAttack": "Aanval",
+    "statDefense": "Verdediging",
+    "statSpecialAttack": "Sp. Aanval",
+    "statSpecialDefense": "Sp. Verdediging",
+    "statSpeed": "Snelheid",
+    "evolution": "Evolutie",
+    "noEvolution": "Deze Pokémon evolueert niet.",
+    "allCardsOf": "Alle kaarten van {name} in onze database ({count})",
+    "allCardsOfEmpty": "Alle kaarten van {name}",
+    "noCardsYet": "Nog geen kaarten van deze Pokémon in onze database."
   },
   "share": {
     "share": "Delen",
