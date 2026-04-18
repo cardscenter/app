@@ -16,8 +16,6 @@ interface Props {
   weaknesses?: TCGdexWeakness[] | null;
   resistances?: TCGdexWeakness[] | null;
   retreat?: number | null;
-  regulationMark?: string | null;
-  legal?: { standard?: boolean; expanded?: boolean } | null;
   trainerType?: string | null;
   energyType?: string | null;
   effect?: string | null;
@@ -40,8 +38,6 @@ export function CardGameplayBlock({
   weaknesses,
   resistances,
   retreat,
-  regulationMark,
-  legal,
   trainerType,
   energyType,
   effect,
@@ -185,29 +181,6 @@ export function CardGameplayBlock({
         </div>
       )}
 
-      {/* Legal / Regulation mark */}
-      {(regulationMark || legal) && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {regulationMark && (
-            <span className="inline-flex size-6 items-center justify-center rounded-full bg-muted font-bold text-foreground">
-              {regulationMark}
-            </span>
-          )}
-          {legal?.standard && (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-600 dark:text-emerald-400">
-              Legaal in Standard
-            </span>
-          )}
-          {legal?.expanded && (
-            <span className="rounded-full bg-blue-500/10 px-2 py-1 font-semibold text-blue-600 dark:text-blue-400">
-              Legaal in Expanded
-            </span>
-          )}
-          {!legal?.standard && !legal?.expanded && regulationMark && (
-            <span className="text-muted-foreground">Niet meer legaal in officiële formats</span>
-          )}
-        </div>
-      )}
     </div>
   );
 }

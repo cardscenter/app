@@ -4,6 +4,8 @@ import { getMergedPricing } from "./pricing";
 import { mergeGameplayDetails } from "./gameplay";
 import { resolveSpriteUrl } from "./sprite";
 import { resolvePriceCharting } from "./pricecharting";
+import { fetchExtraVariants } from "./pricecharting-variants";
+import { getSpecialVariantsForSet } from "./special-variants";
 
 /**
  * Writes EVERYTHING we know about a card to the DB in one pass — gameplay
@@ -23,7 +25,10 @@ export async function enrichCard(
 ) {
   const maxAgeHours = options.maxAgeHours ?? 24;
 
-  const existing = await prisma.card.findUnique({ where: { id: cardId } });
+  const existing = await prisma.card.findUnique({
+    where: { id: cardId },
+    include: { cardSet: { select: { tcgdexSetId: true } } },
+  });
   if (!existing) return null;
 
   // "Never enriched" state → populate EVERYTHING.
@@ -115,6 +120,27 @@ export async function enrichCard(
   const useOverrideNormal = overrideAvg != null;
   const useOverrideReverse = overrideReverseAvg != null;
 
+  // Special-variant pricing (Poké Ball / Master Ball / Ball / Energy patterns)
+  // for the handful of sets that have them. PriceCharting is the only public
+  // source we can scrape; CardMarket blocks us with 403. Only attempted when
+  // the rarity is a "regular" card type — inherently-foil rarities like
+  // Double Rare / Illustration Rare don't receive Ball/Energy variants.
+  let extraVariantsJson: string | null = existing.extraVariantsJson;
+  const setConfig = getSpecialVariantsForSet(existing.cardSet?.tcgdexSetId);
+  const rarityLower = (rarity ?? "").toLowerCase();
+  const rarityEligible =
+    rarityLower === "common" || rarityLower === "uncommon" || rarityLower === "rare";
+  if (setConfig && rarityEligible) {
+    const name = tcgCardRaw?.name ?? existing.name;
+    const lid = tcgCardRaw?.localId ?? existing.localId;
+    try {
+      const fetched = await fetchExtraVariants(name, lid, setConfig);
+      extraVariantsJson = Object.keys(fetched).length > 0 ? JSON.stringify(fetched) : null;
+    } catch {
+      // Silent failure — variant pricing is best-effort
+    }
+  }
+
   return prisma.card.update({
     where: { id: cardId },
     data: {
@@ -133,6 +159,7 @@ export async function enrichCard(
       priceReverseAvg7: useOverrideReverse ? overrideReverseAvg : (pricing?.["avg7-holo"] ?? null),
       priceReverseAvg30: useOverrideReverse ? overrideReverseAvg : (pricing?.["avg30-holo"] ?? null),
       priceUpdatedAt: pricing ? new Date(pricing.updated) : new Date(),
+      extraVariantsJson,
     },
   });
 }

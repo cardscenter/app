@@ -32,10 +32,17 @@ export interface HistoryPoint {
   reverse: number | null;
 }
 
+export interface ExtraVariant {
+  key: string;              // stable key, e.g. "master_ball"
+  label: string;            // display label, e.g. "Master Ball Reverse Holo"
+  priceEur: number;         // single-point NM/ungraded price from PriceCharting
+}
+
 interface Props {
   variants: VariantPricing[];
   history: HistoryPoint[];   // sorted ascending by date
   updated: string | null;
+  extraVariants?: ExtraVariant[];
 }
 
 function formatEur(n: number | null) {
@@ -48,7 +55,7 @@ function delta(current: number | null, past: number | null) {
   return ((current - past) / past) * 100;
 }
 
-export function CardPricePanel({ variants, history, updated }: Props) {
+export function CardPricePanel({ variants, history, updated, extraVariants }: Props) {
   const [activeKey, setActiveKey] = useState(variants[0]?.key ?? "normal");
   const active = variants.find((v) => v.key === activeKey) ?? variants[0];
   if (!active) return null;
@@ -220,6 +227,32 @@ export function CardPricePanel({ variants, history, updated }: Props) {
           sub={deltaVs30d !== null ? `${deltaVs30d > 0 ? "+" : ""}${deltaVs30d.toFixed(1)}%` : undefined}
         />
       </div>
+
+      {extraVariants && extraVariants.length > 0 && (
+        <div className="mt-4 border-t border-border pt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Speciale varianten
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {extraVariants.map((v) => (
+              <div
+                key={v.key}
+                className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 dark:border-purple-900/40 dark:bg-purple-950/30"
+              >
+                <span className="text-sm font-medium text-purple-900 dark:text-purple-200">
+                  {v.label}
+                </span>
+                <span className="text-sm font-bold tabular-nums text-purple-900 dark:text-purple-200">
+                  €{v.priceEur.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Prijzen via PriceCharting (NM ongegradeerd, omgerekend naar EUR)
+          </p>
+        </div>
+      )}
 
       {updated && (
         <p className="mt-3 text-[11px] text-muted-foreground">

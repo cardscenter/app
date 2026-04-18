@@ -9,7 +9,8 @@ import { cardSlug, localIdFromSlug } from "@/lib/tcgdex/slug";
 import { enrichCard } from "@/lib/tcgdex/enrich-card";
 import { getCardImageUrl } from "@/lib/tcgdex/card-image";
 import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
-import { CardPricePanel, type VariantPricing } from "@/components/card/card-price-panel";
+import { CardPricePanel, type VariantPricing, type ExtraVariant } from "@/components/card/card-price-panel";
+import { getSpecialVariantsForSet, parseExtraVariants } from "@/lib/tcgdex/special-variants";
 import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
@@ -263,8 +264,11 @@ export default async function CardDetailPage({ params }: Props) {
     const isInherentlyFoil =
       variants.holo ||
       /\b(holo|hyper|ultra|full art|illustration|special|double|amazing|radiant|shiny|secret|rainbow)\b/.test(rarity);
-    // TCGdex explicitly tells us if a reverse-holo variant exists
-    const reverseAllowed = typeof variants.reverse === "boolean" ? variants.reverse : true;
+    // We used to gate reverse-holo display on `variants.reverse`, but TCGdex
+    // returns `false` incorrectly for whole modern sets (e.g. sv06 Twilight
+    // Masquerade, sv08.5 Prismatic Evolutions). `hasFoil` already requires
+    // a real CardMarket avg-holo price, which is a strong signal that the
+    // variant physically exists.
 
     if (isInherentlyFoil) {
       // Prefer the foil fields only if they include a primary `avg` price.
@@ -297,7 +301,7 @@ export default async function CardDetailPage({ params }: Props) {
           avg1: cm.avg1, avg7: cm.avg7, avg30: cm.avg30,
         });
       }
-      if (hasFoil && reverseAllowed) {
+      if (hasFoil) {
         pricingVariants.push({
           key: "reverse",
           label: "Reverse Holo",
@@ -307,6 +311,20 @@ export default async function CardDetailPage({ params }: Props) {
       }
     }
   }
+
+  // Special-variant pricing (Poké Ball / Master Ball / Ball / Energy patterns)
+  // — cached on Card.extraVariantsJson, labels + keys from the set config.
+  const extraVariants: ExtraVariant[] = (() => {
+    const setConfig = getSpecialVariantsForSet(set.tcgdexSetId);
+    if (!setConfig) return [];
+    const prices = parseExtraVariants(card.extraVariantsJson);
+    return setConfig.variants
+      .map((v) => {
+        const priceEur = prices[v.key];
+        return priceEur ? { key: v.key, label: v.labelNl, priceEur } : null;
+      })
+      .filter((v): v is ExtraVariant => v !== null);
+  })();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -418,6 +436,7 @@ export default async function CardDetailPage({ params }: Props) {
               variants={pricingVariants}
               history={priceHistory}
               updated={cm?.updated ?? card.priceUpdatedAt?.toISOString() ?? null}
+              extraVariants={extraVariants}
             />
           ) : (
             <div className="rounded-2xl border border-border bg-card p-5">
@@ -460,8 +479,6 @@ export default async function CardDetailPage({ params }: Props) {
                 weaknesses={gameplay.weaknesses}
                 resistances={gameplay.resistances}
                 retreat={gameplay.retreat}
-                regulationMark={gameplay.regulationMark}
-                legal={gameplay.legal}
                 trainerType={gameplay.trainerType}
                 energyType={gameplay.energyType}
                 effect={gameplay.effect}

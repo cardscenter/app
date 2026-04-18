@@ -251,6 +251,12 @@ model Card {
   priceOverrideReverseAvg Float?
   priceOverrideReason    String?   // Admin note explaining the override
 
+  // Special-variant reverse-holo pricing (EUR) for sets with Poké Ball /
+  // Master Ball / Ball / Energy patterns. Sourced from PriceCharting since
+  // CardMarket and TCGdex don't surface these as separate products.
+  // Shape: {"poke_ball"?: number, "master_ball"?: number, "ball"?: number, "energy"?: number}
+  extraVariantsJson      String?
+
   watchlistEntries CardWatchlist[]
   priceHistory    CardPriceHistory[]
 

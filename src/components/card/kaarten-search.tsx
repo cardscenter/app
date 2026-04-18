@@ -27,16 +27,6 @@ function isFoilRarity(rarity: string | null): boolean {
   return FOIL_RE.test(rarity ?? "");
 }
 
-function hasReverseVariant(variantsJson: string | null): boolean | null {
-  if (!variantsJson) return null;
-  try {
-    const v = JSON.parse(variantsJson);
-    return typeof v.reverse === "boolean" ? v.reverse : null;
-  } catch {
-    return null;
-  }
-}
-
 function effectivePrice(c: SearchResult): number | null {
   if (isFoilRarity(c.rarity) && c.priceReverseAvg !== null) return c.priceReverseAvg;
   return c.priceAvg;
@@ -258,7 +248,7 @@ function SearchResults({
                       €{price.toFixed(2)}
                     </span>
                   )}
-                  {card.priceReverseAvg !== null && !isFoilRarity(card.rarity) && hasReverseVariant(card.variants) !== false && (
+                  {card.priceReverseAvg !== null && !isFoilRarity(card.rarity) && (
                     <span className="inline-flex items-center gap-0.5 text-xs tabular-nums text-purple-600 dark:text-purple-400">
                       <span className="font-medium">Reverse</span> €{card.priceReverseAvg.toFixed(2)}
                     </span>

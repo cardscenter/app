@@ -48,17 +48,6 @@ export interface BuybackPriceFields {
   variants?: string | null; // JSON string: {reverse:bool, normal:bool, holo:bool, ...}
 }
 
-/** Parse TCGdex variants JSON to check if a card has a reverse holo variant */
-function hasReverseVariant(variantsJson: string | null | undefined): boolean | null {
-  if (!variantsJson) return null; // unknown — allow fallback to price-based detection
-  try {
-    const v = JSON.parse(variantsJson);
-    return typeof v.reverse === "boolean" ? v.reverse : null;
-  } catch {
-    return null;
-  }
-}
-
 // Variant label: rarity for normal, "Reverse Holo" for reverse
 function variantLabel(rarity: string | null, isReverse: boolean): string {
   if (isReverse) return "Reverse Holo";
@@ -104,7 +93,6 @@ export interface VariantPrice {
 export function getAvailableVariants(card: BuybackPriceFields): VariantPrice[] {
   const variants: VariantPrice[] = [];
   const foil = isInherentlyFoil(card.rarity);
-  const reverseExists = hasReverseVariant(card.variants);
 
   // Normal variant (skip for inherently-foil cards)
   if (!foil) {
@@ -114,14 +102,13 @@ export function getAvailableVariants(card: BuybackPriceFields): VariantPrice[] {
     }
   }
 
-  // Reverse holo variant — skip if TCGdex tells us this card has no reverse variant
-  // (e.g. old Wizards-era promos, Scarlet & Violet non-reverse promos).
-  // When reverseExists is null (unknown), fall through to price-based detection.
-  if (reverseExists !== false) {
-    const rp = bestAvailablePrice(card.priceReverseAvg, card.priceReverseAvg30);
-    if (rp != null && rp > 0) {
-      variants.push({ price: rp, isReverse: true, label: variantLabel(card.rarity, true) });
-    }
+  // Reverse holo variant — rely purely on CardMarket's avg-holo price as the
+  // signal that a reverse variant physically exists. We used to also check
+  // TCGdex's `variants.reverse` flag, but it's wrong for whole modern sets
+  // (e.g. sv06 Twilight Masquerade, sv08.5 Prismatic Evolutions).
+  const rp = bestAvailablePrice(card.priceReverseAvg, card.priceReverseAvg30);
+  if (rp != null && rp > 0) {
+    variants.push({ price: rp, isReverse: true, label: variantLabel(card.rarity, true) });
   }
 
   // For inherently-foil cards where reverse pricing is empty,
