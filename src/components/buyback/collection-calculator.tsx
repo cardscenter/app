@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, CheckSquare } from "lucide-react";
-import { BuybackCardSearch, cardVariantKey, type SelectedCard } from "./buyback-card-search";
+import { BuybackCardSearch, cardVariantKey, type SelectedCard, type CardConditionKey } from "./buyback-card-search";
 import { BuybackCart } from "./buyback-cart";
 import { PayoutMethodSelect } from "./payout-method-select";
 import { BuybackSuccess } from "./buyback-success";
@@ -52,7 +52,10 @@ export function CollectionCalculator() {
     }
   }, [actionState, t]);
 
-  const total = items.reduce((sum, i) => sum + i.buybackPrice * i.quantity, 0);
+  // Only Near Mint cards count toward the total — other conditions are not bought
+  const acceptedItems = items.filter((i) => i.condition === "NEAR_MINT");
+  const hasRejectedCards = items.some((i) => i.condition !== "NEAR_MINT");
+  const total = acceptedItems.reduce((sum, i) => sum + i.buybackPrice * i.quantity, 0);
   const roundedTotal = Math.round(total * 100) / 100;
   const minimumMet = roundedTotal >= MINIMUM_COLLECTION_VALUE;
   const bonusAmount = getStoreCreditBonus(roundedTotal);
@@ -95,12 +98,20 @@ export function CollectionCalculator() {
     setItems((prev) => prev.filter((i) => cardVariantKey(i.cardId, i.isReverse) !== key));
   }
 
+  function handleUpdateCondition(key: string, condition: CardConditionKey) {
+    setItems((prev) =>
+      prev.map((i) =>
+        cardVariantKey(i.cardId, i.isReverse) === key ? { ...i, condition } : i
+      )
+    );
+  }
+
   function handleSubmit() {
     const formData = new FormData();
     formData.set(
       "items",
       JSON.stringify(
-        items.map((i) => ({
+        acceptedItems.map((i) => ({
           cardId: i.cardId,
           quantity: i.quantity,
           isReverse: i.isReverse,
@@ -136,11 +147,12 @@ export function CollectionCalculator() {
               <BuybackCart
                 items={items}
                 onUpdateQuantity={handleUpdateQuantity}
+                onUpdateCondition={handleUpdateCondition}
                 onRemove={handleRemove}
                 total={roundedTotal}
                 minimumMet={minimumMet}
               />
-              {items.length > 0 && minimumMet && (
+              {items.length > 0 && minimumMet && !hasRejectedCards && (
                 <button
                   type="button"
                   onClick={() => setStep(2)}
@@ -148,6 +160,11 @@ export function CollectionCalculator() {
                 >
                   {t("nextStep")} <ArrowRight className="h-4 w-4" />
                 </button>
+              )}
+              {hasRejectedCards && (
+                <p className="mt-3 text-center text-xs text-amber-600 dark:text-amber-400">
+                  Verwijder eerst de niet-Near Mint kaarten om door te gaan
+                </p>
               )}
             </div>
           </div>
@@ -170,6 +187,7 @@ export function CollectionCalculator() {
           <BuybackCart
             items={items}
             onUpdateQuantity={handleUpdateQuantity}
+            onUpdateCondition={handleUpdateCondition}
             onRemove={handleRemove}
             total={roundedTotal}
             minimumMet={minimumMet}

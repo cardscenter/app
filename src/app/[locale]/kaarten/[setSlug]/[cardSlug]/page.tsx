@@ -254,16 +254,25 @@ export default async function CardDetailPage({ params }: Props) {
   const pricingVariants: VariantPricing[] = [];
   if (cm) {
     const rarity = (card.rarity ?? "").toLowerCase();
-    const hasBase = cm.avg !== null || cm.low !== null;
-    const hasFoil = cm["avg-holo"] !== null || cm["low-holo"] !== null;
+    // "Has base" / "has foil" should require a meaningful price (avg or avg30),
+    // not just any field. Without this, sparse foil data (e.g. only low-holo
+    // filled) tricks the UI into showing an empty "Holo" variant.
+    const hasBase = (cm.avg !== null && cm.avg > 0) || (cm.avg30 !== null && cm.avg30 > 0);
+    const hasFoil = (cm["avg-holo"] !== null && cm["avg-holo"] > 0) || (cm["avg30-holo"] !== null && cm["avg30-holo"] > 0);
 
     const isInherentlyFoil =
       variants.holo ||
       /\b(holo|hyper|ultra|full art|illustration|special|double|amazing|radiant|shiny|secret|rainbow)\b/.test(rarity);
+    // TCGdex explicitly tells us if a reverse-holo variant exists
+    const reverseAllowed = typeof variants.reverse === "boolean" ? variants.reverse : true;
 
     if (isInherentlyFoil) {
-      // Prefer the foil fields; fall back to base only if foil is missing
-      if (hasFoil) {
+      // Prefer the foil fields only if they include a primary `avg` price.
+      // Some inherently-foil cards (e.g. Hidden Fates Shiny Vault Poipole)
+      // have their real price in the base `avg` field and only sparse reverse
+      // data (low-holo, avg30-holo). In that case base is the single source.
+      const foilHasAvg = cm["avg-holo"] !== null && cm["avg-holo"] > 0;
+      if (foilHasAvg) {
         pricingVariants.push({
           key: "normal",
           label: "Holo",
@@ -288,7 +297,7 @@ export default async function CardDetailPage({ params }: Props) {
           avg1: cm.avg1, avg7: cm.avg7, avg30: cm.avg30,
         });
       }
-      if (hasFoil) {
+      if (hasFoil && reverseAllowed) {
         pricingVariants.push({
           key: "reverse",
           label: "Reverse Holo",

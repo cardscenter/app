@@ -5,6 +5,7 @@ import { Gavel, Tag, Store, Clock, TrendingUp } from "lucide-react";
 
 import { MarketingHero } from "@/components/home/marketing-hero";
 import { LoggedInHero } from "@/components/home/logged-in-hero";
+import { MainSectionsGrid } from "@/components/home/main-sections-grid";
 import { CategoryStatsStrip } from "@/components/home/category-stats-strip";
 import { SponsoredSpotlight } from "@/components/home/sponsored-spotlight";
 import { TopSellersSection } from "@/components/home/top-sellers-section";
@@ -51,6 +52,9 @@ async function HomePageContent({
       ) : (
         <MarketingHero stats={data.stats} />
       )}
+
+      {/* Finn & Sage visual entry points to the three main sections (logged-in only) */}
+      {isLoggedIn && <MainSectionsGrid />}
 
       {/* Category Stats */}
       <CategoryStatsStrip stats={data.stats} />

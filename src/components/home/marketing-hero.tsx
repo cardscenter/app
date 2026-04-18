@@ -17,7 +17,7 @@ export function MarketingHero({ stats }: MarketingHeroProps) {
       {/* Background image with parallax-ready positioning */}
       <div className="absolute inset-0">
         <Image
-          src="/images/hero-banner-pc-image.png"
+          src="/images/finnsage/homepage/herobanner.png"
           alt=""
           fill
           className="object-cover object-center scale-110"

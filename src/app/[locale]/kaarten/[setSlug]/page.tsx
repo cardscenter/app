@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { cardSlug } from "@/lib/tcgdex/slug";
-import { getCardImageUrl } from "@/lib/tcgdex/card-image";
+import { SetCardsGrid } from "@/components/card/set-cards-grid";
 import { Layers } from "lucide-react";
 
 export const revalidate = 3600;
@@ -42,21 +40,15 @@ export default async function SetDetailPage({ params }: Props) {
           rarity: true,
           imageUrl: true,
           imageUrlFull: true,
+          priceAvg: true,
+          priceReverseAvg: true,
+          variants: true,
         },
       },
     },
   });
 
   if (!set) notFound();
-
-  // Natural sort by localId: "1" < "2" < "10" (not "1" < "10" < "2"). Falls
-  // back to string compare for non-numeric prefixes like "SWSH004".
-  set.cards.sort((a, b) => {
-    const na = parseInt(a.localId, 10);
-    const nb = parseInt(b.localId, 10);
-    if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
-    return a.localId.localeCompare(b.localId, undefined, { numeric: true });
-  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -96,42 +88,7 @@ export default async function SetDetailPage({ params }: Props) {
           Nog geen kaarten geïmporteerd voor deze set.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {set.cards.map((card) => {
-            const imgSrc = getCardImageUrl(card, "low");
-            return (
-            <Link
-              key={card.id}
-              href={`/kaarten/${setSlug}/${cardSlug(card.name, card.localId)}`}
-              className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:scale-[1.02] hover:shadow-lg"
-            >
-              <div className="relative aspect-[5/7] bg-muted">
-                {imgSrc ? (
-                  <Image
-                    src={imgSrc}
-                    alt={card.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center text-xs text-muted-foreground/50">
-                    Geen afbeelding
-                  </div>
-                )}
-              </div>
-              <div className="p-2">
-                <p className="truncate text-xs font-semibold text-foreground">{card.name}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  #{card.localId}
-                  {card.rarity && ` · ${card.rarity}`}
-                </p>
-              </div>
-            </Link>
-            );
-          })}
-        </div>
+        <SetCardsGrid cards={set.cards} setSlug={setSlug} />
       )}
     </div>
   );

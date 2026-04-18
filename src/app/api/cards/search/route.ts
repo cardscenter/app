@@ -97,6 +97,7 @@ export async function GET(request: Request) {
       priceReverseAvg7: card.priceReverseAvg7,
       priceReverseAvg30: card.priceReverseAvg30,
       priceReverseLow: card.priceReverseLow,
+      variants: card.variants,
     })),
   });
 }

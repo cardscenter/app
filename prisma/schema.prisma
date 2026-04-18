@@ -243,6 +243,14 @@ model Card {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // Manual price override — used for edge cases where CardMarket data is
+  // wrong (e.g. Pokemon Center stamped promos grouped with normal versions,
+  // mis-mapped products). When set, enrichCard uses these values instead
+  // of scraped pricing.
+  priceOverrideAvg       Float?
+  priceOverrideReverseAvg Float?
+  priceOverrideReason    String?   // Admin note explaining the override
+
   watchlistEntries CardWatchlist[]
   priceHistory    CardPriceHistory[]
 

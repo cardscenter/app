@@ -15,6 +15,18 @@ interface SearchResult extends BuybackPriceFields {
   imageUrl: string | null;
 }
 
+export const CARD_CONDITIONS = ["NEAR_MINT", "EXCELLENT", "GOOD", "LIGHT_PLAYED", "PLAYED", "POOR"] as const;
+export type CardConditionKey = (typeof CARD_CONDITIONS)[number];
+
+export const CONDITION_LABELS: Record<CardConditionKey, string> = {
+  NEAR_MINT: "Near Mint",
+  EXCELLENT: "Excellent",
+  GOOD: "Good",
+  LIGHT_PLAYED: "Light Played",
+  PLAYED: "Played",
+  POOR: "Poor",
+};
+
 export interface SelectedCard {
   cardId: string;
   name: string;
@@ -27,6 +39,7 @@ export interface SelectedCard {
   isReverse: boolean;
   quantity: number;
   variantLabel: string;
+  condition: CardConditionKey;
 }
 
 interface BuybackCardSearchProps {
@@ -87,6 +100,7 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
       isReverse: variant.isReverse,
       quantity: qty,
       variantLabel: variant.label,
+      condition: "NEAR_MINT",
     });
     setQuantities((prev) => ({ ...prev, [key]: 1 }));
   }

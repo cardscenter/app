@@ -27,6 +27,16 @@ const nextConfig: NextConfig = {
         hostname: "cards-center.nl",
         pathname: "/cdn/**",
       },
+      {
+        protocol: "https",
+        hostname: "storage.googleapis.com",
+        pathname: "/images.pricecharting.com/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.shopify.com",
+        pathname: "/**",
+      },
     ],
   },
 };

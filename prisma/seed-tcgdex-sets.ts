@@ -123,7 +123,7 @@ async function main() {
             logoUrl: set.logo ? `${set.logo}.webp` : null,
             symbolUrl: set.symbol ?? null,
             releaseDate: set.releaseDate ?? null,
-            cardCount: set.cardCount.official ?? null,
+            cardCount: set.cardCount.total ?? set.cardCount.official ?? null,
             seriesId: series.id,
           },
         });
@@ -145,7 +145,7 @@ async function main() {
               logoUrl: set.logo ? `${set.logo}.webp` : null,
               symbolUrl: set.symbol ?? null,
               releaseDate: set.releaseDate ?? null,
-              cardCount: set.cardCount.official ?? null,
+              cardCount: set.cardCount.total ?? set.cardCount.official ?? null,
             },
           });
           updatedSets++;
@@ -157,7 +157,7 @@ async function main() {
               logoUrl: set.logo ? `${set.logo}.webp` : null,
               symbolUrl: set.symbol ?? null,
               releaseDate: set.releaseDate ?? null,
-              cardCount: set.cardCount.official ?? null,
+              cardCount: set.cardCount.total ?? set.cardCount.official ?? null,
               seriesId: series.id,
             },
           });

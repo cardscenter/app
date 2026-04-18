@@ -18,12 +18,23 @@ interface SearchResult {
   imageUrl: string | null;
   priceAvg: number | null;
   priceReverseAvg: number | null;
+  variants: string | null;
 }
 
 const FOIL_RE = /\b(holo|hyper|ultra|full art|illustration|special|double|amazing|radiant|shiny|secret|rainbow)\b/i;
 
 function isFoilRarity(rarity: string | null): boolean {
   return FOIL_RE.test(rarity ?? "");
+}
+
+function hasReverseVariant(variantsJson: string | null): boolean | null {
+  if (!variantsJson) return null;
+  try {
+    const v = JSON.parse(variantsJson);
+    return typeof v.reverse === "boolean" ? v.reverse : null;
+  } catch {
+    return null;
+  }
 }
 
 function effectivePrice(c: SearchResult): number | null {
@@ -234,21 +245,21 @@ function SearchResults({
                   </div>
                 )}
               </div>
-              <div className="space-y-1 p-2">
+              <div className="space-y-1 p-2.5">
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold text-foreground">{card.name}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">
+                  <p className="truncate text-sm font-semibold text-foreground">{card.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
                     #{card.localId} · {card.setName}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
                   {price !== null && (
-                    <span className="text-[10px] font-bold text-foreground tabular-nums">
+                    <span className="text-sm font-bold text-foreground tabular-nums">
                       €{price.toFixed(2)}
                     </span>
                   )}
-                  {card.priceReverseAvg !== null && !isFoilRarity(card.rarity) && (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] tabular-nums text-purple-600 dark:text-purple-400">
+                  {card.priceReverseAvg !== null && !isFoilRarity(card.rarity) && hasReverseVariant(card.variants) !== false && (
+                    <span className="inline-flex items-center gap-0.5 text-xs tabular-nums text-purple-600 dark:text-purple-400">
                       <span className="font-medium">Reverse</span> €{card.priceReverseAvg.toFixed(2)}
                     </span>
                   )}
