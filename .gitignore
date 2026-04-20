@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# local dev database (SQLite) — too large for git, refresh locally
+dev.db
+dev.db-journal
