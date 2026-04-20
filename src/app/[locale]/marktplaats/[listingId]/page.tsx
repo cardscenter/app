@@ -16,7 +16,7 @@ import { getSellerOtherItems, getSimilarItems } from "@/lib/recommendations";
 import { SellerInfoBlock } from "@/components/ui/seller-info-block";
 import { getSellerInfo } from "@/lib/seller-info";
 import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
-import { getCard } from "@/lib/tcgdex/client";
+import { getCardPricing } from "@/lib/card-helpers";
 
 export default async function ListingDetailPage({
   params,
@@ -42,7 +42,7 @@ export default async function ListingDetailPage({
   const isActive = listing.status === "ACTIVE";
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
-  const [watched, sellerItems, similarItems, sellerInfo, tcgdexCard] = await Promise.all([
+  const [watched, sellerItems, similarItems, sellerInfo, pricing] = await Promise.all([
     session?.user ? isWatched({ listingId: listing.id }) : false,
     getSellerOtherItems(listing.sellerId, { listingId: listing.id }),
     getSimilarItems({
@@ -53,10 +53,8 @@ export default async function ListingDetailPage({
       itemType: "listing",
     }),
     getSellerInfo(listing.sellerId),
-    listing.tcgdexId ? getCard(listing.tcgdexId) : Promise.resolve(null),
+    getCardPricing(listing.tcgdexId),
   ]);
-
-  const pricing = tcgdexCard?.pricing?.cardmarket ?? null;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -116,7 +114,7 @@ export default async function ListingDetailPage({
           </div>
 
           {/* Marktwaarde */}
-          {pricing && pricing.avg !== null && (
+          {pricing && (
             <PricingInfoBlock pricing={pricing} variant="full" label="Marktwaarde" />
           )}
 

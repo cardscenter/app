@@ -6,14 +6,16 @@ import { createNotification } from "@/actions/notification";
 import {
   getBuybackPrice,
   getStoreCreditBonus,
+  checkBuybackEligibility,
   BULK_PRICING,
   MINIMUM_COLLECTION_VALUE,
   MINIMUM_BULK_VALUE,
+  MAX_BUYBACK_MARKTPRIJS,
   type BulkCategoryKey,
 } from "@/lib/buyback-pricing";
 import { getServerMarketPrice } from "@/lib/buyback-pricing-server";
 import { submitCollectionBuybackSchema, submitBulkBuybackSchema } from "@/lib/validations/buyback";
-import { getCardImageUrl } from "@/lib/tcgdex/card-image";
+import { getCardImageUrl } from "@/lib/card-image";
 
 // ── User actions ─────────────────────────────────────────────────────────────
 
@@ -49,9 +51,22 @@ export async function submitCollectionBuyback(formData: FormData) {
 
     const card = await prisma.card.findUnique({
       where: { id: item.cardId },
-      select: { name: true, localId: true, rarity: true, imageUrl: true, imageUrlFull: true, cardSet: { select: { name: true } } },
+      select: { name: true, localId: true, rarity: true, imageUrl: true, imageUrlFull: true, cardSet: { select: { name: true, releaseDate: true } } },
     });
     if (!card) return { error: `Kaart ${item.cardId} niet gevonden` };
+
+    // Block cards beyond the per-card price cap or from sets older than XY
+    const elig = checkBuybackEligibility(marketResult.price, card.cardSet?.releaseDate);
+    if (!elig.eligible) {
+      const label = `${card.name} (${card.cardSet?.name ?? ""})`;
+      if (elig.reason === "price_too_high") {
+        return { error: `${label} heeft een Marktprijs boven €${MAX_BUYBACK_MARKTPRIJS.toFixed(0)} en kan momenteel niet worden ingekocht.` };
+      }
+      if (elig.reason === "too_old") {
+        return { error: `${label} komt uit een set van vóór de XY-serie en kan momenteel niet worden ingekocht.` };
+      }
+      return { error: `${label} kan momenteel niet worden ingekocht.` };
+    }
 
     const buybackPrice = getBuybackPrice(marketResult.price);
     itemsWithPrices.push({
@@ -474,9 +489,7 @@ export async function finalizeBuybackInspection(requestId: string) {
   }
 
   const storeCreditBonus =
-    request.payoutMethod === "STORE_CREDIT"
-      ? Math.round(finalPayout * 0.2 * 100) / 100
-      : null;
+    request.payoutMethod === "STORE_CREDIT" ? getStoreCreditBonus(finalPayout) : null;
 
   await prisma.buybackRequest.update({
     where: { id: requestId },

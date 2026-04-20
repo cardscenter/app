@@ -1,0 +1,32 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-pokewallet",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/auto-confirm",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/auto-resolve-disputes",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/check-subscriptions",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/auction-payment-deadline",
+      "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/expire-claims",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-archived-chats",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}

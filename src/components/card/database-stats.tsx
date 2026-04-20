@@ -1,4 +1,4 @@
-import { Database, Layers, TrendingUp, Sparkles } from "lucide-react";
+import { Database, Layers, TrendingUp, Sparkles, Info } from "lucide-react";
 
 interface Props {
   totalCards: number;
@@ -8,10 +8,8 @@ interface Props {
   latestSetSlug: string | null;
 }
 
-function formatEur(n: number): string {
-  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `€${(n / 1_000).toFixed(0)}k`;
-  return `€${n.toFixed(0)}`;
+function formatFullEur(n: number): string {
+  return `€${Math.round(n).toLocaleString("nl-NL")}`;
 }
 
 function formatNumber(n: number): string {
@@ -39,7 +37,8 @@ export function DatabaseStats({
       <StatTile
         icon={<TrendingUp className="size-5" />}
         label="Totale marktwaarde"
-        value={formatEur(totalMarketValueEur)}
+        value={formatFullEur(totalMarketValueEur)}
+        tooltip="Marktwaarde van Engelstalige kaarten, raw in near mint conditie."
       />
       <StatTile
         icon={<Sparkles className="size-5" />}
@@ -54,10 +53,12 @@ function StatTile({
   icon,
   label,
   value,
+  tooltip,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  tooltip?: string;
 }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3">
@@ -65,10 +66,26 @@ function StatTile({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <p className="truncate text-base font-bold text-foreground">{value}</p>
+        <div className="flex items-center gap-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          {tooltip && (
+            <span className="group relative inline-flex">
+              <Info
+                className="size-3 cursor-help text-muted-foreground/70 transition-colors hover:text-foreground"
+                aria-label={tooltip}
+              />
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute left-1/2 top-full z-30 mt-1.5 w-56 -translate-x-1/2 rounded-md border border-border bg-popover px-2.5 py-1.5 text-[11px] font-normal normal-case tracking-normal text-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+              >
+                {tooltip}
+              </span>
+            </span>
+          )}
+        </div>
+        <p className="text-base font-bold text-foreground">{value}</p>
       </div>
     </div>
   );

@@ -7,8 +7,8 @@ import { KaartenSearch } from "@/components/card/kaarten-search";
 import { DatabaseStats } from "@/components/card/database-stats";
 import { DatabaseMarquee } from "@/components/card/database-marquee";
 import { DatabaseTrending, type TrendingCard } from "@/components/card/database-trending";
-import { getCardImageUrl } from "@/lib/tcgdex/card-image";
-import { getDisplayPrice, computeWeeklyDeltaPct } from "@/lib/display-price";
+import { getCardImageUrl } from "@/lib/card-image";
+import { getDisplayPrice, getMarktprijs, computeWeeklyDeltaPct } from "@/lib/display-price";
 import { Layers, BookOpen, Banknote, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -38,6 +38,7 @@ export default async function CardsOverviewPage() {
     latestSet,
     marqueeCards,
     trendingCards,
+    rarityGroups,
   ] = await Promise.all([
     // Only series that actually have cards in our local DB.
     // "tcgp" = Pokémon TCG Pocket (mobile game) — different product, excluded.
@@ -74,9 +75,11 @@ export default async function CardsOverviewPage() {
       orderBy: { releaseDate: "desc" },
       select: { name: true, tcgdexSetId: true },
     }),
-    // Marquee pool — top 80 priceAvg cards from sets released in the last
-    // 3 years. We shuffle in JS before showing 40, so each hourly render
-    // mixes things up instead of always leading with the same Charizard.
+    // Marquee pool — top 200 priceAvg cards from sets released in the last
+    // 3 years. We shuffle in JS and post-filter via getMarktprijs to drop
+    // corrupted idProduct mappings (e.g. Quaxly Surging Sparks raw €54 but
+    // real Marktprijs €0.02). Take 200 at the DB layer so we still have
+    // enough candidates after the Marktprijs filter.
     prisma.card.findMany({
       where: {
         priceAvg: { gte: 20, lte: 3000 },
@@ -84,26 +87,34 @@ export default async function CardsOverviewPage() {
       },
       orderBy: { priceAvg: "desc" },
       include: { cardSet: { select: { tcgdexSetId: true } } },
-      take: 80,
+      take: 200,
     }),
-    // Candidate pool for trending movers — same 3-year cutoff. Require
-    // priceAvg and priceAvg7 both above €5 so the % delta is meaningful
-    // (€0.05 → €0.10 is technically +100% but useless info). Pulling
-    // priceTrend + pricePriceChartingEur for the display-price blender
-    // so expensive chase cards use a smoother current price.
+    // Candidate pool for trending movers — 3-year cutoff. Require avg
+    // and avg7 both above €10 so we focus on liquid cards and avoid
+    // -99% error-correction noise on cheap, mis-priced cards.
     prisma.card.findMany({
       where: {
-        priceAvg: { gte: 5 },
-        priceAvg7: { gte: 5 },
+        priceAvg: { gte: 10 },
+        priceAvg7: { gte: 10 },
         cardSet: { releaseDate: { gte: threeYearsCutoff } },
       },
       select: {
         id: true, name: true, localId: true, rarity: true,
-        priceAvg: true, priceAvg7: true, priceTrend: true,
-        pricePriceChartingEur: true,
+        priceAvg: true, priceAvg7: true, priceAvg30: true, priceTrend: true,
+        priceLow: true,
+        priceTcgplayerHolofoilMarket: true, priceTcgplayerNormalMarket: true,
         imageUrl: true, imageUrlFull: true,
         cardSet: { select: { name: true, tcgdexSetId: true } },
       },
+    }),
+    // Distinct rarity values for advanced-search filter
+    prisma.card.groupBy({
+      by: ["rarity"],
+      where: {
+        rarity: { not: null },
+        cardSet: { series: { tcgdexSeriesId: { notIn: ["tcgp"] } } },
+      },
+      _count: { _all: true },
     }),
   ]);
 
@@ -130,24 +141,26 @@ export default async function CardsOverviewPage() {
     })
     .sort((a, b) => b.latestRelease.localeCompare(a.latestRelease));
 
-  // Marquee: pick a random 40 out of the top-80 pool so each hourly render
-  // mixes things up. Fisher-Yates shuffle on a copy.
-  const shuffled = [...marqueeCards];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const marqueeItems = shuffled
-    .slice(0, 40)
+  // Marquee: compute Marktprijs per candidate so corrupted idProduct
+  // mappings (raw priceAvg €54 → real €0.02) don't show up as fake chase
+  // cards. Keep only cards whose Marktprijs is still ≥ €20, then shuffle
+  // and slice to 40.
+  const marqueePool = marqueeCards
     .map((c) => ({
       id: c.id,
       name: c.name,
       localId: c.localId,
       setSlug: c.cardSet.tcgdexSetId ?? "",
       imageUrl: getCardImageUrl(c, "low"),
-      priceAvg: c.priceAvg,
+      priceAvg: getMarktprijs(c) ?? c.priceAvg ?? 0,
     }))
-    .filter((c) => c.setSlug && c.imageUrl);
+    .filter((c) => c.setSlug && c.imageUrl && c.priceAvg >= 20);
+  const shuffled = [...marqueePool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const marqueeItems = shuffled.slice(0, 40);
 
   // Trending: "current" uses getDisplayPrice() which blends CardMarket
   // avg/trend with PriceCharting for expensive cards (>=€250), so single
@@ -162,6 +175,9 @@ export default async function CardsOverviewPage() {
     .map((c) => {
       const displayPrice = getDisplayPrice(c) ?? c.priceAvg;
       const deltaPct = computeWeeklyDeltaPct(c);
+      // Flag corrupted idProduct mappings (raw priceAvg >> Marktprijs):
+      // those cards produce fake -99% "drops" that aren't real movement.
+      const corrupted = c.priceAvg > 0 && displayPrice < c.priceAvg / 2.5;
       return {
         id: c.id,
         name: c.name,
@@ -172,12 +188,26 @@ export default async function CardsOverviewPage() {
         priceAvg: displayPrice,
         priceAvg7: c.priceAvg7,
         deltaPct: deltaPct ?? 0,
+        corrupted,
       };
     })
-    // Require ≥3% absolute move to clear the near-zero noise floor
-    .filter((c) => Math.abs(c.deltaPct) >= 3);
+    // Require ≥3% absolute move AND no corruption-correction noise
+    .filter((c) => !c.corrupted && Math.abs(c.deltaPct) >= 3);
   const risers: TrendingCard[] = [...withDelta].sort((a, b) => b.deltaPct - a.deltaPct).slice(0, 10);
   const fallers: TrendingCard[] = [...withDelta].sort((a, b) => a.deltaPct - b.deltaPct).slice(0, 10);
+
+  // Advanced-search options — keep to non-trivial rarities (min count)
+  // and use the already-sorted series list.
+  const rarityOptions = rarityGroups
+    .filter((r): r is typeof r & { rarity: string } => r.rarity !== null && r._count._all >= 5)
+    .sort((a, b) => b._count._all - a._count._all)
+    .map((r) => r.rarity);
+
+  const seriesOptions = sortedSeries.map((s) => ({
+    id: s.id,
+    name: s.name,
+    sets: s.cardSets.map((set) => ({ id: set.id, name: set.name })),
+  }));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -207,53 +237,53 @@ export default async function CardsOverviewPage() {
         />
       </div>
 
-      {marqueeItems.length > 0 && (
-        <div className="mb-6">
-          <DatabaseMarquee items={marqueeItems} />
+      <KaartenSearch rarityOptions={rarityOptions} seriesOptions={seriesOptions}>
+        {marqueeItems.length > 0 && (
+          <div className="mb-6">
+            <DatabaseMarquee items={marqueeItems} />
+          </div>
+        )}
+
+        {(risers.length > 0 || fallers.length > 0) && (
+          <div className="mb-8">
+            <DatabaseTrending risers={risers} fallers={fallers} />
+          </div>
+        )}
+
+        <div className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Link
+            href="/pokedex"
+            className="group flex items-center gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 transition-all hover:border-primary/60 hover:bg-primary/10"
+          >
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <BookOpen className="size-6" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Pokédex</p>
+              <p className="text-xs text-muted-foreground">
+                Ontdek elke Pokémon — stats, evoluties en alle kaarten.
+              </p>
+            </div>
+            <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          </Link>
+
+          <Link
+            href="/verkoop-calculator/collectie"
+            className="group flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/50"
+          >
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Banknote className="size-6" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Collectie Inkoop</p>
+              <p className="text-xs text-muted-foreground">
+                Verkoop je kaarten aan ons — direct een eerlijke prijs.
+              </p>
+            </div>
+            <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          </Link>
         </div>
-      )}
 
-      {(risers.length > 0 || fallers.length > 0) && (
-        <div className="mb-8">
-          <DatabaseTrending risers={risers} fallers={fallers} />
-        </div>
-      )}
-
-      <div className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Link
-          href="/pokedex"
-          className="group flex items-center gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 transition-all hover:border-primary/60 hover:bg-primary/10"
-        >
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <BookOpen className="size-6" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-foreground">Pokédex</p>
-            <p className="text-xs text-muted-foreground">
-              Ontdek elke Pokémon — stats, evoluties en alle kaarten.
-            </p>
-          </div>
-          <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-        </Link>
-
-        <Link
-          href="/verkoop-calculator/collectie"
-          className="group flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/50"
-        >
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-            <Banknote className="size-6" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-foreground">Collectie Inkoop</p>
-            <p className="text-xs text-muted-foreground">
-              Verkoop je kaarten aan ons — direct een eerlijke prijs.
-            </p>
-          </div>
-          <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      </div>
-
-      <KaartenSearch>
         <div className="space-y-12">
           {sortedSeries.map((s) => (
             <section key={s.id}>

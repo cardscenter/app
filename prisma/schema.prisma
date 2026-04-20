@@ -174,10 +174,12 @@ model Series {
 model CardSet {
   id           String   @id @default(cuid())
   name         String   // "Base Set", "Jungle", "Fossil"
-  tcgdexSetId  String?  @unique           // TCGdex set id, e.g. "base1"
-  logoUrl      String?                     // TCGdex set logo URL
-  symbolUrl    String?                     // TCGdex set symbol URL
-  releaseDate  String?                     // ISO date string (kept as text — TCGdex returns "1999-01-09")
+  tcgdexSetId  String?  @unique           // Legacy TCGdex set id (e.g. "base1") — kept for image URLs (CDN), no longer used for API calls
+  pokewalletSetId   String?  @unique      // PokeWallet numeric set_id (e.g. "24325" for Black Bolt)
+  pokewalletSetCode String?               // PokeWallet set_code (e.g. "BLK") — can be null for promos
+  logoUrl      String?                     // Set logo URL (TCGdex CDN, static)
+  symbolUrl    String?                     // Set symbol URL (TCGdex CDN, static)
+  releaseDate  String?                     // ISO date string (e.g. "1999-01-09")
   cardCount    Int?                        // Total cards in set (official count)
 
   seriesId    String
@@ -193,12 +195,13 @@ model CardSet {
   @@index([seriesId])
 }
 
-// Mirror of TCGdex card data — populated via prisma/seed-tcgdex-cards.ts and
-// kept fresh by the price-sync cron. Each Card.id == TCGdex id (e.g.
-// "base1-4") so existing tcgdexId fields on Auction/Listing/ClaimsaleItem
-// join naturally without an extra mapping table.
+// Card data — IDs are stable TCGdex strings (e.g. "base1-4") for legacy
+// reasons; Auction/Listing/ClaimsaleItem reference them via tcgdexId field.
+// Pricing data comes from PokeWallet API (api.pokewallet.io) since 2026-04-19.
+// Image URLs point to TCGdex CDN (static, no API calls).
 model Card {
-  id              String   @id              // TCGdex id, e.g. "base1-4"
+  id              String   @id              // Stable TCGdex-style id, e.g. "base1-4"
+  pokewalletId    String?  @unique          // PokeWallet card ID ("pk_xxx" or hex hash) — used for /cards/{id} lookups
   localId         String                     // "4" within the set
   name            String
   searchName      String?                    // Normalized name for accent/diacritics-insensitive search
@@ -209,22 +212,34 @@ model Card {
   types           String?                    // JSON array (e.g. ["Fire"])
   illustrator     String?
   variants        String?                    // JSON: {firstEdition, holo, normal, reverse, wPromo}
-  imageUrl        String?                    // TCGdex base URL (append /high.webp at render time)
-  imageUrlFull    String?                    // Full image URL from a fallback source (pokemontcg.io) — used when TCGdex has no image
+  imageUrl        String?                    // TCGdex CDN base URL (append /high.webp at render time)
+  imageUrlFull    String?                    // Full image URL from fallback source — used when TCGdex has no image
 
-  // Cached CardMarket EUR pricing snapshot — refreshed by sync-cron
+  // CardMarket EUR pricing — refreshed by PokeWallet sync (variant_type=normal)
   priceAvg        Float?
   priceLow        Float?
   priceTrend      Float?
   priceAvg7       Float?
   priceAvg30      Float?
-  // Reverse-holo variant pricing (pokemontcg.io reverseHolo* fields)
+  // Reverse-holo CardMarket EUR pricing (PokeWallet variant_type=holo)
   priceReverseAvg   Float?
   priceReverseLow   Float?
   priceReverseTrend Float?
   priceReverseAvg7  Float?
   priceReverseAvg30 Float?
   priceUpdatedAt  DateTime?
+
+  // TCGPlayer USD pricing per variant (PokeWallet sub_type_name) — converted to EUR via API
+  priceTcgplayerNormalLow      Float?
+  priceTcgplayerNormalMid      Float?
+  priceTcgplayerNormalMarket   Float?
+  priceTcgplayerHolofoilLow    Float?
+  priceTcgplayerHolofoilMid    Float?
+  priceTcgplayerHolofoilMarket Float?
+  priceTcgplayerReverseLow     Float?
+  priceTcgplayerReverseMid     Float?
+  priceTcgplayerReverseMarket  Float?
+  priceTcgplayerUpdatedAt      DateTime?
 
   // Full immutable gameplay snapshot — JSON blob so the detail page can
   // render attacks/abilities/weakness/resistance/retreat/stage/legal/etc.
@@ -243,25 +258,18 @@ model Card {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // Extra variant-pricing — voor Master Ball / Poke Ball Pattern e.d.
+  // JSON-array: [{ label: "Master Ball Pattern", tcgUsd: 1.58, tcgUpdatedAt: "..." }, ...]
+  // Pokewallet retourneert deze als aparte card-records met eigen TCGPlayer
+  // Holofoil pricing — CardMarket-data is dan een kopie van de basis, dus we
+  // gebruiken alleen TCGPlayer voor pattern-pricing.
+  priceVariantsJson      String?
+
   // Manual price override — used for edge cases where CardMarket data is
-  // wrong (e.g. Pokemon Center stamped promos grouped with normal versions,
-  // mis-mapped products). When set, enrichCard uses these values instead
-  // of scraped pricing.
+  // wrong. When set, sync uses these values instead of fetched pricing.
   priceOverrideAvg       Float?
   priceOverrideReverseAvg Float?
-  priceOverrideReason    String?   // Admin note explaining the override
-
-  // Special-variant reverse-holo pricing (EUR) for sets with Poké Ball /
-  // Master Ball / Ball / Energy patterns. Sourced from PriceCharting since
-  // CardMarket and TCGdex don't surface these as separate products.
-  // Shape: {"poke_ball"?: number, "master_ball"?: number, "ball"?: number, "energy"?: number}
-  extraVariantsJson      String?
-
-  // PriceCharting "Ungraded" NM price in EUR — only populated for expensive
-  // cards (>=€250) where CardMarket's daily avg swings wildly on individual
-  // sales. Blended with priceAvg + priceTrend via getDisplayPrice() to make
-  // trend % and market value calmer on illiquid chase cards.
-  pricePriceChartingEur  Float?
+  priceOverrideReason    String?
 
   watchlistEntries CardWatchlist[]
   priceHistory    CardPriceHistory[]

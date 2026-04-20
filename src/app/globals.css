@@ -305,17 +305,13 @@
 
 /* Confetti uses JS-driven individual trajectories — no CSS keyframe needed */
 
-@keyframes marquee-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+/* Marquee auto-scroll is JS-driven (requestAnimationFrame) so we can
+   grab + fling. Just hide the scrollbar so it still looks like a marquee. */
+.marquee-scroller {
+  scrollbar-width: none; /* Firefox */
 }
-
-.marquee-track {
-  animation: marquee-scroll 80s linear infinite;
-  width: max-content;
-}
-.marquee-track:hover {
-  animation-play-state: paused;
+.marquee-scroller::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
 }
 
 /* Rarity glow utility classes */

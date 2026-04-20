@@ -18,6 +18,8 @@ export default async function VerkoopCalculatorPage() {
     t("conditionEnglish"),
     t("conditionOriginal"),
     t("conditionPricing"),
+    t("conditionMaxPrice"),
+    t("conditionEra"),
     t("conditionMinCollection"),
     t("conditionMinBulk"),
     t("conditionPayout"),

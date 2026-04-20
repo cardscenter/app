@@ -12,7 +12,7 @@ import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from
 import { calculateAuctionUpsellCost } from "@/lib/upsell-config";
 import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
-import { resolveLocalCardSetId } from "@/lib/tcgdex/resolve-set";
+import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
 

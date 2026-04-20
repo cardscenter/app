@@ -10,7 +10,7 @@ import { PokedexEvolutionChain } from "@/components/pokedex/pokedex-evolution-ch
 import { parsePokedexSlug } from "@/lib/pokeapi/slug";
 import { getPokemon, getSpecies, getEvolutionChain } from "@/lib/pokeapi/client";
 import { pickFlavorText } from "@/lib/pokeapi/flavor-text";
-import { getCardImageUrl } from "@/lib/tcgdex/card-image";
+import { getCardImageUrl } from "@/lib/card-image";
 
 export const revalidate = 86400; // 1d — species data is immutable upstream
 

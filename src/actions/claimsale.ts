@@ -6,7 +6,7 @@ import { checkClaimsaleLimit } from "@/lib/account-limits";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { checkAmountAllowed } from "@/lib/account-age";
-import { resolveLocalCardSetId } from "@/lib/tcgdex/resolve-set";
+import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 

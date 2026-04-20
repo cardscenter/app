@@ -5,15 +5,14 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { cardSlug, localIdFromSlug } from "@/lib/tcgdex/slug";
-import { enrichCard } from "@/lib/tcgdex/enrich-card";
-import { getCardImageUrl } from "@/lib/tcgdex/card-image";
+import { cardSlug, localIdFromSlug } from "@/lib/card-helpers";
+import { syncSingleCard } from "@/lib/pokewallet/sync";
+import { getCardImageUrl } from "@/lib/card-image";
 import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
 import { CardPricePanel, type VariantPricing, type ExtraVariant } from "@/components/card/card-price-panel";
-import { getSpecialVariantsForSet, parseExtraVariants } from "@/lib/tcgdex/special-variants";
 import { basePokemonName } from "@/lib/pokeapi/base-name";
 import { pokedexSlug } from "@/lib/pokeapi/slug";
-import { getDisplayPrice } from "@/lib/display-price";
+import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
 import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
@@ -59,10 +58,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const result = await lookupCard(setSlug, cardSlug);
   if (!result) return { title: "Kaart niet gevonden — Cards Center" };
   const { card, set } = result;
+  const marktprijs = getMarktprijs(card);
   return {
     title: `${card.name} — ${set.name} #${card.localId} — Cards Center`,
-    description: card.priceAvg
-      ? `${card.name} (${set.name}) — marktwaarde €${card.priceAvg.toFixed(2)}. Bekijk actuele aanbiedingen op Cards Center.`
+    description: marktprijs
+      ? `${card.name} (${set.name}) — marktwaarde €${marktprijs.toFixed(2)}. Bekijk actuele aanbiedingen op Cards Center.`
       : `${card.name} (${set.name} #${card.localId}). Bekijk actuele aanbiedingen op Cards Center.`,
     openGraph: {
       title: `${card.name} — ${set.name}`,
@@ -82,11 +82,15 @@ export default async function CardDetailPage({ params }: Props) {
   const { card: initialCard, set } = result;
   const session = await auth();
 
-  // First-visit enrichment: only triggers external API calls if gameplayJson
-  // is still null (never fully enriched). Otherwise this short-circuits
-  // immediately. Pricing refresh is the cron's job.
-  if (!initialCard.gameplayJson) {
-    await enrichCard(initialCard.id);
+  // On-demand pricing refresh — only when our cached price is stale (>24h).
+  // Skips silently if the card has no pokewalletId mapping yet.
+  const stale =
+    !initialCard.priceUpdatedAt ||
+    Date.now() - initialCard.priceUpdatedAt.getTime() > 24 * 60 * 60 * 1000;
+  if (stale) {
+    await syncSingleCard(initialCard.id).catch(() => {
+      /* best-effort: don't block page render on a refresh miss */
+    });
   }
 
   // Now everything is pure DB — one query batch, no external API calls.
@@ -246,6 +250,13 @@ export default async function CardDetailPage({ params }: Props) {
   // surfaces an `avg` value for those — but it's noise from mis-SKU'd /
   // heavily damaged listings, not a real non-foil print. For these cards we
   // ignore `avg` entirely and use `avg-holo` as the single market price.
+  // When getMarktprijs corrects raw CardMarket avg by >60% (spike detection
+  // or extreme TCGPlayer mismatch), we know the underlying idProduct is
+  // corrupt — show Marktprijs as `avg` but suppress the other raw stats
+  // (low/trend/avg7/avg30) since they come from the same poisoned product.
+  const isCorrupted = (raw: number | null | undefined, display: number | null) =>
+    raw != null && display != null && raw > 0 && display < raw / 2.5;
+
   const pricingVariants: VariantPricing[] = [];
   if (cm) {
     const rarity = (card.rarity ?? "").toLowerCase();
@@ -264,20 +275,43 @@ export default async function CardDetailPage({ params }: Props) {
     //      variants.holo !== false. Modern sets (Twilight Masquerade,
     //      Prismatic Evolutions) pass tier 1; the tier-2 gate protects
     //      against phantom reverses on older promo sets.
-    const canHaveReverse = variants.normal !== false;
     const hasActiveFoil = cm["avg-holo"] !== null && cm["avg-holo"] > 0;
-    const hasHistoricalFoil = cm["avg30-holo"] !== null && cm["avg30-holo"] > 0;
-    const hasFoil = canHaveReverse && (
-      hasActiveFoil || (hasHistoricalFoil && variants.holo !== false)
-    );
+    // Pokewallet's CardMarket-RH faalt vaak voor cards met idProduct-collisions
+    // (bv. 151 Bulbasaur commons hebben TP Reverse maar CM RH = null). Accepteer
+    // ook als TCGPlayer Reverse Holofoil pricing beschikbaar is.
+    const hasTcgplayerReverse =
+      (card.priceTcgplayerReverseMarket ?? card.priceTcgplayerReverseMid ?? 0) > 0;
+    // TCGdex's variants-flags zijn soms volledig verkeerd voor hele sets (bv.
+    // 151 Gengar #094 heeft álle variants=false terwijl er duidelijk een normal
+    // én RH bestaat met echt volume). Override de holo-only-promo gate als CM
+    // ZOWEL normal-volume (avg + low) als RH-volume (avg-holo + low-holo) heeft.
+    const hasStrongNormalVolume = cm.avg !== null && cm.avg > 0 && cm.low !== null && cm.low > 0;
+    const hasStrongFoilVolume = hasActiveFoil && cm["low-holo"] !== null && cm["low-holo"] > 0;
+    const marketDataProvesDualPrint = hasStrongNormalVolume && hasStrongFoilVolume;
+    const canHaveReverse = variants.normal !== false || marketDataProvesDualPrint;
+    // hasFoil vereist een STERK RH-signaal. Expliciete TCGdex-bevestiging
+    // (variants.reverse=true) altijd vertrouwen — óók op Holo Rares die
+    // variants.normal=false hebben maar wél een reverse-holo print bezitten
+    // (bv. Octillery swsh5 #37). Voor overige signalen (TP, CM-volume) blijft
+    // de canHaveReverse-gate actief om pokewallet-lekkage uit te filteren.
+    const isModernSet = (set.releaseDate ?? "") >= "2024-01-01";
+    const hasFoil =
+      variants.reverse === true ||
+      (canHaveReverse && (
+        hasTcgplayerReverse ||
+        (isModernSet && hasStrongFoilVolume)
+      ));
 
     // "Inherently foil" = the card ONLY exists as foil (no non-foil print).
     // We need `holo=true` AND `normal=false` — if BOTH holo+normal are true
     // the card has a dual print (common for promos like McDonald's Pikachu)
     // and both should render as separate variants.
     const variantsSayHoloOnly = variants.holo === true && variants.normal === false;
+    // "holo" match vangt "Holo Rare" / "Rare Holo" van oude sets (Call of
+    // Legends, Base Set) op, waar TCGdex vaak variants.normal=true (fout) zet
+    // terwijl de kaart feitelijk alleen als holo bestaat.
     const raritySaysHoloOnly =
-      /\b(hyper|ultra|full art|illustration|special|double|amazing|radiant|shiny|secret|rainbow)\b/.test(rarity);
+      /\b(holo|hyper|ultra|full art|illustration|special|double|amazing|radiant|shiny|secret|rainbow)\b/.test(rarity);
     const isInherentlyFoil = variantsSayHoloOnly || raritySaysHoloOnly;
     // Dual holo/normal promos want a "Holo" label rather than "Reverse Holo"
     // — reverse-holo is specifically the partial-foil finish on commons/
@@ -296,89 +330,200 @@ export default async function CardDetailPage({ params }: Props) {
       // data (low-holo, avg30-holo). In that case base is the single source.
       const foilHasAvg = cm["avg-holo"] !== null && cm["avg-holo"] > 0;
       if (foilHasAvg) {
-        // For inherently-foil cards, the single variant represents the
-        // foil product — blend with PriceCharting / priceTrend when it
-        // crosses the expensive threshold.
-        const holoDisplay = getDisplayPrice({
+        // For inherently-foil cards: use Marktprijs blender with all the
+        // foil-variant fields + TCGPlayer holofoil sanity check.
+        const holoDisplay = getMarktprijs({
           priceAvg: cm["avg-holo"],
+          priceLow: cm["low-holo"],
           priceTrend: cm["trend-holo"],
-          pricePriceChartingEur: card.pricePriceChartingEur,
           priceAvg7: cm["avg7-holo"],
+          priceAvg30: cm["avg30-holo"],
+          priceTcgplayerHolofoilMarket: card.priceTcgplayerHolofoilMarket,
+          priceTcgplayerNormalMarket: card.priceTcgplayerNormalMarket,
+          rarity: card.rarity,
+          priceOverrideAvg: card.priceOverrideAvg,
         });
+        const corrupted = isCorrupted(cm["avg-holo"], holoDisplay);
         pricingVariants.push({
           key: "normal",
           label: "Holo",
           avg: holoDisplay ?? cm["avg-holo"],
-          low: cm["low-holo"], trend: cm["trend-holo"],
-          avg1: cm["avg1-holo"], avg7: cm["avg7-holo"], avg30: cm["avg30-holo"],
+          low: corrupted ? null : cm["low-holo"],
+          trend: corrupted ? null : cm["trend-holo"],
+          avg1: corrupted ? null : cm["avg1-holo"],
+          avg7: corrupted ? null : cm["avg7-holo"],
+          avg30: corrupted ? null : cm["avg30-holo"],
         });
       } else if (hasBase) {
-        const baseDisplay = getDisplayPrice({
+        const baseDisplay = getMarktprijs({
           priceAvg: cm.avg,
+          priceLow: cm.low,
           priceTrend: cm.trend,
-          pricePriceChartingEur: card.pricePriceChartingEur,
           priceAvg7: cm.avg7,
+          priceAvg30: cm.avg30,
+          priceTcgplayerHolofoilMarket: card.priceTcgplayerHolofoilMarket,
+          priceTcgplayerNormalMarket: card.priceTcgplayerNormalMarket,
+          rarity: card.rarity,
+          priceOverrideAvg: card.priceOverrideAvg,
         });
+        const corrupted = isCorrupted(cm.avg, baseDisplay);
         pricingVariants.push({
           key: "normal",
           label: "Holo",
           avg: baseDisplay ?? cm.avg,
-          low: cm.low,
-          trend: cm.trend,
-          avg1: cm.avg1,
-          avg7: cm.avg7,
-          avg30: cm.avg30,
+          low: corrupted ? null : cm.low,
+          trend: corrupted ? null : cm.trend,
+          avg1: corrupted ? null : cm.avg1,
+          avg7: corrupted ? null : cm.avg7,
+          avg30: corrupted ? null : cm.avg30,
         });
+      } else {
+        // No CardMarket data at all — common for older Rare Holo / Holo Rare
+        // cards (Call of Legends, classic base sets). Fall back to TCGPlayer
+        // Holofoil pricing via getMarktprijs (which handles EU-tier adjustment).
+        const tpOnlyDisplay = getMarktprijs({
+          priceAvg: null,
+          priceTcgplayerHolofoilMarket: card.priceTcgplayerHolofoilMarket,
+          priceTcgplayerNormalMarket: card.priceTcgplayerNormalMarket,
+          rarity: card.rarity,
+          priceOverrideAvg: card.priceOverrideAvg,
+        });
+        if (tpOnlyDisplay != null && tpOnlyDisplay > 0) {
+          pricingVariants.push({
+            key: "normal",
+            label: "Holo",
+            avg: tpOnlyDisplay,
+            low: null, trend: null, avg1: null, avg7: null, avg30: null,
+          });
+        }
+      }
+
+      // Inherently-foil cards can ALSO have a separate reverse-holo printing
+      // (modern Holo Rares like Octillery swsh5 #37). If the RH signal says
+      // it exists, add it as a second variant.
+      if (hasFoil) {
+        const reverseDisplay = getMarktprijsReverseHolo({
+          priceReverseAvg: cm["avg-holo"],
+          priceReverseLow: cm["low-holo"],
+          priceReverseTrend: cm["trend-holo"],
+          priceReverseAvg7: cm["avg7-holo"],
+          priceReverseAvg30: cm["avg30-holo"],
+          priceTcgplayerReverseMarket: card.priceTcgplayerReverseMarket,
+          priceTcgplayerReverseMid: card.priceTcgplayerReverseMid,
+          priceOverrideReverseAvg: card.priceOverrideReverseAvg,
+        });
+        if (reverseDisplay != null && reverseDisplay > 0) {
+          const corrupted = card.priceOverrideReverseAvg == null &&
+            isCorrupted(cm["avg-holo"], reverseDisplay);
+          pricingVariants.push({
+            key: "reverse",
+            label: "Reverse Holo",
+            avg: reverseDisplay,
+            low: corrupted ? null : cm["low-holo"],
+            trend: corrupted ? null : cm["trend-holo"],
+            avg1: corrupted ? null : cm["avg1-holo"],
+            avg7: corrupted ? null : cm["avg7-holo"],
+            avg30: corrupted ? null : cm["avg30-holo"],
+          });
+        }
       }
     } else {
       // Regular card: Normal (avg) + Reverse Holo (avg-holo) when both exist
       if (hasBase) {
-        const baseDisplay = getDisplayPrice({
+        const baseDisplay = getMarktprijs({
           priceAvg: cm.avg,
+          priceLow: cm.low,
           priceTrend: cm.trend,
-          pricePriceChartingEur: card.pricePriceChartingEur,
           priceAvg7: cm.avg7,
+          priceAvg30: cm.avg30,
+          priceTcgplayerNormalMarket: card.priceTcgplayerNormalMarket,
+          priceTcgplayerHolofoilMarket: card.priceTcgplayerHolofoilMarket,
+          rarity: card.rarity,
+          priceOverrideAvg: card.priceOverrideAvg,
         });
+        // Als override actief is, is Marktprijs volledig vervangen en komen de
+        // raw CM-stats van de verkeerde product-mapping — die nullen we ook weg.
+        const corrupted = card.priceOverrideAvg != null || isCorrupted(cm.avg, baseDisplay);
         pricingVariants.push({
           key: "normal",
           label: "Normal",
           avg: baseDisplay ?? cm.avg,
-          low: cm.low,
-          trend: cm.trend,
-          avg1: cm.avg1,
-          avg7: cm.avg7,
-          avg30: cm.avg30,
+          low: corrupted ? null : cm.low,
+          trend: corrupted ? null : cm.trend,
+          avg1: corrupted ? null : cm.avg1,
+          avg7: corrupted ? null : cm.avg7,
+          avg30: corrupted ? null : cm.avg30,
         });
       }
       if (hasFoil) {
-        // Fall back to avg30-holo as displayed price if avg-holo is null
-        // (happens on thinly-traded promos where the rolling 30d average
-        // survives but the daily avg rolled off).
-        const foilAvg = cm["avg-holo"] ?? cm["avg30-holo"];
+        // Use outlier-resistant Marktprijs for RH (handles CM-null + TP fallback)
+        const reverseDisplay = getMarktprijsReverseHolo({
+          priceReverseAvg: cm["avg-holo"],
+          priceReverseLow: cm["low-holo"],
+          priceReverseTrend: cm["trend-holo"],
+          priceReverseAvg7: cm["avg7-holo"],
+          priceReverseAvg30: cm["avg30-holo"],
+          priceTcgplayerReverseMarket: card.priceTcgplayerReverseMarket,
+          priceTcgplayerReverseMid: card.priceTcgplayerReverseMid,
+          priceOverrideReverseAvg: card.priceOverrideReverseAvg,
+        });
+        // Ascended Heroes (me02.5): Pokemon + Energy commons/uncommons hebben
+        // TWEE RH-finishes (Ball + Energy Reverse Holo). Trainers hebben gewoon
+        // de standaard Reverse Holo finish. Pokewallet's CM-data heeft géén
+        // split tussen Ball/Energy, dus we tonen één gecombineerd label.
+        const isAhDualReverse =
+          set.tcgdexSetId === "me02.5" && (gameplay?.category === "Pokemon" || gameplay?.category === "Energy");
+        const rhLabel: string =
+          isDualHoloPromo ? "Holo"
+          : isAhDualReverse ? "Ball / Energy Reverse Holo"
+          : "Reverse Holo";
+        const corrupted = isCorrupted(cm["avg-holo"], reverseDisplay);
         pricingVariants.push({
           key: "reverse",
-          label: isDualHoloPromo ? "Holo" : "Reverse Holo",
-          avg: foilAvg,
-          low: cm["low-holo"],
-          trend: cm["trend-holo"],
-          avg1: cm["avg1-holo"], avg7: cm["avg7-holo"], avg30: cm["avg30-holo"],
+          label: rhLabel,
+          avg: reverseDisplay,
+          low: corrupted ? null : cm["low-holo"],
+          trend: corrupted ? null : cm["trend-holo"],
+          avg1: corrupted ? null : cm["avg1-holo"],
+          avg7: corrupted ? null : cm["avg7-holo"],
+          avg30: corrupted ? null : cm["avg30-holo"],
         });
       }
     }
   }
 
-  // Special-variant pricing (Poké Ball / Master Ball / Ball / Energy patterns)
-  // — cached on Card.extraVariantsJson, labels + keys from the set config.
+  // Special-variant pricing (Master Ball / Poke Ball patterns).
+  // Pokewallet returnt deze als aparte cards met eigen TCGPlayer Holofoil
+  // pricing (CardMarket-data is een copy van de basis, dus onbruikbaar).
+  // Tijdens sync slaan we ze op als JSON-blob op de basis-card.
   const extraVariants: ExtraVariant[] = (() => {
-    const setConfig = getSpecialVariantsForSet(set.tcgdexSetId);
-    if (!setConfig) return [];
-    const prices = parseExtraVariants(card.extraVariantsJson);
-    return setConfig.variants
-      .map((v) => {
-        const priceEur = prices[v.key];
-        return priceEur ? { key: v.key, label: v.labelNl, priceEur } : null;
-      })
-      .filter((v): v is ExtraVariant => v !== null);
+    if (!card.priceVariantsJson) return [];
+    try {
+      type RawVariant = { label: string; tcgUsd: number | null };
+      const raw = JSON.parse(card.priceVariantsJson) as RawVariant[];
+      const USD_TO_EUR = 0.92;
+      // Rare-tier adjustment voor pattern variants — ze circuleren niet in
+      // bulk-bins, dus kleine EU-discount tov TP USD prijzen.
+      const tierAdjust = (eur: number) => {
+        if (eur < 1) return 0.8;
+        if (eur < 5) return 0.9;
+        if (eur < 20) return 1.0;
+        return 1.1;
+      };
+      return raw
+        .filter((v): v is { label: string; tcgUsd: number } => v.tcgUsd != null && v.tcgUsd > 0)
+        .map((v) => {
+          const baseEur = v.tcgUsd * USD_TO_EUR;
+          const priceEur = Math.round(baseEur * tierAdjust(baseEur) * 100) / 100;
+          return {
+            key: v.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""),
+            label: v.label,
+            priceEur,
+          };
+        });
+    } catch {
+      return [];
+    }
   })();
 
   return (

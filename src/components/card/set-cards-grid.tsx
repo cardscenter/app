@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
-import { cardSlug } from "@/lib/tcgdex/slug";
-import { getCardImageUrl } from "@/lib/tcgdex/card-image";
+import { cardSlug } from "@/lib/card-helpers";
+import { getCardImageUrl } from "@/lib/card-image";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,9 +15,13 @@ export interface SetCard {
   rarity: string | null;
   imageUrl: string | null;
   imageUrlFull: string | null;
-  priceAvg: number | null;
-  priceReverseAvg: number | null;
   variants: string | null;
+  /** Pre-computed outlier-resistant Marktprijs (server-side). */
+  marktprijs: number | null;
+  /** Pre-computed reverse-holo Marktprijs (incl. TP-fallback). */
+  marktprijsRH: number | null;
+  /** Label voor RH-prijs ("Reverse", "Ball Reverse", "Energy Reverse"). */
+  rhLabel?: string;
 }
 
 type Sort = "localAsc" | "localDesc" | "priceDesc" | "priceAsc";
@@ -42,11 +46,11 @@ function isFoilRarity(rarity: string | null): boolean {
   return FOIL_RE.test(rarity ?? "");
 }
 
-/** Best-effort "market price" — use reverse-holo price if the normal field
- * is suspiciously low (inherently-foil noise), otherwise the normal. */
+/** "Hoofdprijs" voor sortering: voor inherent-foil rarities (IR/SIR/etc) is
+ * de Marktprijs van de holo-variant de echte waarde, anders de normale. */
 function effectivePrice(c: SetCard): number | null {
-  if (isFoilRarity(c.rarity) && c.priceReverseAvg !== null) return c.priceReverseAvg;
-  return c.priceAvg;
+  if (isFoilRarity(c.rarity) && c.marktprijsRH !== null) return c.marktprijsRH;
+  return c.marktprijs;
 }
 
 interface Props {
@@ -152,9 +156,9 @@ export function SetCardsGrid({ cards, setSlug }: Props) {
                       €{price.toFixed(2)}
                     </span>
                   )}
-                  {card.priceReverseAvg !== null && !isFoilRarity(card.rarity) && (
+                  {card.marktprijsRH !== null && !isFoilRarity(card.rarity) && (
                     <span className="inline-flex items-center gap-0.5 text-xs tabular-nums text-purple-600 dark:text-purple-400">
-                      <span className="font-medium">Reverse</span> €{card.priceReverseAvg.toFixed(2)}
+                      <span className="font-medium">{card.rhLabel ?? "Reverse"}</span> €{card.marktprijsRH.toFixed(2)}
                     </span>
                   )}
                 </div>

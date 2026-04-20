@@ -18,7 +18,7 @@ import { ContactSellerButton } from "@/components/message/contact-seller-button"
 import { SellerInfoBlock } from "@/components/ui/seller-info-block";
 import { getSellerInfo } from "@/lib/seller-info";
 import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
-import { getCard } from "@/lib/tcgdex/client";
+import { getCardPricing } from "@/lib/card-helpers";
 
 export default async function AuctionDetailPage({
   params,
@@ -62,7 +62,7 @@ export default async function AuctionDetailPage({
     ? currentUser.balance - currentUser.reservedBalance
     : 0;
 
-  const [watched, existingAutoBid, sellerInfo, sellerItems, similarItems, tcgdexCard] = await Promise.all([
+  const [watched, existingAutoBid, sellerInfo, sellerItems, similarItems, pricing] = await Promise.all([
     session?.user ? isWatched({ auctionId: auction.id }) : false,
     session?.user && !isOwner ? getAutoBid(auction.id) : null,
     getSellerInfo(auction.sellerId),
@@ -74,10 +74,8 @@ export default async function AuctionDetailPage({
       excludeId: auction.id,
       itemType: "auction",
     }),
-    auction.tcgdexId ? getCard(auction.tcgdexId) : Promise.resolve(null),
+    getCardPricing(auction.tcgdexId),
   ]);
-
-  const pricing = tcgdexCard?.pricing?.cardmarket ?? null;
 
   const initialBids = auction.bids.map((b) => ({
     id: b.id,
@@ -142,7 +140,7 @@ export default async function AuctionDetailPage({
           )}
 
           {/* Marktwaarde */}
-          {pricing && pricing.avg !== null && (
+          {pricing && (
             <PricingInfoBlock pricing={pricing} variant="full" label="Marktwaarde" />
           )}
 

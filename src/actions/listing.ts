@@ -11,7 +11,7 @@ import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
-import { resolveLocalCardSetId } from "@/lib/tcgdex/resolve-set";
+import { resolveLocalCardSetId } from "@/lib/card-helpers";
 
 
 export async function createListing(formData: FormData) {

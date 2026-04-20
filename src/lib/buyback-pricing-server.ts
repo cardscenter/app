@@ -1,45 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { isInherentlyFoil, getEffectiveMarketPrice } from "@/lib/buyback-pricing";
-
-const MIN_HISTORY_DAYS = 3;
-
-/**
- * Compute the average price over the last 7 days from our own CardPriceHistory table.
- * Returns null if fewer than MIN_HISTORY_DAYS days of data exist.
- */
-export async function computeOwnAvg7(
-  cardId: string,
-  variant: "normal" | "reverse"
-): Promise<number | null> {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-  const rows = await prisma.cardPriceHistory.findMany({
-    where: {
-      cardId,
-      date: { gte: sevenDaysAgo },
-    },
-    select: {
-      priceNormal: true,
-      priceReverse: true,
-    },
-    orderBy: { date: "desc" },
-  });
-
-  const prices = rows
-    .map((r) => (variant === "reverse" ? r.priceReverse : r.priceNormal))
-    .filter((p): p is number => p != null && p > 0);
-
-  if (prices.length < MIN_HISTORY_DAYS) return null;
-
-  const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length;
-  return Math.round(avg * 100) / 100;
-}
+import { isInherentlyFoil, getAvailableVariants, hasReverseHoloSignal } from "@/lib/buyback-pricing";
+import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
 
 /**
- * Server-side: get the best available market price for a card + variant.
- * Uses the same conservative pricing as the client (min of avg, avg30, capped at 2×low).
- * Priority: own 7d average → CardMarket conservative price.
+ * Server-side: get the market price for a card + variant.
+ * Returns the outlier-resistant Marktprijs (zelfde formule als de detail-page).
+ * Buyback-prijs = `BUYBACK_RATE × marktprijs` (zie getBuybackPrice).
  */
 export async function getServerMarketPrice(
   cardId: string,
@@ -52,28 +18,63 @@ export async function getServerMarketPrice(
     where: { id: cardId },
     select: {
       rarity: true,
+      variants: true,
+      cardSet: { select: { releaseDate: true } },
+      // CardMarket normal
       priceAvg: true,
+      priceLow: true,
+      priceTrend: true,
       priceAvg7: true,
       priceAvg30: true,
-      priceLow: true,
+      // CardMarket reverse holo
       priceReverseAvg: true,
+      priceReverseLow: true,
+      priceReverseTrend: true,
       priceReverseAvg7: true,
       priceReverseAvg30: true,
-      priceReverseLow: true,
+      // TCGPlayer cross-check + RH-fallback
+      priceTcgplayerNormalMarket: true,
+      priceTcgplayerHolofoilMarket: true,
+      priceTcgplayerReverseMarket: true,
+      priceTcgplayerReverseMid: true,
+      // Manual overrides — always win in Marktprijs
+      priceOverrideAvg: true,
+      priceOverrideReverseAvg: true,
     },
   });
 
   if (!card) return null;
 
+  const cardWithReleaseDate = { ...card, releaseDate: card.cardSet?.releaseDate ?? null };
   const isReverse = forceReverse ?? isInherentlyFoil(card.rarity);
-  const variant = isReverse ? "reverse" : "normal";
 
-  // Try own 7-day average first
-  const ownAvg = await computeOwnAvg7(cardId, variant);
-  if (ownAvg != null && ownAvg > 0) {
-    return { price: ownAvg, isReverse };
+  if (isReverse) {
+    // Verify the card actually has an RH printing before pricing it — blocks
+    // client-side manipulation for cards without a real reverse variant.
+    if (!hasReverseHoloSignal(cardWithReleaseDate)) {
+      // Inherently-foil cards without RH data fall back to normal Marktprijs
+      if (isInherentlyFoil(card.rarity)) {
+        const normal = getMarktprijs(card);
+        if (normal != null && normal > 0) return { price: normal, isReverse: false };
+      }
+      return null;
+    }
+    const rh = getMarktprijsReverseHolo(card);
+    if (rh != null && rh > 0) return { price: rh, isReverse: true };
+    const normal = getMarktprijs(card);
+    if (normal != null && normal > 0) return { price: normal, isReverse: false };
+    return null;
   }
 
-  // Fallback to CardMarket prices — uses conservative pricing from shared module
-  return getEffectiveMarketPrice(card);
+  const normal = getMarktprijs(card);
+  if (normal != null && normal > 0) return { price: normal, isReverse: false };
+
+  // Geen normal data — probeer beschikbare variant
+  const variants = getAvailableVariants(card);
+  if (variants.length === 0) return null;
+  // getAvailableVariants returnt al een buyback-price (BUYBACK_RATE × marktprijs)
+  // Wij willen hier de RAW marktprijs, dus reverse-engineer dat niet — pak gewoon RH.
+  const rh = getMarktprijsReverseHolo(card);
+  if (rh != null && rh > 0) return { price: rh, isReverse: true };
+  return null;
 }

@@ -4,7 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Search, Plus, Minus, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { getAvailableVariants, getBuybackPrice, type BuybackPriceFields } from "@/lib/buyback-pricing";
+import {
+  getAvailableVariants,
+  getBuybackPrice,
+  checkBuybackEligibility,
+  type BuybackPriceFields,
+} from "@/lib/buyback-pricing";
 
 interface SearchResult extends BuybackPriceFields {
   id: string;
@@ -13,6 +18,7 @@ interface SearchResult extends BuybackPriceFields {
   setName: string;
   setSlug: string;
   imageUrl: string | null;
+  releaseDate: string | null;
 }
 
 export const CARD_CONDITIONS = ["NEAR_MINT", "EXCELLENT", "GOOD", "LIGHT_PLAYED", "PLAYED", "POOR"] as const;
@@ -145,8 +151,18 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
               );
             }
 
+            // Per-variant eligibility — price cap per variant, era-cutoff on set
+            const variantsWithEligibility = variants.map((v) => ({
+              variant: v,
+              eligibility: checkBuybackEligibility(v.price, card.releaseDate),
+            }));
+            const allIneligible = variantsWithEligibility.every((v) => !v.eligibility.eligible);
+
             return (
-              <div key={card.id} className="flex gap-3 rounded-lg p-2 hover:bg-muted/50">
+              <div
+                key={card.id}
+                className={`flex gap-3 rounded-lg p-2 ${allIneligible ? "" : "hover:bg-muted/50"}`}
+              >
                 {/* Image left */}
                 <CardImage card={card} />
 
@@ -156,16 +172,17 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
 
                   {/* Variant rows */}
                   <div className="mt-1.5 space-y-1">
-                    {variants.map((variant) => {
+                    {variantsWithEligibility.map(({ variant, eligibility }) => {
                       const key = cardVariantKey(card.id, variant.isReverse);
                       const alreadyAdded = selectedKeys.has(key);
                       const buyback = getBuybackPrice(variant.price);
+                      const blocked = !eligibility.eligible;
 
                       return (
                         <div
                           key={key}
                           className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${
-                            alreadyAdded ? "opacity-40" : "hover:bg-muted/30"
+                            alreadyAdded || blocked ? "opacity-50" : "hover:bg-muted/30"
                           }`}
                         >
                           {/* Variant label */}
@@ -177,21 +194,31 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
                             {variant.label}
                           </span>
 
-                          {/* Pricing */}
+                          {/* Pricing (also shown for blocked so user sees why) */}
                           <div className="flex items-center gap-1.5 text-xs">
                             <span className="text-muted-foreground">
                               €{variant.price.toFixed(2)}
                             </span>
-                            <span className="text-muted-foreground">→</span>
-                            <span className="font-semibold text-emerald-600">
-                              €{buyback.toFixed(2)}
-                            </span>
+                            {!blocked && (
+                              <>
+                                <span className="text-muted-foreground">→</span>
+                                <span className="font-semibold text-emerald-600">
+                                  €{buyback.toFixed(2)}
+                                </span>
+                              </>
+                            )}
                           </div>
 
                           <div className="ml-auto" />
 
+                          {blocked && (
+                            <span className="shrink-0 text-right text-[11px] italic text-muted-foreground">
+                              {t("notEligible")}
+                            </span>
+                          )}
+
                           {/* Quantity + Add */}
-                          {!alreadyAdded && (
+                          {!alreadyAdded && !blocked && (
                             <div className="flex shrink-0 items-center gap-1">
                               <button type="button" onClick={() => updateQty(key, -1)} className="rounded p-1 hover:bg-muted">
                                 <Minus className="h-3 w-3" />
@@ -209,7 +236,7 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
                               </button>
                             </div>
                           )}
-                          {alreadyAdded && (
+                          {alreadyAdded && !blocked && (
                             <span className="text-xs text-muted-foreground">&#10003;</span>
                           )}
                         </div>

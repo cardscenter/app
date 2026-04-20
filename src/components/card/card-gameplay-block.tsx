@@ -1,26 +1,39 @@
 import { TypeIcon } from "./type-icon";
 import { Link } from "@/i18n/navigation";
 import { Shield, ShieldCheck, ArrowRight, Zap, BookOpen } from "lucide-react";
-import type {
-  TCGdexAttack,
-  TCGdexAbility,
-  TCGdexWeakness,
-} from "@/lib/tcgdex/types";
+
+// Card gameplay shapes — kept inline since gameplay JSON comes from PokeWallet
+// (in card_info.attacks/weakness/etc) but uses the same field semantics.
+interface Attack {
+  cost?: string[];
+  name: string;
+  effect?: string;
+  damage?: number | string;
+}
+interface Ability {
+  type: string;
+  name: string;
+  effect: string;
+}
+interface Weakness {
+  type: string;
+  value: string;
+}
 
 interface Props {
   category?: string; // "Pokemon" | "Trainer" | "Energy"
   stage?: string | null;
   evolveFrom?: string | null;
   dexId?: number[] | null;
-  attacks?: TCGdexAttack[] | null;
-  abilities?: TCGdexAbility[] | null;
-  weaknesses?: TCGdexWeakness[] | null;
-  resistances?: TCGdexWeakness[] | null;
+  attacks?: Attack[] | null;
+  abilities?: Ability[] | null;
+  weaknesses?: Weakness[] | null;
+  resistances?: Weakness[] | null;
   retreat?: number | null;
   trainerType?: string | null;
   energyType?: string | null;
   effect?: string | null;
-  pokedexHref?: string | null; // Link to the Pokédex entry for this Pokémon
+  pokedexHref?: string | null;
 }
 
 function formatStage(stage: string | null | undefined): string | null {

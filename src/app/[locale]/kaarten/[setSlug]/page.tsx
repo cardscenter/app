@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { SetCardsGrid } from "@/components/card/set-cards-grid";
+import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
+import { hasReverseHoloSignal } from "@/lib/buyback-pricing";
 import { Layers } from "lucide-react";
 
 export const revalidate = 3600;
@@ -40,15 +42,60 @@ export default async function SetDetailPage({ params }: Props) {
           rarity: true,
           imageUrl: true,
           imageUrlFull: true,
-          priceAvg: true,
-          priceReverseAvg: true,
           variants: true,
+          gameplayJson: true,
+          // Velden voor de Marktprijs-formule
+          priceAvg: true,
+          priceLow: true,
+          priceTrend: true,
+          priceAvg7: true,
+          priceAvg30: true,
+          priceReverseAvg: true,
+          priceReverseLow: true,
+          priceReverseTrend: true,
+          priceReverseAvg7: true,
+          priceTcgplayerNormalMarket: true,
+          priceTcgplayerHolofoilMarket: true,
+          priceTcgplayerReverseMarket: true,
+          priceTcgplayerReverseMid: true,
+          priceOverrideAvg: true,
+          priceOverrideReverseAvg: true,
         },
       },
     },
   });
 
   if (!set) notFound();
+
+  // Ascended Heroes (me02.5): Pokemon + Energy commons/uncommons hebben beide
+  // Ball + Energy Reverse Holo finishes. Trainers gewoon standaard Reverse Holo.
+  function reverseLabelFor(c: { gameplayJson: string | null }): string {
+    if (set!.tcgdexSetId !== "me02.5") return "Reverse";
+    try {
+      const cat = (JSON.parse(c.gameplayJson || "{}") as { category?: string }).category;
+      if (cat === "Pokemon" || cat === "Energy") return "Ball/Energy Reverse";
+    } catch { /* ignore */ }
+    return "Reverse";
+  }
+
+  // Pre-compute outlier-resistant Marktprijs server-side per card.
+  // De grid hoeft dan geen pricing-logic te kennen.
+  const cardsForGrid = set.cards.map((c) => ({
+    id: c.id,
+    name: c.name,
+    localId: c.localId,
+    rarity: c.rarity,
+    imageUrl: c.imageUrl,
+    imageUrlFull: c.imageUrlFull,
+    variants: c.variants,
+    marktprijs: getMarktprijs(c),
+    // Alleen RH-prijs tonen als er een echt reverse-holo printing bestaat
+    // (blokkeert pokewallet-lekkage op sets als Detective Pikachu).
+    marktprijsRH: hasReverseHoloSignal({ ...c, releaseDate: set.releaseDate })
+      ? getMarktprijsReverseHolo(c)
+      : null,
+    rhLabel: reverseLabelFor(c),
+  }));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -88,7 +135,7 @@ export default async function SetDetailPage({ params }: Props) {
           Nog geen kaarten geïmporteerd voor deze set.
         </div>
       ) : (
-        <SetCardsGrid cards={set.cards} setSlug={setSlug} />
+        <SetCardsGrid cards={cardsForGrid} setSlug={setSlug} />
       )}
     </div>
   );

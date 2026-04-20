@@ -249,7 +249,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants }: Pr
             ))}
           </div>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Prijzen via PriceCharting (NM ongegradeerd, omgerekend naar EUR)
+            Prijzen via TCGPlayer Holofoil — omgerekend naar EUR met EU/US tier-correctie
           </p>
         </div>
       )}

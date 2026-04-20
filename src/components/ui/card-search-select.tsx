@@ -52,10 +52,25 @@ const VARIANT_LABEL: Record<string, string> = {
   wPromo: "W Promo",
 };
 
+// The search endpoint stores the TCGdex `variants` field as the raw JSON
+// string (e.g. `{"normal":true,"holo":false,...}`). We only care about the
+// keys that are `true` — that's what the UI chip row shows.
+function parseVariantKeys(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const obj = JSON.parse(raw) as Record<string, boolean>;
+    return Object.entries(obj)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+  } catch {
+    return [];
+  }
+}
+
 /**
- * Typeahead card picker — searches our local Card table (via the /api/tcgdex/search
- * proxy). On select, fetches full TCGdex detail to add the high-res image and
- * live pricing snapshot.
+ * Typeahead card picker — searches our local Card table via /api/cards/search.
+ * On select, fetches /api/cards/{id} to add the high-res image and live
+ * CardMarket pricing snapshot.
  */
 export function CardSearchSelect({
   value,
@@ -89,19 +104,41 @@ export function CardSearchSelect({
       setError(null);
       try {
         const res = await fetch(
-          `/api/tcgdex/search?q=${encodeURIComponent(query.trim())}&limit=24`,
+          `/api/cards/search?q=${encodeURIComponent(query.trim())}&limit=24`,
           { signal: controller.signal }
         );
         if (!res.ok) {
-          setError(res.status === 401
-            ? "Je moet ingelogd zijn om kaarten te zoeken."
-            : "Zoekopdracht mislukt.");
+          setError("Zoekopdracht mislukt.");
           setResults([]);
           setOpen(true);
           return;
         }
-        const data: { results: CardSearchSuggestion[] } = await res.json();
-        setResults(data.results);
+        const data: {
+          totalCount: number;
+          results: Array<{
+            id: string;
+            name: string;
+            localId: string;
+            rarity: string | null;
+            setName: string | null;
+            setSlug: string | null;
+            releaseDate: string | null;
+            imageUrl: string | null;
+            variants: string | null;
+          }>;
+        } = await res.json();
+        const mapped: CardSearchSuggestion[] = data.results.map((r) => ({
+          id: r.id,
+          name: r.name,
+          localId: r.localId,
+          thumbnailUrl: r.imageUrl,
+          setName: r.setName,
+          setId: r.setSlug,
+          releaseDate: r.releaseDate,
+          rarity: r.rarity,
+          variants: parseVariantKeys(r.variants),
+        }));
+        setResults(mapped);
         setOpen(true);
       } catch (e) {
         if (e instanceof Error && e.name === "AbortError") return;
@@ -132,15 +169,17 @@ export function CardSearchSelect({
     onChange(suggestion);
 
     try {
-      const res = await fetch(`/api/tcgdex/card/${encodeURIComponent(suggestion.id)}`);
+      const res = await fetch(`/api/cards/${encodeURIComponent(suggestion.id)}`);
       if (!res.ok) return;
       const detail = await res.json();
       onChange({
         ...suggestion,
+        thumbnailUrl: detail.thumbnailUrl ?? suggestion.thumbnailUrl ?? null,
         imageUrl: detail.imageUrl ?? null,
         setName: detail.set?.name ?? suggestion.setName ?? null,
         setId: detail.set?.id ?? suggestion.setId ?? null,
         rarity: detail.rarity ?? suggestion.rarity ?? null,
+        variants: Array.isArray(detail.variants) ? detail.variants : suggestion.variants,
         pricing: detail.pricing ?? null,
       });
     } catch {

@@ -1,9 +1,43 @@
 // ── Constants ────────────────────────────────────────────────────────────────
 
-export const BUYBACK_RATE = 0.85;
-export const STORE_CREDIT_BONUS = 0.20; // 20% extra when choosing store credit
-export const MINIMUM_COLLECTION_VALUE = 5.0; // EUR
-export const MINIMUM_BULK_VALUE = 30.0; // EUR
+import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
+
+export const BUYBACK_RATE = 0.85;             // 85% van Marktprijs
+export const STORE_CREDIT_BONUS = 0.05;       // 5% extra bij tegoed-uitbetaling
+export const MINIMUM_COLLECTION_VALUE = 5.0;  // EUR
+export const MINIMUM_BULK_VALUE = 30.0;       // EUR
+
+// Cap per kaart: dure kaarten hebben minder marge én binden te veel kapitaal
+// in voorraad. Cards met Marktprijs boven deze drempel worden niet ingekocht.
+export const MAX_BUYBACK_MARKTPRIJS = 75.0;
+
+// Oude sets hebben onbetrouwbare pricing (pokewallet product-mapping faalt
+// vaker, lage sales-volume, vaak PSA-vervuiling). We kopen alleen in vanaf
+// XY — eerste release xy1 "XY Base Set" op 2014-02-05.
+export const BUYBACK_ERA_START = "2014-02-05";
+
+export type BuybackIneligibleReason = "no_price" | "price_too_high" | "too_old";
+
+export interface BuybackEligibilityResult {
+  eligible: boolean;
+  reason?: BuybackIneligibleReason;
+}
+
+/**
+ * Check of een kaart/variant in aanmerking komt voor inkoop.
+ * - `no_price`: geen Marktprijs beschikbaar
+ * - `price_too_high`: Marktprijs > MAX_BUYBACK_MARKTPRIJS
+ * - `too_old`: set released vóór XY (BUYBACK_ERA_START)
+ */
+export function checkBuybackEligibility(
+  marktprijs: number | null,
+  releaseDate: string | null | undefined,
+): BuybackEligibilityResult {
+  if (marktprijs == null || marktprijs <= 0) return { eligible: false, reason: "no_price" };
+  if (marktprijs > MAX_BUYBACK_MARKTPRIJS) return { eligible: false, reason: "price_too_high" };
+  if (releaseDate && releaseDate < BUYBACK_ERA_START) return { eligible: false, reason: "too_old" };
+  return { eligible: true };
+}
 
 // ── Bulk pricing (fixed per-unit prices) ─────────────────────────────────────
 
@@ -33,19 +67,90 @@ export function isInherentlyFoil(rarity: string | null): boolean {
   return FOIL_RARITY_RE.test(rarity ?? "");
 }
 
-// ── Buyback price fields (extended for variant selection) ────────────────────
+// ── Buyback price fields ─────────────────────────────────────────────────────
 
+// Inherits all velden die getMarktprijs / getMarktprijsReverseHolo nodig hebben.
 export interface BuybackPriceFields {
   rarity: string | null;
+  // CardMarket normal
   priceAvg: number | null;
-  priceAvg7: number | null;
-  priceAvg30: number | null;
-  priceLow: number | null;
+  priceLow?: number | null;
+  priceTrend?: number | null;
+  priceAvg7?: number | null;
+  priceAvg30?: number | null;
+  // CardMarket reverse holo
   priceReverseAvg: number | null;
-  priceReverseAvg7: number | null;
-  priceReverseAvg30: number | null;
-  priceReverseLow: number | null;
-  variants?: string | null; // JSON string: {reverse:bool, normal:bool, holo:bool, ...}
+  priceReverseLow?: number | null;
+  priceReverseTrend?: number | null;
+  priceReverseAvg7?: number | null;
+  priceReverseAvg30?: number | null;
+  // TCGPlayer cross-check + RH-fallback
+  priceTcgplayerNormalMarket?: number | null;
+  priceTcgplayerHolofoilMarket?: number | null;
+  priceTcgplayerReverseMarket?: number | null;
+  priceTcgplayerReverseMid?: number | null;
+  // Manual overrides — always win in getMarktprijs / getMarktprijsReverseHolo
+  priceOverrideAvg?: number | null;
+  priceOverrideReverseAvg?: number | null;
+  // TCGdex variants-JSON (e.g. {"normal":true,"reverse":false,"holo":false})
+  variants?: string | null;
+  // Set release date — needed to decide whether to trust TCGdex variants
+  // flags vs. fall back to market signals on brand-new sets.
+  releaseDate?: string | null;
+}
+
+// Sets released ON/AFTER this date get the "TCGdex variants-flags may be
+// wrong" escape hatch: if CM-RH has strong volume we accept it even if
+// variants.reverse === false. Known mis-flagged modern sets: sv06 Twilight
+// Masquerade (May 2024), sv08.5 Prismatic Evolutions (Jan 2025).
+const MODERN_SET_CUTOFF = "2024-01-01";
+
+/**
+ * Heeft deze kaart een ECHTE reverse-holo printing?
+ *
+ * Pokewallet lekt soms RH-prijzen naar kaarten zonder RH-printing (bv. de
+ * hele Detective Pikachu set: Mr. Mime #011 heeft CM avg-holo €5 door een
+ * verdwaalde listing, maar er bestaat geen reverse-holo versie). Zonder deze
+ * gate krijgen die kaarten een fake RH-variant in de buyback search.
+ *
+ * We eisen minstens één van deze signalen:
+ *   1. TCGdex bevestigt: variants.reverse === true (sterkste signaal)
+ *   2. Sterke CardMarket-RH volume: avg-holo ÉN low-holo beide > 0
+ *      (low-holo = er staan meerdere listings → echt actief product)
+ *   3. TCGPlayer Reverse Holofoil pricing aanwezig
+ *
+ * Een losse avg-holo zonder low-holo is een zwak signaal (vaak één mis-SKU'd
+ * listing) en wordt niet vertrouwd.
+ */
+export function hasReverseHoloSignal(card: BuybackPriceFields): boolean {
+  let variantsObj: { reverse?: boolean; normal?: boolean; holo?: boolean } = {};
+  try {
+    variantsObj = card.variants ? JSON.parse(card.variants) : {};
+  } catch {
+    // ignore malformed JSON — fall through to market-data checks
+  }
+
+  // 1. Explicit TCGdex confirmation — always trusted
+  if (variantsObj.reverse === true) return true;
+
+  // 2. TCGPlayer Reverse Holofoil price — always trusted (independent source)
+  const hasTpRh = (card.priceTcgplayerReverseMarket ?? card.priceTcgplayerReverseMid ?? 0) > 0;
+  if (hasTpRh) return true;
+
+  // 3. CM-RH strong volume signal — ONLY accepted for modern sets where
+  //    TCGdex variants-flags are known to be unreliable. On older promo sets
+  //    (Detective Pikachu, Hidden Fates, etc.) pokewallet frequently maps
+  //    non-foil cards to a wrong CM product that happens to have RH volume,
+  //    which is NOT evidence of a real reverse-holo printing.
+  const isModernSet = (card.releaseDate ?? "") >= MODERN_SET_CUTOFF;
+  if (isModernSet) {
+    const hasStrongCmRh =
+      card.priceReverseAvg != null && card.priceReverseAvg > 0 &&
+      card.priceReverseLow != null && card.priceReverseLow > 0;
+    if (hasStrongCmRh) return true;
+  }
+
+  return false;
 }
 
 // Variant label: rarity for normal, "Reverse Holo" for reverse
@@ -54,97 +159,47 @@ function variantLabel(rarity: string | null, isReverse: boolean): string {
   return rarity ?? "Normal";
 }
 
-// 90% of avg sell price approximates the lowest NL listings for NM cards.
-// CardMarket's averageSellPrice includes all EU countries; NL prices tend
-// to sit slightly below the EU average.
-export const MARKET_VALUE_RATE = 0.90;
-
-/**
- * Market price for buyback purposes.
- *
- * Takes 90% of `priceAvg` (CardMarket averageSellPrice) to approximate the
- * lowest NL-available NM listings. Falls back to avg30 if avg is unavailable.
- *
- * avg7 is deliberately excluded because a single expensive sale can distort
- * it heavily (e.g. Pikachu Celebrations avg7=€8 vs avg=€4).
- *
- * Final buyback = 85% of this market value = ~76.5% of avg sell price.
- */
-function bestAvailablePrice(
-  avg: number | null,
-  avg30: number | null,
-): number | null {
-  const base = (avg != null && avg > 0) ? avg : (avg30 != null && avg30 > 0) ? avg30 : null;
-  if (base == null) return null;
-  return Math.round(base * MARKET_VALUE_RATE * 100) / 100;
-}
-
 export interface VariantPrice {
+  /** Marktprijs (RAW, niet de inkoopprijs). Pas `getBuybackPrice()` toe voor inkoop. */
   price: number;
   isReverse: boolean;
-  label: string; // "normal" | "reverse"
+  label: string;
 }
 
 /**
  * Get available buyback variants for a card.
- * Returns 1 or 2 variants (normal and/or reverse holo) with pricing.
- * Cards with inherently-foil rarity only show their foil variant.
+ * Returns 1 or 2 variants (normal and/or reverse holo) met de RAW Marktprijs.
+ *
+ * Callers berekenen de inkoopprijs zelf via `getBuybackPrice(variant.price)`.
+ * Voor reverse holo gebruikt `getMarktprijsReverseHolo` automatisch een
+ * TP-fallback als CardMarket RH-data ontbreekt.
+ *
+ * Inherently-foil rarities (IR/SIR/UR/etc) tonen alleen hun foil-variant.
  */
 export function getAvailableVariants(card: BuybackPriceFields): VariantPrice[] {
   const variants: VariantPrice[] = [];
-  const foil = isInherentlyFoil(card.rarity);
 
-  // Normal variant (skip for inherently-foil cards)
-  if (!foil) {
-    const p = bestAvailablePrice(card.priceAvg, card.priceAvg30);
-    if (p != null && p > 0) {
-      variants.push({ price: p, isReverse: false, label: variantLabel(card.rarity, false) });
-    }
+  // Primary variant (Normal voor gewone kaarten, Holo voor inherently-foil).
+  // getMarktprijs valt automatisch terug op TCGPlayer Holofoil als CardMarket
+  // data ontbreekt — nodig voor oude Holo Rares zoals Call of Legends Clefable
+  // of Battle Styles Octillery die alleen TP-data hebben.
+  const primary = getMarktprijs(card);
+  if (primary != null && primary > 0) {
+    variants.push({
+      price: primary,
+      isReverse: false,
+      label: variantLabel(card.rarity, false),
+    });
   }
 
-  // Reverse holo only physically exists on cards that ALSO have a non-foil
-  // print (the "reverse holo" is the alternate-finish version of the non-
-  // foil base). If TCGdex says variants.normal === false (holo-only promo
-  // like SWSH020 Black Star Pikachu, XY84, etc.), stray rolling averages
-  // from CardMarket are mis-labeled listings, not real product prices.
-  //
-  // Signal tiers:
-  //   1. Active avg — strong evidence, always trust.
-  //   2. Historical avg30 only — accept if variants.normal !== false AND
-  //      variants.holo !== false. Modern sets (Twilight Masquerade,
-  //      Prismatic Evolutions) have active avg so they pass tier 1; the
-  //      tier-2 gate protects us against false-positive phantom reverses.
-  const activeReverse = card.priceReverseAvg != null && card.priceReverseAvg > 0
-    ? card.priceReverseAvg
-    : null;
-  const historicalReverse = card.priceReverseAvg30 != null && card.priceReverseAvg30 > 0
-    ? card.priceReverseAvg30
-    : null;
-  let variantsNormalFlag: boolean | null = null;
-  let variantsHoloFlag: boolean | null = null;
-  if (card.variants) {
-    try {
-      const v = JSON.parse(card.variants) as Record<string, unknown>;
-      if (typeof v.normal === "boolean") variantsNormalFlag = v.normal;
-      if (typeof v.holo === "boolean") variantsHoloFlag = v.holo;
-    } catch { /* ignore malformed */ }
-  }
-  const holoOnlyCard = variantsNormalFlag === false;
-  const historicalOk = !holoOnlyCard && variantsHoloFlag !== false;
-  const reverseBaseline = activeReverse ?? (historicalOk ? historicalReverse : null);
-  if (reverseBaseline != null) {
-    const rp = Math.round(reverseBaseline * MARKET_VALUE_RATE * 100) / 100;
-    if (rp > 0) {
-      variants.push({ price: rp, isReverse: true, label: variantLabel(card.rarity, true) });
-    }
-  }
-
-  // For inherently-foil cards where reverse pricing is empty,
-  // fall back to normal pricing fields (some APIs don't split)
-  if (foil && variants.length === 0) {
-    const p = bestAvailablePrice(card.priceAvg, card.priceAvg30);
-    if (p != null && p > 0) {
-      variants.push({ price: p, isReverse: false, label: variantLabel(card.rarity, false) });
+  // Reverse holo variant — alleen als er een echt RH-signaal is (filtert
+  // pokewallet-lekkage op sets zonder RH-printing, bv. Detective Pikachu).
+  // Kan ook op inherently-foil kaarten voorkomen (Holo Rare Octillery heeft
+  // variants.reverse=true én TP-Reverse pricing).
+  if (hasReverseHoloSignal(card)) {
+    const rhMarktprijs = getMarktprijsReverseHolo(card);
+    if (rhMarktprijs != null && rhMarktprijs > 0) {
+      variants.push({ price: rhMarktprijs, isReverse: true, label: variantLabel(card.rarity, true) });
     }
   }
 
@@ -167,14 +222,14 @@ export function getEffectiveMarketPrice(card: BuybackPriceFields): {
 }
 
 /**
- * Calculate buyback price from a market price (85%).
+ * Calculate buyback price from a market price (BUYBACK_RATE × Marktprijs).
  */
 export function getBuybackPrice(marketPrice: number): number {
   return Math.round(marketPrice * BUYBACK_RATE * 100) / 100;
 }
 
 /**
- * Calculate store credit bonus amount (20% extra).
+ * Calculate store credit bonus amount (STORE_CREDIT_BONUS extra).
  */
 export function getStoreCreditBonus(estimatedPayout: number): number {
   return Math.round(estimatedPayout * STORE_CREDIT_BONUS * 100) / 100;

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { cardSlug } from "@/lib/tcgdex/slug";
+import { cardSlug } from "@/lib/card-helpers";
 
 export interface TrendingCard {
   id: string;
