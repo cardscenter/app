@@ -374,5 +374,42 @@ export async function updateListingStatus(listingId: string, status: "SOLD" | "D
     data: { status },
   });
 
+  // D4: when the seller deletes the listing, auto-reject any PENDING proposals
+  // on it. We use REJECTED (not WITHDRAWN) because the proposer didn't pull
+  // their offer — the listing they were negotiating on is gone. Each proposal
+  // gets a system message in the chat and the proposer gets a notification.
+  if (status === "DELETED") {
+    const pendingProposals = await prisma.proposal.findMany({
+      where: { listingId, status: "PENDING" },
+      select: { id: true, conversationId: true, proposerId: true, amount: true },
+    });
+
+    for (const p of pendingProposals) {
+      await prisma.proposal.update({
+        where: { id: p.id },
+        data: { status: "REJECTED", respondedAt: new Date() },
+      });
+
+      // System message: senderId = the seller who deleted the listing.
+      // We render this in the chat as a regular message (no proposalId link
+      // because the proposal is now REJECTED, not actionable).
+      await prisma.message.create({
+        data: {
+          conversationId: p.conversationId,
+          senderId: session.user.id,
+          body: `De advertentie "${listing.title}" is verwijderd door de verkoper. Dit voorstel is automatisch afgewezen.`,
+        },
+      });
+
+      await createNotification(
+        p.proposerId,
+        "NEW_MESSAGE",
+        "Voorstel afgewezen",
+        `De advertentie "${listing.title}" is verwijderd. Je voorstel van €${p.amount.toFixed(2)} is automatisch afgewezen.`,
+        `/nl/berichten/${p.conversationId}`
+      );
+    }
+  }
+
   return { success: true };
 }
