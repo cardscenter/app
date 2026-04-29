@@ -1,9 +1,10 @@
 export const CARD_CONDITIONS = [
   "Near Mint",
-  "Lightly Played",
-  "Moderately Played",
-  "Heavily Played",
-  "Damaged",
+  "Excellent",
+  "Good",
+  "Light Played",
+  "Heavy Played",
+  "Poor",
 ] as const;
 export type CardCondition = (typeof CARD_CONDITIONS)[number];
 
@@ -68,7 +69,7 @@ export const LISTING_TYPES = [
 ] as const;
 export type ListingType = (typeof LISTING_TYPES)[number];
 
-export const LISTING_STATUSES = ["ACTIVE", "SOLD", "EXPIRED", "DELETED"] as const;
+export const LISTING_STATUSES = ["ACTIVE", "SOLD", "DELETED"] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
 // Delivery & shipping
