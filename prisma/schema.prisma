@@ -120,6 +120,13 @@ model User {
   // Uitbetaalsysteem (Fase 6)
   withdrawalRequests       WithdrawalRequest[] @relation("WithdrawalUser")
   reviewedWithdrawalRequests WithdrawalRequest[] @relation("WithdrawalReviewer")
+
+  // Blokkeren + rapporteren (Fase 7)
+  blocks            UserBlock[]  @relation("Blocker")
+  blockedBy         UserBlock[]  @relation("Blocked")
+  reportsFiled      UserReport[] @relation("Reporter")
+  reportsReceived   UserReport[] @relation("Reported")
+  reportsReviewed   UserReport[] @relation("ReportReviewer")
 }
 
 // ============================================================
@@ -1309,6 +1316,59 @@ model BuybackItem {
   createdAt         DateTime @default(now())
 
   @@index([buybackRequestId])
+}
+
+// ============================================================
+// USER BLOCK + REPORT (Fase 7)
+// ============================================================
+//
+// Blocking is symmetric in effect: A blocking B hides their listings/
+// conversations on both sides. Existing transactions (bundles, disputes,
+// active proposals) are NOT affected — those must still close gracefully.
+// Reports go to admin moderation queue, not to the reported user.
+model UserBlock {
+  id        String   @id @default(cuid())
+
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+
+  blockedId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+
+  reason    String?  // optional free text — visible only to the blocker
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model UserReport {
+  id          String   @id @default(cuid())
+
+  reporterId  String
+  reporter    User     @relation("Reporter", fields: [reporterId], references: [id])
+
+  reportedId  String
+  reported    User     @relation("Reported", fields: [reportedId], references: [id])
+
+  reason      String   // SCAM | SPAM | HARASSMENT | INAPPROPRIATE | FAKE_LISTING | OTHER
+  details     String
+  evidenceUrl String?
+
+  status        String   @default("OPEN") // OPEN | REVIEWING | DISMISSED | ACTION_TAKEN
+  reviewedById  String?
+  reviewedBy    User?    @relation("ReportReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  adminNote     String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ============================================================
