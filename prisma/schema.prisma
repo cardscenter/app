@@ -135,6 +135,10 @@ model User {
   reportsFiled      UserReport[] @relation("Reporter")
   reportsReceived   UserReport[] @relation("Reported")
   reportsReviewed   UserReport[] @relation("ReportReviewer")
+
+  // Annuleringsverzoeken (Fase 9)
+  cancellationProposed CancellationRequest[] @relation("CancellationProposer")
+  cancellationResponded CancellationRequest[] @relation("CancellationResponder")
 }
 
 // ============================================================
@@ -694,6 +698,8 @@ model ShippingBundle {
   refundedAmount Float   @default(0) // Total amount refunded to buyer so far
 
   status        String   @default("PENDING") // PENDING | PAID | SHIPPED | COMPLETED | CANCELLED | DISPUTED
+
+  cancellationRequests CancellationRequest[]
 
   // Optional link to source (auction or listing purchase)
   auctionId     String?  @unique
@@ -1324,6 +1330,45 @@ model BuybackItem {
   createdAt         DateTime @default(now())
 
   @@index([buybackRequestId])
+}
+
+// ============================================================
+// CANCELLATION REQUESTS (Fase 9)
+// ============================================================
+//
+// Either party (buyer of seller) op een PAID bundle kan een annulering
+// voorstellen. Wederpartij heeft 7 dagen om te reageren — geen reactie =
+// EXPIRED (verkoper blijft leveringsplichtig). Bij ACCEPTED muteert de
+// bundle naar CANCELLED en wordt de escrow gerefund.
+//
+// Niet bedoeld voor SHIPPED bundles — daar treedt het dispute-systeem in.
+model CancellationRequest {
+  id               String         @id @default(cuid())
+
+  shippingBundleId String
+  shippingBundle   ShippingBundle @relation(fields: [shippingBundleId], references: [id])
+
+  proposedById     String
+  proposedBy       User           @relation("CancellationProposer", fields: [proposedById], references: [id])
+
+  reason           String   // BUYER_CHANGED_MIND | SELLER_OUT_OF_STOCK | DAMAGED | UNRESPONSIVE | OTHER
+  details          String?
+
+  status           String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | EXPIRED
+  respondedAt      DateTime?
+  respondedById    String?
+  respondedBy      User?    @relation("CancellationResponder", fields: [respondedById], references: [id])
+  rejectionNote    String?
+
+  expiresAt        DateTime // createdAt + 7 dagen
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([shippingBundleId])
+  @@index([proposedById])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 // ============================================================

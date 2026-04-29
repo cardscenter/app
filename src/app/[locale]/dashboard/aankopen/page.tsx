@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
+import { CancellationsSection } from "@/components/dashboard/cancellations-section";
 
 export default async function MyPurchasesPage() {
   const session = await auth();
@@ -82,7 +83,21 @@ export default async function MyPurchasesPage() {
           {t("noPurchases")}
         </p>
       ) : (
-        <PurchasesContent bundles={serialized} />
+        <>
+          <CancellationsSection
+            currentUserId={userId}
+            paidBundles={serialized
+              .filter((b) => b.status === "PAID")
+              .map((b) => ({
+                id: b.id,
+                orderNumber: b.orderNumber,
+                status: b.status,
+                totalCost: b.totalCost,
+                counterpartyName: b.sellerName,
+              }))}
+          />
+          <PurchasesContent bundles={serialized} />
+        </>
       )}
     </div>
   );
