@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   BarChart3,
@@ -24,6 +25,7 @@ import {
   Menu,
   X,
   ArrowDownToLine,
+  LogOut,
 } from "lucide-react";
 
 interface NavSection {
@@ -43,9 +45,30 @@ interface LevelInfo {
 
 export function DashboardNav({ accountType, level }: { accountType?: string; level?: LevelInfo }) {
   const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
   const pathname = usePathname();
   const isAdmin = accountType === "ADMIN";
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
+  function handleLogoutClick() {
+    if (confirmLogout) {
+      // Second click — actually sign out
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      signOut({ callbackUrl: "/" });
+      return;
+    }
+    // First click — arm confirmation, auto-revert after 4 seconds
+    setConfirmLogout(true);
+    confirmTimerRef.current = setTimeout(() => setConfirmLogout(false), 4000);
+  }
 
   const sections: NavSection[] = [
     {
@@ -76,6 +99,7 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
       label: "sectionTrading",
       items: [
         { href: "/dashboard/saldo", labelKey: "myBalance", icon: Wallet },
+        { href: "/dashboard/uitbetalingen", labelKey: "myWithdrawals", icon: Wallet },
         { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
         { href: "/dashboard/inkoop", labelKey: "myBuyback", icon: ArrowDownToLine },
       ],
@@ -100,14 +124,21 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
       label: "sectionDisputes",
       items: [
         { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
-        ...(isAdmin
-          ? [
-              { href: "/dashboard/geschillen/admin", labelKey: "adminDisputes", icon: Scale },
-              { href: "/dashboard/inkoop/admin", labelKey: "adminBuyback", icon: ArrowDownToLine },
-            ]
-          : []),
       ],
     },
+    ...(isAdmin
+      ? [
+          {
+            label: "sectionAdmin",
+            items: [
+              { href: "/dashboard/inkoop/admin", labelKey: "adminBuyback", icon: ArrowDownToLine },
+              { href: "/dashboard/uitbetalingen/admin", labelKey: "adminWithdrawals", icon: Wallet },
+              { href: "/dashboard/geschillen/admin", labelKey: "adminDisputes", icon: Scale },
+              { href: "/dashboard/geschillen/admin/verificaties", labelKey: "adminVerifications", icon: ShieldCheck },
+            ],
+          },
+        ]
+      : []),
   ];
 
   const isLevelActive = pathname === "/dashboard/level";
@@ -143,6 +174,21 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
         />
       </div>
     </Link>
+  );
+
+  const logoutButton = (
+    <button
+      type="button"
+      onClick={handleLogoutClick}
+      className={`flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all ${
+        confirmLogout
+          ? "border-red-600 bg-red-600 text-white hover:bg-red-700"
+          : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
+      }`}
+    >
+      <LogOut className="h-4 w-4 shrink-0" />
+      {confirmLogout ? tc("logoutConfirm") : tc("logout")}
+    </button>
   );
 
   const navLinks = sections.map((section) => (
@@ -192,18 +238,24 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
         </button>
 
         {mobileOpen && (
-          <div className="glass-nav mt-2 rounded-xl p-2 space-y-1">
-            {levelCard && <div className="mb-2">{levelCard}</div>}
-            {navLinks}
-          </div>
+          <>
+            <div className="glass-nav mt-2 rounded-xl p-2 space-y-1">
+              {levelCard && <div className="mb-2">{levelCard}</div>}
+              {navLinks}
+            </div>
+            <div className="mt-3">{logoutButton}</div>
+          </>
         )}
       </div>
 
       {/* Desktop: full sidebar */}
-      <nav className="hidden md:block glass-nav rounded-xl p-2 space-y-0.5">
-        {levelCard && <div className="mb-2">{levelCard}</div>}
-        {navLinks}
-      </nav>
+      <div className="hidden md:block">
+        <nav className="glass-nav rounded-xl p-2 space-y-0.5">
+          {levelCard && <div className="mb-2">{levelCard}</div>}
+          {navLinks}
+        </nav>
+        <div className="mt-3">{logoutButton}</div>
+      </div>
     </>
   );
 }
