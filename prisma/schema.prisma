@@ -72,6 +72,11 @@ model User {
   // Runner-up auction setting (max cascade hops when winners fail to pay)
   maxRunnerUpAttempts Int @default(5)
 
+  // Bank details for payouts (Fase 5)
+  iban               String?
+  accountHolderName  String?
+  lastIbanChange     DateTime?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
