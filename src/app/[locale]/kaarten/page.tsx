@@ -8,7 +8,12 @@ import { DatabaseStats } from "@/components/card/database-stats";
 import { DatabaseMarquee } from "@/components/card/database-marquee";
 import { DatabaseTrending, type TrendingCard } from "@/components/card/database-trending";
 import { getCardImageUrl } from "@/lib/card-image";
-import { getDisplayPrice, getMarktprijs, computeWeeklyDeltaPct } from "@/lib/display-price";
+import {
+  getDisplayPrice,
+  getMarktprijs,
+  computeWeeklyDeltaPct,
+  type SnapshotPoint,
+} from "@/lib/display-price";
 import { Layers, BookOpen, Banknote, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -162,10 +167,34 @@ export default async function CardsOverviewPage() {
   }
   const marqueeItems = shuffled.slice(0, 40);
 
-  // Trending: "current" uses getDisplayPrice() which blends CardMarket
-  // avg/trend with PriceCharting for expensive cards (>=€250), so single
-  // outlier sales on illiquid chase cards don't produce phantom swings.
-  // Baseline stays priceAvg7 so the "deze week" label remains accurate.
+  // Trending: snapshot-based delta. Apples-to-apples: Marktprijs(today) vs
+  // Marktprijs(7d-old snapshot). Both sides go through the outlier filter,
+  // so we never see fake -54% drops from idProduct corruption alone.
+  //
+  // Two queries: candidate pool (priceAvg≥€10 + 3y cutoff) → fetch last
+  // ~9 days of CardPriceHistory rows for those candidates → build a per-
+  // card map → compute delta with snapshot baseline.
+  const trendingCandidateIds = trendingCards.map((c) => c.id);
+  const ninedaysAgo = new Date(Date.now() - 9 * 24 * 60 * 60 * 1000);
+  const recentSnapshotRows = trendingCandidateIds.length === 0
+    ? []
+    : await prisma.cardPriceHistory.findMany({
+        where: {
+          cardId: { in: trendingCandidateIds },
+          date: { gte: ninedaysAgo },
+        },
+        select: { cardId: true, date: true, priceNormal: true },
+      });
+  const snapshotHistoryByCard = new Map<string, SnapshotPoint[]>();
+  for (const row of recentSnapshotRows) {
+    let arr = snapshotHistoryByCard.get(row.cardId);
+    if (!arr) {
+      arr = [];
+      snapshotHistoryByCard.set(row.cardId, arr);
+    }
+    arr.push({ date: row.date, price: row.priceNormal });
+  }
+
   const withDelta = trendingCards
     .filter((c): c is typeof c & { priceAvg: number; priceAvg7: number; cardSet: { name: string; tcgdexSetId: string } } =>
       c.priceAvg != null &&
@@ -173,11 +202,34 @@ export default async function CardsOverviewPage() {
       !!c.cardSet.tcgdexSetId
     )
     .map((c) => {
-      const displayPrice = getDisplayPrice(c) ?? c.priceAvg;
-      const deltaPct = computeWeeklyDeltaPct(c);
+      const snapshotHistory = snapshotHistoryByCard.get(c.id);
+      // Last 7 entries excluding today, used by getMarktprijs's snapshot-anchor.
+      const todayUtcMs = (() => {
+        const d = new Date();
+        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+      })();
+      const recentSnapshots = (snapshotHistory ?? [])
+        .filter((s) => (s.date instanceof Date ? s.date.getTime() : new Date(s.date).getTime()) < todayUtcMs)
+        .slice(-7)
+        .map((s) => s.price);
+      const displayPrice = getDisplayPrice({ ...c, recentSnapshots }) ?? c.priceAvg;
+      const deltaPct = computeWeeklyDeltaPct({ ...c, recentSnapshots, snapshotHistory });
       // Flag corrupted idProduct mappings (raw priceAvg >> Marktprijs):
-      // those cards produce fake -99% "drops" that aren't real movement.
+      // even with snapshot-based delta we want to hide these because the
+      // displayed price itself is unreliable until pokewallet's mapping
+      // gets fixed or an admin sets a priceOverrideAvg.
       const corrupted = c.priceAvg > 0 && displayPrice < c.priceAvg / 2.5;
+      // hasSnapshotBaseline tells us whether the delta is true apples-to-
+      // apples (preferred) or fell back to raw avg vs avg7. We don't
+      // exclude raw-fallback cards entirely — they're still valid signals
+      // for the first ~7 days of a card's snapshot lifetime — but we
+      // demand stricter ≥5% movement to compensate for the lower precision.
+      const hasSnapshotBaseline = (snapshotHistory ?? []).some((s) => {
+        if (s.price == null || s.price <= 0) return false;
+        const t = s.date instanceof Date ? s.date.getTime() : new Date(s.date).getTime();
+        const ageDays = (Date.now() - t) / (24 * 60 * 60 * 1000);
+        return ageDays >= 5 && ageDays <= 9;
+      });
       return {
         id: c.id,
         name: c.name,
@@ -189,10 +241,17 @@ export default async function CardsOverviewPage() {
         priceAvg7: c.priceAvg7,
         deltaPct: deltaPct ?? 0,
         corrupted,
+        hasSnapshotBaseline,
       };
     })
-    // Require ≥3% absolute move AND no corruption-correction noise
-    .filter((c) => !c.corrupted && Math.abs(c.deltaPct) >= 3);
+    // Require non-trivial movement AND no corruption-correction noise.
+    // Snapshot-baseline ≥3%, raw fallback ≥5% (less precise so we want
+    // a stronger signal).
+    .filter((c) => {
+      if (c.corrupted) return false;
+      const threshold = c.hasSnapshotBaseline ? 3 : 5;
+      return Math.abs(c.deltaPct) >= threshold;
+    });
   const risers: TrendingCard[] = [...withDelta].sort((a, b) => b.deltaPct - a.deltaPct).slice(0, 10);
   const fallers: TrendingCard[] = [...withDelta].sort((a, b) => a.deltaPct - b.deltaPct).slice(0, 10);
 
