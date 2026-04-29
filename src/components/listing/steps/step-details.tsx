@@ -21,6 +21,7 @@ interface StepDetailsProps {
   selectedSeries: string;
   condition: string;
   tcgdex: CardSearchSelectValue | null;
+  variant: "normal" | "reverse";
   // MULTI_CARD
   cardItems: CardItemEntry[];
   // COLLECTION
@@ -40,6 +41,7 @@ export function StepDetails({
   cardName,
   condition,
   tcgdex,
+  variant,
   cardItems,
   estimatedCardCount,
   productType,
@@ -48,6 +50,7 @@ export function StepDetails({
 }: StepDetailsProps) {
   const t = useTranslations("listing");
   const ttcg = useTranslations("tcg");
+  const hasReverse = tcgdex?.variants?.includes("reverse") ?? false;
 
   const addCardItem = () => {
     onChange("cardItems", [...cardItems, { cardName: "", cardSetId: "", condition: "Near Mint", quantity: 1 }]);
@@ -95,17 +98,62 @@ export function StepDetails({
       {/* SINGLE_CARD specific */}
       {listingType === "SINGLE_CARD" && (
         <div className="space-y-4">
-          {/* TCGdex card picker — auto-fills cardName when selected */}
+          {/* Database card picker — auto-fills cardName when selected */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Zoek kaart</label>
             <CardSearchSelect
               value={tcgdex}
               onChange={(v) => {
                 onChange("tcgdex", v);
-                if (v && !cardName) onChange("cardName", v.name);
+                // Pick always overwrites name — seller just clicked this exact card.
+                if (v) onChange("cardName", v.name);
+                onChange("variant", "normal");
               }}
             />
           </div>
+
+          {/* Extra info chips — read-only metadata from the DB card */}
+          {tcgdex && (tcgdex.series?.name || tcgdex.setName || tcgdex.rarity) && (
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              {tcgdex.series?.name && (
+                <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                  <span className="opacity-60">Serie:</span> <span className="font-medium text-foreground">{tcgdex.series.name}</span>
+                </span>
+              )}
+              {tcgdex.setName && (
+                <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                  <span className="opacity-60">Set:</span> <span className="font-medium text-foreground">{tcgdex.setName}</span>
+                </span>
+              )}
+              {tcgdex.rarity && (
+                <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                  <span className="opacity-60">Zeldzaamheid:</span> <span className="font-medium text-foreground">{tcgdex.rarity}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Variant selector — shown only when the DB card has a reverse-holo print.
+              Drives the Marktwaarde shown in the pricing step. */}
+          {hasReverse && (
+            <div className="inline-flex rounded-lg border border-border p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => onChange("variant", "normal")}
+                className={`rounded-md px-3 py-1 transition-colors ${variant === "normal" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Normal
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange("variant", "reverse")}
+                className={`rounded-md px-3 py-1 transition-colors ${variant === "reverse" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Reverse Holo
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="cardName" className="block text-sm font-medium text-foreground">{t("cardName")}</label>

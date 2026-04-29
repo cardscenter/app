@@ -16,6 +16,7 @@ type CardItem = {
   sellerNote: string;
   condition: string;
   price: string;
+  variant: "normal" | "reverse";
   frontImage: string | null;
   backImage: string | null;
   tcgdex: CardSearchSelectValue | null;
@@ -45,9 +46,11 @@ function SingleImageUpload({
     }
   }, [onChange]);
 
+  // Portrait aspect mimics a real trading-card (≈ 5:7) so the uploader
+  // previews read as "card slot" instead of a generic square tile.
   if (image) {
     return (
-      <div className="relative group w-full aspect-square rounded-lg overflow-hidden bg-muted">
+      <div className="relative group w-full aspect-[5/7] rounded-lg overflow-hidden bg-muted">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={image} alt={label} className="h-full w-full object-cover" />
         <button
@@ -66,7 +69,7 @@ function SingleImageUpload({
 
   return (
     <label
-      className={`flex cursor-pointer flex-col items-center justify-center w-full aspect-square rounded-lg border-2 border-dashed transition-all ${
+      className={`flex cursor-pointer flex-col items-center justify-center w-full aspect-[5/7] rounded-lg border-2 border-dashed transition-all ${
         uploading ? "opacity-50 pointer-events-none" : "border-border hover:border-primary/50 hover:bg-muted/30"
       }`}
     >
@@ -77,7 +80,7 @@ function SingleImageUpload({
         onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
       />
       <Upload className="size-5 text-muted-foreground/50" />
-      <span className="mt-1 text-[10px] font-medium text-muted-foreground/60">
+      <span className="mt-1 px-1 text-center text-[10px] font-medium leading-tight text-muted-foreground/60">
         {uploading ? "..." : label}
       </span>
     </label>
@@ -141,12 +144,14 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
   const [coverUploading, setCoverUploading] = useState(false);
   const [selectedShippingMethods, setSelectedShippingMethods] = useState<string[]>([]);
   const [items, setItems] = useState<CardItem[]>([
-    { id: "1", cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null, tcgdex: null },
+    { id: "1", cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", variant: "normal", frontImage: null, backImage: null, tcgdex: null },
   ]);
 
+  // New & duplicated items are prepended so the user lands next to the newly
+  // created block instead of scrolling through the whole claimsale every time.
   function addItem() {
     if (items.length >= maxItems) return;
-    setItems([...items, { id: Date.now().toString(), cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", frontImage: null, backImage: null, tcgdex: null }]);
+    setItems([{ id: Date.now().toString(), cardName: "", cardNumber: "", sellerNote: "", condition: "Near Mint", price: "", variant: "normal", frontImage: null, backImage: null, tcgdex: null }, ...items]);
   }
 
   function duplicateItem(item: CardItem, count: number = 1) {
@@ -157,7 +162,7 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
     for (let i = 0; i < toAdd; i++) {
       newItems.push({ ...item, id: `${Date.now()}-${i}`, frontImage: null, backImage: null });
     }
-    setItems([...items, ...newItems]);
+    setItems([...newItems, ...items]);
   }
 
   function removeItem(id: string) {
@@ -172,18 +177,27 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
   function setItemTcgdex(id: string, tcgdex: CardSearchSelectValue | null) {
     setItems((prev) => prev.map((i) => {
       if (i.id !== id) return i;
-      // When picking a card, auto-fill name + number if empty so seller doesn't
-      // re-type. If they cleared the picker, leave manual fields intact.
+      // Picking a card always overwrites name + number — the seller just
+      // picked this exact card, so whatever they had typed before is stale.
+      // If they clear the picker, keep manual fields intact and reset variant.
       if (tcgdex) {
         return {
           ...i,
           tcgdex,
-          cardName: i.cardName || tcgdex.name,
-          cardNumber: i.cardNumber || tcgdex.localId,
+          cardName: tcgdex.name,
+          cardNumber: tcgdex.localId,
+          variant: "normal",
         };
       }
-      return { ...i, tcgdex: null };
+      return { ...i, tcgdex: null, variant: "normal" };
     }));
+  }
+
+  // Pick the right CardMarket price for the variant the seller has toggled on.
+  function marktprijsFor(item: CardItem): number | null {
+    if (!item.tcgdex) return null;
+    if (item.variant === "reverse") return item.tcgdex.pricingReverse?.avg ?? null;
+    return item.tcgdex.pricing?.avg ?? null;
   }
 
   async function uploadCover(file: File) {
@@ -214,11 +228,16 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
       const imageUrls: string[] = [];
       if (i.frontImage) imageUrls.push(i.frontImage);
       if (i.backImage) imageUrls.push(i.backImage);
-      // If the seller picked a TCGdex card and uploaded no own image, fall back
+      // If the seller picked a DB card and uploaded no own image, fall back
       // to the official artwork so the listing isn't blank.
       if (imageUrls.length === 0 && i.tcgdex?.imageUrl) imageUrls.push(i.tcgdex.imageUrl);
+      // Encode reverse-holo into the name so buyers see which print they're
+      // buying and we pick the right price baseline downstream.
+      const baseName = i.cardName || i.tcgdex?.name || `Kaart ${items.indexOf(i) + 1}`;
+      const needsReverseSuffix = i.variant === "reverse" && !/reverse/i.test(baseName);
+      const cardName = needsReverseSuffix ? `${baseName} (Reverse Holo)` : baseName;
       return {
-        cardName: i.cardName || i.tcgdex?.name || `Kaart ${items.indexOf(i) + 1}`,
+        cardName,
         cardNumber: i.cardNumber || i.tcgdex?.localId || undefined,
         sellerNote: i.sellerNote || undefined,
         condition: i.condition,
@@ -325,7 +344,10 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
           </button>
         </div>
 
-        {items.map((item, idx) => (
+        {items.map((item, idx) => {
+          const hasReverse = item.tcgdex?.variants?.includes("reverse") ?? false;
+          const marktprijs = marktprijsFor(item);
+          return (
           <div key={item.id} className="glass-subtle rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-muted-foreground">#{idx + 1}</span>
@@ -342,16 +364,59 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
               </div>
             </div>
 
-            {/* TCGdex card picker — auto-fills name + number, attaches stable id */}
-            <div className="mb-4">
+            {/* Database card picker — auto-fills name + number, attaches stable id */}
+            <div className="mb-3">
               <CardSearchSelect
                 value={item.tcgdex}
                 onChange={(v) => setItemTcgdex(item.id, v)}
               />
             </div>
 
+            {/* Extra info chips when a DB card is picked — show read-only
+                metadata (serie, set, rarity) that the seller can't edit. */}
+            {item.tcgdex && (item.tcgdex.series?.name || item.tcgdex.setName || item.tcgdex.rarity) && (
+              <div className="mb-3 flex flex-wrap gap-1.5 text-[11px]">
+                {item.tcgdex.series?.name && (
+                  <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                    <span className="opacity-60">Serie:</span> <span className="font-medium text-foreground">{item.tcgdex.series.name}</span>
+                  </span>
+                )}
+                {item.tcgdex.setName && (
+                  <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                    <span className="opacity-60">Set:</span> <span className="font-medium text-foreground">{item.tcgdex.setName}</span>
+                  </span>
+                )}
+                {item.tcgdex.rarity && (
+                  <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                    <span className="opacity-60">Zeldzaamheid:</span> <span className="font-medium text-foreground">{item.tcgdex.rarity}</span>
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Variant selector — only shown when the picked card actually has
+                a reverse-holo print. Drives the marktprijs shown below. */}
+            {hasReverse && (
+              <div className="mb-3 inline-flex rounded-lg border border-border p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, variant: "normal" } : i))}
+                  className={`rounded-md px-3 py-1 transition-colors ${item.variant === "normal" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  Normal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, variant: "reverse" } : i))}
+                  className={`rounded-md px-3 py-1 transition-colors ${item.variant === "reverse" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  Reverse Holo
+                </button>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-4">
-              {/* Front & back image uploads */}
+              {/* Front & back image uploads (portrait, card-shaped) */}
               <div className="flex gap-3 shrink-0">
                 <div className="w-20 sm:w-24">
                   <SingleImageUpload
@@ -364,57 +429,70 @@ export function ClaimsaleForm({ maxItems, shippingMethods }: { maxItems: number;
                   <SingleImageUpload
                     image={item.backImage}
                     onChange={(url) => updateItem(item.id, "backImage", url)}
-                    label="Achterkant"
+                    label="Achterkant (optioneel)"
                   />
                 </div>
               </div>
 
               {/* Card fields */}
-              <div className="flex-1 grid grid-cols-2 gap-3 content-start">
-                <input
-                  type="text"
-                  placeholder={`${t("cardName")} (optioneel)`}
-                  value={item.cardName}
-                  onChange={(e) => updateItem(item.id, "cardName", e.target.value)}
-                  className="col-span-2 sm:col-span-1 glass-input px-3 py-2.5 text-sm text-foreground"
-                />
-                <input
-                  type="text"
-                  placeholder={t("cardNumber")}
-                  value={item.cardNumber}
-                  onChange={(e) => updateItem(item.id, "cardNumber", e.target.value)}
-                  className="col-span-2 sm:col-span-1 glass-input px-3 py-2.5 text-sm text-foreground"
-                />
-                <select
-                  value={item.condition}
-                  onChange={(e) => updateItem(item.id, "condition", e.target.value)}
-                  className="glass-input px-3 py-2.5 text-sm text-foreground"
-                >
-                  {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground">€</span>
+              <div className="flex-1 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    placeholder={t("price")}
-                    value={item.price}
-                    onChange={(e) => updateItem(item.id, "price", e.target.value)}
-                    className="w-full glass-input px-3 py-2.5 text-sm text-foreground"
+                    type="text"
+                    placeholder={`${t("cardName")} (optioneel)`}
+                    value={item.cardName}
+                    onChange={(e) => updateItem(item.id, "cardName", e.target.value)}
+                    className="col-span-2 sm:col-span-1 glass-input px-3 py-2.5 text-sm text-foreground"
                   />
+                  <input
+                    type="text"
+                    placeholder={t("cardNumber")}
+                    value={item.cardNumber}
+                    onChange={(e) => updateItem(item.id, "cardNumber", e.target.value)}
+                    className="col-span-2 sm:col-span-1 glass-input px-3 py-2.5 text-sm text-foreground"
+                  />
+                </div>
+                {/* Condition + price + marktprijs all in one row on sm+,
+                    stack vertically on mobile. */}
+                <div className="flex flex-col sm:flex-row sm:items-stretch gap-3">
+                  <select
+                    value={item.condition}
+                    onChange={(e) => updateItem(item.id, "condition", e.target.value)}
+                    className="sm:flex-1 glass-input px-3 py-2.5 text-sm text-foreground"
+                  >
+                    {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <div className="flex w-full items-center gap-1 glass-input px-3 py-2.5 sm:w-32">
+                    <span className="text-sm text-muted-foreground">€</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder={t("price")}
+                      value={item.price}
+                      onChange={(e) => updateItem(item.id, "price", e.target.value)}
+                      className="w-full bg-transparent text-sm text-foreground outline-none"
+                    />
+                  </div>
+                  {marktprijs !== null && (
+                    <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-3 py-2 sm:w-40">
+                      <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Marktprijs</span>
+                      <span className="text-sm font-semibold text-foreground">€{marktprijs.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
                 <input
                   type="text"
                   placeholder={t("sellerNote")}
                   value={item.sellerNote}
                   onChange={(e) => updateItem(item.id, "sellerNote", e.target.value)}
-                  className="col-span-2 glass-input px-3 py-2.5 text-sm text-foreground"
+                  className="w-full glass-input px-3 py-2.5 text-sm text-foreground"
                 />
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="glass-subtle rounded-2xl bg-yellow-50/50 p-4 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">

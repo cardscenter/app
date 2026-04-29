@@ -55,10 +55,20 @@ export async function submitCollectionBuyback(formData: FormData) {
     });
     if (!card) return { error: `Kaart ${item.cardId} niet gevonden` };
 
-    // Block cards beyond the per-card price cap or from sets older than XY
-    const elig = checkBuybackEligibility(marketResult.price, card.cardSet?.releaseDate);
+    // McDonald's promo sets are out of scope for the Collection Calculator —
+    // same defence in depth as the client-side search filter.
+    if (card.cardSet?.name?.startsWith("McDonald")) {
+      return { error: `${card.name} (${card.cardSet.name}) komt uit een promo-set die niet ingekocht wordt.` };
+    }
+
+    // Block cards beyond the per-card price cap, from sets older than XY,
+    // or with a bulk-only rarity (those must go through the Bulk Calculator).
+    const elig = checkBuybackEligibility(marketResult.price, card.cardSet?.releaseDate, card.rarity);
     if (!elig.eligible) {
       const label = `${card.name} (${card.cardSet?.name ?? ""})`;
+      if (elig.reason === "bulk_only") {
+        return { error: `${label} kan alleen via de Bulk Calculator verkocht worden, niet via de Collectie Calculator.` };
+      }
       if (elig.reason === "price_too_high") {
         return { error: `${label} heeft een Marktprijs boven €${MAX_BUYBACK_MARKTPRIJS.toFixed(0)} en kan momenteel niet worden ingekocht.` };
       }
@@ -93,6 +103,10 @@ export async function submitCollectionBuyback(formData: FormData) {
 
   const storeCreditBonus = payoutMethod === "STORE_CREDIT" ? getStoreCreditBonus(roundedPayout) : null;
 
+  // Verkoper moet binnen 5 dagen verzenden — anders kan de huidige Marktprijs-
+  // gebaseerde calculatie zijn verlopen en moet de aanvraag opnieuw worden ingediend.
+  const shippingDeadline = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
   const request = await prisma.buybackRequest.create({
     data: {
       userId: session.user.id,
@@ -103,6 +117,7 @@ export async function submitCollectionBuyback(formData: FormData) {
       totalItems,
       estimatedPayout: roundedPayout,
       storeCreditBonus,
+      shippingDeadline,
       items: {
         create: itemsWithPrices.map((i) => ({
           cardId: i.cardId,
@@ -185,6 +200,7 @@ export async function submitBulkBuyback(formData: FormData) {
   }
 
   const storeCreditBonus = payoutMethod === "STORE_CREDIT" ? getStoreCreditBonus(estimatedPayout) : null;
+  const shippingDeadline = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
   const request = await prisma.buybackRequest.create({
     data: {
@@ -196,6 +212,7 @@ export async function submitBulkBuyback(formData: FormData) {
       totalItems,
       estimatedPayout,
       storeCreditBonus,
+      shippingDeadline,
       bulkItems: {
         create: validItems,
       },
@@ -211,6 +228,52 @@ export async function submitBulkBuyback(formData: FormData) {
   );
 
   return { success: true, requestId: request.id };
+}
+
+// ── Tracking ────────────────────────────────────────────────────────────────
+
+const VALID_CARRIERS = ["PostNL", "DPD", "DHL", "UPS", "OTHER"] as const;
+type Carrier = (typeof VALID_CARRIERS)[number];
+
+export async function submitBuybackTracking(
+  requestId: string,
+  carrier: string,
+  trackingNumber: string,
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const trimmedTracking = trackingNumber.trim();
+  if (!trimmedTracking || trimmedTracking.length < 4) {
+    return { error: "Vul een geldige Track & Trace-code in" };
+  }
+  if (trimmedTracking.length > 100) {
+    return { error: "Track & Trace-code te lang" };
+  }
+  if (!VALID_CARRIERS.includes(carrier as Carrier)) {
+    return { error: "Onbekende vervoerder" };
+  }
+
+  const request = await prisma.buybackRequest.findUnique({
+    where: { id: requestId },
+    select: { userId: true, status: true },
+  });
+  if (!request) return { error: "Aanvraag niet gevonden" };
+  if (request.userId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (request.status !== "PENDING" && request.status !== "RECEIVED") {
+    return { error: "Tracking kan niet meer worden bijgewerkt voor deze aanvraag" };
+  }
+
+  await prisma.buybackRequest.update({
+    where: { id: requestId },
+    data: {
+      shippingCarrier: carrier,
+      trackingNumber: trimmedTracking,
+      shippedAt: new Date(),
+    },
+  });
+
+  return { success: true };
 }
 
 export async function cancelBuybackRequest(requestId: string) {
@@ -284,10 +347,16 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   PARTIALLY_APPROVED: ["PAID"],
 };
 
-const STATUS_NOTIFICATIONS: Record<string, { title: string; body: (payout?: number) => string }> = {
+interface NotificationContext {
+  payout?: number;
+  bonus?: number;
+  payoutMethod?: string;
+}
+
+const STATUS_NOTIFICATIONS: Record<string, { title: string; body: (ctx: NotificationContext) => string }> = {
   RECEIVED: {
     title: "Kaarten ontvangen",
-    body: () => "We hebben je kaarten ontvangen en gaan ze beoordelen.",
+    body: () => "We hebben je kaarten ontvangen. De inspectie kan tot 3 werkdagen duren — je krijgt een melding zodra we starten.",
   },
   INSPECTING: {
     title: "Inspectie gestart",
@@ -295,11 +364,11 @@ const STATUS_NOTIFICATIONS: Record<string, { title: string; body: (payout?: numb
   },
   APPROVED: {
     title: "Kaarten goedgekeurd",
-    body: (p) => `Alle kaarten zijn goedgekeurd! Uitbetaling van €${p?.toFixed(2)} wordt verwerkt.`,
+    body: ({ payout }) => `Alle kaarten zijn goedgekeurd! Uitbetaling van €${payout?.toFixed(2)} wordt verwerkt.`,
   },
   PARTIALLY_APPROVED: {
     title: "Gedeeltelijk goedgekeurd",
-    body: (p) => `Een deel van je kaarten is goedgekeurd. Uitbetaling van €${p?.toFixed(2)} wordt verwerkt.`,
+    body: ({ payout }) => `Een deel van je kaarten is goedgekeurd. Uitbetaling van €${payout?.toFixed(2)} wordt verwerkt.`,
   },
   REJECTED: {
     title: "Kaarten afgekeurd",
@@ -307,7 +376,14 @@ const STATUS_NOTIFICATIONS: Record<string, { title: string; body: (payout?: numb
   },
   PAID: {
     title: "Uitbetaling verwerkt",
-    body: (p) => `Je uitbetaling van €${p?.toFixed(2)} is overgemaakt naar je bankrekening.`,
+    body: ({ payout, bonus, payoutMethod }) => {
+      if (payoutMethod === "STORE_CREDIT") {
+        const total = (payout ?? 0) + (bonus ?? 0);
+        const bonusNote = bonus && bonus > 0 ? ` (incl. €${bonus.toFixed(2)} bonus)` : "";
+        return `€${total.toFixed(2)}${bonusNote} is bijgeschreven op je saldo.`;
+      }
+      return `Je uitbetaling van €${payout?.toFixed(2)} is overgemaakt naar je bankrekening.`;
+    },
   },
 };
 
@@ -389,10 +465,96 @@ export async function updateBuybackStatus(
       request.userId,
       `BUYBACK_${newStatus}`,
       notif.title,
-      notif.body(payout),
+      notif.body({
+        payout,
+        bonus: request.storeCreditBonus ?? 0,
+        payoutMethod: request.payoutMethod,
+      }),
       `/dashboard/inkoop/${requestId}`
     );
   }
+
+  return { success: true };
+}
+
+// ── Price-correction flow ────────────────────────────────────────────────────
+
+export async function applyItemPriceCorrection(
+  itemId: string,
+  correctedMarketPrice: number,
+  reason: string,
+) {
+  const adminId = await requireAdmin();
+  if (!adminId) return { error: "Niet geautoriseerd" };
+
+  if (!Number.isFinite(correctedMarketPrice) || correctedMarketPrice <= 0) {
+    return { error: "Vul een geldige prijs in" };
+  }
+  if (!reason.trim() || reason.trim().length < 3) {
+    return { error: "Beschrijf kort waarom de prijs is aangepast" };
+  }
+
+  const item = await prisma.buybackItem.findUnique({
+    where: { id: itemId },
+    include: { buybackRequest: { select: { status: true, userId: true, id: true } } },
+  });
+  if (!item) return { error: "Item niet gevonden" };
+  if (item.buybackRequest.status !== "INSPECTING") {
+    return { error: "Prijscorrectie alleen mogelijk tijdens inspectie" };
+  }
+
+  const correctedBuybackPrice = getBuybackPrice(correctedMarketPrice);
+
+  await prisma.buybackItem.update({
+    where: { id: itemId },
+    data: {
+      priceCorrected: true,
+      correctedMarketPrice,
+      correctedBuybackPrice,
+      priceCorrectionReason: reason.trim(),
+      userApprovedCorrection: null, // reset bij nieuwe correctie
+      userRespondedAt: null,
+    },
+  });
+
+  await createNotification(
+    item.buybackRequest.userId,
+    "BUYBACK_PRICE_CORRECTION",
+    "Prijscorrectie voorgesteld",
+    `Voor "${item.cardName}" hebben we een aangepaste prijs voorgesteld. Bekijk de details en geef akkoord om de inkoop af te ronden.`,
+    `/dashboard/inkoop/${item.buybackRequest.id}`,
+  );
+
+  return { success: true };
+}
+
+export async function respondToPriceCorrection(itemId: string, accept: boolean) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const item = await prisma.buybackItem.findUnique({
+    where: { id: itemId },
+    include: { buybackRequest: { select: { userId: true, status: true } } },
+  });
+  if (!item) return { error: "Item niet gevonden" };
+  if (item.buybackRequest.userId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (!item.priceCorrected) return { error: "Geen prijscorrectie op dit item" };
+  if (item.userApprovedCorrection !== null) return { error: "Je hebt al een keuze gemaakt" };
+  if (item.buybackRequest.status !== "INSPECTING") {
+    return { error: "Niet meer mogelijk om te reageren" };
+  }
+
+  await prisma.buybackItem.update({
+    where: { id: itemId },
+    data: {
+      userApprovedCorrection: accept,
+      userRespondedAt: new Date(),
+      // Als verkoper afwijst, item gaat automatisch naar REJECTED met reden
+      ...(accept
+        ? {}
+        : { inspectionStatus: "REJECTED", rejectionReason: "Verkoper accepteerde de prijscorrectie niet" }),
+    },
+  });
 
   return { success: true };
 }
@@ -452,9 +614,25 @@ export async function finalizeBuybackInspection(requestId: string) {
     const pending = request.items.filter((i) => i.inspectionStatus === "PENDING");
     if (pending.length > 0) return { error: `Nog ${pending.length} kaart(en) niet beoordeeld` };
 
+    // Block when there's still a pending price-correction the user hasn't
+    // responded to — verkoper moet eerst akkoord geven voordat we finaliseren.
+    const pendingCorrections = request.items.filter(
+      (i) => i.priceCorrected && i.userApprovedCorrection === null,
+    );
+    if (pendingCorrections.length > 0) {
+      return {
+        error: `Nog ${pendingCorrections.length} prijscorrectie(s) wachten op akkoord van de verkoper`,
+      };
+    }
+
     for (const item of request.items) {
       if (item.inspectionStatus === "APPROVED") {
-        finalPayout += item.buybackPrice * item.quantity;
+        // Use corrected price when verkoper accepted it; original anders.
+        const priceToUse =
+          item.priceCorrected && item.userApprovedCorrection === true
+            ? item.correctedBuybackPrice ?? item.buybackPrice
+            : item.buybackPrice;
+        finalPayout += priceToUse * item.quantity;
         allRejected = false;
       } else {
         allApproved = false;
@@ -509,7 +687,11 @@ export async function finalizeBuybackInspection(requestId: string) {
       request.userId,
       `BUYBACK_${newStatus}`,
       notif.title,
-      notif.body(finalPayout),
+      notif.body({
+        payout: finalPayout,
+        bonus: storeCreditBonus ?? 0,
+        payoutMethod: request.payoutMethod,
+      }),
       `/dashboard/inkoop/${requestId}`
     );
   }

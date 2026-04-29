@@ -16,7 +16,7 @@ export const MAX_BUYBACK_MARKTPRIJS = 75.0;
 // XY — eerste release xy1 "XY Base Set" op 2014-02-05.
 export const BUYBACK_ERA_START = "2014-02-05";
 
-export type BuybackIneligibleReason = "no_price" | "price_too_high" | "too_old";
+export type BuybackIneligibleReason = "no_price" | "price_too_high" | "too_old" | "bulk_only";
 
 export interface BuybackEligibilityResult {
   eligible: boolean;
@@ -24,7 +24,31 @@ export interface BuybackEligibilityResult {
 }
 
 /**
- * Check of een kaart/variant in aanmerking komt voor inkoop.
+ * Rariteiten die alleen via de Bulk Calculator verkocht kunnen worden (niet
+ * via de Collectie Calculator). Commons, uncommons en gewone rares — inclusief
+ * hun reverse-holo varianten — worden tegen vaste bulk-prijzen afgehandeld.
+ * Modernere rare-subtypes (Holo Rare V / VMAX / VSTAR / LV.X etc.) gaan WEL
+ * door de Collectie Calculator, dus exact-match i.p.v. prefix.
+ */
+const BULK_ONLY_RARITIES = new Set([
+  "common",
+  "uncommon",
+  "rare",
+  "rare holo",
+  "holo rare",
+]);
+
+export function isBulkOnlyRarity(rarity: string | null | undefined): boolean {
+  if (!rarity) return false;
+  return BULK_ONLY_RARITIES.has(rarity.toLowerCase().trim());
+}
+
+/**
+ * Check of een kaart/variant in aanmerking komt voor inkoop via de Collectie
+ * Calculator.
+ * - `bulk_only`: rarity valt onder de Bulk Calculator (common/uncommon/rare/
+ *   rare holo) — gecheckt BEFORE price/age checks zodat de user altijd een
+ *   duidelijke "ga naar Bulk" boodschap krijgt.
  * - `no_price`: geen Marktprijs beschikbaar
  * - `price_too_high`: Marktprijs > MAX_BUYBACK_MARKTPRIJS
  * - `too_old`: set released vóór XY (BUYBACK_ERA_START)
@@ -32,7 +56,9 @@ export interface BuybackEligibilityResult {
 export function checkBuybackEligibility(
   marktprijs: number | null,
   releaseDate: string | null | undefined,
+  rarity?: string | null,
 ): BuybackEligibilityResult {
+  if (isBulkOnlyRarity(rarity)) return { eligible: false, reason: "bulk_only" };
   if (marktprijs == null || marktprijs <= 0) return { eligible: false, reason: "no_price" };
   if (marktprijs > MAX_BUYBACK_MARKTPRIJS) return { eligible: false, reason: "price_too_high" };
   if (releaseDate && releaseDate < BUYBACK_ERA_START) return { eligible: false, reason: "too_old" };
@@ -40,21 +66,39 @@ export function checkBuybackEligibility(
 }
 
 // ── Bulk pricing (fixed per-unit prices) ─────────────────────────────────────
+//
+// `group` splits the UI into two visible sections and drives the card-count
+// semantics: only `pokemon` items count toward "totaal kaarten"; `other` items
+// (code cards, coins, sleeves, sealed energy) contribute to payout but not to
+// the card count.
+//
+// `tier` drives the tile-styling — commons get a muted gray, Master Ball gets
+// a royal purple, etc. Kept separate from `price` so UI colour-coding evolves
+// independently from pricing.
 
+export type BulkGroup = "pokemon" | "other";
+export type BulkTier = "common" | "uncommon" | "rare" | "holo" | "ultra" | "pokeball" | "masterball" | "oversized" | "code" | "coin" | "sleeves" | "energy";
+
+// Per-unit gewicht in gram — gebruikt voor shipping-advies. Standaard Pokémon
+// kaart = 1.8 g; overige items hebben eigen gewichten zoals opgegeven.
 export const BULK_PRICING = {
-  COMMON:              { price: 0.01, labelKey: "common" },
-  UNCOMMON:            { price: 0.01, labelKey: "uncommon" },
-  RARE:                { price: 0.04, labelKey: "rare" },
-  HOLO:                { price: 0.04, labelKey: "holo" },
-  REVERSE_HOLO:        { price: 0.06, labelKey: "reverseHolo" },
-  ULTRA_RARE:          { price: 0.45, labelKey: "ultraRare" },
-  POKEBALL_REVERSE:    { price: 0.25, labelKey: "pokeballReverse" },
-  MASTER_BALL_REVERSE: { price: 2.50, labelKey: "masterBallReverse" },
-  CODE_CARD:           { price: 0.01, labelKey: "codeCard" },
-  COIN:                { price: 0.05, labelKey: "coin" },
-  SLEEVES:             { price: 1.00, labelKey: "sleeves" },
-  ENERGY:              { price: 0.15, labelKey: "energy" },
-} as const;
+  COMMON:              { price: 0.01, labelKey: "commonUncommon",   group: "pokemon", tier: "common",     weightGrams: 1.8  },
+  RARE:                { price: 0.04, labelKey: "rare",              group: "pokemon", tier: "rare",       weightGrams: 1.8  },
+  HOLO:                { price: 0.04, labelKey: "holo",              group: "pokemon", tier: "holo",       weightGrams: 1.8  },
+  REVERSE_HOLO:        { price: 0.06, labelKey: "reverseHolo",       group: "pokemon", tier: "holo",       weightGrams: 1.8  },
+  ULTRA_RARE:          { price: 0.45, labelKey: "ultraRare",         group: "pokemon", tier: "ultra",      weightGrams: 1.8  },
+  POKEBALL_REVERSE:    { price: 0.25, labelKey: "pokeballReverse",   group: "pokemon", tier: "pokeball",   weightGrams: 1.8  },
+  MASTER_BALL_REVERSE: { price: 2.50, labelKey: "masterBallReverse", group: "pokemon", tier: "masterball", weightGrams: 1.8  },
+  OVERSIZED_CARD:      { price: 0.40, labelKey: "oversizedCard",     group: "other",   tier: "oversized",  weightGrams: 15   },
+  CODE_CARD:           { price: 0.01, labelKey: "codeCard",          group: "other",   tier: "code",       weightGrams: 1.8  },
+  COIN:                { price: 0.05, labelKey: "coin",              group: "other",   tier: "coin",       weightGrams: 5    },
+  SLEEVES:             { price: 1.00, labelKey: "sleeves",           group: "other",   tier: "sleeves",    weightGrams: 40   },
+  ENERGY:              { price: 0.15, labelKey: "energy",            group: "other",   tier: "energy",     weightGrams: 90   },
+} as const satisfies Record<string, { price: number; labelKey: string; group: BulkGroup; tier: BulkTier; weightGrams: number }>;
+
+// Shipping package limit: carriers (PostNL etc.) cap most parcels at 23 kg;
+// we reserve 1 kg margin for box + filler so only 22 kg telt als bruikbaar.
+export const MAX_SHIPPING_WEIGHT_KG = 22;
 
 export type BulkCategoryKey = keyof typeof BULK_PRICING;
 

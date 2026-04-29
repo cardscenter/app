@@ -15,7 +15,7 @@ interface ClaimsaleItemEditProps {
   onClose: () => void;
 }
 
-const CONDITIONS = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"];
+const CONDITIONS = ["Near Mint", "Excellent", "Good", "Light Played", "Heavy Played", "Poor"];
 
 export function ClaimsaleItemEdit({
   itemId,

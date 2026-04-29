@@ -152,3 +152,12 @@ export interface SpeciesListResponse {
 export function listSpecies(offset: number, limit: number): Promise<SpeciesListResponse | null> {
   return get<SpeciesListResponse>(`/pokemon-species?offset=${offset}&limit=${limit}`);
 }
+
+/**
+ * Full species list (all ~1300 entries). Used for name-search on the Pokédex
+ * page — a single cached fetch is cheaper than paging the normal endpoint for
+ * every query. Next.js caches this for 7 days (same TTL as paginated list).
+ */
+export function listAllSpecies(): Promise<SpeciesListResponse | null> {
+  return get<SpeciesListResponse>(`/pokemon-species?limit=2000`);
+}

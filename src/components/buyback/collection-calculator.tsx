@@ -2,9 +2,9 @@
 
 import { useState, useActionState, useTransition, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, CheckSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckSquare, Package } from "lucide-react";
 import { BuybackCardSearch, cardVariantKey, type SelectedCard, type CardConditionKey } from "./buyback-card-search";
 import { BuybackCart } from "./buyback-cart";
 import { PayoutMethodSelect } from "./payout-method-select";
@@ -29,6 +29,7 @@ export function CollectionCalculator() {
   // Confirmation checkboxes
   const [confirmNM, setConfirmNM] = useState(false);
   const [confirmCenter, setConfirmCenter] = useState(false);
+  const [confirmTerms, setConfirmTerms] = useState(false);
 
   // Success state
   const [successId, setSuccessId] = useState<string | null>(null);
@@ -41,6 +42,14 @@ export function CollectionCalculator() {
     },
     null
   );
+
+  // Bij elke stap-overgang naar boven scrollen — anders blijft de viewport
+  // op de oude positie (storend op mobile + lange step 1-pagina).
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [step]);
 
   useEffect(() => {
     if (actionState?.success && actionState.requestId) {
@@ -70,13 +79,14 @@ export function CollectionCalculator() {
         (i) => cardVariantKey(i.cardId, i.isReverse) === key
       );
       if (existing) {
-        return prev.map((i) =>
-          cardVariantKey(i.cardId, i.isReverse) === key
-            ? { ...i, quantity: i.quantity + card.quantity }
-            : i
-        );
+        // Bestaand item bovenaan plaatsen + aantal verhogen, zodat de
+        // verkoper meteen ziet dat het toegevoegd is.
+        const updated = { ...existing, quantity: existing.quantity + card.quantity };
+        const rest = prev.filter((i) => cardVariantKey(i.cardId, i.isReverse) !== key);
+        return [updated, ...rest];
       }
-      return [...prev, card];
+      // Nieuw item bovenaan toevoegen — meest recente staat altijd in beeld.
+      return [card, ...prev];
     });
   }
 
@@ -143,7 +153,7 @@ export function CollectionCalculator() {
             <BuybackCardSearch onAdd={handleAddCard} selectedKeys={selectedKeys} />
           </div>
           <div className="lg:col-span-2">
-            <div className="sticky top-4">
+            <div className="lg:sticky lg:top-4">
               <BuybackCart
                 items={items}
                 onUpdateQuantity={handleUpdateQuantity}
@@ -166,6 +176,23 @@ export function CollectionCalculator() {
                   Verwijder eerst de niet-Near Mint kaarten om door te gaan
                 </p>
               )}
+              <Link
+                href="/verkoop-calculator/bulk"
+                className="mt-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                    {t("bulkNoticeTitle")}
+                  </p>
+                  <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                    {t("bulkNoticeDesc")}
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-amber-800 dark:text-amber-300" />
+              </Link>
             </div>
           </div>
         </div>
@@ -223,6 +250,26 @@ export function CollectionCalculator() {
               />
               <span>{t("confirmNotOffCenter")}</span>
             </label>
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={confirmTerms}
+                onChange={(e) => setConfirmTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-input"
+              />
+              <span>
+                {t("confirmTermsPrefix")}{" "}
+                <Link
+                  href="/verkoop-calculator/voorwaarden-collectie"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+                >
+                  {t("confirmTermsLinkLabel")}
+                </Link>
+                {t("confirmTermsSuffix")}
+              </span>
+            </label>
           </div>
 
           <button
@@ -232,6 +279,7 @@ export function CollectionCalculator() {
               isPending ||
               !confirmNM ||
               !confirmCenter ||
+              !confirmTerms ||
               !minimumMet ||
               (payoutMethod === "BANK" && (!iban || !accountHolder))
             }

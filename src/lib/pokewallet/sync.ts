@@ -140,11 +140,22 @@ export async function syncSetByPokewalletId(cardSetId: string): Promise<SyncResu
 
   for (const dbCard of dbCards) {
     const num = normalizeCardNumber(dbCard.localId);
-    const candidates = pwByNum.get(num) ?? [];
-    if (candidates.length === 0) {
+    const rawCandidates = pwByNum.get(num) ?? [];
+    if (rawCandidates.length === 0) {
       unmatched++;
       continue;
     }
+
+    // Sort: candidates without parenthetical-modifiers first (e.g. "Eevee - 173"
+    // before "Eevee - 173 (Pokemon Center Exclusive)"), then by name length so
+    // the most "plain" name wins. Prevents promo-sets accidentally mapping to
+    // the special-edition variant when both share the same card_number.
+    const candidates = [...rawCandidates].sort((a, b) => {
+      const aHasParen = a.card_info.name.includes("(");
+      const bHasParen = b.card_info.name.includes("(");
+      if (aHasParen !== bHasParen) return aHasParen ? 1 : -1;
+      return a.card_info.name.length - b.card_info.name.length;
+    });
 
     let pw = candidates.find(
       (c) => c.card_info.name === dbCard.name && (c.cardmarket?.prices?.length ?? 0) > 0,

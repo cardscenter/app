@@ -37,9 +37,28 @@ function isCommonTier(rarity: string | null | undefined): boolean {
 }
 
 const USD_TO_EUR = 0.92;
-const SPIKE_RATIO = 3;          // avg > low * 3 = outlier-spike
+const OUTLIER_RATIO = 1.5;      // max > median * 1.5 = spike → exclude before blending
 const TP_SANITY_RATIO = 1.5;    // estimate > tp * 1.5 = mild discrepancy → blend
 const TP_EXTREME_RATIO = 5;     // estimate > tp * 5 = extreme = trust TP
+
+/**
+ * Filter out the single highest rolling-avg if it sits disproportionately above
+ * the others. Needed for hype-cards where avg7 (or trend) reflects a recent
+ * spike (PSA listings, damaged outliers) while priceAvg still anchors the
+ * realistic long-term value. Applied BEFORE averaging so the spike doesn't
+ * pull the blend upward.
+ *
+ * Example: Umbreon ex SIR (Prismatic Evolutions) had [priceAvg €1095,
+ * priceTrend €1783, priceAvg7 €2888]. Median €1783 × 1.5 = €2674. avg7
+ * exceeds that → dropped. Remaining mean: €1439 (matches TCGPlayer €1357).
+ */
+function excludeHighSpike(values: number[]): number[] {
+  if (values.length < 2) return values;
+  const sorted = [...values].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const max = sorted[sorted.length - 1];
+  return max > median * OUTLIER_RATIO ? sorted.slice(0, -1) : sorted;
+}
 
 /**
  * EU/US price-tier adjustment factor voor NORMAL Common/Uncommon prints.
@@ -102,9 +121,9 @@ export function getMarktprijs(card: DisplayPriceFields): number | null {
   // the window, trend reacts to recent weighted sales), while priceAvg anchors
   // the longer-term baseline. This gives small daily movement for ~85% of
   // cards without introducing the volatility of raw avg1 / low / single sales.
-  const inputs = [card.priceAvg, card.priceAvg7, card.priceTrend]
+  const rollingAvgs = [card.priceAvg, card.priceAvg7, card.priceTrend]
     .filter((v): v is number => v != null && v > 0);
-  if (inputs.length === 0) {
+  if (rollingAvgs.length === 0) {
     // No CardMarket data at all (e.g. older Rare Holo cards like Call of
     // Legends Clefable). Fall back to TCGPlayer as the only available source,
     // with EU-tier adjustment so US shipping-overhead prices get normalised.
@@ -115,16 +134,13 @@ export function getMarktprijs(card: DisplayPriceFields): number | null {
     }
     return null;
   }
+
+  // Drop the high spike (if any) before averaging — stops a volatile avg7
+  // (or trend, or avg) from pulling the Marktprijs far above the others.
+  const inputs = excludeHighSpike(rollingAvgs);
   let prijs = inputs.reduce((a, b) => a + b, 0) / inputs.length;
 
-  // 1. Spike-detectie via low: if our blended estimate is >3× the lowest
-  //    listing, one of the rolling avgs is being pulled up by a PSA10 /
-  //    damaged outlier. Fall back to avg7 (the cleanest single signal).
-  if (card.priceLow != null && card.priceLow > 0 && card.priceLow * SPIKE_RATIO < prijs) {
-    prijs = card.priceAvg7 ?? card.priceTrend ?? card.priceAvg ?? prijs;
-  }
-
-  // 2. TCGPlayer cross-check (alleen als TP-data beschikbaar)
+  // TCGPlayer cross-check (alleen als TP-data beschikbaar)
   const tpUsd = card.priceTcgplayerHolofoilMarket ?? card.priceTcgplayerNormalMarket;
   if (tpUsd != null && tpUsd > 0) {
     const tpEur = tpUsd * USD_TO_EUR;
@@ -185,16 +201,8 @@ export function getMarktprijsReverseHolo(card: ReverseHoloFields): number | null
     }
     return null;
   }
-  let prijs = rhInputs.reduce((a, b) => a + b, 0) / rhInputs.length;
-
-  // Spike-detectie via low
-  if (
-    card.priceReverseLow != null &&
-    card.priceReverseLow > 0 &&
-    card.priceReverseLow * SPIKE_RATIO < prijs
-  ) {
-    prijs = card.priceReverseAvg7 ?? card.priceReverseTrend ?? card.priceReverseAvg ?? prijs;
-  }
+  const rhFiltered = excludeHighSpike(rhInputs);
+  let prijs = rhFiltered.reduce((a, b) => a + b, 0) / rhFiltered.length;
 
   // TCGPlayer cross-check (gebruikt RH-tier voor extreme discrepancy)
   if (tpEur != null) {

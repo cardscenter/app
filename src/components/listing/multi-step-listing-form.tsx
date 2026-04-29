@@ -35,6 +35,7 @@ interface FormState {
   selectedSeries: string;
   condition: string;
   tcgdex: CardSearchSelectValue | null;
+  variant: "normal" | "reverse";
   cardItems: CardItemEntry[];
   estimatedCardCount: number | null;
   productType: string;
@@ -60,6 +61,7 @@ const INITIAL_STATE: FormState = {
   selectedSeries: "",
   condition: "Near Mint",
   tcgdex: null,
+  variant: "normal",
   cardItems: [],
   estimatedCardCount: null,
   productType: "",
@@ -122,7 +124,11 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     formData.set("shippingCost", String(form.shippingCost));
     formData.set("packageCount", String(form.packageCount));
 
-    if (form.cardName) formData.set("cardName", form.cardName);
+    // Append "(Reverse Holo)" so buyers see which print they're buying.
+    const baseName = form.cardName;
+    const needsReverseSuffix = form.variant === "reverse" && baseName && !/reverse/i.test(baseName);
+    const cardName = needsReverseSuffix ? `${baseName} (Reverse Holo)` : baseName;
+    if (cardName) formData.set("cardName", cardName);
     if (form.cardSetId) formData.set("cardSetId", form.cardSetId);
     if (form.condition) formData.set("condition", form.condition);
     if (form.tcgdex?.id) formData.set("tcgdexId", form.tcgdex.id);
@@ -187,6 +193,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           selectedSeries={form.selectedSeries}
           condition={form.condition}
           tcgdex={form.tcgdex}
+          variant={form.variant}
           cardItems={form.cardItems}
           estimatedCardCount={form.estimatedCardCount}
 
@@ -201,7 +208,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
         <StepPricing
           pricingType={form.pricingType}
           price={form.price}
-          pricing={form.tcgdex?.pricing ?? null}
+          pricing={form.variant === "reverse" ? (form.tcgdex?.pricingReverse ?? null) : (form.tcgdex?.pricing ?? null)}
           onChange={updateField}
         />
       </section>

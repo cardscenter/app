@@ -145,10 +145,26 @@ export async function GET(request: Request) {
     andClauses.push(jsonContains("category", category));
   }
 
+  // `buybackOnly=true` narrows the result set to cards actually accepted by
+  // the Collection Buyback Calculator: excludes bulk-only rarities (common/
+  // uncommon/rare/rare holo — those go through the Bulk Calculator) and
+  // promo-only McDonald's sets (not in scope for buyback).
+  const buybackOnly = searchParams.get("buybackOnly") === "true";
+
   const where: Record<string, unknown> = {
     cardSet: { series: { tcgdexSeriesId: { notIn: ["tcgp"] } } },
   };
   if (andClauses.length > 0) where.AND = andClauses;
+
+  if (buybackOnly) {
+    const buybackClauses: Array<Record<string, unknown>> = [
+      { NOT: { rarity: { in: ["Common", "Uncommon", "Rare", "Rare Holo", "Holo Rare"] } } },
+      { cardSet: { NOT: { name: { startsWith: "McDonald" } } } },
+    ];
+    where.AND = Array.isArray(where.AND)
+      ? [...(where.AND as Array<Record<string, unknown>>), ...buybackClauses]
+      : buybackClauses;
+  }
 
   // Soft cap: when the full result set is too wide we skip the fetch and
   // let the UI ask the user to narrow their query. Keeps payloads small

@@ -77,7 +77,7 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/cards/search?q=${encodeURIComponent(query)}&limit=50`);
+        const res = await fetch(`/api/cards/search?q=${encodeURIComponent(query)}&limit=50&buybackOnly=true`);
         const data = await res.json();
         setResults(data.results ?? []);
       } catch {
@@ -120,7 +120,8 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
 
   return (
     <div className="space-y-4">
-      {/* Search input */}
+      {/* Search input — text-base (16px) op mobile zodat iOS niet auto-zoomt
+          bij focus; vanaf sm: terug naar text-sm voor compactere desktop-UI. */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -128,7 +129,7 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          className="w-full rounded-xl border border-input bg-background py-3 pl-10 pr-4 text-sm"
+          className="w-full rounded-xl border border-input bg-background py-3 pl-10 pr-4 text-base sm:text-sm"
         />
         {loading && (
           <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -137,7 +138,7 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
 
       {/* Results */}
       {results.length > 0 && (
-        <div className="max-h-[500px] space-y-1 overflow-y-auto rounded-xl border border-input p-2">
+        <div className="max-h-[500px] space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-input p-2">
           {results.map((card) => {
             const variants = getAvailableVariants(card);
             if (variants.length === 0) {
@@ -151,10 +152,11 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
               );
             }
 
-            // Per-variant eligibility — price cap per variant, era-cutoff on set
+            // Per-variant eligibility — price cap per variant, era-cutoff on set,
+            // rarity-based bulk-only check (same result for both variants).
             const variantsWithEligibility = variants.map((v) => ({
               variant: v,
-              eligibility: checkBuybackEligibility(v.price, card.releaseDate),
+              eligibility: checkBuybackEligibility(v.price, card.releaseDate, card.rarity),
             }));
             const allIneligible = variantsWithEligibility.every((v) => !v.eligibility.eligible);
 
@@ -181,8 +183,8 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
                       return (
                         <div
                           key={key}
-                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${
-                            alreadyAdded || blocked ? "opacity-50" : "hover:bg-muted/30"
+                          className={`flex flex-wrap items-center gap-2 rounded-md px-2 py-1.5 ${
+                            alreadyAdded || blocked ? "opacity-60" : "hover:bg-muted/30"
                           }`}
                         >
                           {/* Variant label */}
@@ -196,48 +198,48 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
 
                           {/* Pricing (also shown for blocked so user sees why) */}
                           <div className="flex items-center gap-1.5 text-xs">
-                            <span className="text-muted-foreground">
+                            <span className="text-muted-foreground tabular-nums">
                               €{variant.price.toFixed(2)}
                             </span>
                             {!blocked && (
                               <>
                                 <span className="text-muted-foreground">→</span>
-                                <span className="font-semibold text-emerald-600">
+                                <span className="font-semibold tabular-nums text-emerald-600">
                                   €{buyback.toFixed(2)}
                                 </span>
                               </>
                             )}
                           </div>
 
-                          <div className="ml-auto" />
-
                           {blocked && (
-                            <span className="shrink-0 text-right text-[11px] italic text-muted-foreground">
+                            <span className="basis-full text-right text-[11px] italic text-muted-foreground sm:ml-auto sm:basis-auto">
                               {t("notEligible")}
                             </span>
                           )}
 
-                          {/* Quantity + Add */}
+                          {/* Quantity + Add — wrap to next line on mobile if needed */}
                           {!alreadyAdded && !blocked && (
-                            <div className="flex shrink-0 items-center gap-1">
+                            <div className="ml-auto flex shrink-0 items-center gap-1">
                               <button type="button" onClick={() => updateQty(key, -1)} className="rounded p-1 hover:bg-muted">
                                 <Minus className="h-3 w-3" />
                               </button>
-                              <span className="w-6 text-center text-xs">{quantities[key] || 1}</span>
+                              <span className="w-6 text-center text-xs tabular-nums">{quantities[key] || 1}</span>
                               <button type="button" onClick={() => updateQty(key, 1)} className="rounded p-1 hover:bg-muted">
                                 <Plus className="h-3 w-3" />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleAdd(card, variant)}
-                                className="ml-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-primary/90"
+                                className="ml-1 inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-primary/90"
+                                aria-label={t("addCard")}
                               >
-                                {t("addCard")}
+                                <Plus className="h-3 w-3 sm:hidden" />
+                                <span className="hidden sm:inline">{t("addCard")}</span>
                               </button>
                             </div>
                           )}
                           {alreadyAdded && !blocked && (
-                            <span className="text-xs text-muted-foreground">&#10003;</span>
+                            <span className="ml-auto text-xs text-muted-foreground">&#10003;</span>
                           )}
                         </div>
                       );
@@ -269,7 +271,7 @@ function CardImage({ card }: { card: SearchResult }) {
   return (
     <div
       ref={imgRef}
-      className="h-[130px] w-[93px] shrink-0"
+      className="h-[90px] w-[64px] shrink-0 sm:h-[130px] sm:w-[93px]"
       onMouseEnter={handleEnter}
       onMouseLeave={() => setHover(false)}
     >

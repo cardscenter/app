@@ -2,12 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
 import { BuybackStatusBadge } from "./buyback-status-badge";
+import { TrackingForm } from "./tracking-form";
+import { PriceCorrectionPrompt } from "./price-correction-prompt";
+import { BuybackOutcomeInfo, BuybackFAQ } from "./buyback-outcome-info";
 import { cancelBuybackRequest } from "@/actions/buyback";
-import { X, CheckCircle2, XCircle, Clock, CreditCard, Banknote, Wallet } from "lucide-react";
+import { X, CheckCircle2, XCircle, Clock, CreditCard, Banknote, Wallet, Package, ExternalLink } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
 import { BULK_PRICING, type BulkCategoryKey } from "@/lib/buyback-pricing";
 
@@ -68,6 +71,10 @@ export function BuybackRequestDetail({ request }: { request: RequestWithItems })
         <BuybackStatusBadge status={request.status} />
       </div>
 
+      {/* Status-bewuste outcome-info — beantwoordt voor elke fase wat er gebeurt,
+          wat de verkoper moet doen, en wat de financiële gevolgen zijn. */}
+      <BuybackOutcomeInfo request={request} />
+
       {/* Status timeline */}
       <div className="glass rounded-xl p-4">
         <div className="flex items-center gap-2 text-sm">
@@ -101,32 +108,47 @@ export function BuybackRequestDetail({ request }: { request: RequestWithItems })
             {request.items.map((item) => {
               const Icon = ITEM_STATUS_ICON[item.inspectionStatus] ?? Clock;
               const color = ITEM_STATUS_COLOR[item.inspectionStatus] ?? "text-muted-foreground";
+              const correctionReadOnly = request.status !== "INSPECTING";
 
               return (
-                <div key={item.id} className="flex items-center gap-3 p-3">
-                  <div className="h-12 w-8 shrink-0 overflow-hidden rounded">
-                    {item.imageUrl ? (
-                      <Image src={item.imageUrl} alt={item.cardName} width={32} height={48} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-muted text-[8px]">?</div>
-                    )}
+                <div key={item.id} className="p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-8 shrink-0 overflow-hidden rounded">
+                      {item.imageUrl ? (
+                        <Image src={item.imageUrl} alt={item.cardName} width={32} height={48} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-muted text-[8px]">?</div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{item.cardName}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {item.setName} · #{item.cardLocalId}
+                      </p>
+                      {item.rejectionReason && (
+                        <p className="text-xs text-red-500">{item.rejectionReason}</p>
+                      )}
+                    </div>
+                    <div className="text-center text-sm">
+                      <span className="text-muted-foreground">{item.quantity}x</span>
+                    </div>
+                    <div className="text-right text-sm">
+                      <p className="font-medium">€{(item.buybackPrice * item.quantity).toFixed(2)}</p>
+                    </div>
+                    <Icon className={`h-4 w-4 shrink-0 ${color}`} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{item.cardName}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {item.setName} · #{item.cardLocalId}
-                    </p>
-                    {item.rejectionReason && (
-                      <p className="text-xs text-red-500">{item.rejectionReason}</p>
-                    )}
-                  </div>
-                  <div className="text-center text-sm">
-                    <span className="text-muted-foreground">{item.quantity}x</span>
-                  </div>
-                  <div className="text-right text-sm">
-                    <p className="font-medium">€{(item.buybackPrice * item.quantity).toFixed(2)}</p>
-                  </div>
-                  <Icon className={`h-4 w-4 shrink-0 ${color}`} />
+                  {item.priceCorrected && (
+                    <PriceCorrectionPrompt
+                      itemId={item.id}
+                      cardName={item.cardName}
+                      originalBuybackPrice={item.buybackPrice}
+                      correctedMarketPrice={item.correctedMarketPrice ?? 0}
+                      correctedBuybackPrice={item.correctedBuybackPrice ?? 0}
+                      reason={item.priceCorrectionReason ?? ""}
+                      userApprovedCorrection={item.userApprovedCorrection}
+                      readOnly={correctionReadOnly}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -171,6 +193,40 @@ export function BuybackRequestDetail({ request }: { request: RequestWithItems })
         </div>
       )}
 
+      {/* Tracking form + packing link — alleen relevant zolang het pakket nog
+          niet bij Cards Center is. Vanaf RECEIVED+ verbergen we beide. */}
+      {request.status === "PENDING" && (
+        <>
+          <TrackingForm
+            requestId={request.id}
+            initialCarrier={request.shippingCarrier}
+            initialTrackingNumber={request.trackingNumber}
+            shippedAt={request.shippedAt ? new Date(request.shippedAt).toISOString() : null}
+            shippingDeadline={request.shippingDeadline ? new Date(request.shippingDeadline).toISOString() : null}
+            canEdit
+          />
+          <Link
+            href="/verkoop-calculator/verpakken"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200">
+              <Package className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                {t("packingInstructionsLink")}
+              </p>
+              <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                {t("packingInstructionsLinkDesc")}
+              </p>
+            </div>
+            <ExternalLink className="h-4 w-4 shrink-0 text-amber-800 dark:text-amber-300" />
+          </Link>
+        </>
+      )}
+
       {/* Payout summary */}
       <div className="glass rounded-xl p-4">
         <div className="flex items-center justify-between">
@@ -192,6 +248,10 @@ export function BuybackRequestDetail({ request }: { request: RequestWithItems })
           </div>
         )}
       </div>
+
+      {/* FAQ — antwoorden op alle veelvoorkomende vragen zodat de verkoper
+          niet hoeft te mailen voor info. */}
+      <BuybackFAQ type={request.type} />
 
       {/* Cancel button */}
       {canCancel && (

@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getCardImageUrl } from "@/lib/card-image";
 
 // Detail fetch for the typeahead card-picker (auction/listing/claimsale forms).
-// Called after a user selects a search result — returns the high-res image
-// and a CardMarket pricing snapshot so the form can show "Marktwaarde" hints.
+// Called after a user selects a search result — returns high-res image,
+// set/series metadata and a CardMarket pricing snapshot (both normal and
+// reverse-holo, so the picker can show the right "Marktwaarde" for the
+// variant the seller chooses).
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ cardId: string }> }
@@ -17,7 +19,13 @@ export async function GET(
   const card = await prisma.card.findUnique({
     where: { id: cardId },
     include: {
-      cardSet: { select: { name: true, tcgdexSetId: true } },
+      cardSet: {
+        select: {
+          name: true,
+          tcgdexSetId: true,
+          series: { select: { id: true, name: true } },
+        },
+      },
     },
   });
 
@@ -41,6 +49,10 @@ export async function GET(
       id: card.cardSet.tcgdexSetId,
       name: card.cardSet.name,
     },
+    series: {
+      id: card.cardSet.series.id,
+      name: card.cardSet.series.name,
+    },
     imageUrl: getCardImageUrl(card, "high"),
     thumbnailUrl: getCardImageUrl(card, "low"),
     pricing:
@@ -51,6 +63,17 @@ export async function GET(
             trend: card.priceTrend,
             avg7: card.priceAvg7,
             avg30: card.priceAvg30,
+            updated: card.priceUpdatedAt ? card.priceUpdatedAt.toISOString() : null,
+          }
+        : null,
+    pricingReverse:
+      card.priceReverseAvg !== null
+        ? {
+            avg: card.priceReverseAvg,
+            low: card.priceReverseLow,
+            trend: card.priceReverseTrend,
+            avg7: card.priceReverseAvg7,
+            avg30: card.priceReverseAvg30,
             updated: card.priceUpdatedAt ? card.priceUpdatedAt.toISOString() : null,
           }
         : null,

@@ -12,10 +12,11 @@ interface SearchFiltersProps {
 
 const CONDITIONS = [
   "Near Mint",
-  "Lightly Played",
-  "Moderately Played",
-  "Heavily Played",
-  "Damaged",
+  "Excellent",
+  "Good",
+  "Light Played",
+  "Heavy Played",
+  "Poor",
 ];
 
 export function SearchFilters({ cardSets }: SearchFiltersProps) {

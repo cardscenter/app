@@ -45,3 +45,6 @@ next-env.d.ts
 # local dev database (SQLite) — too large for git, refresh locally
 dev.db
 dev.db-journal
+
+# Claude Code runtime state (per-session, niet projectspecifiek)
+.claude/

@@ -29,8 +29,12 @@ export interface CardPricingSnapshot {
 export interface CardSearchSelectValue extends CardSearchSuggestion {
   /** Full image URL (high quality) — only filled after detail fetch on select. */
   imageUrl?: string | null;
-  /** CardMarket EUR pricing — only filled after detail fetch on select. */
+  /** CardMarket EUR pricing (normal print) — only filled after detail fetch. */
   pricing?: CardPricingSnapshot | null;
+  /** CardMarket EUR pricing for reverse-holo variant — null if card has no reverse-holo. */
+  pricingReverse?: CardPricingSnapshot | null;
+  /** Series (Scarlet & Violet, Sword & Shield, …) — only after detail fetch. */
+  series?: { id: string; name: string } | null;
 }
 
 interface Props {
@@ -181,6 +185,8 @@ export function CardSearchSelect({
         rarity: detail.rarity ?? suggestion.rarity ?? null,
         variants: Array.isArray(detail.variants) ? detail.variants : suggestion.variants,
         pricing: detail.pricing ?? null,
+        pricingReverse: detail.pricingReverse ?? null,
+        series: detail.series ?? null,
       });
     } catch {
       // Keep optimistic value if detail fetch fails — user already sees a result
