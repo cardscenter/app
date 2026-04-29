@@ -12,7 +12,12 @@ import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
 import { CardPricePanel, type VariantPricing, type ExtraVariant } from "@/components/card/card-price-panel";
 import { basePokemonName } from "@/lib/pokeapi/base-name";
 import { pokedexSlug } from "@/lib/pokeapi/slug";
-import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
+import {
+  getMarktprijs,
+  getMarktprijsReverseHolo,
+  findHistoricPrice,
+  type SnapshotPoint,
+} from "@/lib/display-price";
 import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
@@ -201,6 +206,29 @@ export default async function CardDetailPage({ params }: Props) {
     reverse: r.priceReverse,
   }));
 
+  // Snapshot anchor inputs: last 7 daily snapshots EXCLUDING today. We exclude
+  // today's snapshot from the median calculation to avoid a feedback loop —
+  // today's snapshot was itself written by getMarktprijs() during the most
+  // recent sync, and we'd be checking a value against itself.
+  const todayUtcMs = (() => {
+    const d = new Date();
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  })();
+  const olderSnapshots = priceHistoryRows.filter((r) => r.date.getTime() < todayUtcMs).slice(-7);
+  const recentSnapshots: (number | null)[] = olderSnapshots.map((r) => r.priceNormal);
+  const recentReverseSnapshots: (number | null)[] = olderSnapshots.map((r) => r.priceReverse);
+
+  // Full snapshot history for delta calculation (include today — it doesn't
+  // matter since findHistoricPrice looks for ~7 / ~30 days ago).
+  const normalDeltaHistory: SnapshotPoint[] = priceHistoryRows.map((r) => ({
+    date: r.date,
+    price: r.priceNormal,
+  }));
+  const reverseDeltaHistory: SnapshotPoint[] = priceHistoryRows.map((r) => ({
+    date: r.date,
+    price: r.priceReverse,
+  }));
+
   // "Meer kaarten van [base]" — strip suffixes, plus possessive + thematic
   // prefixes for Pokémon cards so "Team Aqua's Kyogre" etc. find siblings.
   const baseName = basePokemonName(card.name, gameplay?.category);
@@ -256,6 +284,26 @@ export default async function CardDetailPage({ params }: Props) {
   // (low/trend/avg7/avg30) since they come from the same poisoned product.
   const isCorrupted = (raw: number | null | undefined, display: number | null) =>
     raw != null && display != null && raw > 0 && display < raw / 2.5;
+
+  // Apples-to-apples delta: takes the filtered Marktprijs of today and
+  // compares against either a snapshot from N days ago (preferred) or a
+  // raw rolling-avg from the same period (fallback). Returns null when
+  // neither baseline is reliable.
+  const computeDelta = (
+    current: number | null,
+    history: SnapshotPoint[],
+    daysAgo: number,
+    rawCurrent: number | null | undefined,
+    rawPast: number | null | undefined,
+  ): number | null => {
+    if (current != null) {
+      const past = findHistoricPrice(history, daysAgo);
+      if (past != null) return ((current - past) / past) * 100;
+    }
+    if (rawCurrent == null || rawCurrent <= 0) return null;
+    if (rawPast == null || rawPast <= 0) return null;
+    return ((rawCurrent - rawPast) / rawPast) * 100;
+  };
 
   const pricingVariants: VariantPricing[] = [];
   if (cm) {
@@ -331,7 +379,10 @@ export default async function CardDetailPage({ params }: Props) {
       const foilHasAvg = cm["avg-holo"] !== null && cm["avg-holo"] > 0;
       if (foilHasAvg) {
         // For inherently-foil cards: use Marktprijs blender with all the
-        // foil-variant fields + TCGPlayer holofoil sanity check.
+        // foil-variant fields + TCGPlayer holofoil sanity check. The
+        // snapshot-anchor uses recentReverseSnapshots because sync stores
+        // the filtered holo-display in the priceReverse column (via
+        // getMarktprijsReverseHolo, which works on the same CM-holo fields).
         const holoDisplay = getMarktprijs({
           priceAvg: cm["avg-holo"],
           priceLow: cm["low-holo"],
@@ -342,17 +393,21 @@ export default async function CardDetailPage({ params }: Props) {
           priceTcgplayerNormalMarket: card.priceTcgplayerNormalMarket,
           rarity: card.rarity,
           priceOverrideAvg: card.priceOverrideAvg,
+          recentSnapshots: recentReverseSnapshots,
         });
         const corrupted = isCorrupted(cm["avg-holo"], holoDisplay);
+        const finalAvg = holoDisplay ?? cm["avg-holo"];
         pricingVariants.push({
           key: "normal",
           label: "Holo",
-          avg: holoDisplay ?? cm["avg-holo"],
+          avg: finalAvg,
           low: corrupted ? null : cm["low-holo"],
           trend: corrupted ? null : cm["trend-holo"],
           avg1: corrupted ? null : cm["avg1-holo"],
           avg7: corrupted ? null : cm["avg7-holo"],
           avg30: corrupted ? null : cm["avg30-holo"],
+          delta7d: computeDelta(finalAvg, reverseDeltaHistory, 7, cm["avg-holo"], cm["avg7-holo"]),
+          delta30d: computeDelta(finalAvg, reverseDeltaHistory, 30, cm["avg-holo"], cm["avg30-holo"]),
         });
       } else if (hasBase) {
         const baseDisplay = getMarktprijs({
@@ -365,17 +420,21 @@ export default async function CardDetailPage({ params }: Props) {
           priceTcgplayerNormalMarket: card.priceTcgplayerNormalMarket,
           rarity: card.rarity,
           priceOverrideAvg: card.priceOverrideAvg,
+          recentSnapshots,
         });
         const corrupted = isCorrupted(cm.avg, baseDisplay);
+        const finalAvg = baseDisplay ?? cm.avg;
         pricingVariants.push({
           key: "normal",
           label: "Holo",
-          avg: baseDisplay ?? cm.avg,
+          avg: finalAvg,
           low: corrupted ? null : cm.low,
           trend: corrupted ? null : cm.trend,
           avg1: corrupted ? null : cm.avg1,
           avg7: corrupted ? null : cm.avg7,
           avg30: corrupted ? null : cm.avg30,
+          delta7d: computeDelta(finalAvg, normalDeltaHistory, 7, cm.avg, cm.avg7),
+          delta30d: computeDelta(finalAvg, normalDeltaHistory, 30, cm.avg, cm.avg30),
         });
       } else {
         // No CardMarket data at all — common for older Rare Holo / Holo Rare
@@ -394,6 +453,9 @@ export default async function CardDetailPage({ params }: Props) {
             label: "Holo",
             avg: tpOnlyDisplay,
             low: null, trend: null, avg1: null, avg7: null, avg30: null,
+            // No CM rolling-avg history available for TP-only fallback.
+            delta7d: null,
+            delta30d: null,
           });
         }
       }
@@ -411,6 +473,7 @@ export default async function CardDetailPage({ params }: Props) {
           priceTcgplayerReverseMarket: card.priceTcgplayerReverseMarket,
           priceTcgplayerReverseMid: card.priceTcgplayerReverseMid,
           priceOverrideReverseAvg: card.priceOverrideReverseAvg,
+          recentReverseSnapshots,
         });
         if (reverseDisplay != null && reverseDisplay > 0) {
           const corrupted = card.priceOverrideReverseAvg == null &&
@@ -424,6 +487,8 @@ export default async function CardDetailPage({ params }: Props) {
             avg1: corrupted ? null : cm["avg1-holo"],
             avg7: corrupted ? null : cm["avg7-holo"],
             avg30: corrupted ? null : cm["avg30-holo"],
+            delta7d: computeDelta(reverseDisplay, reverseDeltaHistory, 7, cm["avg-holo"], cm["avg7-holo"]),
+            delta30d: computeDelta(reverseDisplay, reverseDeltaHistory, 30, cm["avg-holo"], cm["avg30-holo"]),
           });
         }
       }
@@ -440,19 +505,23 @@ export default async function CardDetailPage({ params }: Props) {
           priceTcgplayerHolofoilMarket: card.priceTcgplayerHolofoilMarket,
           rarity: card.rarity,
           priceOverrideAvg: card.priceOverrideAvg,
+          recentSnapshots,
         });
         // Als override actief is, is Marktprijs volledig vervangen en komen de
         // raw CM-stats van de verkeerde product-mapping — die nullen we ook weg.
         const corrupted = card.priceOverrideAvg != null || isCorrupted(cm.avg, baseDisplay);
+        const finalAvg = baseDisplay ?? cm.avg;
         pricingVariants.push({
           key: "normal",
           label: "Normal",
-          avg: baseDisplay ?? cm.avg,
+          avg: finalAvg,
           low: corrupted ? null : cm.low,
           trend: corrupted ? null : cm.trend,
           avg1: corrupted ? null : cm.avg1,
           avg7: corrupted ? null : cm.avg7,
           avg30: corrupted ? null : cm.avg30,
+          delta7d: computeDelta(finalAvg, normalDeltaHistory, 7, cm.avg, cm.avg7),
+          delta30d: computeDelta(finalAvg, normalDeltaHistory, 30, cm.avg, cm.avg30),
         });
       }
       if (hasFoil) {
@@ -466,6 +535,7 @@ export default async function CardDetailPage({ params }: Props) {
           priceTcgplayerReverseMarket: card.priceTcgplayerReverseMarket,
           priceTcgplayerReverseMid: card.priceTcgplayerReverseMid,
           priceOverrideReverseAvg: card.priceOverrideReverseAvg,
+          recentReverseSnapshots,
         });
         // Ascended Heroes (me02.5): Pokemon + Energy commons/uncommons hebben
         // TWEE RH-finishes (Ball + Energy Reverse Holo). Trainers hebben gewoon
@@ -487,6 +557,8 @@ export default async function CardDetailPage({ params }: Props) {
           avg1: corrupted ? null : cm["avg1-holo"],
           avg7: corrupted ? null : cm["avg7-holo"],
           avg30: corrupted ? null : cm["avg30-holo"],
+          delta7d: computeDelta(reverseDisplay, reverseDeltaHistory, 7, cm["avg-holo"], cm["avg7-holo"]),
+          delta30d: computeDelta(reverseDisplay, reverseDeltaHistory, 30, cm["avg-holo"], cm["avg30-holo"]),
         });
       }
     }

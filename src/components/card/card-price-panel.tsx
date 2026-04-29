@@ -24,6 +24,13 @@ export interface VariantPricing {
   avg1: number | null;
   avg7: number | null;
   avg30: number | null;
+  /**
+   * Server-computed delta on Marktprijs vs ~7-day-old snapshot. Apples-to-
+   * apples — both sides go through the same outlier-filter. Falls back to
+   * raw priceAvg vs priceAvg7 when no snapshot history exists yet.
+   */
+  delta7d: number | null;
+  delta30d: number | null;
 }
 
 export interface HistoryPoint {
@@ -50,11 +57,6 @@ function formatEur(n: number | null) {
   return `€${n.toFixed(2)}`;
 }
 
-function delta(current: number | null, past: number | null) {
-  if (current === null || past === null || past === 0) return null;
-  return ((current - past) / past) * 100;
-}
-
 export function CardPricePanel({ variants, history, updated, extraVariants }: Props) {
   const [activeKey, setActiveKey] = useState(variants[0]?.key ?? "normal");
   const active = variants.find((v) => v.key === activeKey) ?? variants[0];
@@ -68,8 +70,10 @@ export function CardPricePanel({ variants, history, updated, extraVariants }: Pr
     .map((h) => ({ date: h.date, price: h[field] }))
     .filter((p): p is { date: string; price: number } => p.price !== null);
 
-  const deltaVs7d = delta(active.avg, active.avg7);
-  const deltaVs30d = delta(active.avg, active.avg30);
+  // Pre-computed by the server using snapshot history. Already apples-to-
+  // apples (Marktprijs vs Marktprijs of ~7d ago, or raw vs raw fallback).
+  const deltaVs7d = active.delta7d;
+  const deltaVs30d = active.delta30d;
 
   const trendIcon =
     deltaVs7d === null ? <Minus className="size-4" /> :
