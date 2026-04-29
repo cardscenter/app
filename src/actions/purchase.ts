@@ -381,11 +381,18 @@ export async function issueSellerRefund(bundleId: string, amount: number, itemId
     data: { refundedAmount: bundle.refundedAmount + refundAmount },
   });
 
-  // Mark specific items as refunded
+  // Mark specific items as refunded AND release them so the seller can re-list
+  // them on the same (or a fresh) claimsale. Without this, refunded items get
+  // stuck SOLD with a stale shippingBundleId.
   if (itemIds && itemIds.length > 0) {
     await prisma.claimsaleItem.updateMany({
       where: { id: { in: itemIds }, shippingBundleId: bundleId },
-      data: { refundedAt: new Date() },
+      data: {
+        status: "AVAILABLE",
+        buyerId: null,
+        shippingBundleId: null,
+        refundedAt: new Date(),
+      },
     });
   }
 
