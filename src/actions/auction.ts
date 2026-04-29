@@ -608,12 +608,10 @@ export async function completeAuctionPayment(auctionId: string) {
   if (auction.winnerId !== session.user.id) return { error: "Niet geautoriseerd" };
   if (auction.paymentStatus !== "AWAITING_PAYMENT") return { error: "Geen openstaande betaling" };
 
-  // Check deadline
+  // Check deadline. Do NOT flip the auction to PAYMENT_FAILED here — leave that
+  // to the cron, which decides between rotating to a runner-up and failing the
+  // auction. Mutating here would short-circuit rotation.
   if (auction.paymentDeadline && new Date() > auction.paymentDeadline) {
-    await prisma.auction.update({
-      where: { id: auctionId },
-      data: { paymentStatus: "PAYMENT_FAILED", status: "PAYMENT_FAILED" },
-    });
     return { error: "De betalingsdeadline is verlopen" };
   }
 
