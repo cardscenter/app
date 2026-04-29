@@ -5,11 +5,14 @@
 //   • Damaged listings die als NM gelabeld worden
 //   • idProduct-collisions waar varianten samenvallen (bv. Pawniard BB #142)
 //
-// Voor onze marktwaarde gebruiken we 2 lagen verdediging:
-//   1. Spike-detectie via low: als avg > 3× low → switch naar avg7 (recente
-//      stabielere signaal, vaak zonder de outlier-influx)
-//   2. TCGPlayer cross-check: als CardMarket-display > 1,5× TCGPlayer-EUR →
-//      blend 50/50 (US-markt als sanity-check op extreme EU-spike)
+// Voor onze marktwaarde gebruiken we 4 lagen verdediging:
+//   1. excludeHighSpike: drop max rolling-avg als die >1.5× mediaan staat
+//   2. Blend van resterende rolling-avgs (priceAvg + priceAvg7 + priceTrend)
+//   3. TCGPlayer cross-check: extreme/mild discrepancy → klamp/blend
+//   4. Snapshot-anchor: als onze laatste 7 daily snapshots beschikbaar én
+//      de blended prijs >2× hun mediaan staat, klamp naar mediaan × 1.5.
+//      Vangt kortdurende spikes op die de andere 3 lagen nog niet hebben
+//      gefilterd, zonder echte release-week stijgingen volledig te dempen.
 
 export interface DisplayPriceFields {
   priceAvg: number | null;
@@ -26,6 +29,14 @@ export interface DisplayPriceFields {
    * via the DB to force a correct Marktprijs. Always wins.
    */
   priceOverrideAvg?: number | null;
+  /**
+   * Optional: laatste 5-7 daily Marktprijs snapshots (excl. vandaag) uit
+   * `CardPriceHistory`. Wanneer aanwezig én >=5 datapunten, wordt de
+   * snapshot-mediaan gebruikt als anker tegen kortdurende spikes — als de
+   * blended prijs >2× de mediaan ligt, wordt hij geklampt naar 1.5× mediaan
+   * (laat 50% groei toe per week, voorkomt 200%+ spikes).
+   */
+  recentSnapshots?: (number | null)[];
 }
 
 // Common/Uncommon krijgen forse EU-bulk-discount, rares NIET. Een Double Rare
@@ -40,6 +51,42 @@ const USD_TO_EUR = 0.92;
 const OUTLIER_RATIO = 1.5;      // max > median * 1.5 = spike → exclude before blending
 const TP_SANITY_RATIO = 1.5;    // estimate > tp * 1.5 = mild discrepancy → blend
 const TP_EXTREME_RATIO = 5;     // estimate > tp * 5 = extreme = trust TP
+const SNAPSHOT_MIN_POINTS = 5;  // need at least N daily snapshots to use as anchor
+const SNAPSHOT_SPIKE_RATIO = 2; // blend > snapshot_median * 2 → clamp
+const SNAPSHOT_CLAMP_FACTOR = 1.5; // clamp target = median * 1.5
+
+/**
+ * Median of a sparse number-array. Returns null when there isn't enough
+ * data to compute a meaningful median.
+ */
+function medianOf(values: (number | null | undefined)[], minPoints: number): number | null {
+  const clean = values.filter((v): v is number => v != null && v > 0);
+  if (clean.length < minPoints) return null;
+  const sorted = [...clean].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+/**
+ * Snapshot-anchor (4th layer). If we have ≥5 daily snapshots of our own
+ * Marktprijs and the freshly-blended `prijs` lies >2× their median, the
+ * blend is dragged down by today's CM/TP outlier — clamp to median × 1.5.
+ *
+ * Why median × 1.5 and not the median itself: real release-week hype can
+ * legitimately push a card 50% in a week. We want to dampen the spike,
+ * not block all upward movement. Spikes that persist for >7 days will
+ * gradually pull the snapshot-median up too.
+ */
+function applySnapshotAnchor(prijs: number, snapshots: (number | null)[] | undefined): number {
+  if (!snapshots) return prijs;
+  const median = medianOf(snapshots, SNAPSHOT_MIN_POINTS);
+  if (median == null) return prijs;
+  if (prijs > median * SNAPSHOT_SPIKE_RATIO) return median * SNAPSHOT_CLAMP_FACTOR;
+  // No symmetric "crash" clamp (low spikes) — a sudden price drop is more
+  // often a real correction than a glitch, and clamping it would hide
+  // genuine market movement. We only fight upward outliers.
+  return prijs;
+}
 
 /**
  * Filter out the single highest rolling-avg if it sits disproportionately above
@@ -156,6 +203,10 @@ export function getMarktprijs(card: DisplayPriceFields): number | null {
     }
   }
 
+  // 4th layer: snapshot-anchor. Use our own daily Marktprijs history as a
+  // sanity check on transient CM/TP spikes the previous layers missed.
+  prijs = applySnapshotAnchor(prijs, card.recentSnapshots);
+
   return Math.round(prijs * 100) / 100;
 }
 
@@ -172,6 +223,8 @@ export interface ReverseHoloFields {
   priceTcgplayerReverseMid?: number | null;
   /** Manual reverse-holo override — see DisplayPriceFields.priceOverrideAvg. */
   priceOverrideReverseAvg?: number | null;
+  /** See DisplayPriceFields.recentSnapshots — RH equivalent (priceReverse history). */
+  recentReverseSnapshots?: (number | null)[];
 }
 
 /**
@@ -213,16 +266,121 @@ export function getMarktprijsReverseHolo(card: ReverseHoloFields): number | null
     }
   }
 
+  // 4th layer: snapshot-anchor on reverse-holo history.
+  prijs = applySnapshotAnchor(prijs, card.recentReverseSnapshots);
+
   return Math.round(prijs * 100) / 100;
 }
 
 /**
- * 7-day delta as a percentage. Uses Marktprijs as "current" so the delta
- * matches what the user sees as the market value.
+ * 7-day delta as a percentage — apples-to-apples version.
+ *
+ * The naive `(getMarktprijs - priceAvg7) / priceAvg7` is wrong: Marktprijs
+ * is the FILTERED value, priceAvg7 is the RAW one. On any card where the
+ * filter fires (e.g. corrupted idProduct → TP-blend reduces priceAvg7 €14
+ * to Marktprijs €6), you get a fake -54% delta even when the market hasn't
+ * moved at all.
+ *
+ * Correct approach:
+ *   • If we have a snapshot from ~7 days ago: use Marktprijs(today) vs
+ *     snapshot.priceNormal(7d-old). Both filtered → real movement only.
+ *   • Otherwise: use raw priceAvg vs priceAvg7. Both raw → still
+ *     apples-to-apples, just less accurate. Returns null when neither
+ *     baseline is reliable.
  */
-export function computeWeeklyDeltaPct(card: DisplayPriceFields): number | null {
+export interface SnapshotPoint {
+  date: Date | string;
+  price: number | null;
+}
+
+export interface DeltaInputs extends DisplayPriceFields {
+  /** Snapshot rows of priceNormal, ascending or descending by date. */
+  snapshotHistory?: SnapshotPoint[];
+}
+
+export interface ReverseDeltaInputs extends ReverseHoloFields {
+  /** Snapshot rows of priceReverse, ascending or descending by date. */
+  reverseSnapshotHistory?: SnapshotPoint[];
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SNAPSHOT_TOLERANCE_DAYS = 2;
+
+/**
+ * Find the snapshot price closest to N days ago, within a ±2-day window.
+ * Returns null when no snapshot in that window has a usable price.
+ *
+ * The tolerance window is needed because the daily cron occasionally fails
+ * (rate limit, dev-server lock) and skips a day. Without tolerance, every
+ * skipped day would suppress that day's delta calculations.
+ */
+export function findHistoricPrice(
+  history: SnapshotPoint[] | undefined,
+  daysAgo: number,
+): number | null {
+  if (!history || history.length === 0) return null;
+  const target = Date.now() - daysAgo * DAY_MS;
+  const tolerance = SNAPSHOT_TOLERANCE_DAYS * DAY_MS;
+  let best: { diff: number; price: number } | null = null;
+  for (const row of history) {
+    if (row.price == null || row.price <= 0) continue;
+    const t = row.date instanceof Date ? row.date.getTime() : new Date(row.date).getTime();
+    const diff = Math.abs(t - target);
+    if (diff > tolerance) continue;
+    if (!best || diff < best.diff) best = { diff, price: row.price };
+  }
+  return best?.price ?? null;
+}
+
+/**
+ * 7-day delta percentage on the NORMAL Marktprijs.
+ * Snapshot-based when possible; raw-priceAvg fallback otherwise.
+ */
+export function computeWeeklyDeltaPct(card: DeltaInputs): number | null {
   const current = getMarktprijs(card);
-  const baseline = card.priceAvg7;
-  if (current == null || baseline == null || baseline <= 0) return null;
-  return ((current - baseline) / baseline) * 100;
+  const snapshot7d = findHistoricPrice(card.snapshotHistory, 7);
+  if (current != null && snapshot7d != null) {
+    return ((current - snapshot7d) / snapshot7d) * 100;
+  }
+  // Fallback when we don't have snapshot history yet (new card, sync gap):
+  // raw priceAvg vs priceAvg7 stays apples-to-apples since both are raw.
+  if (card.priceAvg == null || card.priceAvg <= 0) return null;
+  if (card.priceAvg7 == null || card.priceAvg7 <= 0) return null;
+  return ((card.priceAvg - card.priceAvg7) / card.priceAvg7) * 100;
+}
+
+/** 30-day delta on Marktprijs. Falls back to raw priceAvg vs priceAvg30. */
+export function computeMonthlyDeltaPct(card: DeltaInputs): number | null {
+  const current = getMarktprijs(card);
+  const snapshot30d = findHistoricPrice(card.snapshotHistory, 30);
+  if (current != null && snapshot30d != null) {
+    return ((current - snapshot30d) / snapshot30d) * 100;
+  }
+  if (card.priceAvg == null || card.priceAvg <= 0) return null;
+  if (card.priceAvg30 == null || card.priceAvg30 <= 0) return null;
+  return ((card.priceAvg - card.priceAvg30) / card.priceAvg30) * 100;
+}
+
+/** 7-day delta on the REVERSE-HOLO Marktprijs. */
+export function computeReverseWeeklyDeltaPct(card: ReverseDeltaInputs): number | null {
+  const current = getMarktprijsReverseHolo(card);
+  const snapshot7d = findHistoricPrice(card.reverseSnapshotHistory, 7);
+  if (current != null && snapshot7d != null) {
+    return ((current - snapshot7d) / snapshot7d) * 100;
+  }
+  if (card.priceReverseAvg == null || card.priceReverseAvg <= 0) return null;
+  if (card.priceReverseAvg7 == null || card.priceReverseAvg7 <= 0) return null;
+  return ((card.priceReverseAvg - card.priceReverseAvg7) / card.priceReverseAvg7) * 100;
+}
+
+/** 30-day delta on reverse-holo Marktprijs. */
+export function computeReverseMonthlyDeltaPct(card: ReverseDeltaInputs): number | null {
+  const current = getMarktprijsReverseHolo(card);
+  const snapshot30d = findHistoricPrice(card.reverseSnapshotHistory, 30);
+  if (current != null && snapshot30d != null) {
+    return ((current - snapshot30d) / snapshot30d) * 100;
+  }
+  if (card.priceReverseAvg == null || card.priceReverseAvg <= 0) return null;
+  if (card.priceReverseAvg30 == null || card.priceReverseAvg30 <= 0) return null;
+  return ((card.priceReverseAvg - card.priceReverseAvg30) / card.priceReverseAvg30) * 100;
 }
