@@ -575,7 +575,11 @@
     "bankSaved": "Bankgegevens opgeslagen",
     "ibanCooldown": "IBAN-wijziging beschikbaar over {days} dag(en)",
     "ibanChangeWarning": "Let op: na een IBAN-wijziging kun je {days} dagen lang geen nieuwe IBAN instellen (anti-fraude).",
-    "cancel": "Annuleren"
+    "cancel": "Annuleren",
+    "runnerUpTitle": "Veiling: tweede-bieder cascade",
+    "runnerUpHelp": "Hoeveel keer mag een veiling doorgeschoven worden naar de volgende bieder als de winnaar niet betaalt? Hoger = meer kans op verkoop, maar potentieel langer wachten.",
+    "runnerUpSave": "Opslaan",
+    "runnerUpSaved": "Instelling opgeslagen"
   },
   "chat": {
     "inbox": "Inbox",

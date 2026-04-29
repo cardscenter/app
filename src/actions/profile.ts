@@ -158,3 +158,19 @@ export async function updateBankDetails(formData: FormData) {
 
   return { success: true };
 }
+
+export async function updateMaxRunnerUpAttempts(value: number) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  if (!Number.isInteger(value) || value < 1 || value > 10) {
+    return { error: "Waarde moet tussen 1 en 10 liggen" };
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { maxRunnerUpAttempts: value },
+  });
+
+  return { success: true };
+}

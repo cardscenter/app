@@ -12,6 +12,7 @@ import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { BannerSelector } from "@/components/dashboard/banner-selector";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
 import { IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
+import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -158,6 +159,13 @@ export default async function ProfilePage() {
             lastIbanChange={user.lastIbanChange?.toISOString() ?? null}
             cooldownDays={IBAN_COOLDOWN_DAYS}
           />
+        </div>
+      </div>
+
+      {/* Runner-up settings (Cluster A backlog) */}
+      <div className="glass rounded-xl p-6">
+        <div className="max-w-lg">
+          <RunnerUpSettings current={user.maxRunnerUpAttempts} />
         </div>
       </div>
 

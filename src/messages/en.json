@@ -575,7 +575,11 @@
     "bankSaved": "Bank details saved",
     "ibanCooldown": "IBAN change available in {days} day(s)",
     "ibanChangeWarning": "Heads up: after changing your IBAN you can't change it again for {days} days (anti-fraud).",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "runnerUpTitle": "Auction: runner-up cascade",
+    "runnerUpHelp": "How many times can an auction roll over to the next bidder if the winner doesn't pay? Higher = better chance of selling but potentially longer wait.",
+    "runnerUpSave": "Save",
+    "runnerUpSaved": "Setting saved"
   },
   "chat": {
     "inbox": "Inbox",
