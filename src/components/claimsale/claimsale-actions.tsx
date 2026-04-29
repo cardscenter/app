@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { publishClaimsale, deleteClaimsale } from "@/actions/claimsale";
+import { publishClaimsale, deleteClaimsale, closeClaimsale } from "@/actions/claimsale";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -16,6 +16,18 @@ export function ClaimsaleActions({ claimsaleId, status }: { claimsaleId: string;
     if (!confirm(t("confirmPublish"))) return;
     setLoading(true);
     const result = await publishClaimsale(claimsaleId);
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      router.refresh();
+    }
+    setLoading(false);
+  }
+
+  async function handleClose() {
+    if (!confirm(t("confirmClose"))) return;
+    setLoading(true);
+    const result = await closeClaimsale(claimsaleId);
     if (result?.error) {
       setError(result.error);
     } else {
@@ -44,6 +56,15 @@ export function ClaimsaleActions({ claimsaleId, status }: { claimsaleId: string;
           className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50"
         >
           {t("publish")}
+        </button>
+      )}
+      {status === "LIVE" && (
+        <button
+          onClick={handleClose}
+          disabled={loading}
+          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+        >
+          {t("close")}
         </button>
       )}
       <button

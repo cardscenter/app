@@ -190,6 +190,86 @@ export async function deleteClaimsale(claimsaleId: string) {
   redirect("/nl/dashboard/claimsales");
 }
 
+/**
+ * Manually close a LIVE claimsale (owner only). Marks any remaining AVAILABLE
+ * items as DELETED and sets the claimsale status to CLOSED. CLAIMED items
+ * (= items in someone's cart) block closing — the seller must wait for those
+ * to either expire or check out.
+ */
+export async function closeClaimsale(claimsaleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const claimsale = await prisma.claimsale.findUnique({
+    where: { id: claimsaleId },
+    select: { sellerId: true, status: true, title: true },
+  });
+  if (!claimsale) return { error: "Niet gevonden" };
+  if (claimsale.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (claimsale.status !== "LIVE") return { error: "Claimsale is niet actief" };
+
+  // Atomic close: re-check CLAIMED inside the transaction so we don't race a
+  // late claimItem call. If a buyer manages to claim between our outer check
+  // and the transaction, the inner check catches them and we abort. We also
+  // CAS the claimsale status with updateMany ({where: status: "LIVE"}) so two
+  // concurrent close attempts can't both succeed.
+  let raced = false;
+  let hasClaimed = false;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const claimedCount = await tx.claimsaleItem.count({
+        where: { claimsaleId, status: "CLAIMED" },
+      });
+      if (claimedCount > 0) {
+        hasClaimed = true;
+        throw new Error("HAS_CLAIMED");
+      }
+
+      const flipped = await tx.claimsale.updateMany({
+        where: { id: claimsaleId, status: "LIVE" },
+        data: { status: "CLOSED" },
+      });
+      if (flipped.count === 0) {
+        raced = true;
+        throw new Error("NOT_LIVE");
+      }
+
+      await tx.claimsaleItem.updateMany({
+        where: { claimsaleId, status: "AVAILABLE" },
+        data: { status: "DELETED" },
+      });
+    });
+  } catch (err) {
+    if (hasClaimed) {
+      return {
+        error:
+          "Kan niet sluiten: er zijn nog items gereserveerd of in een winkelwagen. Wacht tot lopende claims verlopen of checkout afronden.",
+      };
+    }
+    if (raced) {
+      return { error: "Claimsale-status is al gewijzigd, vernieuw de pagina." };
+    }
+    throw err;
+  }
+
+  // Belt-and-braces: drop any cartItems for items in this claimsale that may
+  // have slipped through during the race. These reference DELETED items now
+  // and can't be checked out anyway (cart filters by claimsale.status=LIVE).
+  await prisma.cartItem.deleteMany({
+    where: { claimsaleItem: { claimsaleId } },
+  });
+
+  await createNotification(
+    session.user.id,
+    "ITEM_SOLD",
+    "Claimsale gesloten",
+    `Je hebt claimsale "${claimsale.title}" gesloten. Resterende items zijn verwijderd.`,
+    `/nl/claimsales/${claimsaleId}`
+  );
+
+  return { success: true };
+}
+
 const CLAIM_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
@@ -515,7 +595,46 @@ export async function deleteClaimsaleItem(itemId: string) {
     }),
   ]);
 
+  await closeClaimsaleIfDepleted(item.claimsaleId);
+
   return { success: true };
+}
+
+/**
+ * Auto-close a claimsale once every item is SOLD or DELETED. Called after any
+ * status mutation on a ClaimsaleItem. Idempotent — safe to call repeatedly.
+ * Returns true if the claimsale was just closed, false otherwise.
+ */
+export async function closeClaimsaleIfDepleted(claimsaleId: string): Promise<boolean> {
+  const claimsale = await prisma.claimsale.findUnique({
+    where: { id: claimsaleId },
+    select: { status: true, sellerId: true, title: true },
+  });
+  if (!claimsale || claimsale.status !== "LIVE") return false;
+
+  const remaining = await prisma.claimsaleItem.count({
+    where: {
+      claimsaleId,
+      status: { notIn: ["SOLD", "DELETED"] },
+    },
+  });
+
+  if (remaining > 0) return false;
+
+  await prisma.claimsale.update({
+    where: { id: claimsaleId },
+    data: { status: "CLOSED" },
+  });
+
+  await createNotification(
+    claimsale.sellerId,
+    "ITEM_SOLD",
+    "Claimsale gesloten",
+    `Alle items op je claimsale "${claimsale.title}" zijn verkocht of verwijderd. De claimsale is automatisch gesloten.`,
+    `/nl/claimsales/${claimsaleId}`
+  );
+
+  return true;
 }
 
 /**

@@ -6,7 +6,7 @@ import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
-import { expireClaimedItems, unclaimItem } from "@/actions/claimsale";
+import { expireClaimedItems, unclaimItem, closeClaimsaleIfDepleted } from "@/actions/claimsale";
 import { requiresSignedShipping, isUntrackedAllowed, LETTER_MAX_ITEMS } from "@/lib/shipping/tracked-threshold";
 
 /**
@@ -485,6 +485,12 @@ export async function checkout(shippingSelections?: Record<string, string>) {
         "Er is een nieuwe bestelling binnengekomen. Bekijk deze in je verkopen.",
         "/dashboard/verkopen"
       );
+    }
+
+    // D5: auto-close affected claimsales if every item is now SOLD/DELETED.
+    const affectedClaimsaleIds = new Set(items.map((ci) => ci.claimsaleItem.claimsaleId));
+    for (const cid of affectedClaimsaleIds) {
+      await closeClaimsaleIfDepleted(cid);
     }
   }
 
