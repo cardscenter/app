@@ -69,6 +69,9 @@ model User {
   // Username change tracking
   lastUsernameChange DateTime?
 
+  // Runner-up auction setting (max cascade hops when winners fail to pay)
+  maxRunnerUpAttempts Int @default(5)
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -366,6 +369,13 @@ model Auction {
   // Payment deadline (for winners with insufficient balance)
   paymentDeadline DateTime?  // 5 days after auction end to complete payment
   paymentStatus   String?    // AWAITING_PAYMENT | PAID | PAYMENT_FAILED
+
+  // Runner-up rotation: when the current winner fails to pay, the cron tries
+  // the next-highest bidder (who is not in failedBidderIds and not the current
+  // winner). Capped by seller.maxRunnerUpAttempts.
+  runnerUpEnabled  Boolean @default(true)
+  failedBidderIds  String  @default("[]") // JSON array of bidder userIds that already passed on payment
+  runnerUpAttempts Int     @default(0)
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1233,6 +1243,14 @@ model BuybackRequest {
   adminNotes       String?
   inspectedById    String?
 
+  // Shipping — verkoper moet binnen `shippingDeadline` (= createdAt + 5 dagen)
+  // het pakket onderweg hebben en de Track & Trace via het dashboard invoeren
+  // zodat admins de zending kunnen volgen.
+  shippingDeadline DateTime?
+  shippingCarrier  String?    // PostNL | DPD | DHL | UPS | OTHER
+  trackingNumber   String?
+  shippedAt        DateTime?  // Gezet zodra de verkoper tracking invult
+
   receivedAt       DateTime?
   inspectedAt      DateTime?
   paidAt           DateTime?
@@ -1268,6 +1286,17 @@ model BuybackItem {
 
   inspectionStatus  String   @default("PENDING") // PENDING | APPROVED | REJECTED
   rejectionReason   String?
+
+  // Price-correction flow — admin signaleert prijsfout op de oorspronkelijke
+  // calculator-prijs (Marktprijs × 85%). Verkoper moet de gecorrigeerde prijs
+  // accepteren (true) of afwijzen (false; item wordt dan REJECTED). Pending
+  // (null) blokkeert het finaliseren van de inspectie.
+  priceCorrected         Boolean   @default(false)
+  correctedMarketPrice   Float?
+  correctedBuybackPrice  Float?
+  priceCorrectionReason  String?
+  userApprovedCorrection Boolean?  // null = pending, true = geaccepteerd, false = afgewezen
+  userRespondedAt        DateTime?
 
   createdAt         DateTime @default(now())
 
