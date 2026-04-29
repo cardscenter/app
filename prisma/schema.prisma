@@ -116,6 +116,10 @@ model User {
 
   // Buyback / Inkoop
   buybackRequests     BuybackRequest[]
+
+  // Uitbetaalsysteem (Fase 6)
+  withdrawalRequests       WithdrawalRequest[] @relation("WithdrawalUser")
+  reviewedWithdrawalRequests WithdrawalRequest[] @relation("WithdrawalReviewer")
 }
 
 // ============================================================
@@ -1305,6 +1309,43 @@ model BuybackItem {
   createdAt         DateTime @default(now())
 
   @@index([buybackRequestId])
+}
+
+// ============================================================
+// WITHDRAWALS / UITBETALINGEN (Fase 6)
+// ============================================================
+//
+// User-initiated payout requests against their wallet balance. Money is
+// deducted from User.balance immediately on PENDING (single source of
+// truth — refund on REJECTED). Admin approves and manually transfers the
+// funds via bank, then marks as PAID. Only one active request (PENDING or
+// APPROVED) per user at a time.
+model WithdrawalRequest {
+  id                String   @id @default(cuid())
+
+  userId            String
+  user              User     @relation("WithdrawalUser", fields: [userId], references: [id])
+
+  amount            Float
+  iban              String   // snapshot — protects against later IBAN changes
+  accountHolderName String   // snapshot
+
+  status            String   @default("PENDING") // PENDING | APPROVED | PAID | REJECTED
+  rejectReason      String?
+  adminNote         String?
+
+  reviewedById      String?
+  reviewedBy        User?    @relation("WithdrawalReviewer", fields: [reviewedById], references: [id])
+  approvedAt        DateTime?
+  paidAt            DateTime?
+  rejectedAt        DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // Category-based items for BULK type buyback requests
