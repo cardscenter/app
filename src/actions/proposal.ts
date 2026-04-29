@@ -270,7 +270,9 @@ export async function respondToProposal(
     }
   }
 
-  // Notify both parties
+  // Notify both parties. The seller-side notification differs by payment
+  // state so they don't ship before the partial-balance buyer has actually
+  // paid the remainder.
   await createNotification(
     proposal.proposerId,
     "ITEM_SOLD",
@@ -279,13 +281,23 @@ export async function respondToProposal(
     `/nl/berichten/${proposal.conversationId}`
   );
 
-  await createNotification(
-    sellerId,
-    "ORDER_PAID",
-    "Betaalverzoek geaccepteerd!",
-    `"${contextTitle}" — €${amount.toFixed(2)} is geaccepteerd. Bekijk je verkopen om te verzenden.`,
-    "/dashboard/verkopen"
-  );
+  if (availableBalance >= totalCost) {
+    await createNotification(
+      sellerId,
+      "ORDER_PAID",
+      "Betaalverzoek geaccepteerd!",
+      `"${contextTitle}" — €${amount.toFixed(2)} is geaccepteerd. Bekijk je verkopen om te verzenden.`,
+      "/dashboard/verkopen"
+    );
+  } else {
+    await createNotification(
+      sellerId,
+      "ITEM_SOLD",
+      "Voorstel geaccepteerd — wachten op betaling",
+      `"${contextTitle}" — €${amount.toFixed(2)} is geaccepteerd, maar de koper heeft nog 5 dagen om te betalen. Verzend pas zodra de betaling binnen is.`,
+      `/nl/berichten/${proposal.conversationId}`
+    );
+  }
 
   return { success: true, status: "ACCEPTED" };
 }

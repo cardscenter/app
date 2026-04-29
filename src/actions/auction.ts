@@ -421,6 +421,13 @@ export async function finalizeAuction(auctionId: string) {
       where: { id: auctionId },
       data: { status: "ENDED_NO_BIDS" },
     });
+    await createNotification(
+      auction.sellerId,
+      "ITEM_SOLD",
+      "Veiling geëindigd zonder bieders",
+      `Je veiling "${auction.title}" is afgelopen zonder biedingen.`,
+      `/nl/veilingen/${auctionId}`
+    );
     return;
   }
 
@@ -432,6 +439,13 @@ export async function finalizeAuction(auctionId: string) {
       where: { id: auctionId },
       data: { status: "ENDED_RESERVE_NOT_MET" },
     });
+    await createNotification(
+      auction.sellerId,
+      "ITEM_SOLD",
+      "Reserveprijs niet behaald",
+      `Je veiling "${auction.title}" is afgelopen op €${highestBid.amount.toFixed(2)} maar heeft de reserveprijs niet gehaald.`,
+      `/nl/veilingen/${auctionId}`
+    );
     return;
   }
 
@@ -516,6 +530,15 @@ export async function finalizeAuction(auctionId: string) {
       "OUTBID",
       "Veiling gewonnen — betaling vereist",
       `Je hebt "${auction.title}" gewonnen voor €${totalCost.toFixed(2)}. Betaal binnen 5 dagen.`,
+      `/nl/veilingen/${auctionId}`
+    );
+
+    // Notify seller — this is NOT a confirmed sale yet, payment is pending.
+    await createNotification(
+      auction.sellerId,
+      "ITEM_SOLD",
+      "Veiling beëindigd — wachten op betaling",
+      `"${auction.title}" is verkocht voor €${totalCost.toFixed(2)} maar de winnaar moet nog betalen. Verzend pas zodra de betaling binnen is (5 dagen deadline).`,
       `/nl/veilingen/${auctionId}`
     );
   }

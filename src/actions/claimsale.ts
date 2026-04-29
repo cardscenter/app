@@ -207,10 +207,14 @@ export async function expireClaimedItems(claimsaleId?: string) {
     ...(claimsaleId ? { claimsaleId } : {}),
   };
 
-  // Find expired items to clean up cart items
+  // Find expired items to clean up cart items + notify sellers
   const expiredItems = await prisma.claimsaleItem.findMany({
     where,
-    select: { id: true },
+    select: {
+      id: true,
+      claimsaleId: true,
+      claimsale: { select: { sellerId: true, title: true } },
+    },
   });
 
   if (expiredItems.length === 0) return { expired: 0 };
@@ -227,6 +231,32 @@ export async function expireClaimedItems(claimsaleId?: string) {
       where: { claimsaleItemId: { in: expiredIds } },
     }),
   ]);
+
+  // One notification per (seller, claimsale) — batched so a sweep across
+  // many items in the same claimsale doesn't flood the seller.
+  const grouped = new Map<string, { sellerId: string; title: string; claimsaleId: string; count: number }>();
+  for (const item of expiredItems) {
+    const key = item.claimsaleId;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      grouped.set(key, {
+        sellerId: item.claimsale.sellerId,
+        title: item.claimsale.title,
+        claimsaleId: item.claimsaleId,
+        count: 1,
+      });
+    }
+  }
+
+  for (const { sellerId, title, claimsaleId: csid, count } of grouped.values()) {
+    const body =
+      count === 1
+        ? `Een gereserveerd item op "${title}" is vrijgegeven omdat de koper niet heeft afgerekend.`
+        : `${count} gereserveerde items op "${title}" zijn vrijgegeven omdat de kopers niet hebben afgerekend.`;
+    await createNotification(sellerId, "ITEM_SOLD", "Reservering verlopen", body, `/nl/claimsales/${csid}`);
+  }
 
   return { expired: expiredIds.length };
 }
