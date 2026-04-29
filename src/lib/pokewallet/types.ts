@@ -89,3 +89,38 @@ export interface PokewalletSetsResponse {
   data: PokewalletSetSummary[];
   total: number;
 }
+
+/**
+ * Response from `GET /cards/:id/price-history` (Pro tier, v1.3.0+).
+ * TCGPlayer + CardMarket time-series with pre-computed % change fields.
+ *
+ * Note: rolling windows expand over time as PokeWallet collects more data.
+ * Initially `price_7d` and `price_14d` are populated; 30d/60d/120d roll out
+ * gradually. Always null-check before using.
+ */
+export interface PokewalletPriceHistoryWindow {
+  price_7d: number | null;
+  price_14d: number | null;
+  price_30d: number | null;
+  price_60d: number | null;
+  price_120d: number | null;
+  change_7d: number | null;   // % change vs 7 days ago
+  change_14d: number | null;
+  change_30d: number | null;
+  change_60d: number | null;
+  change_120d: number | null;
+}
+
+export interface PokewalletPriceHistoryResponse {
+  success: boolean;
+  card_id: string;
+  card_info?: PokewalletCardInfo;
+  tcgplayer?: {
+    current?: number | null;
+    history?: PokewalletPriceHistoryWindow | null;
+  } | null;
+  cardmarket?: {
+    current?: number | null;
+    history?: PokewalletPriceHistoryWindow | null;
+  } | null;
+}

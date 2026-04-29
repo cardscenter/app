@@ -3,6 +3,7 @@
 
 import type {
   PokewalletCard,
+  PokewalletPriceHistoryResponse,
   PokewalletSearchResponse,
   PokewalletSetsResponse,
 } from "./types";
@@ -77,6 +78,23 @@ export async function searchByQuery(
 
 export async function getCard(pokewalletId: string): Promise<{ id: string } & PokewalletCard> {
   return pwFetch(`/cards/${encodeURIComponent(pokewalletId)}`);
+}
+
+/**
+ * `GET /cards/:id/price-history` (Pro tier, v1.3.0+) — full TCGPlayer +
+ * CardMarket history with pre-computed % change fields. Use sparingly:
+ * 1 call per fetch. Recommended pattern: on-demand for the chart on a
+ * single card-detail page view, NOT for bulk sync.
+ *
+ * Currently 7d / 14d windows are filled; 30d / 60d / 120d roll out as
+ * PokeWallet accumulates more historical data.
+ */
+export async function getCardPriceHistory(
+  pokewalletId: string,
+): Promise<PokewalletPriceHistoryResponse> {
+  return pwFetch<PokewalletPriceHistoryResponse>(
+    `/cards/${encodeURIComponent(pokewalletId)}/price-history`,
+  );
 }
 
 export async function listAllSets(): Promise<PokewalletSetsResponse> {
