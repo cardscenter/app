@@ -31,6 +31,7 @@ interface FormState {
   cardName: string;
   condition: string;
   tcgdex: CardSearchSelectValue | null;
+  variant: "normal" | "reverse";
   estimatedCardCount: number | null;
   conditionRange: string;
   productType: string;
@@ -41,6 +42,7 @@ interface FormState {
   reservePrice: number | null;
   hasBuyNow: boolean;
   buyNowPrice: number | null;
+  runnerUpEnabled: boolean;
   selectedShippingMethods: string[];
   upsells: UpsellEntry[];
 }
@@ -53,6 +55,7 @@ const INITIAL_STATE: FormState = {
   cardName: "",
   condition: "Near Mint",
   tcgdex: null,
+  variant: "normal",
   estimatedCardCount: null,
   conditionRange: "",
   productType: "",
@@ -63,6 +66,7 @@ const INITIAL_STATE: FormState = {
   reservePrice: null,
   hasBuyNow: false,
   buyNowPrice: null,
+  runnerUpEnabled: true,
   selectedShippingMethods: [],
   upsells: [],
 };
@@ -111,7 +115,11 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     formData.set("startingBid", String(form.startingBid ?? ""));
     formData.set("duration", String(form.duration));
 
-    if (form.cardName) formData.set("cardName", form.cardName);
+    // Append "(Reverse Holo)" so buyers see which print they're bidding on.
+    const baseName = form.cardName;
+    const needsReverseSuffix = form.variant === "reverse" && baseName && !/reverse/i.test(baseName);
+    const cardName = needsReverseSuffix ? `${baseName} (Reverse Holo)` : baseName;
+    if (cardName) formData.set("cardName", cardName);
     if (form.condition) formData.set("condition", form.condition);
     if (form.tcgdex?.id) formData.set("tcgdexId", form.tcgdex.id);
     if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
@@ -120,6 +128,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
     if (form.hasReserve && form.reservePrice !== null) formData.set("reservePrice", String(form.reservePrice));
     if (form.hasBuyNow && form.buyNowPrice !== null) formData.set("buyNowPrice", String(form.buyNowPrice));
+    formData.set("runnerUpEnabled", form.runnerUpEnabled ? "1" : "0");
     if (form.selectedShippingMethods.length === 0) {
       toast.error(ts("selectAtLeastOneMethod"));
       return;
@@ -173,6 +182,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
           cardName={form.cardName}
           condition={form.condition}
           tcgdex={form.tcgdex}
+          variant={form.variant}
           estimatedCardCount={form.estimatedCardCount}
           conditionRange={form.conditionRange}
           productType={form.productType}
@@ -190,7 +200,8 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
           reservePrice={form.reservePrice}
           hasBuyNow={form.hasBuyNow}
           buyNowPrice={form.buyNowPrice}
-          pricing={form.tcgdex?.pricing ?? null}
+          runnerUpEnabled={form.runnerUpEnabled}
+          pricing={form.variant === "reverse" ? (form.tcgdex?.pricingReverse ?? null) : (form.tcgdex?.pricing ?? null)}
           onChange={updateField}
         />
       </section>

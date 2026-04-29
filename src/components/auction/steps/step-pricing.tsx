@@ -12,6 +12,7 @@ interface StepPricingProps {
   reservePrice: number | null;
   hasBuyNow: boolean;
   buyNowPrice: number | null;
+  runnerUpEnabled: boolean;
   pricing?: CardPricingSnapshot | null;
   onChange: (field: string, value: unknown) => void;
 }
@@ -25,6 +26,7 @@ export function StepPricing({
   reservePrice,
   hasBuyNow,
   buyNowPrice,
+  runnerUpEnabled,
   pricing,
   onChange,
 }: StepPricingProps) {
@@ -140,6 +142,26 @@ export function StepPricing({
             />
           </div>
         )}
+      </div>
+
+      {/* Runner-up rotation */}
+      <div className="glass-subtle rounded-xl p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <span className="text-sm font-medium text-foreground">{t("runnerUpEnabled")}</span>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("runnerUpEnabledHelp")}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange("runnerUpEnabled", !runnerUpEnabled)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${runnerUpEnabled ? "bg-primary" : "bg-muted"}`}
+            aria-pressed={runnerUpEnabled}
+          >
+            <span
+              className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${runnerUpEnabled ? "translate-x-5" : ""}`}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

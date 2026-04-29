@@ -42,6 +42,7 @@ export async function createAuction(formData: FormData) {
     reservePrice: formData.get("reservePrice") || undefined,
     buyNowPrice: formData.get("buyNowPrice") || undefined,
     duration: formData.get("duration"),
+    runnerUpEnabled: formData.get("runnerUpEnabled") || undefined,
     upsells: formData.get("upsells") || undefined,
   };
 
@@ -102,6 +103,7 @@ export async function createAuction(formData: FormData) {
       reservePrice: data.reservePrice || null,
       buyNowPrice: data.buyNowPrice || null,
       duration: data.duration,
+      runnerUpEnabled: data.runnerUpEnabled,
       endTime,
     },
   });

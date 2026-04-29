@@ -23,6 +23,11 @@ export const createAuctionSchema = z
     reservePrice: z.coerce.number().min(0).optional(),
     buyNowPrice: z.coerce.number().min(0).optional(),
     duration: z.coerce.number().refine((v) => [3, 5, 7, 14].includes(v)),
+    // Runner-up rotation: "1" (default on) or "0" — opt-out from FormData
+    runnerUpEnabled: z
+      .union([z.literal("0"), z.literal("1")])
+      .optional()
+      .transform((v) => v === undefined ? true : v === "1"),
     // Upsells
     upsells: z.string().optional(), // JSON array: [{type, days}]
   })
