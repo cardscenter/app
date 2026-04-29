@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
+import { createPendingBundle } from "@/lib/shipping-bundle";
 import { checkAmountAllowed } from "@/lib/account-age";
 
 export async function createProposal(
@@ -267,6 +268,25 @@ export async function respondToProposal(
         where: { id: proposal.listing.id },
         data: { status: "SOLD", buyerId },
       });
+
+      // D1: pre-create PENDING bundle so the buyer sees a "wacht op
+      // betaling" order and the seller sees a pending sale. Listing-based
+      // proposals already require a buyer address (validated above) so we
+      // pass it directly. completeProposalPayment will flip this to PAID.
+      await createPendingBundle({
+        buyerId,
+        sellerId,
+        totalItemCost: amount,
+        shippingCost,
+        listingId: proposal.listing.id,
+        address: {
+          street: buyer.street,
+          houseNumber: buyer.houseNumber,
+          postalCode: buyer.postalCode,
+          city: buyer.city,
+          country: buyer.country,
+        },
+      });
     }
   }
 
@@ -320,16 +340,9 @@ export async function completeProposalPayment(proposalId: string) {
   }
 
   if (proposal.paymentDeadline && new Date() > proposal.paymentDeadline) {
-    await prisma.proposal.update({
-      where: { id: proposalId },
-      data: { paymentStatus: "PAYMENT_FAILED" },
-    });
-    if (proposal.listing) {
-      await prisma.listing.update({
-        where: { id: proposal.listing.id },
-        data: { status: "ACTIVE", buyerId: null },
-      });
-    }
+    // Same correctness consideration as completeAuctionPayment: leave the
+    // status mutation to the proposal-payment-deadline cron, which is the
+    // single source of truth for deadline transitions and bundle cleanup.
     return { error: "De betalingsdeadline is verlopen" };
   }
 
@@ -361,23 +374,42 @@ export async function completeProposalPayment(proposalId: string) {
   await escrowCredit(sellerId, totalCost, `Betaalverzoek (escrow): ${contextTitle}`);
 
   if (proposal.listing) {
-    await prisma.shippingBundle.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        buyerId,
-        sellerId,
-        shippingCost,
-        totalItemCost: proposal.amount,
-        totalCost,
-        status: "PAID",
-        listingId: proposal.listing.id,
-        buyerStreet: buyer.street,
-        buyerHouseNumber: buyer.houseNumber,
-        buyerPostalCode: buyer.postalCode,
-        buyerCity: buyer.city,
-        buyerCountry: buyer.country,
-      },
+    // Promote the PENDING bundle (created by respondToProposal) to PAID.
+    // Defensive create-fallback for older data without a PENDING row.
+    const existing = await prisma.shippingBundle.findUnique({
+      where: { listingId: proposal.listing.id },
     });
+    if (existing) {
+      await prisma.shippingBundle.update({
+        where: { id: existing.id },
+        data: {
+          status: "PAID",
+          buyerStreet: buyer.street,
+          buyerHouseNumber: buyer.houseNumber,
+          buyerPostalCode: buyer.postalCode,
+          buyerCity: buyer.city,
+          buyerCountry: buyer.country,
+        },
+      });
+    } else {
+      await prisma.shippingBundle.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          buyerId,
+          sellerId,
+          shippingCost,
+          totalItemCost: proposal.amount,
+          totalCost,
+          status: "PAID",
+          listingId: proposal.listing.id,
+          buyerStreet: buyer.street,
+          buyerHouseNumber: buyer.houseNumber,
+          buyerPostalCode: buyer.postalCode,
+          buyerCity: buyer.city,
+          buyerCountry: buyer.country,
+        },
+      });
+    }
   }
 
   await prisma.proposal.update({

@@ -11,6 +11,7 @@ import { createNotification } from "@/actions/notification";
 import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
 import { calculateAuctionUpsellCost } from "@/lib/upsell-config";
 import { generateOrderNumber } from "@/lib/order-number";
+import { createPendingBundle } from "@/lib/shipping-bundle";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { redirect } from "next/navigation";
@@ -524,6 +525,31 @@ export async function finalizeAuction(auctionId: string) {
       },
     });
 
+    // Pre-create a PENDING ShippingBundle so the buyer sees a "wacht op
+    // betaling" order and the seller sees a pending sale. Address fields
+    // can stay null; completeAuctionPayment fills them at PAID transition.
+    // Skip if the winner already has an active bundle on this auction
+    // (could happen via runner-up rotation).
+    const existingBundle = await prisma.shippingBundle.findUnique({ where: { auctionId } });
+    if (!existingBundle) {
+      await createPendingBundle({
+        buyerId: highestBid.bidderId,
+        sellerId: auction.sellerId,
+        totalItemCost: totalCost,
+        shippingCost: 0,
+        auctionId,
+        address: winner
+          ? {
+              street: winner.street,
+              houseNumber: winner.houseNumber,
+              postalCode: winner.postalCode,
+              city: winner.city,
+              country: winner.country,
+            }
+          : undefined,
+      });
+    }
+
     // Notify winner they need to pay
     await createNotification(
       highestBid.bidderId,
@@ -661,24 +687,42 @@ export async function completeAuctionPayment(auctionId: string) {
   // Escrow for seller
   await escrowCredit(auction.sellerId, totalCost, `Veiling verkocht (escrow): ${auction.title}`);
 
-  // Create ShippingBundle
-  await prisma.shippingBundle.create({
-    data: {
-      orderNumber: generateOrderNumber(),
-      buyerId: session.user.id,
-      sellerId: auction.sellerId,
-      shippingCost: 0,
-      totalItemCost: totalCost,
-      totalCost,
-      status: "PAID",
-      auctionId,
-      buyerStreet: buyer.street,
-      buyerHouseNumber: buyer.houseNumber,
-      buyerPostalCode: buyer.postalCode,
-      buyerCity: buyer.city,
-      buyerCountry: buyer.country,
-    },
-  });
+  // Promote the PENDING bundle (created by finalizeAuction) to PAID, filling
+  // in any address fields that were unknown at AWAITING_PAYMENT time.
+  // Defensive: if no PENDING row exists (older data, manual cleanup, etc.),
+  // create one directly.
+  const existing = await prisma.shippingBundle.findUnique({ where: { auctionId } });
+  if (existing) {
+    await prisma.shippingBundle.update({
+      where: { id: existing.id },
+      data: {
+        status: "PAID",
+        buyerStreet: buyer.street,
+        buyerHouseNumber: buyer.houseNumber,
+        buyerPostalCode: buyer.postalCode,
+        buyerCity: buyer.city,
+        buyerCountry: buyer.country,
+      },
+    });
+  } else {
+    await prisma.shippingBundle.create({
+      data: {
+        orderNumber: generateOrderNumber(),
+        buyerId: session.user.id,
+        sellerId: auction.sellerId,
+        shippingCost: 0,
+        totalItemCost: totalCost,
+        totalCost,
+        status: "PAID",
+        auctionId,
+        buyerStreet: buyer.street,
+        buyerHouseNumber: buyer.houseNumber,
+        buyerPostalCode: buyer.postalCode,
+        buyerCity: buyer.city,
+        buyerCountry: buyer.country,
+      },
+    });
+  }
 
   // Update auction payment status
   await prisma.auction.update({

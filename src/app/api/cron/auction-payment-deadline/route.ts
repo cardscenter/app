@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
+import { createPendingBundle } from "@/lib/shipping-bundle";
 
 // GET /api/cron/auction-payment-deadline
 // Call this daily to handle expired auction payment deadlines.
@@ -105,6 +106,29 @@ async function processExpiredPaymentDeadlines() {
       // sum automatically — but we still call sync to be explicit.
       await syncReservedBalance(previousWinnerId);
 
+      // D1: re-target the PENDING shipping bundle to the new winner. Delete
+      // the old PENDING row (auctionId is @unique) and create a fresh one
+      // with the new buyer's data. We do nothing with PAID bundles — those
+      // shouldn't exist while paymentStatus is AWAITING_PAYMENT.
+      const oldBundle = await prisma.shippingBundle.findUnique({
+        where: { auctionId: auction.id },
+      });
+      if (oldBundle && oldBundle.status === "PENDING") {
+        await prisma.shippingBundle.delete({ where: { id: oldBundle.id } });
+      }
+      const newWinner = await prisma.user.findUnique({
+        where: { id: runnerUpBid.bidderId },
+        select: { street: true, houseNumber: true, postalCode: true, city: true, country: true },
+      });
+      await createPendingBundle({
+        buyerId: runnerUpBid.bidderId,
+        sellerId: auction.sellerId,
+        totalItemCost: runnerUpBid.amount,
+        shippingCost: 0,
+        auctionId: auction.id,
+        address: newWinner ?? undefined,
+      });
+
       // Notify the new winner — phrase honestly so they know they're a runner-up.
       await createNotification(
         runnerUpBid.bidderId,
@@ -139,6 +163,15 @@ async function processExpiredPaymentDeadlines() {
 
     // A2: release the failed winner's reserve.
     await syncReservedBalance(previousWinnerId);
+
+    // D1: drop the PENDING shipping bundle so it doesn't linger as a zombie
+    // order in either party's dashboard. Only PENDING — never touch PAID.
+    const failedBundle = await prisma.shippingBundle.findUnique({
+      where: { auctionId: auction.id },
+    });
+    if (failedBundle && failedBundle.status === "PENDING") {
+      await prisma.shippingBundle.delete({ where: { id: failedBundle.id } });
+    }
 
     await createNotification(
       previousWinnerId,

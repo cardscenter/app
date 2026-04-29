@@ -53,12 +53,21 @@ async function processExpiredProposalDeadlines() {
     });
 
     if (proposal.listing) {
-      // Mirror the inline fix in completeProposalPayment: free the listing
-      // back to ACTIVE so the seller can re-list or accept new proposals.
+      // Free the listing back to ACTIVE so the seller can re-list or accept
+      // new proposals.
       await prisma.listing.update({
         where: { id: proposal.listing.id },
         data: { status: "ACTIVE", buyerId: null },
       });
+
+      // Drop the PENDING shipping bundle so it doesn't linger as a zombie
+      // order. Only PENDING — never touch PAID.
+      const bundle = await prisma.shippingBundle.findUnique({
+        where: { listingId: proposal.listing.id },
+      });
+      if (bundle && bundle.status === "PENDING") {
+        await prisma.shippingBundle.delete({ where: { id: bundle.id } });
+      }
     }
 
     const contextTitle = proposal.listing?.title ?? "betaalverzoek";
