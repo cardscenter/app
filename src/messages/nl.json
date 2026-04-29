@@ -595,6 +595,7 @@
     "reject": "Afwijzen",
     "accepted": "Geaccepteerd",
     "rejected": "Afgewezen",
+    "withdrawn": "Ingetrokken",
     "pending": "In afwachting",
     "cancelled": "Geannuleerd",
     "insufficientBalance": "Onvoldoende saldo (minimaal 40% vereist)",

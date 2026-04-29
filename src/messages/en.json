@@ -595,6 +595,7 @@
     "reject": "Reject",
     "accepted": "Accepted",
     "rejected": "Rejected",
+    "withdrawn": "Withdrawn",
     "pending": "Pending",
     "cancelled": "Cancelled",
     "insufficientBalance": "Insufficient balance (minimum 40% required)",

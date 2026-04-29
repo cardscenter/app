@@ -414,7 +414,7 @@ export async function withdrawProposal(proposalId: string) {
 
   await prisma.proposal.update({
     where: { id: proposalId },
-    data: { status: "REJECTED", respondedAt: new Date() },
+    data: { status: "WITHDRAWN", respondedAt: new Date() },
   });
 
   const otherUserId = proposal.conversation.participants.find((p) => p.userId !== session.user!.id)?.userId;

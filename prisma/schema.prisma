@@ -864,7 +864,7 @@ model Proposal {
 
   amount         Float    // Proposed price
   type           String   // BUY | SELL
-  status         String   @default("PENDING") // PENDING | ACCEPTED | REJECTED
+  status         String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | WITHDRAWN
 
   // Payment deadline (for buyers with >= 40% but < 100% balance)
   paymentDeadline DateTime?

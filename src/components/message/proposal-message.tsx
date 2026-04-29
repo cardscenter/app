@@ -97,11 +97,13 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
   const statusColor =
     proposal.status === "ACCEPTED" ? "text-green-600 dark:text-green-400" :
     proposal.status === "REJECTED" ? "text-red-500" :
+    proposal.status === "WITHDRAWN" ? "text-muted-foreground" :
     "text-yellow-600 dark:text-yellow-400";
 
   const statusIcon =
     proposal.status === "ACCEPTED" ? <Check className="h-4 w-4" /> :
     proposal.status === "REJECTED" ? <X className="h-4 w-4" /> :
+    proposal.status === "WITHDRAWN" ? <X className="h-4 w-4" /> :
     <Clock className="h-4 w-4" />;
 
   return (
@@ -125,6 +127,7 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
             {proposal.status === "PENDING" && t("pending")}
             {proposal.status === "ACCEPTED" && t("accepted")}
             {proposal.status === "REJECTED" && t("rejected")}
+            {proposal.status === "WITHDRAWN" && t("withdrawn")}
           </div>
 
           {/* Awaiting payment info */}
