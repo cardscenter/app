@@ -10,6 +10,8 @@ import { getLevel, SELLER_LEVELS } from "@/lib/seller-levels";
 import { getSellerStats } from "@/actions/review";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { BannerSelector } from "@/components/dashboard/banner-selector";
+import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
+import { IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -144,6 +146,18 @@ export default async function ProfilePage() {
           <SessionProvider>
             <ProfileForm user={user} />
           </SessionProvider>
+        </div>
+      </div>
+
+      {/* Bank details (Fase 5) */}
+      <div className="glass rounded-xl p-6">
+        <div className="max-w-lg">
+          <BankDetailsForm
+            iban={user.iban}
+            accountHolderName={user.accountHolderName}
+            lastIbanChange={user.lastIbanChange?.toISOString() ?? null}
+            cooldownDays={IBAN_COOLDOWN_DAYS}
+          />
         </div>
       </div>
 

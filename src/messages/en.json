@@ -563,7 +563,17 @@
     "usernameHistory": "Previous usernames",
     "profileBanner": "Profile banner",
     "bannerDescription": "Choose a banner for your public profile. Reach higher ranks to unlock more banners.",
-    "removeBanner": "Remove banner"
+    "removeBanner": "Remove banner",
+    "bankDetailsTitle": "Bank details",
+    "bankDetailsHelp": "Provide your IBAN and account holder's name for payouts. Supported for all EU, EEA and UK bank accounts.",
+    "ibanLabel": "IBAN",
+    "accountHolderLabel": "Account holder name",
+    "saveBankDetails": "Save bank details",
+    "editBankDetails": "Edit",
+    "bankSaved": "Bank details saved",
+    "ibanCooldown": "IBAN change available in {days} day(s)",
+    "ibanChangeWarning": "Heads up: after changing your IBAN you can't change it again for {days} days (anti-fraud).",
+    "cancel": "Cancel"
   },
   "chat": {
     "inbox": "Inbox",

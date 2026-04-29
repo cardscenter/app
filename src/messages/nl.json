@@ -563,7 +563,17 @@
     "usernameHistory": "Eerdere gebruikersnamen",
     "profileBanner": "Profielbanner",
     "bannerDescription": "Kies een banner voor je openbare profiel. Bereik hogere ranks om meer banners vrij te spelen.",
-    "removeBanner": "Banner verwijderen"
+    "removeBanner": "Banner verwijderen",
+    "bankDetailsTitle": "Bankgegevens",
+    "bankDetailsHelp": "Vul je IBAN en de naam van de rekeninghouder in voor uitbetalingen. Ondersteund voor alle EU-, EER- en VK-rekeningen.",
+    "ibanLabel": "IBAN",
+    "accountHolderLabel": "Naam rekeninghouder",
+    "saveBankDetails": "Bankgegevens opslaan",
+    "editBankDetails": "Wijzigen",
+    "bankSaved": "Bankgegevens opgeslagen",
+    "ibanCooldown": "IBAN-wijziging beschikbaar over {days} dag(en)",
+    "ibanChangeWarning": "Let op: na een IBAN-wijziging kun je {days} dagen lang geen nieuwe IBAN instellen (anti-fraude).",
+    "cancel": "Annuleren"
   },
   "chat": {
     "inbox": "Inbox",

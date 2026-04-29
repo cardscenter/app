@@ -1,6 +1,5 @@
 import { z } from "zod";
-
-const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{4,30}$/;
+import { isValidIbanFormat } from "@/lib/validations/iban";
 
 const collectionItemSchema = z.object({
   cardId: z.string().min(1),
@@ -42,7 +41,7 @@ export const submitCollectionBuybackSchema = z
 
     // Bank payout requires IBAN + account holder
     if (data.payoutMethod === "BANK") {
-      if (!data.iban || !IBAN_RE.test(data.iban.replace(/\s/g, "").toUpperCase())) {
+      if (!data.iban || !isValidIbanFormat(data.iban)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ongeldig IBAN-formaat", path: ["iban"] });
       }
       if (!data.accountHolder || data.accountHolder.trim().length < 2) {
@@ -93,7 +92,7 @@ export const submitBulkBuybackSchema = z
 
     // Bank payout requires IBAN + account holder
     if (data.payoutMethod === "BANK") {
-      if (!data.iban || !IBAN_RE.test(data.iban.replace(/\s/g, "").toUpperCase())) {
+      if (!data.iban || !isValidIbanFormat(data.iban)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ongeldig IBAN-formaat", path: ["iban"] });
       }
       if (!data.accountHolder || data.accountHolder.trim().length < 2) {

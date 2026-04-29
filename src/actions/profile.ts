@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { saveUploadedFile } from "@/lib/upload";
+import { isValidIbanFormat, normalizeIban, IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
 import { z } from "zod";
 
 const profileSchema = z.object({
@@ -93,6 +94,66 @@ export async function updateProfileBanner(bannerKey: string | null) {
   await prisma.user.update({
     where: { id: session.user.id },
     data: { profileBanner: bannerKey },
+  });
+
+  return { success: true };
+}
+
+const bankDetailsSchema = z.object({
+  iban: z.string().min(1, "IBAN is verplicht"),
+  accountHolderName: z.string().min(2, "Naam rekeninghouder is verplicht").max(100),
+});
+
+export async function updateBankDetails(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const result = bankDetailsSchema.safeParse({
+    iban: formData.get("iban"),
+    accountHolderName: formData.get("accountHolderName"),
+  });
+  if (!result.success) return { error: result.error.issues[0].message };
+
+  const iban = normalizeIban(result.data.iban);
+  if (!isValidIbanFormat(iban)) {
+    return { error: "Ongeldig IBAN-formaat" };
+  }
+  const accountHolderName = result.data.accountHolderName.trim();
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { iban: true, accountHolderName: true, lastIbanChange: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  // No-op early return: nothing to save.
+  if (user.iban === iban && user.accountHolderName === accountHolderName) {
+    return { success: true, unchanged: true };
+  }
+
+  // First-time set is free; subsequent changes are cooldown-capped. We only
+  // gate IBAN changes (not name-only edits) since the name doesn't change
+  // where the money lands. If both fields change, we treat it as an IBAN
+  // change for cooldown purposes.
+  const isIbanChange = user.iban !== null && user.iban !== iban;
+  if (isIbanChange && user.lastIbanChange) {
+    const daysSince = (Date.now() - user.lastIbanChange.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSince < IBAN_COOLDOWN_DAYS) {
+      const daysRemaining = Math.ceil(IBAN_COOLDOWN_DAYS - daysSince);
+      return {
+        error: `Je kunt je IBAN pas over ${daysRemaining} dag${daysRemaining === 1 ? "" : "en"} weer wijzigen.`,
+        daysRemaining,
+      };
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: {
+      iban,
+      accountHolderName,
+      ...(isIbanChange ? { lastIbanChange: new Date() } : {}),
+    },
   });
 
   return { success: true };
