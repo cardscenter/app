@@ -26,6 +26,8 @@ import {
   X,
   ArrowDownToLine,
   LogOut,
+  Ban,
+  Flag,
 } from "lucide-react";
 
 interface NavSection {
@@ -112,6 +114,7 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
         { href: "/dashboard/verificatie", labelKey: "myVerification", icon: ShieldCheck },
         { href: "/dashboard/reviews", labelKey: "myReviews", icon: Star },
         { href: "/dashboard/meldingen", labelKey: "myNotifications", icon: Bell },
+        { href: "/dashboard/blokkeerlijst", labelKey: "myBlockedList", icon: Ban },
       ],
     },
     {
@@ -135,6 +138,7 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
               { href: "/dashboard/uitbetalingen/admin", labelKey: "adminWithdrawals", icon: Wallet },
               { href: "/dashboard/geschillen/admin", labelKey: "adminDisputes", icon: Scale },
               { href: "/dashboard/geschillen/admin/verificaties", labelKey: "adminVerifications", icon: ShieldCheck },
+              { href: "/dashboard/rapporten/admin", labelKey: "adminReports", icon: Flag },
             ],
           },
         ]

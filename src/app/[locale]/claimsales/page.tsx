@@ -5,6 +5,8 @@ import { ShoppingBag, Plus } from "lucide-react";
 import { ClaimsaleCard } from "@/components/claimsale/claimsale-card";
 import { Pagination } from "@/components/ui/pagination";
 import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
+import { auth } from "@/lib/auth";
+import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 
 const PAGE_SIZE = 40;
 
@@ -26,15 +28,21 @@ export default async function ClaimsalesPage({
   const buyerCountry = await getBuyerCountry();
   const countryFilter = getSellerCountryFilter(buyerCountry);
 
+  // Fase 7: hide claimsales from sellers I've blocked + sellers who blocked me.
+  const session = await auth();
+  const blockedIds = await getBlockedUserIds(session?.user?.id);
+  const sellerFilter = sellerNotInBlockedFilter(blockedIds);
+  const blockingFilter = sellerFilter ? { sellerId: sellerFilter } : {};
+
   const totalCount = await prisma.claimsale.count({
-    where: { status: "LIVE", ...countryFilter },
+    where: { status: "LIVE", ...countryFilter, ...blockingFilter },
   });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
 
   const claimsales = await prisma.claimsale.findMany({
-    where: { status: "LIVE", ...countryFilter },
+    where: { status: "LIVE", ...countryFilter, ...blockingFilter },
     orderBy: { publishedAt: "desc" },
     skip: (safePage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,

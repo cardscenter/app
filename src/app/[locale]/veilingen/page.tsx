@@ -8,6 +8,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { AuctionCreatedToast } from "@/components/auction/auction-created-toast";
 import { AuctionSortBar } from "@/components/auction/auction-sort-bar";
 import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
+import { auth } from "@/lib/auth";
+import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 
 const PAGE_SIZE = 40;
 
@@ -64,11 +66,18 @@ export default async function AuctionsPage({
   const buyerCountry = await getBuyerCountry();
   const countryFilter = getSellerCountryFilter(buyerCountry);
 
+  // Fase 7: hide auctions from sellers I've blocked + sellers who blocked me.
+  const session = await auth();
+  const blockedIds = await getBlockedUserIds(session?.user?.id);
+  const sellerFilter = sellerNotInBlockedFilter(blockedIds);
+  const blockingFilter = sellerFilter ? { sellerId: sellerFilter } : {};
+
   // Fetch all sponsored auctions and shuffle for fairness
   const sponsoredRaw = await prisma.auction.findMany({
     where: {
       status: "ACTIVE",
       ...countryFilter,
+      ...blockingFilter,
       upsells: {
         some: {
           type: "CATEGORY_HIGHLIGHT",
@@ -88,7 +97,7 @@ export default async function AuctionsPage({
 
   // Count ALL active auctions (sponsored included in main grid now)
   const totalCount = await prisma.auction.count({
-    where: { status: "ACTIVE", ...countryFilter },
+    where: { status: "ACTIVE", ...countryFilter, ...blockingFilter },
   });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -96,7 +105,7 @@ export default async function AuctionsPage({
   // Fetch paginated auctions (including sponsored ones)
   const orderBy = getOrderBy(sort);
   let auctions = await prisma.auction.findMany({
-    where: { status: "ACTIVE", ...countryFilter },
+    where: { status: "ACTIVE", ...countryFilter, ...blockingFilter },
     ...(orderBy ? { orderBy } : { orderBy: { createdAt: "desc" } }),
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,

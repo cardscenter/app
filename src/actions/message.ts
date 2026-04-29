@@ -61,6 +61,26 @@ export async function sendMessage(conversationId: string, body: string, imageUrl
   });
   if (!participant) return { error: "Niet geautoriseerd" };
 
+  // Fase 7: block sending to a user that's blocked either way.
+  const otherParticipants = await prisma.conversationParticipant.findMany({
+    where: { conversationId, userId: { not: session.user.id } },
+    select: { userId: true },
+  });
+  if (otherParticipants.length > 0) {
+    const otherIds = otherParticipants.map((p) => p.userId);
+    const blockedRow = await prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerId: session.user.id, blockedId: { in: otherIds } },
+          { blockedId: session.user.id, blockerId: { in: otherIds } },
+        ],
+      },
+    });
+    if (blockedRow) {
+      return { error: "Je kunt deze gebruiker geen berichten sturen." };
+    }
+  }
+
   await prisma.message.create({
     data: {
       conversationId,

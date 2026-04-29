@@ -7,6 +7,8 @@ import { Link } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
 import { ListingSortBar } from "@/components/listing/listing-sort-bar";
 import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
+import { auth } from "@/lib/auth";
+import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 
 const PAGE_SIZE = 40;
 
@@ -41,11 +43,18 @@ export default async function MarktplaatsPage({
   const buyerCountry = await getBuyerCountry();
   const countryFilter = getSellerCountryFilter(buyerCountry);
 
+  // Fase 7: hide listings from sellers I've blocked + sellers who blocked me.
+  const session = await auth();
+  const blockedIds = await getBlockedUserIds(session?.user?.id);
+  const sellerFilter = sellerNotInBlockedFilter(blockedIds);
+  const blockingFilter = sellerFilter ? { sellerId: sellerFilter } : {};
+
   // Fetch sponsored listings (active CATEGORY_HIGHLIGHT upsell)
   const sponsoredListings = await prisma.listing.findMany({
     where: {
       status: "ACTIVE",
       ...countryFilter,
+      ...blockingFilter,
       upsells: {
         some: {
           type: "CATEGORY_HIGHLIGHT",
@@ -68,6 +77,7 @@ export default async function MarktplaatsPage({
     where: {
       status: "ACTIVE",
       ...countryFilter,
+      ...blockingFilter,
       ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
     },
   });
@@ -80,6 +90,7 @@ export default async function MarktplaatsPage({
     where: {
       status: "ACTIVE",
       ...countryFilter,
+      ...blockingFilter,
       ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
     },
     orderBy,

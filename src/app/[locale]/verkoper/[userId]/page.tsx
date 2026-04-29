@@ -3,6 +3,8 @@ import { getSellerStats, getSellerReviews } from "@/actions/review";
 import { auth } from "@/lib/auth";
 import { SellerReputationCard } from "@/components/ui/seller-reputation-card";
 import { ReviewList } from "@/components/ui/review-list";
+import { BlockReportButtons } from "@/components/ui/block-report-buttons";
+import { isUserBlocked } from "@/actions/block-report";
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -31,6 +33,7 @@ export default async function SellerProfilePage({
   const reviews = await getSellerReviews(userId);
   const isOwner = session?.user?.id === userId;
   const isLoggedIn = !!session?.user?.id;
+  const initiallyBlocked = !isOwner && isLoggedIn ? await isUserBlocked(userId) : false;
 
   const seller = await prisma.user.findUnique({
     where: { id: userId },
@@ -150,6 +153,17 @@ export default async function SellerProfilePage({
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
           <SellerReputationCard stats={stats} />
+
+          {/* Fase 7: block + report */}
+          {!isOwner && isLoggedIn && (
+            <div className="glass rounded-2xl p-4">
+              <BlockReportButtons
+                targetUserId={userId}
+                targetDisplayName={seller?.displayName ?? "Gebruiker"}
+                initiallyBlocked={initiallyBlocked}
+              />
+            </div>
+          )}
 
           {/* XP Breakdown */}
           <div className="glass rounded-2xl p-6">

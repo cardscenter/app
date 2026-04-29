@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ChatLayout, type ConversationPreview } from "@/components/message/chat-layout";
+import { getBlockedUserIds } from "@/lib/blocking";
 
 export default async function MessagesPage({
   params,
@@ -12,9 +13,22 @@ export default async function MessagesPage({
   const session = await auth();
   if (!session?.user) redirect(`/${locale}/login`);
 
+  // Fase 7: filter conversations with blocked users (symmetric).
+  const blockedIds = await getBlockedUserIds(session.user.id);
+
   const conversations = await prisma.conversation.findMany({
     where: {
       participants: { some: { userId: session.user.id! } },
+      // Exclude conversations where ANY participant is in the blocked set.
+      ...(blockedIds.size > 0
+        ? {
+            NOT: {
+              participants: {
+                some: { userId: { in: Array.from(blockedIds) } },
+              },
+            },
+          }
+        : {}),
     },
     orderBy: { updatedAt: "desc" },
     include: {
