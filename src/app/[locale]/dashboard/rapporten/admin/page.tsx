@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AdminReportsList } from "@/components/dashboard/admin-reports-list";
+import { isUserSuspended } from "@/lib/suspension";
 
 export default async function AdminReportsPage() {
   const session = await auth();
@@ -24,7 +25,15 @@ export default async function AdminReportsPage() {
     ],
     include: {
       reporter: { select: { id: true, displayName: true } },
-      reported: { select: { id: true, displayName: true, accountType: true } },
+      reported: {
+        select: {
+          id: true,
+          displayName: true,
+          accountType: true,
+          suspendedUntil: true,
+          suspensionType: true,
+        },
+      },
       reviewedBy: { select: { displayName: true } },
     },
     take: 200,
@@ -43,6 +52,7 @@ export default async function AdminReportsPage() {
     reportedId: reps[0].reportedId,
     reportedName: reps[0].reported.displayName,
     reportedAccountType: reps[0].reported.accountType,
+    reportedSuspended: isUserSuspended(reps[0].reported),
     openCount: reps.filter((r) => r.status === "OPEN" || r.status === "REVIEWING").length,
     reports: reps.map((r) => ({
       id: r.id,

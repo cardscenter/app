@@ -7,6 +7,7 @@ import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { checkAmountAllowed } from "@/lib/account-age";
+import { requireNotSuspended } from "@/lib/suspension";
 
 export async function createProposal(
   conversationId: string,
@@ -15,6 +16,9 @@ export async function createProposal(
 ) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   if (amount <= 0) return { error: "Bedrag moet groter zijn dan 0" };
 
@@ -139,6 +143,9 @@ export async function respondToProposal(
 ) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   const proposal = await prisma.proposal.findUnique({
     where: { id: proposalId },

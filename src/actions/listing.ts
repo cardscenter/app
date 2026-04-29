@@ -12,11 +12,15 @@ import type { UpsellType } from "@/types";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
+import { requireNotSuspended } from "@/lib/suspension";
 
 
 export async function createListing(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   const listingLimit = await checkListingLimit(session.user.id);
   if (!listingLimit.allowed) {
@@ -232,6 +236,9 @@ export async function createListing(formData: FormData) {
 export async function buyListing(listingId: string, shippingMethodId?: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },

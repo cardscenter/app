@@ -919,6 +919,13 @@
     "copied": "Copied!",
     "shareOn": "Share on {platform}"
   },
+  "suspension": {
+    "titleTemporary": "Your account is temporarily suspended",
+    "titlePermanent": "Your account is permanently suspended",
+    "until": "Until {date}",
+    "reasonLabel": "Reason",
+    "allowedActions": "While suspended you can't place bids, buy, create listings or send messages. You can still request withdrawals, respond to disputes and confirm ongoing shipments."
+  },
   "blockReport": {
     "blockButton": "Block",
     "unblockButton": "Unblock",
@@ -960,7 +967,18 @@
     "status.OPEN": "Open",
     "status.REVIEWING": "Reviewing",
     "status.DISMISSED": "Closed",
-    "status.ACTION_TAKEN": "Action taken"
+    "status.ACTION_TAKEN": "Action taken",
+    "suspended": "Suspended",
+    "suspendUser": "Suspend account",
+    "liftSuspension": "Lift suspension",
+    "temporary": "Temporary",
+    "permanent": "Permanent",
+    "days": "Days",
+    "suspendReasonPlaceholder": "Reason for suspension (visible to the user)",
+    "confirmSuspend": "Confirm suspend",
+    "confirmLift": "Are you sure you want to lift the suspension?",
+    "suspendSuccess": "{name} suspended",
+    "liftSuccess": "Suspension lifted"
   },
   "withdrawal": {
     "title": "Withdrawals",

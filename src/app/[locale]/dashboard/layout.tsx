@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { getSellerStats } from "@/actions/review";
 import { getLevel, getNextLevel, getLevelProgress } from "@/lib/seller-levels";
+import { isUserSuspended } from "@/lib/suspension";
+import { SuspensionBanner } from "@/components/dashboard/suspension-banner";
 
 export default async function DashboardLayout({
   children,
@@ -17,8 +19,15 @@ export default async function DashboardLayout({
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id! },
-    select: { accountType: true },
+    select: {
+      accountType: true,
+      suspendedUntil: true,
+      suspensionType: true,
+      suspensionReason: true,
+    },
   });
+
+  const suspended = user ? isUserSuspended(user) : false;
 
   const stats = await getSellerStats(session.user.id!);
   const xp = stats?.xp ?? 0;
@@ -43,7 +52,16 @@ export default async function DashboardLayout({
             }}
           />
         </aside>
-        <div className="flex-1 min-w-0">{children}</div>
+        <div className="flex-1 min-w-0">
+          {suspended && user && (
+            <SuspensionBanner
+              type={user.suspensionType ?? "TEMPORARY"}
+              until={user.suspendedUntil?.toISOString() ?? null}
+              reason={user.suspensionReason}
+            />
+          )}
+          {children}
+        </div>
       </div>
     </div>
   );

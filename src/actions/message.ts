@@ -55,6 +55,10 @@ export async function sendMessage(conversationId: string, body: string, imageUrl
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   if (!body.trim() && !imageUrl) return { error: "Bericht mag niet leeg zijn" };
 
+  const { requireNotSuspended } = await import("@/lib/suspension");
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
   // Verify user is participant
   const participant = await prisma.conversationParticipant.findFirst({
     where: { conversationId, userId: session.user.id },

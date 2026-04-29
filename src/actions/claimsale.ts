@@ -7,6 +7,7 @@ import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
+import { requireNotSuspended } from "@/lib/suspension";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -23,6 +24,10 @@ const claimsaleItemSchema = z.object({
 
 export async function createClaimsale(formData: FormData) {
   const session = await auth();
+  if (session?.user?.id) {
+    const susp = await requireNotSuspended(session.user.id);
+    if ("error" in susp) return { error: susp.error };
+  }
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
 
@@ -349,6 +354,9 @@ export async function claimItem(claimsaleItemId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
+
+  const susp = await requireNotSuspended(userId);
+  if ("error" in susp) return { error: susp.error };
 
   const item = await prisma.claimsaleItem.findUnique({
     where: { id: claimsaleItemId },

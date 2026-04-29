@@ -41,6 +41,14 @@ model User {
   isVerified           Boolean  @default(false)
   verificationStatus   String   @default("NONE") // NONE | PENDING | APPROVED | REJECTED
 
+  // Suspension (Fase 8). suspendedUntil null = niet opgeschort.
+  // PERMANENT: suspendedUntil heeft geen einddatum-betekenis (datum ver in
+  // toekomst gezet voor zoek-eenvoud).
+  suspendedUntil    DateTime?
+  suspensionType    String?   // TEMPORARY | PERMANENT
+  suspensionReason  String?
+  suspensionAdminId String?
+
   // Account type & role
   accountType       String   @default("FREE") // FREE | PRO | UNLIMITED | ADMIN
   premiumExpiresAt  DateTime?

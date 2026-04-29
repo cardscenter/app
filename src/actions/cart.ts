@@ -7,6 +7,7 @@ import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { expireClaimedItems, unclaimItem, closeClaimsaleIfDepleted } from "@/actions/claimsale";
+import { requireNotSuspended } from "@/lib/suspension";
 import { requiresSignedShipping, isUntrackedAllowed, LETTER_MAX_ITEMS } from "@/lib/shipping/tracked-threshold";
 
 /**
@@ -206,6 +207,9 @@ export async function getCart(): Promise<CartSellerGroup[]> {
 export async function checkout(shippingSelections?: Record<string, string>) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   // Check buyer has address
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });

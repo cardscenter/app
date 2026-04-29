@@ -3,9 +3,10 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Flag } from "lucide-react";
+import { ExternalLink, Flag, AlertOctagon } from "lucide-react";
 import { toast } from "sonner";
 import { reviewReport } from "@/actions/block-report";
+import { suspendUser, liftSuspension } from "@/actions/admin-suspension";
 
 interface Report {
   id: string;
@@ -24,6 +25,7 @@ interface Group {
   reportedId: string;
   reportedName: string;
   reportedAccountType: string;
+  reportedSuspended: boolean;
   openCount: number;
   reports: Report[];
 }
@@ -49,7 +51,7 @@ function ReportedUserGroup({ group }: { group: Group }) {
 
   return (
     <section className="glass rounded-xl p-5">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-foreground">
             <Flag className="inline h-4 w-4 mr-1" />
@@ -57,19 +59,32 @@ function ReportedUserGroup({ group }: { group: Group }) {
             <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
               {group.reportedAccountType}
             </span>
+            {group.reportedSuspended && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-400">
+                <AlertOctagon className="h-3 w-3" />
+                {t("suspended")}
+              </span>
+            )}
           </h2>
           <p className="text-xs text-muted-foreground">
             {t("totalReports", { count: group.reports.length })} —{" "}
             {t("openReports", { count: group.openCount })}
           </p>
         </div>
-        <a
-          href={`/nl/verkoper/${group.reportedId}`}
-          className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-        >
-          <ExternalLink className="h-4 w-4" />
-          {t("viewProfile")}
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`/nl/verkoper/${group.reportedId}`}
+            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            {t("viewProfile")}
+          </a>
+          <SuspendUserActions
+            targetId={group.reportedId}
+            targetName={group.reportedName}
+            isSuspended={group.reportedSuspended}
+          />
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -78,6 +93,145 @@ function ReportedUserGroup({ group }: { group: Group }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function SuspendUserActions({
+  targetId,
+  targetName,
+  isSuspended,
+}: {
+  targetId: string;
+  targetName: string;
+  isSuspended: boolean;
+}) {
+  const t = useTranslations("blockReport");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [showForm, setShowForm] = useState(false);
+  const [type, setType] = useState<"TEMPORARY" | "PERMANENT">("TEMPORARY");
+  const [days, setDays] = useState("7");
+  const [reason, setReason] = useState("");
+
+  function handleSuspend(e: React.FormEvent) {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.set("type", type);
+    formData.set("reason", reason);
+    if (type === "TEMPORARY") formData.set("days", days);
+
+    startTransition(async () => {
+      const result = await suspendUser(targetId, formData);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t("suspendSuccess", { name: targetName }));
+      setShowForm(false);
+      setReason("");
+      router.refresh();
+    });
+  }
+
+  function handleLift() {
+    if (!confirm(t("confirmLift"))) return;
+    startTransition(async () => {
+      const result = await liftSuspension(targetId);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t("liftSuccess"));
+      router.refresh();
+    });
+  }
+
+  if (isSuspended) {
+    return (
+      <button
+        onClick={handleLift}
+        disabled={pending}
+        className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+      >
+        {t("liftSuspension")}
+      </button>
+    );
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setShowForm((s) => !s)}
+        disabled={pending}
+        className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
+      >
+        {t("suspendUser")}
+      </button>
+      {showForm && (
+        <form
+          onSubmit={handleSuspend}
+          className="mt-3 w-full space-y-2 rounded-lg border border-red-300 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-950/30"
+        >
+          <div className="flex flex-wrap gap-2 text-xs">
+            <label className="inline-flex items-center gap-1">
+              <input
+                type="radio"
+                checked={type === "TEMPORARY"}
+                onChange={() => setType("TEMPORARY")}
+              />
+              {t("temporary")}
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input
+                type="radio"
+                checked={type === "PERMANENT"}
+                onChange={() => setType("PERMANENT")}
+              />
+              {t("permanent")}
+            </label>
+          </div>
+          {type === "TEMPORARY" && (
+            <div className="flex items-center gap-2 text-xs">
+              <label htmlFor={`days-${targetId}`}>{t("days")}:</label>
+              <input
+                id={`days-${targetId}`}
+                type="number"
+                min={1}
+                max={365}
+                value={days}
+                onChange={(e) => setDays(e.target.value)}
+                className="w-20 glass-input px-2 py-1 text-foreground"
+              />
+            </div>
+          )}
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={2}
+            placeholder={t("suspendReasonPlaceholder")}
+            className="block w-full glass-input px-2 py-1.5 text-sm text-foreground"
+            required
+          />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={pending || reason.trim().length < 5}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+            >
+              {pending ? "..." : t("confirmSuspend")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              disabled={pending}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+            >
+              {t("cancel")}
+            </button>
+          </div>
+        </form>
+      )}
+    </>
   );
 }
 

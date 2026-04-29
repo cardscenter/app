@@ -14,12 +14,16 @@ import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
+import { requireNotSuspended } from "@/lib/suspension";
 import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
 
 export async function createAuction(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   const limit = await checkAuctionLimit(session.user.id);
   if (!limit.allowed) {
@@ -181,6 +185,9 @@ export async function placeBid(auctionId: string, amount: number) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };
   if (auction.status !== "ACTIVE") return { error: "Veiling is niet meer actief" };
@@ -285,6 +292,9 @@ export async function placeBid(auctionId: string, amount: number) {
 export async function buyNow(auctionId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };
@@ -577,6 +587,9 @@ export async function finalizeAuction(auctionId: string) {
 export async function setAutoBid(auctionId: string, maxAmount: number) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };

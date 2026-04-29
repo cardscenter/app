@@ -919,6 +919,13 @@
     "copied": "Gekopieerd!",
     "shareOn": "Delen op {platform}"
   },
+  "suspension": {
+    "titleTemporary": "Je account is tijdelijk opgeschort",
+    "titlePermanent": "Je account is permanent opgeschort",
+    "until": "Tot {date}",
+    "reasonLabel": "Reden",
+    "allowedActions": "Tijdens opschorting kun je geen biedingen plaatsen, kopen, advertenties aanmaken of berichten sturen. Je kunt wel uitbetalingen aanvragen, geschillen beantwoorden en lopende verzendingen bevestigen."
+  },
   "blockReport": {
     "blockButton": "Blokkeren",
     "unblockButton": "Deblokkeren",
@@ -960,7 +967,18 @@
     "status.OPEN": "Open",
     "status.REVIEWING": "In behandeling",
     "status.DISMISSED": "Gesloten",
-    "status.ACTION_TAKEN": "Actie ondernomen"
+    "status.ACTION_TAKEN": "Actie ondernomen",
+    "suspended": "Opgeschort",
+    "suspendUser": "Account opschorten",
+    "liftSuspension": "Opschorting opheffen",
+    "temporary": "Tijdelijk",
+    "permanent": "Permanent",
+    "days": "Dagen",
+    "suspendReasonPlaceholder": "Reden voor opschorting (zichtbaar voor de gebruiker)",
+    "confirmSuspend": "Bevestig opschorting",
+    "confirmLift": "Weet je zeker dat je de opschorting wilt opheffen?",
+    "suspendSuccess": "{name} is opgeschort",
+    "liftSuccess": "Opschorting opgeheven"
   },
   "withdrawal": {
     "title": "Uitbetalingen",
