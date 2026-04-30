@@ -3,6 +3,28 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      email?: string | null;
+      name?: string | null;
+      image?: string | null;
+      accountType?: string;
+    };
+  }
+  interface User {
+    accountType?: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    accountType?: string;
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -32,6 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.displayName,
           image: user.avatarUrl,
+          accountType: user.accountType,
         };
       },
     }),
@@ -44,6 +67,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.picture = user.image;
+        token.accountType = user.accountType;
       }
       return token;
     },
@@ -51,6 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.image = token.picture as string | null;
+        session.user.accountType = token.accountType as string | undefined;
       }
       return session;
     },

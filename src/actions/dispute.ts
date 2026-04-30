@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { refundEscrow, releaseEscrow, partialRefundEscrow } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { logAdminAction } from "@/lib/admin-audit";
 
 async function logDisputeEvent(disputeId: string, actorId: string, type: string, detail?: string) {
   await prisma.disputeEvent.create({ data: { disputeId, actorId, type, detail } });
@@ -590,6 +591,21 @@ export async function adminResolveDispute(data: {
 
   await createNotification(bundle.buyerId, "DISPUTE_RESOLVED", "Beheerder heeft beslist", resolutionText, `/dashboard/geschillen/${data.disputeId}`);
   await createNotification(bundle.sellerId, "DISPUTE_RESOLVED", "Beheerder heeft beslist", resolutionText, `/dashboard/geschillen/${data.disputeId}`);
+
+  await logAdminAction({
+    adminId: session.user.id,
+    action: "ADMIN_RESOLVE_DISPUTE",
+    targetType: "DISPUTE",
+    targetId: data.disputeId,
+    metadata: {
+      decision: data.decision,
+      partialAmount: data.partialAmount ?? null,
+      adminNotes: data.adminNotes,
+      buyerId: bundle.buyerId,
+      sellerId: bundle.sellerId,
+      bundleId: bundle.id,
+    },
+  });
 
   revalidatePath(`/dashboard/geschillen/${data.disputeId}`);
   revalidatePath("/dashboard/geschillen");

@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCommissionRate } from "@/lib/subscription-tiers";
+import { logAdminAction } from "@/lib/admin-audit";
 
 // Get current user's balance
 export async function getBalance(): Promise<number | null> {
@@ -73,7 +74,7 @@ export async function adminDeposit(userId: string, amount: number, description?:
 }
 
 // Admin action: confirm a bank transfer deposit
-export async function confirmBankTransfer(userId: string, amount: number) {
+export async function confirmBankTransfer(userId: string, amount: number, adminNote?: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -104,10 +105,25 @@ export async function confirmBankTransfer(userId: string, amount: number) {
         amount,
         balanceBefore,
         balanceAfter,
-        description: `Bankoverschrijving bevestigd: €${amount.toFixed(2)}`,
+        description: adminNote
+          ? `Bankoverschrijving bevestigd: €${amount.toFixed(2)} (${adminNote})`
+          : `Bankoverschrijving bevestigd: €${amount.toFixed(2)}`,
       },
     }),
   ]);
+
+  await logAdminAction({
+    adminId: session.user.id,
+    action: "CONFIRM_BANK_TRANSFER",
+    targetType: "USER",
+    targetId: userId,
+    metadata: {
+      amount,
+      adminNote: adminNote ?? null,
+      userName: user.displayName,
+      bankTransferReference: user.bankTransferReference,
+    },
+  });
 
   return { success: true, newBalance: balanceAfter };
 }

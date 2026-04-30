@@ -10,6 +10,7 @@ import { Menu, X, MessageCircle, Search } from "lucide-react";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { SearchBar } from "@/components/search/search-bar";
 import { CartIcon } from "@/components/ui/cart-icon";
+import { AdminShield } from "@/components/layout/admin-shield";
 
 function HeaderContent() {
   const t = useTranslations("common");
@@ -112,6 +113,9 @@ function HeaderContent() {
 
               {/* Notifications */}
               <NotificationBell />
+
+              {/* Admin shield (only renders for ADMIN accounts) */}
+              <AdminShield />
 
               {/* Messages */}
               <Link

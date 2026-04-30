@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
+import { withCronLogging } from "@/lib/cron-logging";
+import { resolveCronTrigger } from "@/lib/cron-auth";
 
 // GET /api/cron/auction-payment-deadline
 // Call this daily to handle expired auction payment deadlines.
@@ -13,14 +15,15 @@ import { createPendingBundle } from "@/lib/shipping-bundle";
 //   - Otherwise, mark the auction as PAYMENT_FAILED and sync the reserve for
 //     the (final) failed winner so their reservedBalance reflects reality.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
+  const trigger = await resolveCronTrigger(request);
+  if (!trigger) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await withCronLogging("auction-payment-deadline", async (run) => {
+    const r = await processExpiredPaymentDeadlines();
+    run.setItemsProcessed(r.processed);
+    return r;
+  }, trigger);
 
-  const result = await processExpiredPaymentDeadlines();
   return NextResponse.json(result);
 }
 

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductBalance, creditBalance } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { logAdminAction } from "@/lib/admin-audit";
 import { WITHDRAWAL_MIN_AMOUNT } from "@/lib/withdrawal-config";
 import { z } from "zod";
 
@@ -147,6 +148,14 @@ export async function approveWithdrawal(withdrawalId: string, adminNote?: string
     "/nl/dashboard/uitbetalingen"
   );
 
+  await logAdminAction({
+    adminId: adm.adminId,
+    action: "APPROVE_WITHDRAWAL",
+    targetType: "WITHDRAWAL",
+    targetId: withdrawalId,
+    metadata: { userId: w.userId, amount: w.amount, adminNote: adminNote?.trim() || null },
+  });
+
   return { success: true };
 }
 
@@ -173,6 +182,14 @@ export async function markWithdrawalPaid(withdrawalId: string) {
     `Je uitbetaling van €${w.amount.toFixed(2)} is overgemaakt naar ${w.iban.slice(0, 4)} **** ${w.iban.slice(-4)}.`,
     "/nl/dashboard/uitbetalingen"
   );
+
+  await logAdminAction({
+    adminId: adm.adminId,
+    action: "MARK_PAID",
+    targetType: "WITHDRAWAL",
+    targetId: withdrawalId,
+    metadata: { userId: w.userId, amount: w.amount },
+  });
 
   return { success: true };
 }
@@ -214,6 +231,14 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
     `Je uitbetaling van €${w.amount.toFixed(2)} is afgewezen: ${trimmed}. Het bedrag is teruggestort op je saldo.`,
     "/nl/dashboard/uitbetalingen"
   );
+
+  await logAdminAction({
+    adminId: adm.adminId,
+    action: "REJECT_WITHDRAWAL",
+    targetType: "WITHDRAWAL",
+    targetId: withdrawalId,
+    metadata: { userId: w.userId, amount: w.amount, reason: trimmed },
+  });
 
   return { success: true };
 }

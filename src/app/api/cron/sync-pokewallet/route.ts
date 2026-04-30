@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
+import { withCronLogging } from "@/lib/cron-logging";
+import { resolveCronTrigger } from "@/lib/cron-auth";
 
 // GET /api/cron/sync-pokewallet
 //
@@ -18,42 +20,46 @@ const PER_SET_DELAY_MS = 100;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const trigger = await resolveCronTrigger(request);
+  if (!trigger) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const sets = await prisma.cardSet.findMany({
-    where: { pokewalletSetId: { not: null }, cards: { some: {} } },
-    select: { id: true, name: true },
-  });
+  const result = await withCronLogging("sync-pokewallet", async (run) => {
+    const sets = await prisma.cardSet.findMany({
+      where: { pokewalletSetId: { not: null }, cards: { some: {} } },
+      select: { id: true, name: true },
+    });
 
-  let totalUpdated = 0;
-  let totalUnmatched = 0;
-  let totalSetsOk = 0;
-  const failures: { setName: string; error: string }[] = [];
+    let totalUpdated = 0;
+    let totalUnmatched = 0;
+    let totalSetsOk = 0;
+    const failures: { setName: string; error: string }[] = [];
 
-  for (const set of sets) {
-    try {
-      const result = await syncSetByPokewalletId(set.id);
-      totalUpdated += result.updated;
-      totalUnmatched += result.unmatched;
-      totalSetsOk++;
-    } catch (e) {
-      failures.push({ setName: set.name, error: (e as Error).message.slice(0, 200) });
+    for (const set of sets) {
+      try {
+        const r = await syncSetByPokewalletId(set.id);
+        totalUpdated += r.updated;
+        totalUnmatched += r.unmatched;
+        totalSetsOk++;
+      } catch (e) {
+        failures.push({ setName: set.name, error: (e as Error).message.slice(0, 200) });
+      }
+      await sleep(PER_SET_DELAY_MS);
     }
-    await sleep(PER_SET_DELAY_MS);
-  }
+
+    run.setItemsProcessed(totalUpdated);
+    return {
+      totalSets: sets.length,
+      setsOk: totalSetsOk,
+      totalUpdated,
+      totalUnmatched,
+      failureCount: failures.length,
+      failures: failures.slice(0, 10),
+    };
+  }, trigger);
 
   return NextResponse.json({
     success: true,
-    totalSets: sets.length,
-    setsOk: totalSetsOk,
-    totalUpdated,
-    totalUnmatched,
-    failureCount: failures.length,
-    failures: failures.slice(0, 10),
+    ...result,
     timestamp: new Date().toISOString(),
   });
 }

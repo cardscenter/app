@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
+import { logAdminAction } from "@/lib/admin-audit";
 import { z } from "zod";
 
 async function requireAdmin() {
@@ -74,6 +75,20 @@ export async function suspendUser(targetId: string, formData: FormData) {
     "/dashboard/meldingen"
   );
 
+  await logAdminAction({
+    adminId: adm.adminId,
+    action: "SUSPEND_USER",
+    targetType: "USER",
+    targetId,
+    metadata: {
+      type: parsed.data.type,
+      reason: parsed.data.reason,
+      days: parsed.data.days,
+      suspendedUntil: suspendedUntil.toISOString(),
+      targetName: target.displayName,
+    },
+  });
+
   return { success: true };
 }
 
@@ -104,6 +119,14 @@ export async function liftSuspension(targetId: string) {
     "Je account-opschorting is opgeheven. Je kunt het platform weer normaal gebruiken.",
     "/dashboard"
   );
+
+  await logAdminAction({
+    adminId: adm.adminId,
+    action: "LIFT_SUSPENSION",
+    targetType: "USER",
+    targetId,
+    metadata: { targetName: target.displayName },
+  });
 
   return { success: true };
 }

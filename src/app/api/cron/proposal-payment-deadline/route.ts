@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
+import { withCronLogging } from "@/lib/cron-logging";
+import { resolveCronTrigger } from "@/lib/cron-auth";
 
 // GET /api/cron/proposal-payment-deadline
 // Mirrors auction-payment-deadline but for chat proposals: when an ACCEPTED
@@ -9,14 +11,15 @@ import { createNotification } from "@/actions/notification";
 // parties. Proposals have no bid order, so no runner-up rotation — the
 // listing is just released back into the marketplace.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
+  const trigger = await resolveCronTrigger(request);
+  if (!trigger) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await withCronLogging("proposal-payment-deadline", async (run) => {
+    const r = await processExpiredProposalDeadlines();
+    run.setItemsProcessed(r.processed);
+    return r;
+  }, trigger);
 
-  const result = await processExpiredProposalDeadlines();
   return NextResponse.json(result);
 }
 

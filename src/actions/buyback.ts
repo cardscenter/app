@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
+import { logAdminAction } from "@/lib/admin-audit";
 import {
   getBuybackPrice,
   getStoreCreditBonus,
@@ -473,6 +474,19 @@ export async function updateBuybackStatus(
       `/dashboard/inkoop/${requestId}`
     );
   }
+
+  await logAdminAction({
+    adminId,
+    action: "UPDATE_BUYBACK_STATUS",
+    targetType: "BUYBACK",
+    targetId: requestId,
+    metadata: {
+      oldStatus: request.status,
+      newStatus,
+      adminNotes: adminNotes ?? null,
+      userId: request.userId,
+    },
+  });
 
   return { success: true };
 }

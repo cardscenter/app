@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
+import { logAdminAction } from "@/lib/admin-audit";
 import { z } from "zod";
 
 // ============================================================
@@ -186,6 +187,20 @@ export async function reviewReport(
       "/dashboard/meldingen"
     );
   }
+
+  await logAdminAction({
+    adminId: adm.adminId,
+    action: "REVIEW_REPORT",
+    targetType: "REPORT",
+    targetId: reportId,
+    metadata: {
+      newStatus,
+      reportedId: r.reportedId,
+      reporterId: r.reporterId,
+      reason: r.reason,
+      adminNote: adminNote?.trim() || null,
+    },
+  });
 
   return { success: true };
 }

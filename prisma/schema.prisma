@@ -139,6 +139,9 @@ model User {
   // Annuleringsverzoeken (Fase 9)
   cancellationProposed CancellationRequest[] @relation("CancellationProposer")
   cancellationResponded CancellationRequest[] @relation("CancellationResponder")
+
+  // Admin audit log (Fase 15)
+  adminAuditLogs    AdminAuditLog[] @relation("AdminAuditLogActor")
 }
 
 // ============================================================
@@ -1477,4 +1480,46 @@ model BulkBuybackItem {
   createdAt         DateTime @default(now())
 
   @@index([buybackRequestId])
+}
+
+// ============================================================
+// ADMIN PANEL (Fase 15)
+// ============================================================
+
+// Forward-only audit trail of every admin action. Populated by `logAdminAction`
+// helper in `src/lib/admin-audit.ts`. No retroactive backfill.
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+
+  adminId     String
+  admin       User     @relation("AdminAuditLogActor", fields: [adminId], references: [id])
+
+  action      String   // SUSPEND_USER | LIFT_SUSPENSION | APPROVE_WITHDRAWAL | REJECT_WITHDRAWAL | MARK_PAID | ADMIN_RESOLVE_DISPUTE | REVIEW_VERIFICATION | UPDATE_BUYBACK_STATUS | CONFIRM_BANK_TRANSFER | REVIEW_REPORT | UPDATE_APP_CONFIG | EDIT_SERIES | EDIT_CARDSET | EDIT_CARD | RUN_CRON_MANUALLY | BULK_REMOVE_LISTINGS | BULK_REMOVE_AUCTIONS | BULK_REMOVE_CLAIMSALES | RESET_IBAN_COOLDOWN | FORCE_USERNAME_RESET
+  targetType  String   // USER | WITHDRAWAL | DISPUTE | VERIFICATION | BUYBACK | LISTING | AUCTION | CLAIMSALE | APP_CONFIG | SERIES | CARDSET | CARD | CRON | REPORT
+  targetId    String?
+  metadata    String?  // JSON blob with extra context (amount, oldStatus, newStatus, reason, etc.)
+
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+// Per-execution log for cron-jobs. Wraps each cron-route via `withCronLogging`
+// in `src/lib/cron-logging.ts`. Manual runs from the admin panel set
+// `triggeredBy = adminId`; scheduled runs use 'cron'.
+model CronRun {
+  id              String    @id @default(cuid())
+
+  jobName         String    // 'auto-confirm' | 'auto-resolve-disputes' | etc.
+  startedAt       DateTime  @default(now())
+  finishedAt      DateTime?
+  status          String    // RUNNING | SUCCESS | FAILED
+  itemsProcessed  Int       @default(0)
+  errorMessage    String?
+  triggeredBy     String?   // 'cron' | adminId
+
+  @@index([jobName, startedAt])
+  @@index([status])
 }

@@ -1,0 +1,61 @@
+"use client";
+
+import { useTransition, useState } from "react";
+import { useRouter } from "@/i18n/navigation";
+import { runCronManually } from "@/actions/admin/crons";
+import { Play, Lock } from "lucide-react";
+
+export function CronRunNowButton({
+  jobName,
+  allowManualRun,
+  runWarning,
+}: {
+  jobName: string;
+  allowManualRun: boolean;
+  runWarning: string | null;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  if (!allowManualRun) {
+    return (
+      <div className="space-y-1">
+        <span
+          title={runWarning ?? "Deze cron mag alleen door de scheduler gedraaid worden."}
+          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-muted-foreground dark:border-slate-800 dark:bg-slate-800/40"
+        >
+          <Lock className="h-3 w-3" />
+          Alleen scheduler
+        </span>
+      </div>
+    );
+  }
+
+  function run() {
+    const prompt = runWarning
+      ? `${runWarning}\n\nWeet je zeker dat je "${jobName}" nu wilt uitvoeren?`
+      : `Cron "${jobName}" nu uitvoeren?`;
+    if (!confirm(prompt)) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await runCronManually(jobName);
+      if (res.error) setError(res.error);
+      else router.refresh();
+    });
+  }
+
+  return (
+    <div className="space-y-1">
+      <button
+        onClick={run}
+        disabled={pending}
+        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+      >
+        <Play className="h-3 w-3" />
+        {pending ? "Bezig…" : "Run nu"}
+      </button>
+      {error && <p className="text-xs text-rose-600">{error}</p>}
+    </div>
+  );
+}

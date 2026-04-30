@@ -11,6 +11,7 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 - **`"use server"` bestanden mogen alleen async exports hebben.** Constants (zoals `IBAN_COOLDOWN_DAYS`, `WITHDRAWAL_MIN_AMOUNT`) moeten in een apart `src/lib/*-config.ts` bestand. Anders breekt Next.js client-side imports met "module has no exports at all".
 - **Schema-wijzigingen via `prisma db push`, NIET `prisma migrate dev`.** Het project heeft drift tussen migration-history (in `prisma/migrations/`) en de huidige schema. `migrate dev` wil de DB resetten — gebruik `db push --accept-data-loss` om data te behouden.
 - **Voor `prisma db push`: kill eerst de dev server.** Anders DB-lock.
+- **Admin-werk hoort thuis in het admin panel** (Fase 15). Elke nieuwe admin-feature, admin-page, admin-action of admin-only flow moet via `/dashboard/admin/*` gaan en de admin-conventies volgen — zie sectie **Admin panel (Fase 15)** verderop. Concreet: nooit een nieuwe `*/admin/page.tsx` ergens anders aanmaken, nooit een admin-action zonder `requireAdmin()` + `logAdminAction()` schrijven, nooit een nieuwe cron toevoegen zonder `CRON_JOBS` registry + `withCronLogging`.
 
 ## Tech Stack
 - **Framework:** Next.js 16 (App Router) — **Read `node_modules/next/dist/docs/` before writing code**
@@ -43,6 +44,7 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 - Import alias: `@/` → `src/`
 - Server Actions in `src/actions/`, Zod schemas in `src/lib/validations/`
 - Pages are Server Components; add `"use client"` only when needed (charts, forms with state)
+- **Locale-aware navigation**: `Link`, `useRouter`, `usePathname`, `getPathname` ALTIJD uit `@/i18n/navigation` — niet uit `next/link` of `next/navigation`. **redirect**: voor stub-paden die naar een ander pad in dezelfde locale verwijzen (zoals de `/dashboard/geschillen/admin` → `/dashboard/admin/disputes` redirects) werkt `redirect({ href, locale })` uit `@/i18n/navigation`. Maar voor redirects vanuit een live stateful page (bv. admin → admin-overview) gaf de i18n-redirect "This page couldn't load" + hook-mismatches in Next 16 + next-intl 4 setup — gebruik daar `redirect` uit `next/navigation` met een **handmatig locale-prefixed pad**: `redirect(\`/${locale}/dashboard/admin\`)`. Locale komt uit `params` (`const { locale } = await params;`). `notFound()` mag uit `next/navigation` (geen locale relevant). Bij twijfel: vermijd server-side redirects en gebruik een client-side Link.
 
 ## Key Architecture
 - **Pokémon only** — no multi-TCG, Category always Pokémon
@@ -87,6 +89,8 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 - **Marketplace/Auction pagination** — 40 items per page, sponsored excluded from main grid, 4-column layout.
 - **Real-time bid updates** — Polling via `/api/auctions/[auctionId]/bids` endpoint. 5-second interval normally, 2-second in last 30 minutes. Client component: `live-auction-content.tsx`. Shows "Je bent de hoogste bieder" banner + hides bid form when user is highest bidder.
 - **SQLite date handling** — no DATE_TRUNC; fetch raw + group in JS
+- **Admin panel (Fase 15)** — gecentraliseerde backoffice op `/dashboard/admin/*`. Eigen sub-nav (`src/components/admin/admin-nav.tsx`) met 4 secties: Overview · Queues (disputes/verifications/withdrawals/buybacks/reports/bank-transfers) · Users & Content (users/moderation/catalog) · System (config/crons/audit). Toegang via header shield-icon (`AdminShield`, alleen zichtbaar bij `session.user.accountType === "ADMIN"`) + 1 sidebar-link in `dashboard-nav.tsx`. Layout-guard: `dashboard/admin/layout.tsx` roept `requireAdminPage()` aan. **Elke admin-write-action moet door 2 hekken: `requireAdmin()` van `@/lib/admin` (of `requireAdminPage()` voor pages) ÉN `logAdminAction()` van `@/lib/admin-audit` na succes.** Audit log is forward-only — `AdminAuditLog`-model, geen retro-backfill. Alle bestaande admin-actions in `admin-suspension.ts`, `withdrawal.ts`, `dispute.ts` (`adminResolveDispute`), `verification.ts` (`adminReviewVerification`), `buyback.ts` (`updateBuybackStatus`), `wallet.ts` (`confirmBankTransfer`), `block-report.ts` (`reviewReport`) zijn geïnstrumenteerd. JWT-callback in `auth.ts` exposeert `accountType` op `session.user` zodat client-componenten admin-status kunnen detecteren. Oude admin-paden (`/dashboard/geschillen/admin`, `/dashboard/uitbetalingen/admin`, `/dashboard/inkoop/admin[/id]`, `/dashboard/rapporten/admin`) zijn redirect-stubs naar het nieuwe `/dashboard/admin/*`-pad — nieuwe admin-flows nooit ergens anders dan onder `/dashboard/admin/*` plaatsen.
+- **Cron-logging & manual run (Fase 15)** — alle cron-routes onder `src/app/api/cron/` zijn gewrapt met `withCronLogging(jobName, fn)` uit `@/lib/cron-logging`, wat per executie een `CronRun`-record produceert (status RUNNING → SUCCESS/FAILED, items processed, errorMessage, triggeredBy). Auth via `resolveCronTrigger(request)` uit `@/lib/cron-auth` — accepteert `Bearer CRON_SECRET` (scheduler) of een ingelogde admin-sessie (manual). Centrale registry in `src/lib/cron-jobs.ts`: `CRON_JOBS` (job-runners) + `CRON_JOB_META` (description, schedule, `allowManualRun`, optionele `runWarning`). De admin-page `/dashboard/admin/crons` toont status + "Run nu"-knop alleen voor jobs met `allowManualRun: true`. **Niet manueel runbaar:** `cleanup-archived-chats` (destructief, hard-delete). **Met waarschuwing:** `sync-pokewallet` (heavy: ~600 PokeWallet API-calls). `runCronManually` (in `src/actions/admin/crons.ts`) weigert een job als de meta `allowManualRun: false` heeft — backend-guard, niet alleen UI.
 
 ---
 
@@ -120,6 +124,11 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `block-report.ts` | `blockUser`/`unblockUser`/`isUserBlocked`, `reportUser`, admin `getReports`/`reviewReport` |
 | `admin-suspension.ts` | Admin `suspendUser` (TEMPORARY 1-365 dagen of PERMANENT) + `liftSuspension` + `getSuspendedUsers` |
 | `cancellation.ts` | `requestCancellation`, `respondToCancellation` (ACCEPT refund + bundle CANCELLED, REJECT met reden), `getActiveCancellationRequest`. Reasons-enum geëxporteerd voor UI |
+| `admin/users.ts` | `resetIbanCooldown`, `forceUsernameReset` (Fase 15) — **alle nieuwe admin user-management actions hier toevoegen** |
+| `admin/catalog.ts` | `createSeries`/`updateSeries`/`createCardSet`/`updateCardSet`/`updateCardMeta` (Fase 15) |
+| `admin/app-config.ts` | `upsertAppConfig`/`deleteAppConfig` (Fase 15) — JSON-validatie server-side |
+| `admin/crons.ts` | `runCronManually(jobName)`, `getCronStatus()` (Fase 15) — guard via `CRON_JOB_META.allowManualRun` |
+| `admin/moderation.ts` | `bulkRemoveListings`/`bulkRemoveAuctions`/`bulkRemoveClaimsales` met reden + notificaties (Fase 15). Auctions → CANCELLED, Claimsales → CLOSED, Listings → DELETED (geen DELETED-status in Auction/Claimsale schema) |
 
 ### Pages (`src/app/[locale]/`)
 | Route | Page |
@@ -150,9 +159,26 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `…/verificatie` | Account verification upload/status |
 | `…/abonnement` | Subscription tier management |
 | `…/uitbetalingen` | Saldo + IBAN + uitbetalingsformulier + history |
-| `…/uitbetalingen/admin` | Admin: pending/approved/paid/rejected withdrawal-requests |
+| `…/uitbetalingen/admin` | Redirect-stub → `/dashboard/admin/withdrawals` (Fase 15) |
 | `…/blokkeerlijst` | "Block-list" — geblokkeerde gebruikers met unblock-actie |
-| `…/rapporten/admin` | Admin: meldingen gegroepeerd per gerapporteerde user, inline suspend-knop |
+| `…/rapporten/admin` | Redirect-stub → `/dashboard/admin/reports` (Fase 15) |
+| `…/geschillen/admin` | Redirect-stub → `/dashboard/admin/disputes` (Fase 15) |
+| `…/geschillen/admin/verificaties` | Redirect-stub → `/dashboard/admin/verifications` (Fase 15) |
+| `…/inkoop/admin` (+ `[id]`) | Redirect-stubs → `/dashboard/admin/buybacks(/[id])` (Fase 15) |
+| **Admin Panel** `/dashboard/admin/` | **Admin-only**, eigen layout met `requireAdminPage()` + `AdminNav`-sidebar |
+| `…/admin` | Overzicht: KPI-tegels per queue, financiële totalen, recent audit-feed, quick-actions |
+| `…/admin/disputes` | Escalated disputes (verplaatst van `/dashboard/geschillen/admin`) |
+| `…/admin/verifications` | PENDING ID-verificaties (verplaatst van `/dashboard/geschillen/admin/verificaties`) |
+| `…/admin/withdrawals` | Withdrawals queue: pending/approved/paid/rejected |
+| `…/admin/buybacks` (+ `[id]`) | Buyback-aanvragen overzicht + detail |
+| `…/admin/reports` | User-reports gegroepeerd per gerapporteerde user, inline suspend-knop |
+| `…/admin/bank-transfers` | Search + confirm-form voor `confirmBankTransfer`, recente confirmaties uit audit log |
+| `…/admin/users` (+ `[userId]`) | User-search met filters + 360° detail-page met 11 tabs (profile/wallet/sales/purchases/disputes/withdrawals/reports/suspensions/reviews/ember/audit) |
+| `…/admin/catalog` | Series/CardSets/Cards CRUD via sub-tabs |
+| `…/admin/config` | AppConfig key/value editor met live JSON-validatie |
+| `…/admin/crons` | Cron-status + description per job + "Run nu" (alleen voor jobs met `allowManualRun: true`) |
+| `…/admin/moderation` | Listings/auctions/claimsales tabs met "alleen verkopers met open rapport"-filter + bulk-delete-met-reden |
+| `…/admin/audit` | AdminAuditLog feed met filters (action, targetType, targetId-search) en paginatie |
 | **Customization** `/customization/` | Hub: Ember balance, login streak, nav cards |
 | `…/achievements` | Tiered achievements overview, progress per category |
 | `…/packs` | Chapters overview (cosmetic collections) |
@@ -174,6 +200,8 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `home/` | `hero-email-form`, `pricing-section` |
 | `layout/` | `header`, `footer`, `language-switcher`, `user-balance` |
 | `ui/` | `button`, `card`, `cart-icon`, `chart`, `checkbox`, `input`, `select`, `slider`, `label`, `switch`, `image-gallery`, `image-uploader`, `rich-text-editor`, `item-carousel`, `breadcrumbs`, `social-share`, `notification-bell`, `notification-list`, `pagination`, `review-form`, `review-list`, `seller-level-badge`, `seller-reputation-card`, `seller-info-block`, `username-history-tooltip`, `shipping-method-selector`, `star-rating`, `watchlist-button`, `verified-badge`, `block-report-buttons` (Fase 7) |
+| `admin/` | (Fase 15) `admin-nav` (sidebar met badges), `bank-transfer-form`, `user-action-bar` (suspend/lift/IBAN-reset modal), `catalog-edit-form` (generic CRUD), `app-config-editor` (JSON-validatie), `cron-run-now-button` (respects `allowManualRun`), `moderation-table` (bulk-select + delete-met-reden) |
+| `layout/` (admin) | (Fase 15) `admin-shield` — header-icon, alleen zichtbaar voor `accountType === "ADMIN"` |
 | `providers/` | `theme-provider` |
 
 ### Library (`src/lib/`)
@@ -203,22 +231,29 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `withdrawal-config.ts` | `WITHDRAWAL_MIN_AMOUNT` (apart bestand zodat client-componenten het kunnen importeren) |
 | `blocking.ts` | `getBlockedUserIds(userId)` symmetrisch (beide richtingen), `sellerNotInBlockedFilter` helper voor Prisma where-clauses, `REPORT_REASONS` const-tuple |
 | `suspension.ts` | `isUserSuspended(user)` (PERMANENT of `suspendedUntil` in toekomst), `requireNotSuspended(userId)` async guard voor write-actions |
+| `admin.ts` | (Fase 15) `requireAdmin()` (action-variant: throws) en `requireAdminPage()` (page-variant: redirect). Returnt `{ adminId }`. **Vervangt inline `accountType !== "ADMIN"`-checks** |
+| `admin-audit.ts` | (Fase 15) `logAdminAction({ adminId, action, targetType, targetId?, metadata? })` schrijft `AdminAuditLog`. `AdminAction`/`AdminTargetType` zijn const-unions — bij nieuwe actie eerst hier toevoegen |
+| `cron-logging.ts` | (Fase 15) `withCronLogging(jobName, fn, triggeredBy?)` wrapper rond cron-werk. Maakt `CronRun` met RUNNING → SUCCESS/FAILED, vangt errors, schrijft itemsProcessed |
+| `cron-jobs.ts` | (Fase 15) Centrale registry: `CRON_JOBS` (job-runners) + `CRON_JOB_META` (description/schedule/`allowManualRun`/runWarning) + `CRON_JOB_NAMES`. **Bij nieuwe cron toevoegen: registry + meta + route + withCronLogging — alle vier** |
+| `cron-auth.ts` | (Fase 15) `resolveCronTrigger(request)` returnt `"cron"` (Bearer secret), `<adminId>` (admin sessie) of `null` (unauthorized). Gebruikt door alle cron-routes |
 
 ### Database (`prisma/schema.prisma`)
-User, Category, Series, CardSet, Card, CardPriceHistory, CardWatchlist, Auction, AuctionBid, AuctionShippingMethod, AuctionUpsell, Claimsale, ClaimsaleItem, ClaimsaleShippingMethod, Listing, ListingShippingMethod, ListingUpsell, SellerShippingMethod, ShippingBundle, Transaction, Subscription, Conversation, ConversationParticipant, Message, Proposal, Watchlist, Notification, Review, AppConfig, AutoBid, CartItem, Dispute, DisputeEvent, UsernameHistory, VerificationRequest, CosmeticBundle, CosmeticItem, OwnedItem, EmberTransaction, ActivityLog, Achievement, AchievementTier, UserAchievement, BuybackRequest, BuybackItem, BulkBuybackItem, **WithdrawalRequest** (Fase 6), **UserBlock** + **UserReport** (Fase 7), **CancellationRequest** (Fase 9).
+User, Category, Series, CardSet, Card, CardPriceHistory, CardWatchlist, Auction, AuctionBid, AuctionShippingMethod, AuctionUpsell, Claimsale, ClaimsaleItem, ClaimsaleShippingMethod, Listing, ListingShippingMethod, ListingUpsell, SellerShippingMethod, ShippingBundle, Transaction, Subscription, Conversation, ConversationParticipant, Message, Proposal, Watchlist, Notification, Review, AppConfig, AutoBid, CartItem, Dispute, DisputeEvent, UsernameHistory, VerificationRequest, CosmeticBundle, CosmeticItem, OwnedItem, EmberTransaction, ActivityLog, Achievement, AchievementTier, UserAchievement, BuybackRequest, BuybackItem, BulkBuybackItem, **WithdrawalRequest** (Fase 6), **UserBlock** + **UserReport** (Fase 7), **CancellationRequest** (Fase 9), **AdminAuditLog** + **CronRun** (Fase 15).
 
-User-velden toegevoegd in roadmap-werk: `maxRunnerUpAttempts` (Cluster A), `iban`/`accountHolderName`/`lastIbanChange` (Fase 5), `suspendedUntil`/`suspensionType`/`suspensionReason`/`suspensionAdminId` (Fase 8). Auction-velden: `runnerUpEnabled`/`failedBidderIds`/`runnerUpAttempts` (Cluster A). Listing.expiresAt + `EXPIRED` enum-waarde **verwijderd** (Cluster C).
+User-velden toegevoegd in roadmap-werk: `maxRunnerUpAttempts` (Cluster A), `iban`/`accountHolderName`/`lastIbanChange` (Fase 5), `suspendedUntil`/`suspensionType`/`suspensionReason`/`suspensionAdminId` (Fase 8). Auction-velden: `runnerUpEnabled`/`failedBidderIds`/`runnerUpAttempts` (Cluster A). Listing.expiresAt + `EXPIRED` enum-waarde **verwijderd** (Cluster C). User-relatie `adminAuditLogs` (Fase 15, named `AdminAuditLogActor`).
 
 ### i18n (`src/i18n/`)
 `routing.ts` (locales: nl default, en) · `request.ts` (translations per request) · `navigation.ts` (i18n Link/redirect) · Proxy: `src/proxy.ts`
 
 ### i18n Namespaces (`src/messages/`)
-`common`, `auth`, `home`, `auction`, `claimsale`, `wallet`, `dashboard`, `profile`, `chat`, `proposal`, `listing`, `watchlist`, `notifications`, `bids`, `search`, `reputation`, `carousel`, `breadcrumbs`, `seller`, `cart`, `shipping`, `sellerClaims`, `subscription`, `verification`, `sales`, `purchases`, `disputes`, `customization`, `footer`, `withdrawal` (Fase 6), `blockReport` (Fase 7), `suspension` (Fase 8), `cancellation` (Fase 9)
+`common`, `auth`, `home`, `auction`, `claimsale`, `wallet`, `dashboard`, `profile`, `chat`, `proposal`, `listing`, `watchlist`, `notifications`, `bids`, `search`, `reputation`, `carousel`, `breadcrumbs`, `seller`, `cart`, `shipping`, `sellerClaims`, `subscription`, `verification`, `sales`, `purchases`, `disputes`, `customization`, `footer`, `withdrawal` (Fase 6), `blockReport` (Fase 7), `suspension` (Fase 8), `cancellation` (Fase 9), `admin` (Fase 15 — bevat shieldTooltip/panelTitle/sectie-namen/nav-keys/KPI-labels/quick-actions; pagina-specifieke strings nog hardcoded NL als follow-up)
 
 ### API Routes (`src/app/api/`)
+**Alle cron-routes** zijn vanaf Fase 15 gewrapt met `withCronLogging` (productie-logs in `CronRun`-tabel) en gebruiken `resolveCronTrigger` voor auth (Bearer secret OF admin-sessie). Bij toevoegen van een nieuwe cron: ook entry in `src/lib/cron-jobs.ts` (`CRON_JOBS` + `CRON_JOB_META` + `CRON_JOB_NAMES`) zodat manual-run via admin-panel werkt.
+
 | Route | Purpose |
 |-------|---------|
-| `auth/[...nextauth]/route.ts` | NextAuth handlers |
+| `auth/[...nextauth]/route.ts` | NextAuth handlers (JWT-callback exposeert nu `accountType` op session, Fase 15) |
 | `upload/route.ts` | Image upload (auth required) |
 | `uploads/[filename]/route.ts` | Serve uploaded files |
 | `balance/route.ts` | Get user balance (auth required) |
@@ -226,6 +261,9 @@ User-velden toegevoegd in roadmap-werk: `maxRunnerUpAttempts` (Cluster A), `iban
 | `cron/auto-confirm/route.ts` | Auto-confirm shipped bundles after timeout |
 | `cron/auto-resolve-disputes/route.ts` | Auto-resolve unresponded disputes |
 | `cron/check-subscriptions/route.ts` | Downgrade expired subscriptions to FREE |
+| `cron/expire-claims/route.ts` | Verloop CLAIMED claimsale-items >15min in cart |
+| `cron/sync-pokewallet/route.ts` | Refresh pricing voor alle PokeWallet-gemapte sets (heavy: ~600 API-calls) |
+| `cron/cleanup-archived-chats/route.ts` | Hard-delete conversations >60 dagen ARCHIVED (destructief — manual run geblokkeerd) |
 | `cron/auction-payment-deadline/route.ts` | Mark expired AWAITING_PAYMENT auctions as PAYMENT_FAILED OF rotateer naar runner-up (Cluster A) |
 | `cron/proposal-payment-deadline/route.ts` | Mark expired ACCEPTED-AWAITING_PAYMENT proposals as PAYMENT_FAILED, listing terug op ACTIVE (A3) |
 | `cron/cancellation-expiry/route.ts` | Mark PENDING `CancellationRequest`s die >7 dagen open staan als EXPIRED (Fase 9) |
@@ -238,7 +276,6 @@ User-velden toegevoegd in roadmap-werk: `maxRunnerUpAttempts` (Cluster A), `iban
 | Fase | Onderwerp |
 |------|-----------|
 | 13 | Premium statistieken |
-| 15 | Admin panel (gecentraliseerd dashboard voor users/disputes/verificaties/payouts/reports) |
 | 16 | Email notificaties |
 | 17 | Betaalmethoden (iDEAL/Stripe) |
 | 18 | Veiling eindetijden pagina |
@@ -249,12 +286,14 @@ User-velden toegevoegd in roadmap-werk: `maxRunnerUpAttempts` (Cluster A), `iban
 | 23 | Customization Chapter 1 — eigen cosmetic-art (banners/emblems/backgrounds) seeden + via `rewardCosmeticKey` koppelen aan achievement-tiers |
 | 24 | Mascotte-uitbreiding — Finn & Sage poses transparant maken en integreren in empty-states, 404-page, achievement-celebration-toast, profile-page |
 
-Afgerond: fases 0–12, 14 (3-tier abonnementssysteem), customization/achievement/IP-cleanup pivot, en op 2026-04-29 de **9-fase audit-roadmap** (clusters A-D fundament-fixes + fases 5-9: IBAN/payouts/blocking+reports/account-suspension/cancellation-requests). Update deze tabel na elke afgeronde fase.
+Afgerond: fases 0–12, 14 (3-tier abonnementssysteem), customization/achievement/IP-cleanup pivot, op 2026-04-29 de **9-fase audit-roadmap** (clusters A-D fundament-fixes + fases 5-9: IBAN/payouts/blocking+reports/account-suspension/cancellation-requests), en op 2026-04-30 **Fase 15 — Admin panel** (volledige backoffice op `/dashboard/admin/*` met audit-logging, cron-status/run-now, user-360°-detail, catalog/AppConfig/moderation). Update deze tabel na elke afgeronde fase.
 
 ### Bekende follow-ups (klein onderhoud, niet eigen fase)
 - Search/homepage/recommendations filteren nog niet op `UserBlock` (alleen marktplaats/veilingen/claimsales/conversations doen dat). Helper `getBlockedUserIds()` bestaat al — hoeven alleen toe te passen.
 - `src/app/[locale]/dashboard/claimsales/page.tsx` (en mogelijk meer) gebruikt `session!.user!.id!` met non-null asserts en crashed bij no-session i.p.v. te redirecten naar /login.
 - PENDING `ShippingBundle`s zijn niet zichtbaar in `/dashboard/aankopen`/`verkopen` — daar wordt PENDING uitgefilterd. Pending auctions hebben aparte sectie, pending listing-proposals worden via chat afgehandeld. Eventueel een "Wachten op betaling"-sectie toevoegen.
+- Admin-panel pagina's (`/dashboard/admin/bank-transfers`, `/users`, `/catalog`, `/config`, `/crons`, `/moderation`, `/audit`) gebruiken hardcoded NL-strings; alleen het `admin` i18n-namespace voor sectie/nav/KPI is gevuld. Pagina-strings progressief migreren wanneer EN echt gebruikt gaat worden.
+- Admin user-detail "manuele verificatie" knop ontbreekt nog — bestaande `adminReviewVerification` werkt alleen op een bestaande `VerificationRequest`. Voor "verifieer zonder upload" zou een aparte action nodig zijn.
 
 ## Workflow
 - Na elke grote verandering: herstart de dev server (`npm run dev`) en controleer of alles correct werkt voordat je verdergaat.
@@ -284,6 +323,39 @@ Bij een nieuwe write-action die door een gebruiker getriggerd wordt, voeg deze g
 5. Account-age cap (`checkAmountAllowed` voor financiële commitments)
 6. Balance/saldo-check
 7. Race-safe write via `updateMany` met status-filter, of expliciete `prisma.$transaction`
+
+### Action guards voor **admin-actions** (Fase 15)
+Admin-only schrijfacties hebben een ander patroon — de eindgebruiker is hier geen "user", maar een admin die op iemand anders' state acteert:
+1. `const { adminId } = await requireAdmin();` (uit `@/lib/admin`) — werpt bij niet-ADMIN. Page-variant: `requireAdminPage()` doet redirect.
+2. Resource-check + state-check (existentie + correcte status)
+3. **De eigenlijke schrijfactie** (transactie of single update)
+4. **`await logAdminAction({ adminId, action, targetType, targetId?, metadata? })`** uit `@/lib/admin-audit` — direct na succes, niet bij faalpaden. Het `action`-string moet bestaan in de `AdminAction` const-union (uitbreiden in `admin-audit.ts`).
+5. Optionele notificatie naar de getroffen user (zoals in `suspendUser`, `confirmBankTransfer`).
+6. `revalidatePath()` voor de admin-page die het toont.
+
+Voorbeeld: zie `src/actions/admin-suspension.ts:suspendUser` of `src/actions/withdrawal.ts:approveWithdrawal`.
+
+### Nieuwe admin-feature toevoegen — checklist
+Bij elk verzoek dat raakt aan "iets dat alleen admins doen" (queue, bulk-actie, instelling, log-view):
+1. **Pagina** komt onder `/dashboard/admin/<feature>/page.tsx`. Géén nieuwe `*/admin/` paden ergens anders. `dashboard/admin/layout.tsx` doet de role-guard al — geen inline `accountType !== "ADMIN"` checks.
+2. **Server actions** komen in `src/actions/admin/<feature>.ts`. Elke action begint met `await requireAdmin()` en eindigt met `await logAdminAction(...)` (zie patroon hierboven).
+3. **AdminAction-union** in `src/lib/admin-audit.ts` uitbreiden met de nieuwe action-keys voordat je `logAdminAction()` aanroept.
+4. **Nav-entry** in `src/components/admin/admin-nav.tsx` toevoegen onder de juiste sectie (Overview / Queues / Users & Content / System).
+5. **i18n-keys** in het `admin` namespace (`src/messages/nl.json` + `en.json`) — minstens label + section, page-strings mogen hardcoded NL als de feature admin-only is.
+6. **Overview-tegel** op `/dashboard/admin/page.tsx`? Alleen als het een queue is met "openstaand werk". Voeg een KPI-tegel + count-query toe.
+7. **Audit-page filters** — als de nieuwe action veel zal voorkomen, voeg de action-key toe aan de `ACTIONS` const in `src/app/[locale]/dashboard/admin/audit/page.tsx` (en `targetType` aan `TARGET_TYPES` indien nieuw).
+
+### Nieuwe cron toevoegen — checklist (Fase 15)
+1. **Route** in `src/app/api/cron/<name>/route.ts` — gebruik `resolveCronTrigger(request)` voor auth en wrap business logic in `withCronLogging("<name>", async (run) => { ... }, trigger)`. `run.setItemsProcessed(n)` aanroepen voor zinvolle stats.
+2. **Registry-entry** in `src/lib/cron-jobs.ts`:
+   - Toevoegen aan `CRON_JOB_NAMES` const-tuple
+   - Runner-functie in `CRON_JOBS` (zelfde shape als de andere — `{ itemsProcessed, result }` returnen)
+   - Meta-entry in `CRON_JOB_META`: `description` (1-2 zinnen), `schedule`, `allowManualRun` (default true tenzij destructief), optionele `runWarning` voor heavy/risky jobs.
+3. **Mag deze cron manueel?** Default ja. Zet `allowManualRun: false` voor:
+   - Destructieve jobs (hard-delete, geen reversal mogelijk)
+   - Jobs waarbij scheduling-frequentie precies belangrijk is en handmatig draaien de logica breekt
+4. Heavy/risky maar wel manueel? Vul `runWarning` — die wordt zowel in de UI getoond als in de browser-confirm-prompt verwerkt.
+5. CLAUDE.md API Routes-tabel hierboven bijwerken met de nieuwe route.
 
 ### Schema-velden die moeten meereizen bij nieuwe queries op publieke lijsten
 - **Country filter:** `getSellerCountryFilter(buyerCountry)` (`src/lib/shipping/filter.ts`)

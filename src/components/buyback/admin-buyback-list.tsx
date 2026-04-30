@@ -113,7 +113,7 @@ export function AdminBuybackList({ requests }: AdminBuybackListProps) {
                 </td>
                 <td className="px-4 py-3">
                   <Link
-                    href={`/dashboard/inkoop/admin/${req.id}`}
+                    href={`/dashboard/admin/buybacks/${req.id}`}
                     className="flex items-center gap-1 text-primary hover:underline"
                   >
                     {t("adminInspect")} <ChevronRight className="h-3 w-3" />

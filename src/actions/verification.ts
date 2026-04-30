@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
+import { logAdminAction } from "@/lib/admin-audit";
 
 export async function submitVerification(formData: FormData) {
   const session = await auth();
@@ -150,6 +151,19 @@ export async function adminReviewVerification(
       "/nl/dashboard/verificatie"
     );
   }
+
+  await logAdminAction({
+    adminId: session.user.id,
+    action: "REVIEW_VERIFICATION",
+    targetType: "VERIFICATION",
+    targetId: requestId,
+    metadata: {
+      decision,
+      reason: reason ?? null,
+      userId: request.userId,
+      userName: request.user.displayName,
+    },
+  });
 
   return { success: true };
 }

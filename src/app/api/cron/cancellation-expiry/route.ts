@@ -1,47 +1,50 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
+import { withCronLogging } from "@/lib/cron-logging";
+import { resolveCronTrigger } from "@/lib/cron-auth";
 
 // GET /api/cron/cancellation-expiry
 // Markeer PENDING annuleringsverzoeken die over hun 7-dagen-deadline zijn als
 // EXPIRED. Geen reactie van wederpartij = verkoper blijft leveringsplichtig.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
+  const trigger = await resolveCronTrigger(request);
+  if (!trigger) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await withCronLogging("cancellation-expiry", async (run) => {
+    const now = new Date();
 
-  const now = new Date();
-
-  const expired = await prisma.cancellationRequest.findMany({
-    where: {
-      status: "PENDING",
-      expiresAt: { lt: now },
-    },
-    include: {
-      shippingBundle: { select: { orderNumber: true } },
-    },
-  });
-
-  let processed = 0;
-  for (const r of expired) {
-    await prisma.cancellationRequest.update({
-      where: { id: r.id },
-      data: { status: "EXPIRED" },
+    const expired = await prisma.cancellationRequest.findMany({
+      where: {
+        status: "PENDING",
+        expiresAt: { lt: now },
+      },
+      include: {
+        shippingBundle: { select: { orderNumber: true } },
+      },
     });
 
-    await createNotification(
-      r.proposedById,
-      "NEW_MESSAGE",
-      "Annuleringsverzoek verlopen",
-      `Je annuleringsverzoek voor bestelling ${r.shippingBundle.orderNumber} is verlopen omdat de wederpartij niet heeft gereageerd. De bestelling staat nog open.`,
-      "/dashboard/aankopen"
-    );
+    let processed = 0;
+    for (const r of expired) {
+      await prisma.cancellationRequest.update({
+        where: { id: r.id },
+        data: { status: "EXPIRED" },
+      });
 
-    processed++;
-  }
+      await createNotification(
+        r.proposedById,
+        "NEW_MESSAGE",
+        "Annuleringsverzoek verlopen",
+        `Je annuleringsverzoek voor bestelling ${r.shippingBundle.orderNumber} is verlopen omdat de wederpartij niet heeft gereageerd. De bestelling staat nog open.`,
+        "/dashboard/aankopen"
+      );
 
-  return NextResponse.json({ processed, total: expired.length });
+      processed++;
+    }
+
+    run.setItemsProcessed(processed);
+    return { processed, total: expired.length };
+  }, trigger);
+
+  return NextResponse.json(result);
 }

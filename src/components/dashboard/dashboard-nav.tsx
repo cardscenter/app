@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
+import { AdminNav } from "@/components/admin/admin-nav";
 import {
   LayoutDashboard,
   BarChart3,
@@ -27,7 +28,7 @@ import {
   ArrowDownToLine,
   LogOut,
   Ban,
-  Flag,
+  Shield,
 } from "lucide-react";
 
 interface NavSection {
@@ -45,11 +46,29 @@ interface LevelInfo {
   nextLevelName: string | null;
 }
 
-export function DashboardNav({ accountType, level }: { accountType?: string; level?: LevelInfo }) {
+type DashboardNavProps = {
+  accountType?: string;
+  level?: LevelInfo;
+  adminPendingCounts?: { disputes?: number; verifications?: number; withdrawals?: number; buybacks?: number; reports?: number };
+};
+
+// Thin wrapper: decides which nav to render based on path + admin status.
+// Splitting the swap from the inner component avoids React reconciliation
+// confusion (the inner DashboardNavInner has 7 hooks, AdminNav has 3 — keeping
+// them as siblings instead of a parent-with-early-return makes hook-counts
+// stable per fiber).
+export function DashboardNav(props: DashboardNavProps) {
+  const pathname = usePathname();
+  if (props.accountType === "ADMIN" && pathname.startsWith("/dashboard/admin")) {
+    return <AdminNav pendingCounts={props.adminPendingCounts} />;
+  }
+  return <DashboardNavInner {...props} />;
+}
+
+function DashboardNavInner({ accountType, level }: DashboardNavProps) {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
   const pathname = usePathname();
-  const isAdmin = accountType === "ADMIN";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,6 +78,8 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
     };
   }, []);
+
+  const isAdmin = accountType === "ADMIN";
 
   function handleLogoutClick() {
     if (confirmLogout) {
@@ -129,20 +150,8 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
         { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
       ],
     },
-    ...(isAdmin
-      ? [
-          {
-            label: "sectionAdmin",
-            items: [
-              { href: "/dashboard/inkoop/admin", labelKey: "adminBuyback", icon: ArrowDownToLine },
-              { href: "/dashboard/uitbetalingen/admin", labelKey: "adminWithdrawals", icon: Wallet },
-              { href: "/dashboard/geschillen/admin", labelKey: "adminDisputes", icon: Scale },
-              { href: "/dashboard/geschillen/admin/verificaties", labelKey: "adminVerifications", icon: ShieldCheck },
-              { href: "/dashboard/rapporten/admin", labelKey: "adminReports", icon: Flag },
-            ],
-          },
-        ]
-      : []),
+    // Admin Panel staat NIET meer in de sections — wordt onder de nav als
+    // eigen knop gerenderd (zoals de logout-button), zie `adminPanelButton`.
   ];
 
   const isLevelActive = pathname === "/dashboard/level";
@@ -194,6 +203,17 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
       {confirmLogout ? tc("logoutConfirm") : tc("logout")}
     </button>
   );
+
+  const adminPanelButton = isAdmin ? (
+    <Link
+      href="/dashboard/admin"
+      onClick={() => setMobileOpen(false)}
+      className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50"
+    >
+      <Shield className="h-4 w-4 shrink-0" />
+      {t("adminPanel")}
+    </Link>
+  ) : null;
 
   const navLinks = sections.map((section) => (
     <div key={section.label}>
@@ -247,6 +267,7 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
               {levelCard && <div className="mb-2">{levelCard}</div>}
               {navLinks}
             </div>
+            {adminPanelButton && <div className="mt-3">{adminPanelButton}</div>}
             <div className="mt-3">{logoutButton}</div>
           </>
         )}
@@ -258,6 +279,7 @@ export function DashboardNav({ accountType, level }: { accountType?: string; lev
           {levelCard && <div className="mb-2">{levelCard}</div>}
           {navLinks}
         </nav>
+        {adminPanelButton && <div className="mt-3">{adminPanelButton}</div>}
         <div className="mt-3">{logoutButton}</div>
       </div>
     </>

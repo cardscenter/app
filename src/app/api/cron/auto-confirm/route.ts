@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { autoConfirmDeliveries } from "@/actions/purchase";
+import { withCronLogging } from "@/lib/cron-logging";
+import { resolveCronTrigger } from "@/lib/cron-auth";
 
 // GET /api/cron/auto-confirm
 // Call this daily to auto-confirm deliveries older than 30 days
 export async function GET(request: Request) {
-  // Simple auth: check for a secret header (set CRON_SECRET in env)
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
+  const trigger = await resolveCronTrigger(request);
+  if (!trigger) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const result = await autoConfirmDeliveries();
+  const result = await withCronLogging("auto-confirm", async (run) => {
+    const r = await autoConfirmDeliveries();
+    run.setItemsProcessed(r.confirmed);
+    return r;
+  }, trigger);
 
   return NextResponse.json({
     success: true,
