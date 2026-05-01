@@ -499,6 +499,8 @@
       "period90d": "90 dagen",
       "period1y": "1 jaar",
       "periodAll": "Alles",
+      "periodMonth": "Deze maand",
+      "periodYtd": "YTD",
       "totalRevenue": "Totale omzet",
       "itemsSold": "Items verkocht",
       "avgSalePrice": "Gem. verkoopprijs",
@@ -541,7 +543,55 @@
       "viewDetailedStats": "Bekijk gedetailleerde statistieken",
       "locked": "Premium Statistieken",
       "lockedDescription": "Upgrade naar PRO of UNLIMITED voor uitgebreide analytics, grafieken en prestatie-inzichten.",
-      "upgradeCta": "Upgrade nu"
+      "upgradeCta": "Upgrade nu",
+      "export": {
+        "csv": "Export CSV"
+      },
+      "empty": {
+        "noSales": "Nog geen verkopen in deze periode",
+        "noPurchases": "Nog geen aankopen in deze periode",
+        "noReviews": "Nog geen reviews ontvangen in deze periode",
+        "noRatings": "Nog geen beoordelingen in deze periode",
+        "noCommission": "Geen commissie-data in deze periode",
+        "noTrend": "Te weinig data voor een trendgrafiek"
+      }
+    },
+    "essentials": {
+      "actionItems": {
+        "title": "Actie nodig",
+        "allClear": "Alles op orde — geen openstaande acties",
+        "unreadConversations": "Nieuwe berichten",
+        "unreadNotifications": "Nieuwe meldingen",
+        "openDisputes": "Open geschillen",
+        "awaitingPaymentAuctions": "Betaling nodig",
+        "bundlesToShip": "Te verzenden",
+        "pendingCancellations": "Annuleringsverzoeken"
+      },
+      "balance": {
+        "title": "Saldo-overzicht",
+        "viewAll": "Volledig",
+        "available": "Beschikbaar",
+        "reserved": "Gereserveerd",
+        "escrow": "In escrow",
+        "recentTransactions": "Recente mutaties"
+      },
+      "activity": {
+        "title": "Lopende activiteit",
+        "activeAuctions": "Actieve veilingen",
+        "activeListings": "Actieve marktplaats-aanbiedingen",
+        "activeClaimsales": "Actieve claimsales",
+        "myBids": "Mijn lopende biedingen",
+        "bidHighest": "Hoogste bieder",
+        "bidOutbid": "Overboden"
+      },
+      "bundles": {
+        "salesTitle": "Recente verkopen",
+        "purchasesTitle": "Recente aankopen",
+        "emptySales": "Nog geen verkopen",
+        "emptyPurchases": "Nog geen aankopen",
+        "buyer": "Koper",
+        "seller": "Verkoper"
+      }
     }
   },
   "profile": {

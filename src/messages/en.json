@@ -499,6 +499,8 @@
       "period90d": "90 days",
       "period1y": "1 year",
       "periodAll": "All time",
+      "periodMonth": "This month",
+      "periodYtd": "YTD",
       "totalRevenue": "Total revenue",
       "itemsSold": "Items sold",
       "avgSalePrice": "Avg. sale price",
@@ -541,7 +543,55 @@
       "viewDetailedStats": "View detailed statistics",
       "locked": "Premium Statistics",
       "lockedDescription": "Upgrade to PRO or UNLIMITED for advanced analytics, charts and performance insights.",
-      "upgradeCta": "Upgrade now"
+      "upgradeCta": "Upgrade now",
+      "export": {
+        "csv": "Export CSV"
+      },
+      "empty": {
+        "noSales": "No sales in this period yet",
+        "noPurchases": "No purchases in this period yet",
+        "noReviews": "No reviews received in this period yet",
+        "noRatings": "No ratings in this period yet",
+        "noCommission": "No commission data in this period",
+        "noTrend": "Not enough data for a trend chart"
+      }
+    },
+    "essentials": {
+      "actionItems": {
+        "title": "Action needed",
+        "allClear": "All clear — no pending actions",
+        "unreadConversations": "New messages",
+        "unreadNotifications": "New notifications",
+        "openDisputes": "Open disputes",
+        "awaitingPaymentAuctions": "Payment due",
+        "bundlesToShip": "To ship",
+        "pendingCancellations": "Cancellation requests"
+      },
+      "balance": {
+        "title": "Balance overview",
+        "viewAll": "View all",
+        "available": "Available",
+        "reserved": "Reserved",
+        "escrow": "In escrow",
+        "recentTransactions": "Recent activity"
+      },
+      "activity": {
+        "title": "Active items",
+        "activeAuctions": "Active auctions",
+        "activeListings": "Active listings",
+        "activeClaimsales": "Active claimsales",
+        "myBids": "My active bids",
+        "bidHighest": "Highest bidder",
+        "bidOutbid": "Outbid"
+      },
+      "bundles": {
+        "salesTitle": "Recent sales",
+        "purchasesTitle": "Recent purchases",
+        "emptySales": "No sales yet",
+        "emptyPurchases": "No purchases yet",
+        "buyer": "Buyer",
+        "seller": "Seller"
+      }
     }
   },
   "profile": {
