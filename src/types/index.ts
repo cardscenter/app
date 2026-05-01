@@ -69,8 +69,12 @@ export const LISTING_TYPES = [
 ] as const;
 export type ListingType = (typeof LISTING_TYPES)[number];
 
-export const LISTING_STATUSES = ["ACTIVE", "SOLD", "DELETED"] as const;
+// Fase 27: DRAFT (concept, niet gepubliceerd), PAUSED (tijdelijk verborgen),
+// RESERVED (gekoppeld aan accepted bundle-offer of partial-balance proposal).
+export const LISTING_STATUSES = ["DRAFT", "ACTIVE", "PAUSED", "RESERVED", "SOLD", "DELETED"] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
+
+export const PUBLIC_LISTING_STATUSES = ["ACTIVE"] as const;
 
 // Delivery & shipping
 export const DELIVERY_METHODS = ["PICKUP", "SHIP", "BOTH"] as const;

@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createListingSchema } from "@/lib/validations/listing";
+import { createListingSchema, draftListingSchema } from "@/lib/validations/listing";
 import { calculateUpsellCost } from "@/lib/upsell-config";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
@@ -386,37 +386,333 @@ export async function updateListingStatus(listingId: string, status: "SOLD" | "D
   // their offer — the listing they were negotiating on is gone. Each proposal
   // gets a system message in the chat and the proposer gets a notification.
   if (status === "DELETED") {
-    const pendingProposals = await prisma.proposal.findMany({
-      where: { listingId, status: "PENDING" },
-      select: { id: true, conversationId: true, proposerId: true, amount: true },
+    await cascadeRejectProposalsAndBundleOffers({
+      listingId,
+      listingTitle: listing.title,
+      systemMessageReason: "verwijderd door de verkoper",
+      sellerId: session.user.id,
+    });
+  }
+
+  return { success: true };
+}
+
+// Shared cascade voor zowel DELETED als PAUSED. Rejecteert PENDING enkel-listing
+// proposals én PENDING multi-listing bundle-offers waar deze listing in zit,
+// met systeembericht in chat en notificatie naar de proposer/buyer.
+async function cascadeRejectProposalsAndBundleOffers({
+  listingId,
+  listingTitle,
+  systemMessageReason,
+  sellerId,
+}: {
+  listingId: string;
+  listingTitle: string;
+  systemMessageReason: string;
+  sellerId: string;
+}) {
+  // 1. Single-listing proposals
+  const pendingProposals = await prisma.proposal.findMany({
+    where: { listingId, status: "PENDING" },
+    select: { id: true, conversationId: true, proposerId: true, amount: true },
+  });
+
+  for (const p of pendingProposals) {
+    await prisma.proposal.update({
+      where: { id: p.id },
+      data: { status: "REJECTED", respondedAt: new Date() },
     });
 
-    for (const p of pendingProposals) {
-      await prisma.proposal.update({
-        where: { id: p.id },
-        data: { status: "REJECTED", respondedAt: new Date() },
-      });
+    await prisma.message.create({
+      data: {
+        conversationId: p.conversationId,
+        senderId: sellerId,
+        body: `De advertentie "${listingTitle}" is ${systemMessageReason}. Dit voorstel is automatisch afgewezen.`,
+      },
+    });
 
-      // System message: senderId = the seller who deleted the listing.
-      // We render this in the chat as a regular message (no proposalId link
-      // because the proposal is now REJECTED, not actionable).
-      await prisma.message.create({
-        data: {
-          conversationId: p.conversationId,
-          senderId: session.user.id,
-          body: `De advertentie "${listing.title}" is verwijderd door de verkoper. Dit voorstel is automatisch afgewezen.`,
-        },
-      });
-
-      await createNotification(
-        p.proposerId,
-        "NEW_MESSAGE",
-        "Voorstel afgewezen",
-        `De advertentie "${listing.title}" is verwijderd. Je voorstel van €${p.amount.toFixed(2)} is automatisch afgewezen.`,
-        `/nl/berichten/${p.conversationId}`
-      );
-    }
+    await createNotification(
+      p.proposerId,
+      "NEW_MESSAGE",
+      "Voorstel afgewezen",
+      `De advertentie "${listingTitle}" is ${systemMessageReason}. Je voorstel van €${p.amount.toFixed(2)} is automatisch afgewezen.`,
+      `/nl/berichten/${p.conversationId}`
+    );
   }
+
+  // 2. Multi-listing bundle-offers (Fase 27)
+  const affectedBundleOffers = await prisma.bundleProposal.findMany({
+    where: {
+      status: "PENDING",
+      listings: { some: { listingId } },
+    },
+    select: { id: true, conversationId: true, buyerId: true, totalAmount: true },
+  });
+
+  for (const bp of affectedBundleOffers) {
+    await prisma.bundleProposal.update({
+      where: { id: bp.id },
+      data: { status: "REJECTED", respondedAt: new Date() },
+    });
+
+    await prisma.message.create({
+      data: {
+        conversationId: bp.conversationId,
+        senderId: sellerId,
+        body: `Een advertentie in dit bundel-voorstel ("${listingTitle}") is ${systemMessageReason}. Het bundel-voorstel is automatisch afgewezen.`,
+      },
+    });
+
+    await createNotification(
+      bp.buyerId,
+      "NEW_MESSAGE",
+      "Bundel-voorstel afgewezen",
+      `Een advertentie ("${listingTitle}") in je bundel-voorstel van €${bp.totalAmount.toFixed(2)} is ${systemMessageReason}. Het voorstel is automatisch afgewezen.`,
+      `/nl/berichten/${bp.conversationId}`
+    );
+  }
+}
+
+// Fase 27: opslaan als concept. Permissieve validatie (alleen titel +
+// listingType verplicht); volledige check pas bij `publishDraft`.
+// Account-limits worden NIET gecheckt voor DRAFT — een gebruiker mag
+// onbeperkt concepten hebben, alleen ACTIVE telt mee.
+export async function saveDraft(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const listingId = (formData.get("listingId") as string | null) || null;
+
+  const raw = {
+    listingType: formData.get("listingType") || "SINGLE_CARD",
+    imageUrls: formData.get("imageUrls") || "[]",
+    title: formData.get("title") || "Concept",
+    description: formData.get("description") || undefined,
+    cardName: formData.get("cardName") || undefined,
+    cardSetId: formData.get("cardSetId") || undefined,
+    tcgdexId: formData.get("tcgdexId") || undefined,
+    cardItems: formData.get("cardItems") || undefined,
+    estimatedCardCount: formData.get("estimatedCardCount") || undefined,
+    conditionRange: formData.get("conditionRange") || undefined,
+    productType: formData.get("productType") || undefined,
+    itemCategory: formData.get("itemCategory") || undefined,
+    condition: formData.get("condition") || undefined,
+    pricingType: formData.get("pricingType") || undefined,
+    price: formData.get("price") || undefined,
+    deliveryMethod: formData.get("deliveryMethod") || undefined,
+    freeShipping: formData.get("freeShipping") === "true",
+    shippingCost: formData.get("shippingCost") || "0",
+    carriers: formData.get("carriers") || undefined,
+    packageSize: formData.get("packageSize") || undefined,
+    packageCount: formData.get("packageCount") || "1",
+    pickupPostalCode: formData.get("pickupPostalCode") || undefined,
+    pickupCity: formData.get("pickupCity") || undefined,
+    shippingMethodIds: formData.get("shippingMethodIds") || undefined,
+  };
+
+  const result = draftListingSchema.safeParse(raw);
+  if (!result.success) {
+    return { error: result.error.issues[0].message };
+  }
+
+  const data = result.data;
+  const userId = session.user.id;
+
+  const listingData: Record<string, unknown> = {
+    title: data.title,
+    description: data.description ?? "",
+    imageUrls: data.imageUrls || "[]",
+    listingType: data.listingType,
+    pricingType: data.pricingType ?? "FIXED",
+    price: data.pricingType === "FIXED" ? data.price ?? null : null,
+    deliveryMethod: data.deliveryMethod ?? "SHIP",
+    freeShipping: data.freeShipping,
+    shippingCost: data.freeShipping ? 0 : data.shippingCost,
+    carriers: data.carriers || null,
+    packageSize: data.packageSize || null,
+    packageCount: data.packageCount,
+    pickupPostalCode: data.pickupPostalCode || null,
+    pickupCity: data.pickupCity || null,
+    cardName: data.cardName || null,
+    cardSetId: data.cardSetId || null,
+    tcgdexId: data.tcgdexId || null,
+    cardItems: data.cardItems || null,
+    estimatedCardCount: data.estimatedCardCount ?? null,
+    conditionRange: data.conditionRange || null,
+    productType: data.productType || null,
+    itemCategory: data.itemCategory || null,
+    condition: data.condition || null,
+    sellerId: userId,
+    status: "DRAFT",
+  };
+
+  let listing;
+  if (listingId) {
+    // Updating existing draft: ownership + status guard
+    const existing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { sellerId: true, status: true },
+    });
+    if (!existing || existing.sellerId !== userId) return { error: "Niet geautoriseerd" };
+    if (existing.status !== "DRAFT") return { error: "Alleen concepten kunnen bewerkt worden via deze actie" };
+
+    listing = await prisma.listing.update({
+      where: { id: listingId },
+      data: listingData as never,
+    });
+  } else {
+    listing = await prisma.listing.create({ data: listingData as never });
+  }
+
+  return { success: true, listingId: listing.id };
+}
+
+// Fase 27: concept publiceren. Volledige createListingSchema-validatie + limit-check.
+// Geen upsells/wallet-deduct in deze flow (upsells alleen via createListing).
+export async function publishDraft(listingId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: { shippingMethods: true },
+  });
+  if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (listing.status !== "DRAFT") return { error: "Alleen concepten kunnen gepubliceerd worden" };
+
+  const limit = await checkListingLimit(session.user.id);
+  if (!limit.allowed) {
+    return { error: `Je hebt het maximum aantal actieve advertenties bereikt (${limit.max})` };
+  }
+
+  // Re-valideren met volledige createListingSchema. We bouwen pseudo-FormData uit
+  // de huidige Listing-velden zodat we exact dezelfde regels afdwingen.
+  const result = createListingSchema.safeParse({
+    listingType: listing.listingType,
+    imageUrls: listing.imageUrls,
+    title: listing.title,
+    description: listing.description,
+    cardName: listing.cardName ?? undefined,
+    cardSetId: listing.cardSetId ?? undefined,
+    tcgdexId: listing.tcgdexId ?? undefined,
+    cardItems: listing.cardItems ?? undefined,
+    estimatedCardCount: listing.estimatedCardCount ?? undefined,
+    conditionRange: listing.conditionRange ?? undefined,
+    productType: listing.productType ?? undefined,
+    itemCategory: listing.itemCategory ?? undefined,
+    condition: listing.condition ?? undefined,
+    pricingType: listing.pricingType,
+    price: listing.price ?? undefined,
+    deliveryMethod: listing.deliveryMethod,
+    freeShipping: listing.freeShipping,
+    shippingCost: listing.shippingCost,
+    carriers: listing.carriers ?? undefined,
+    packageSize: listing.packageSize ?? undefined,
+    packageCount: listing.packageCount,
+  });
+  if (!result.success) {
+    return { error: result.error.issues[0].message };
+  }
+
+  // Pickup-locatie verplicht als deliveryMethod ∈ {PICKUP, BOTH}
+  if ((listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH")
+    && (!listing.pickupPostalCode || !listing.pickupCity)) {
+    return { error: "Vul postcode en plaats voor ophalen in" };
+  }
+
+  await prisma.listing.update({
+    where: { id: listingId },
+    data: { status: "ACTIVE" },
+  });
+
+  return { success: true };
+}
+
+// Fase 27: tijdelijk verbergen. PENDING proposals + bundle-offers worden
+// gerejecteerd zoals bij DELETED — de seller heeft duidelijk aangegeven nu
+// niet te willen verkopen. Resume zet alleen de listing weer ACTIVE; oude
+// proposals zijn dan al weg.
+export async function pauseListing(listingId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (listing.status !== "ACTIVE") return { error: "Alleen actieve advertenties kunnen gepauzeerd worden" };
+
+  // Race-safe flip
+  const flipped = await prisma.listing.updateMany({
+    where: { id: listingId, status: "ACTIVE" },
+    data: { status: "PAUSED" },
+  });
+  if (flipped.count === 0) {
+    return { error: "Advertentie kon niet gepauzeerd worden — status is gewijzigd" };
+  }
+
+  await cascadeRejectProposalsAndBundleOffers({
+    listingId,
+    listingTitle: listing.title,
+    systemMessageReason: "tijdelijk gepauzeerd door de verkoper",
+    sellerId: session.user.id,
+  });
+
+  return { success: true };
+}
+
+// Fase 27: pauze opheffen. Geen cascade — eerdere proposals zijn al gerejecteerd.
+export async function resumeListing(listingId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (listing.status !== "PAUSED") return { error: "Alleen gepauzeerde advertenties kunnen hervat worden" };
+
+  // Account-limit check bij hervatten — de seller zou tussentijds andere actieve
+  // listings hebben kunnen aanmaken. Anders kan een seller met PAUSED de cap omzeilen.
+  const limit = await checkListingLimit(session.user.id);
+  if (!limit.allowed) {
+    return { error: `Je hebt het maximum aantal actieve advertenties bereikt (${limit.max})` };
+  }
+
+  const flipped = await prisma.listing.updateMany({
+    where: { id: listingId, status: "PAUSED" },
+    data: { status: "ACTIVE" },
+  });
+  if (flipped.count === 0) {
+    return { error: "Advertentie kon niet hervat worden — status is gewijzigd" };
+  }
+
+  return { success: true };
+}
+
+// Fase 27: hard-delete van een DRAFT-listing (concept). Geen cascade nodig
+// omdat een DRAFT nooit publiek is geweest, dus geen proposals/bundle-offers.
+export async function deleteDraft(listingId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (listing.status !== "DRAFT") return { error: "Alleen concepten kunnen via deze actie verwijderd worden" };
+
+  await prisma.listing.delete({ where: { id: listingId } });
 
   return { success: true };
 }
