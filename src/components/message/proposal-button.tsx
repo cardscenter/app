@@ -28,18 +28,20 @@ export function ProposalButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function close() {
+    setOpen(false);
     setError(null);
-    setLoading(true);
+  }
 
+  async function handleSubmit() {
+    setError(null);
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setError(t("enterAmount"));
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
     const result = await createProposal(
       conversationId,
       parsedAmount,
@@ -59,28 +61,37 @@ export function ProposalButton({
   }
 
   const title = isSeller ? t("suggestPrice") : t("makeOffer");
+  const overBudget =
+    !isSeller &&
+    availableBalance !== undefined &&
+    parseFloat(amount) > availableBalance &&
+    parseFloat(amount) > 0;
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg p-2 text-muted-foreground hover:bg-muted/50 transition-colors"
+        className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
         title={title}
       >
         <HandCoins className="h-5 w-5" />
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setOpen(false); setError(null); }}>
-          <div className="glass w-full max-w-md rounded-2xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">
-                {title}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={close}>
+          <div
+            className="glass max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <HandCoins className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+              </div>
               <button
                 type="button"
-                onClick={() => { setOpen(false); setError(null); }}
+                onClick={close}
                 className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
@@ -88,62 +99,75 @@ export function ProposalButton({
             </div>
 
             {listingTitle && (
-              <p className="text-sm text-muted-foreground mb-4 truncate">
+              <p className="mb-5 truncate text-sm text-muted-foreground">
                 {t("proposalFor", { title: listingTitle })}
               </p>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  {t("amount")}
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">&euro;</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background pl-8 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
+            {/* Amount */}
+            <div className="mb-5">
+              <label className="mb-2 block text-sm font-medium text-foreground">
+                {t("amount")}
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
+                />
               </div>
+            </div>
 
-              {/* Balance info for buyers */}
-              {!isSeller && availableBalance !== undefined && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{t("yourBalance")}:</span>
-                  <span className="font-medium text-foreground">&euro;{availableBalance.toFixed(2)}</span>
-                </div>
-              )}
+            {/* Balance info (buyer only) */}
+            {!isSeller && availableBalance !== undefined && (
+              <div className="mb-5 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{t("yourBalance")}:</span>
+                <span className="ml-auto font-medium text-foreground">
+                  €{availableBalance.toFixed(2)}
+                </span>
+              </div>
+            )}
 
-              {/* Warning if amount exceeds balance */}
-              {!isSeller && availableBalance !== undefined && parseFloat(amount) > availableBalance && parseFloat(amount) > 0 && (
-                <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3">
-                  <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-2">
-                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                    {t("balanceInsufficient")}
-                  </p>
-                </div>
-              )}
+            {/* Over-budget warning */}
+            {overBudget && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                <p className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                  {t("balanceInsufficient")}
+                </p>
+              </div>
+            )}
 
-              {error && (
-                <p className="text-sm text-red-500">{error}</p>
-              )}
+            {error && (
+              <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+                {error}
+              </div>
+            )}
 
+            <div className="flex gap-3">
               <button
-                type="submit"
+                type="button"
+                onClick={close}
                 disabled={loading}
-                className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover disabled:opacity-50"
+                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading || !amount}
+                className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
               >
                 {loading ? "..." : t("submit")}
               </button>
-            </form>
+            </div>
           </div>
         </div>
       )}
