@@ -8,6 +8,7 @@ import { RarityBadge } from "@/components/customization/rarity-badge";
 import { EmberBalance } from "@/components/customization/ember-balance";
 import { getRarity } from "@/lib/cosmetic-config";
 import { cn } from "@/lib/utils";
+import { PageContainer } from "@/components/layout/page-container";
 
 const RARITY_ORDER: Record<string, number> = {
   UNIQUE: 0,
@@ -95,7 +96,7 @@ export default async function InventoryPage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <PageContainer width="default" className="py-8">
       <div className="mb-6 flex items-center gap-3">
         <Link href="/customization" className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <ArrowLeft className="size-5" />
@@ -221,6 +222,6 @@ export default async function InventoryPage({
           })}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

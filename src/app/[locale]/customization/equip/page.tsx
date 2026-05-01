@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { EquipSelector } from "@/components/customization/equip-selector";
 import { SELLER_LEVELS } from "@/lib/seller-levels";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function EquipPage() {
   const t = await getTranslations("customization");
@@ -63,7 +64,7 @@ export default async function EquipPage() {
   const ownedBackgrounds = ownedItems.filter((o) => o.item.type === "BACKGROUND");
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <PageContainer width="default" className="py-8">
       <div className="mb-6 flex items-center gap-3">
         <Link href="/customization" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-5" />
@@ -102,6 +103,6 @@ export default async function EquipPage() {
         }))}
         bundles={bundles}
       />
-    </div>
+    </PageContainer>
   );
 }

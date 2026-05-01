@@ -7,6 +7,7 @@ import { EmberBalance } from "@/components/customization/ember-balance";
 import { EmberIcon } from "@/components/customization/ember-icon";
 import { LoginStreak } from "@/components/customization/login-streak";
 import { getLoginStreakInfo } from "@/actions/customization";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function CustomizationPage() {
   const t = await getTranslations("customization");
@@ -28,7 +29,7 @@ export default async function CustomizationPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <PageContainer width="default" className="py-8">
       <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 shadow-2xl ring-1 ring-white/10">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-orange-500/10 via-transparent to-purple-500/10" />
         <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-orange-500/10 blur-3xl" />
@@ -162,6 +163,6 @@ export default async function CustomizationPage() {
           ))}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

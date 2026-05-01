@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { KaartenSearch } from "@/components/card/kaarten-search";
+import { PageContainer } from "@/components/layout/page-container";
 import { DatabaseStats } from "@/components/card/database-stats";
 import { DatabaseMarquee } from "@/components/card/database-marquee";
 import { DatabaseTrending, type TrendingCard } from "@/components/card/database-trending";
@@ -269,7 +270,7 @@ export default async function CardsOverviewPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="wide" className="py-8">
       <Breadcrumbs items={[{ label: "Kaarten" }]} />
 
       <header className="mb-6 mt-2">
@@ -388,6 +389,6 @@ export default async function CardsOverviewPage() {
           ))}
         </div>
       </KaartenSearch>
-    </div>
+    </PageContainer>
   );
 }

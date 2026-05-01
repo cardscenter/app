@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { PokemonTypeBadge } from "@/components/pokedex/pokemon-type-badge";
 import { listSpecies, listAllSpecies, dexIdFromUrl, getPokemon } from "@/lib/pokeapi/client";
 import { pokedexSlug } from "@/lib/pokeapi/slug";
+import { PageContainer } from "@/components/layout/page-container";
 
 export const revalidate = 604800; // 7d — the species list is essentially static
 
@@ -61,9 +62,9 @@ export default async function PokedexIndexPage({ searchParams }: Props) {
     const all = await listAllSpecies();
     if (!all) {
       return (
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageContainer width="default" className="py-8">
           <p className="text-sm text-muted-foreground">PokéAPI is momenteel niet bereikbaar.</p>
-        </div>
+        </PageContainer>
       );
     }
     const filtered = all.results
@@ -80,9 +81,9 @@ export default async function PokedexIndexPage({ searchParams }: Props) {
     const list = await listSpecies(offset, PAGE_SIZE);
     if (!list) {
       return (
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <PageContainer width="default" className="py-8">
           <p className="text-sm text-muted-foreground">PokéAPI is momenteel niet bereikbaar.</p>
-        </div>
+        </PageContainer>
       );
     }
     totalItems = list.count;
@@ -110,7 +111,7 @@ export default async function PokedexIndexPage({ searchParams }: Props) {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="wide" className="py-8">
       <Breadcrumbs items={[{ label: tBc("pokedex") }]} />
 
       <header className="mb-6">
@@ -204,6 +205,6 @@ export default async function PokedexIndexPage({ searchParams }: Props) {
         locale={locale}
         extraParams={rawQuery ? { q: rawQuery } : undefined}
       />
-    </div>
+    </PageContainer>
   );
 }

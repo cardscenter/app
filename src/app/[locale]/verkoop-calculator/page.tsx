@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Calculator, Package, ArrowRight, CheckCircle2 } from "lucide-react";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function VerkoopCalculatorPage() {
   const t = await getTranslations("buyback");
@@ -26,7 +27,7 @@ export default async function VerkoopCalculatorPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
+    <PageContainer width="default" className="py-8">
       {/* Header */}
       <div className="mb-10 text-center">
         <h1 className="text-3xl font-bold">{t("title")}</h1>
@@ -92,6 +93,6 @@ export default async function VerkoopCalculatorPage() {
           ))}
         </ul>
       </div>
-    </div>
+    </PageContainer>
   );
 }

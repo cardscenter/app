@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { checkClaimsaleLimit } from "@/lib/account-limits";
 import { ClaimsaleForm } from "@/components/claimsale/claimsale-form";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function NewClaimsalePage() {
   const session = await auth();
@@ -19,7 +20,7 @@ export default async function NewClaimsalePage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       <h1 className="text-2xl font-bold text-foreground">
         {t("createTitle")}
       </h1>
@@ -29,6 +30,6 @@ export default async function NewClaimsalePage() {
       <div className="mt-8">
         <ClaimsaleForm maxItems={limit.maxItems} shippingMethods={shippingMethods} />
       </div>
-    </div>
+    </PageContainer>
   );
 }

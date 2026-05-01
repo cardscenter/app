@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { MultiStepAuctionForm } from "@/components/auction/multi-step-auction-form";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function NewAuctionPage() {
   const session = await auth();
@@ -23,7 +24,7 @@ export default async function NewAuctionPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       <h1 className="text-2xl font-bold text-foreground">
         {t("createTitle")}
       </h1>
@@ -34,6 +35,6 @@ export default async function NewAuctionPage() {
           accountType={user?.accountType ?? "FREE"}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

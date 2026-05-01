@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { PackingInstructions } from "@/components/buyback/packing-instructions";
+import { PageContainer } from "@/components/layout/page-container";
 
 export const metadata: Metadata = {
   title: "Verpakkingsinstructies — Cards Center",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function VerpakkenPage() {
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="narrow" className="py-8">
       <Breadcrumbs
         items={[
           { label: "Verkoop calculator", href: "/verkoop-calculator" },
@@ -28,6 +29,6 @@ export default function VerpakkenPage() {
       </header>
 
       <PackingInstructions />
-    </div>
+    </PageContainer>
   );
 }

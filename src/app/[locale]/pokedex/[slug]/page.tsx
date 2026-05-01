@@ -10,6 +10,7 @@ import { PokedexEvolutionChain } from "@/components/pokedex/pokedex-evolution-ch
 import { parsePokedexSlug } from "@/lib/pokeapi/slug";
 import { getPokemon, getSpecies, getEvolutionChain } from "@/lib/pokeapi/client";
 import { pickFlavorText } from "@/lib/pokeapi/flavor-text";
+import { PageContainer } from "@/components/layout/page-container";
 import { getCardImageUrl } from "@/lib/card-image";
 
 export const revalidate = 86400; // 1d — species data is immutable upstream
@@ -117,7 +118,7 @@ export default async function PokedexPage({ params }: Props) {
   const genus = pickGenus(species, locale);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       <Breadcrumbs
         items={[
           { label: tBc("pokedex"), href: "/pokedex" },
@@ -155,6 +156,6 @@ export default async function PokedexPage({ params }: Props) {
           </p>
         </section>
       )}
-    </div>
+    </PageContainer>
   );
 }

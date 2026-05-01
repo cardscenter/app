@@ -6,6 +6,7 @@ import { ArrowLeft, Trophy, Archive, Vault, Store, MessageSquare, Calendar, Spar
 import { EmberIcon } from "@/components/customization/ember-icon";
 import { checkAchievements, getUserAchievements, type AchievementCategory } from "@/lib/achievements";
 import { cn } from "@/lib/utils";
+import { PageContainer } from "@/components/layout/page-container";
 
 const CATEGORY_META: Record<AchievementCategory, { icon: typeof Archive; label: string; color: string; bgColor: string }> = {
   ARCHIVE:   { icon: Archive,        label: "The Archive",    color: "text-amber-500",   bgColor: "bg-amber-500/10" },
@@ -36,7 +37,7 @@ export default async function AchievementsPage() {
   for (const a of achievements) grouped.get(a.category)?.push(a);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <PageContainer width="default" className="py-8">
       <div className="mb-6 flex items-center gap-3">
         <Link href="/customization" className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <ArrowLeft className="size-5" />
@@ -181,6 +182,6 @@ export default async function AchievementsPage() {
           );
         })}
       </div>
-    </div>
+    </PageContainer>
   );
 }

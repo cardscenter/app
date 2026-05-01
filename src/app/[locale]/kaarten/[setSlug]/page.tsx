@@ -7,6 +7,7 @@ import { SetCardsGrid } from "@/components/card/set-cards-grid";
 import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
 import { hasReverseHoloSignal } from "@/lib/buyback-pricing";
 import { Layers } from "lucide-react";
+import { PageContainer } from "@/components/layout/page-container";
 
 export const revalidate = 3600;
 
@@ -98,7 +99,7 @@ export default async function SetDetailPage({ params }: Props) {
   }));
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="wide" className="py-8">
       <Breadcrumbs
         items={[
           { label: "Kaarten", href: "/kaarten" },
@@ -137,6 +138,6 @@ export default async function SetDetailPage({ params }: Props) {
       ) : (
         <SetCardsGrid cards={cardsForGrid} setSlug={setSlug} />
       )}
-    </div>
+    </PageContainer>
   );
 }

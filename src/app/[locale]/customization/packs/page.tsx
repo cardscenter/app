@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { EmberBalance } from "@/components/customization/ember-balance";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function ChaptersPage() {
   const t = await getTranslations("customization");
@@ -27,7 +28,7 @@ export default async function ChaptersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <PageContainer width="default" className="py-8">
       <div className="mb-6 flex items-center gap-3">
         <Link href="/customization" className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <ArrowLeft className="size-5" />
@@ -60,6 +61,6 @@ export default async function ChaptersPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

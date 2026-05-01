@@ -22,6 +22,7 @@ import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
 import { ChevronLeft, ChevronRight, Tag, Hash, Palette, Calendar, Heart } from "lucide-react";
+import { PageContainer } from "@/components/layout/page-container";
 
 export const revalidate = 1800; // re-render every 30min so prices stay fresh
 
@@ -599,7 +600,7 @@ export default async function CardDetailPage({ params }: Props) {
   })();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       <Breadcrumbs
         items={[
           { label: "Kaarten", href: "/kaarten" },
@@ -868,6 +869,6 @@ export default async function CardDetailPage({ params }: Props) {
       </nav>
 
       <CardCarousel title={`Meer kaarten van ${baseName}`} items={relatedCards} />
-    </div>
+    </PageContainer>
   );
 }

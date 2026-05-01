@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { MultiStepListingForm } from "@/components/listing/multi-step-listing-form";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function NieuwListingPage({
   params,
@@ -38,7 +39,7 @@ export default async function NieuwListingPage({
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       <h1 className="text-2xl font-bold text-foreground mb-8">{t("createTitle")}</h1>
       <MultiStepListingForm
         seriesList={seriesList}
@@ -46,6 +47,6 @@ export default async function NieuwListingPage({
         userAccountType={user?.accountType ?? "FREE"}
         shippingMethods={shippingMethods}
       />
-    </div>
+    </PageContainer>
   );
 }
