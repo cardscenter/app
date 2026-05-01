@@ -1,0 +1,225 @@
+import { prisma } from "@/lib/prisma";
+
+export type ActionItemsCounts = {
+  unreadConversations: number;
+  unreadNotifications: number;
+  openDisputes: number;
+  awaitingPaymentAuctions: number;
+  bundlesToShip: number;
+  pendingCancellations: number;
+};
+
+export async function fetchActionItems(userId: string): Promise<ActionItemsCounts> {
+  const [
+    myParticipations,
+    unreadNotifications,
+    openDisputes,
+    awaitingPaymentAuctions,
+    bundlesToShip,
+    pendingCancellations,
+  ] = await Promise.all([
+    prisma.conversationParticipant.findMany({
+      where: { userId, status: "ACTIVE" },
+      select: {
+        lastReadAt: true,
+        conversation: {
+          select: {
+            messages: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { createdAt: true, senderId: true },
+            },
+          },
+        },
+      },
+    }),
+    prisma.notification.count({ where: { userId, read: false } }),
+    prisma.dispute.count({
+      where: {
+        status: { in: ["OPEN", "SELLER_RESPONDED", "ESCALATED"] },
+        OR: [
+          { openedById: userId },
+          { shippingBundle: { sellerId: userId } },
+        ],
+      },
+    }),
+    prisma.auction.count({
+      where: { winnerId: userId, paymentStatus: "AWAITING_PAYMENT" },
+    }),
+    prisma.shippingBundle.count({
+      where: { sellerId: userId, status: "PAID" },
+    }),
+    prisma.cancellationRequest.count({
+      where: {
+        status: "PENDING",
+        proposedById: { not: userId },
+        shippingBundle: { OR: [{ buyerId: userId }, { sellerId: userId }] },
+      },
+    }),
+  ]);
+
+  const unreadConversations = myParticipations.filter((p) => {
+    const last = p.conversation.messages[0];
+    if (!last || last.senderId === userId) return false;
+    return !p.lastReadAt || last.createdAt > p.lastReadAt;
+  }).length;
+
+  return {
+    unreadConversations,
+    unreadNotifications,
+    openDisputes,
+    awaitingPaymentAuctions,
+    bundlesToShip,
+    pendingCancellations,
+  };
+}
+
+export type RecentTransaction = {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  createdAt: Date;
+};
+
+export type BalanceOverview = {
+  available: number;
+  reserved: number;
+  escrow: number;
+  recentTransactions: RecentTransaction[];
+};
+
+export async function fetchBalanceOverview(userId: string): Promise<BalanceOverview> {
+  const [user, transactions] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { balance: true, reservedBalance: true, heldBalance: true },
+    }),
+    prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, type: true, amount: true, description: true, createdAt: true },
+    }),
+  ]);
+
+  if (!user) {
+    return { available: 0, reserved: 0, escrow: 0, recentTransactions: [] };
+  }
+
+  return {
+    available: Math.max(0, user.balance - user.reservedBalance),
+    reserved: user.reservedBalance,
+    escrow: user.heldBalance,
+    recentTransactions: transactions,
+  };
+}
+
+export type ActiveActivity = {
+  counts: { auctions: number; listings: number; claimsales: number };
+  bids: { highest: number; outbid: number; totalActive: number };
+};
+
+export async function fetchActiveActivity(userId: string): Promise<ActiveActivity> {
+  const [auctions, listings, claimsales, myAuctions] = await Promise.all([
+    prisma.auction.count({ where: { sellerId: userId, status: "ACTIVE" } }),
+    prisma.listing.count({ where: { sellerId: userId, status: "ACTIVE" } }),
+    prisma.claimsale.count({ where: { sellerId: userId, status: "LIVE" } }),
+    prisma.auction.findMany({
+      where: { status: "ACTIVE", bids: { some: { bidderId: userId } } },
+      select: {
+        id: true,
+        bids: {
+          orderBy: { amount: "desc" },
+          take: 1,
+          select: { bidderId: true },
+        },
+      },
+    }),
+  ]);
+
+  let highest = 0;
+  let outbid = 0;
+  for (const a of myAuctions) {
+    if (a.bids[0]?.bidderId === userId) highest++;
+    else outbid++;
+  }
+
+  return {
+    counts: { auctions, listings, claimsales },
+    bids: { highest, outbid, totalActive: myAuctions.length },
+  };
+}
+
+export type BundleRow = {
+  id: string;
+  orderNumber: string;
+  totalCost: number;
+  status: string;
+  createdAt: Date;
+  counterpartyName: string;
+  itemTitle: string | null;
+};
+
+export type RecentBundles = {
+  sales: BundleRow[];
+  purchases: BundleRow[];
+};
+
+export async function fetchRecentBundles(userId: string): Promise<RecentBundles> {
+  const [sales, purchases] = await Promise.all([
+    prisma.shippingBundle.findMany({
+      where: { sellerId: userId, status: { not: "PENDING" } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        orderNumber: true,
+        totalCost: true,
+        status: true,
+        createdAt: true,
+        buyer: { select: { displayName: true } },
+        auction: { select: { title: true } },
+        listing: { select: { title: true } },
+        items: { select: { cardName: true }, take: 1 },
+      },
+    }),
+    prisma.shippingBundle.findMany({
+      where: { buyerId: userId, status: { not: "PENDING" } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        orderNumber: true,
+        totalCost: true,
+        status: true,
+        createdAt: true,
+        seller: { select: { displayName: true } },
+        auction: { select: { title: true } },
+        listing: { select: { title: true } },
+        items: { select: { cardName: true }, take: 1 },
+      },
+    }),
+  ]);
+
+  return {
+    sales: sales.map((b) => ({
+      id: b.id,
+      orderNumber: b.orderNumber,
+      totalCost: b.totalCost,
+      status: b.status,
+      createdAt: b.createdAt,
+      counterpartyName: b.buyer.displayName,
+      itemTitle: b.auction?.title ?? b.listing?.title ?? b.items[0]?.cardName ?? null,
+    })),
+    purchases: purchases.map((b) => ({
+      id: b.id,
+      orderNumber: b.orderNumber,
+      totalCost: b.totalCost,
+      status: b.status,
+      createdAt: b.createdAt,
+      counterpartyName: b.seller.displayName,
+      itemTitle: b.auction?.title ?? b.listing?.title ?? b.items[0]?.cardName ?? null,
+    })),
+  };
+}
