@@ -39,6 +39,8 @@ export const CRON_JOB_NAMES = [
   "cleanup-archived-chats",
   "bundle-offer-expiry",
   "bundle-offer-payment-deadline",
+  "pickup-reservation-timeout",
+  "pickup-reminder",
 ] as const;
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
 
@@ -118,6 +120,18 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     description:
       "Verlopen ACCEPTED-AWAITING_PAYMENT bundle-voorstellen (PLATFORM-mode): paymentStatus → PAYMENT_FAILED, listings RESERVED → ACTIVE, PENDING bundle weg, beide partijen genotificeerd.",
     schedule: "Dagelijks",
+    allowManualRun: true,
+  },
+  "pickup-reservation-timeout": {
+    description:
+      "EXTERNAL pickup-bundles waarvan de reservering >14 dagen geleden is gemaakt en niet bevestigd: bundle CANCELLED, listings RESERVED → ACTIVE, beide partijen genotificeerd. Voorkomt dat listings eeuwig vastzitten.",
+    schedule: "Dagelijks",
+    allowManualRun: true,
+  },
+  "pickup-reminder": {
+    description:
+      "Stuurt 24-uur-reminder aan beide partijen voor ACCEPTED ophaalmomenten die binnen ~1 dag plaatsvinden. Set reminderSentAt zodat dezelfde afspraak niet dubbel pingt.",
+    schedule: "Elke uur",
     allowManualRun: true,
   },
 };
@@ -439,5 +453,103 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     }
 
     return { itemsProcessed: processed, result: { processed, total: expired.length } };
+  },
+  "pickup-reservation-timeout": async () => {
+    const now = new Date();
+    const expired = await prisma.shippingBundle.findMany({
+      where: {
+        paymentMode: "EXTERNAL",
+        pickupReservationExpiresAt: { lt: now },
+        status: { in: ["PENDING", "SCHEDULED"] },
+      },
+      include: {
+        bundleListings: { select: { listingId: true } },
+        bundleProposal: { select: { id: true, conversationId: true } },
+      },
+    });
+
+    let processed = 0;
+    for (const bundle of expired) {
+      const listingIds = bundle.bundleListings.map((bl) => bl.listingId);
+      await prisma.$transaction(async (tx) => {
+        await tx.shippingBundle.updateMany({
+          where: { id: bundle.id, paymentMode: "EXTERNAL", status: { in: ["PENDING", "SCHEDULED"] } },
+          data: { status: "CANCELLED" },
+        });
+        if (listingIds.length > 0) {
+          await tx.listing.updateMany({
+            where: { id: { in: listingIds }, status: "RESERVED" },
+            data: { status: "ACTIVE", buyerId: null },
+          });
+        } else if (bundle.listingId) {
+          await tx.listing.updateMany({
+            where: { id: bundle.listingId, status: "RESERVED" },
+            data: { status: "ACTIVE", buyerId: null },
+          });
+        }
+        if (bundle.bundleProposal) {
+          await tx.bundleProposal.update({
+            where: { id: bundle.bundleProposal.id },
+            data: { status: "EXPIRED" },
+          });
+        }
+      });
+
+      await createNotification(bundle.buyerId, "NEW_MESSAGE", "Reservering verlopen",
+        `De ophaal-reservering voor bestelling ${bundle.orderNumber} is verlopen na 14 dagen zonder bevestiging.`,
+        bundle.bundleProposal?.conversationId
+          ? `/nl/berichten/${bundle.bundleProposal.conversationId}`
+          : "/dashboard/aankopen");
+      await createNotification(bundle.sellerId, "NEW_MESSAGE", "Reservering verlopen",
+        `De ophaal-reservering voor bestelling ${bundle.orderNumber} is verlopen. De advertenties staan weer actief.`,
+        bundle.bundleProposal?.conversationId
+          ? `/nl/berichten/${bundle.bundleProposal.conversationId}`
+          : "/dashboard/verkopen");
+      processed++;
+    }
+    return { itemsProcessed: processed, result: { processed, total: expired.length } };
+  },
+  "pickup-reminder": async () => {
+    const in23h = new Date(Date.now() + 23 * 60 * 60 * 1000);
+    const in25h = new Date(Date.now() + 25 * 60 * 60 * 1000);
+
+    const due = await prisma.pickupSchedule.findMany({
+      where: {
+        status: "ACCEPTED",
+        proposedFor: { gte: in23h, lte: in25h },
+        reminderSentAt: null,
+      },
+      include: {
+        shippingBundle: {
+          select: {
+            id: true,
+            buyerId: true,
+            sellerId: true,
+            orderNumber: true,
+            bundleProposal: { select: { conversationId: true } },
+          },
+        },
+      },
+    });
+
+    let processed = 0;
+    for (const sched of due) {
+      const link = sched.shippingBundle.bundleProposal?.conversationId
+        ? `/nl/berichten/${sched.shippingBundle.bundleProposal.conversationId}`
+        : null;
+      const dateStr = sched.proposedFor.toLocaleDateString("nl-NL");
+      const timeStr = `${sched.windowStart}-${sched.windowEnd}`;
+      const body = `Herinnering: ophaalmoment morgen ${dateStr} (${timeStr}) voor bestelling ${sched.shippingBundle.orderNumber}.`;
+
+      await createNotification(sched.shippingBundle.buyerId, "NEW_MESSAGE", "Ophaal-herinnering", body, link ?? "/dashboard/aankopen");
+      await createNotification(sched.shippingBundle.sellerId, "NEW_MESSAGE", "Ophaal-herinnering", body, link ?? "/dashboard/verkopen");
+
+      await prisma.pickupSchedule.update({
+        where: { id: sched.id },
+        data: { reminderSentAt: new Date() },
+      });
+      processed++;
+    }
+    return { itemsProcessed: processed, result: { processed, total: due.length } };
   },
 };
