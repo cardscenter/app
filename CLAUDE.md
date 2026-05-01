@@ -142,7 +142,8 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `/berichten/*` | Messages/conversations (photo upload, proposals) |
 | `/verkoper/[userId]` | Public seller profile |
 | **Dashboard** `/dashboard/` | |
-| `…/` | Home (stats + charts, PRO/UNLIMITED only) |
+| `…/` | Home: 4 essentials-widgets voor IEDEREEN (action-items, saldo, lopende activiteit, recente bundles); CTA naar `/dashboard/statistieken` alleen voor PRO/UNLIMITED |
+| `…/statistieken` | Premium statistieken (PRO/UNLIMITED): sales/seller-performance/buyer/XP/commission-savings, periode-filter incl. month/ytd quick-ranges, CSV-export per sectie |
 | `…/profiel` | Edit profile |
 | `…/saldo` | Wallet/balance |
 | `…/veilingen` | My auctions |
@@ -275,7 +276,6 @@ User-velden toegevoegd in roadmap-werk: `maxRunnerUpAttempts` (Cluster A), `iban
 
 | Fase | Onderwerp |
 |------|-----------|
-| 13 | Premium statistieken |
 | 16 | Email notificaties |
 | 17 | Betaalmethoden (iDEAL/Stripe) |
 | 18 | Veiling eindetijden pagina |
@@ -286,7 +286,7 @@ User-velden toegevoegd in roadmap-werk: `maxRunnerUpAttempts` (Cluster A), `iban
 | 23 | Customization Chapter 1 — eigen cosmetic-art (banners/emblems/backgrounds) seeden + via `rewardCosmeticKey` koppelen aan achievement-tiers |
 | 24 | Mascotte-uitbreiding — Finn & Sage poses transparant maken en integreren in empty-states, 404-page, achievement-celebration-toast, profile-page |
 
-Afgerond: fases 0–12, 14 (3-tier abonnementssysteem), customization/achievement/IP-cleanup pivot, op 2026-04-29 de **9-fase audit-roadmap** (clusters A-D fundament-fixes + fases 5-9: IBAN/payouts/blocking+reports/account-suspension/cancellation-requests), en op 2026-04-30 **Fase 15 — Admin panel** (volledige backoffice op `/dashboard/admin/*` met audit-logging, cron-status/run-now, user-360°-detail, catalog/AppConfig/moderation). Update deze tabel na elke afgeronde fase.
+Afgerond: fases 0–12, 14 (3-tier abonnementssysteem), customization/achievement/IP-cleanup pivot, op 2026-04-29 de **9-fase audit-roadmap** (clusters A-D fundament-fixes + fases 5-9: IBAN/payouts/blocking+reports/account-suspension/cancellation-requests), op 2026-04-30 **Fase 15 — Admin panel** (volledige backoffice op `/dashboard/admin/*` met audit-logging, cron-status/run-now, user-360°-detail, catalog/AppConfig/moderation), en op 2026-05-01 **Fase 13 — Premium statistieken** (dashboard-essentials voor IEDEREEN: action-items/saldo/activiteit/recente-bundles; premium-only statistieken-page polish: CSV-export per sectie, ChartEmptyState voor lege chart-blokken, month/ytd quick-ranges, mobile-polish; commission-sectie omgezet naar saved-only). Update deze tabel na elke afgeronde fase.
 
 ### Bekende follow-ups (klein onderhoud, niet eigen fase)
 - Search/homepage/recommendations filteren nog niet op `UserBlock` (alleen marktplaats/veilingen/claimsales/conversations doen dat). Helper `getBlockedUserIds()` bestaat al — hoeven alleen toe te passen.
