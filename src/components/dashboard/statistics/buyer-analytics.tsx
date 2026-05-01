@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { ShoppingBag, Package } from "lucide-react";
 import { StatCard } from "./stat-card";
+import { ChartEmptyState } from "./chart-empty-state";
 
 export type BuyerAnalyticsData = {
   totalSpent: number;
@@ -68,7 +69,7 @@ export function BuyerAnalytics({ data }: { data: BuyerAnalyticsData }) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Spending by type - Donut */}
-        {data.spendingByType.some((d) => d.value > 0) && (
+        {data.spendingByType.some((d) => d.value > 0) ? (
           <div className="glass-subtle rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("spendingByType")}</h4>
             <div style={{ width: "100%", height: 220 }}>
@@ -98,10 +99,12 @@ export function BuyerAnalytics({ data }: { data: BuyerAnalyticsData }) {
               </ResponsiveContainer>
             </div>
           </div>
+        ) : (
+          <ChartEmptyState title={t("spendingByType")} messageKey="noPurchases" />
         )}
 
         {/* Purchase frequency - Bar */}
-        {data.purchaseFrequency.length > 0 && (
+        {data.purchaseFrequency.length > 0 ? (
           <div className="glass-subtle rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("purchaseFrequency")}</h4>
             <div style={{ width: "100%", height: 220 }}>
@@ -134,6 +137,8 @@ export function BuyerAnalytics({ data }: { data: BuyerAnalyticsData }) {
               </ResponsiveContainer>
             </div>
           </div>
+        ) : (
+          <ChartEmptyState title={t("purchaseFrequency")} messageKey="noPurchases" />
         )}
       </div>
     </div>

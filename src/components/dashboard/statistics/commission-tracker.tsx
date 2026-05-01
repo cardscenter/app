@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Receipt, PiggyBank, TrendingDown } from "lucide-react";
 import { StatCard } from "./stat-card";
+import { ChartEmptyState } from "./chart-empty-state";
 
 export type CommissionTrackerData = {
   totalCommissionPaid: number;
@@ -62,7 +63,7 @@ export function CommissionTracker({ data }: { data: CommissionTrackerData }) {
       </div>
 
       {/* Commission over time - Area chart */}
-      {data.commissionOverTime.length > 1 && (
+      {data.commissionOverTime.length > 1 ? (
         <div className="glass-subtle rounded-xl p-5">
           <h4 className="text-sm font-semibold text-foreground mb-4">{t("commissionOverTime")}</h4>
           <div style={{ width: "100%", height: 192 }}>
@@ -108,6 +109,8 @@ export function CommissionTracker({ data }: { data: CommissionTrackerData }) {
             </ResponsiveContainer>
           </div>
         </div>
+      ) : (
+        <ChartEmptyState title={t("commissionOverTime")} messageKey="noCommission" height={192} />
       )}
     </div>
   );

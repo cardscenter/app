@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { TrendingUp, Package, Receipt } from "lucide-react";
 import { StatCard } from "./stat-card";
+import { ChartEmptyState } from "./chart-empty-state";
 
 export type SalesAnalyticsData = {
   totalRevenue: number;
@@ -83,7 +84,7 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Revenue by type - Donut */}
-        {data.revenueByType.some((d) => d.value > 0) && (
+        {data.revenueByType.some((d) => d.value > 0) ? (
           <div className="glass-subtle rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("revenueByType")}</h4>
             <div style={{ width: "100%", height: 220 }}>
@@ -117,10 +118,12 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
               </ResponsiveContainer>
             </div>
           </div>
+        ) : (
+          <ChartEmptyState title={t("revenueByType")} messageKey="noSales" />
         )}
 
         {/* Revenue per month - Bar */}
-        {data.revenuePerMonth.length > 0 && (
+        {data.revenuePerMonth.length > 0 ? (
           <div className="glass-subtle rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("revenuePerMonth")}</h4>
             <div style={{ width: "100%", height: 220 }}>
@@ -154,11 +157,13 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
               </ResponsiveContainer>
             </div>
           </div>
+        ) : (
+          <ChartEmptyState title={t("revenuePerMonth")} messageKey="noSales" />
         )}
       </div>
 
       {/* Average price over time - Line */}
-      {data.avgPricePerMonth.length > 1 && (
+      {data.avgPricePerMonth.length > 1 ? (
         <div className="glass-subtle rounded-xl p-5">
           <h4 className="text-sm font-semibold text-foreground mb-4">{t("avgPriceOverTime")}</h4>
           <div style={{ width: "100%", height: 192 }}>
@@ -197,6 +202,8 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
             </ResponsiveContainer>
           </div>
         </div>
+      ) : (
+        <ChartEmptyState title={t("avgPriceOverTime")} messageKey="noTrend" height={192} />
       )}
     </div>
   );
