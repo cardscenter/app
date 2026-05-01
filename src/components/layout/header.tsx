@@ -101,10 +101,10 @@ function HeaderContent() {
           })}
         </nav>
 
-        {/* Search bar — inline on lg+, takes available space.
-            Below lg the inline bar is hidden; HeaderSearchToggle below renders
+        {/* Search bar — inline on xl+, takes available space.
+            Below xl the inline bar is hidden; HeaderSearchToggle below renders
             an icon that expands into a search input. */}
-        <div className="mx-6 hidden flex-1 justify-center lg:flex">
+        <div className="mx-6 hidden flex-1 justify-center xl:flex">
           <div className="w-full max-w-xl">
             <SearchBar variant="header" />
           </div>
@@ -328,7 +328,7 @@ function HeaderSearchToggle() {
   }
 
   return (
-    <div ref={wrapperRef} className="relative hidden md:block lg:hidden">
+    <div ref={wrapperRef} className="relative hidden md:block xl:hidden">
       <button
         type="button"
         onClick={() => setOpen((s) => !s)}
