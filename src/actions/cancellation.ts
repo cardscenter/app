@@ -174,6 +174,21 @@ export async function respondToCancellation(
     }
   }
 
+  // Multi-listing bundle (Fase 27): alle bundleListings terug op ACTIVE.
+  const bundleListings = await prisma.bundleListing.findMany({
+    where: { shippingBundleId: bundle.id },
+    select: { listingId: true },
+  });
+  if (bundleListings.length > 0) {
+    await prisma.listing.updateMany({
+      where: {
+        id: { in: bundleListings.map((bl) => bl.listingId) },
+        status: "SOLD",
+      },
+      data: { status: "ACTIVE", buyerId: null },
+    });
+  }
+
   // Auction-bundle: status blijft ENDED_SOLD; geen herafleveing mogelijk.
   // Verkoper kan een nieuwe veiling aanmaken als ze het opnieuw willen
   // verkopen.

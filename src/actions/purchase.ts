@@ -141,6 +141,10 @@ export async function markAsShipped(
   if (!bundle) return { error: "Bestelling niet gevonden" };
   if (bundle.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
   if (bundle.status !== "PAID") return { error: "Kan alleen betaalde bestellingen als verzonden markeren" };
+  // Fase 27: pickup-bundles verzenden niet — die worden via confirmPickup afgehandeld.
+  if (bundle.paymentMode === "EXTERNAL") {
+    return { error: "Ophaal-bestellingen worden afgehandeld via de ophaal-code in /dashboard/verkopen" };
+  }
 
   const isBriefpost = bundle.shippingMethod ? !bundle.shippingMethod.isTracked : false;
 
