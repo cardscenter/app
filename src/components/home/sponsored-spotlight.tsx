@@ -41,7 +41,7 @@ export function SponsoredSpotlight({ auctions, listings, locale }: SponsoredSpot
 
   return (
     <section className="py-8 sm:py-12 bg-background">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
         <AnimatedSection>
           <div className="flex items-center gap-3 mb-6">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">

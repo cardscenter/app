@@ -5,7 +5,7 @@ export default function HomeLoading() {
     <div className="flex flex-col">
       {/* Hero skeleton */}
       <div className="relative h-[480px] bg-gradient-to-br from-slate-800 to-slate-900">
-        <div className="mx-auto max-w-7xl px-6 py-16">
+        <div className="mx-auto max-w-[1680px] px-6 py-16 lg:px-8 xl:px-10">
           <div className="max-w-xl space-y-4">
             <Skeleton className="h-6 w-40 !bg-white/10" />
             <Skeleton className="h-6 w-48 !bg-white/10" />
@@ -20,7 +20,7 @@ export default function HomeLoading() {
 
       {/* Stats strip skeleton */}
       <div className="border-b border-border bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 divide-border">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-3 py-4 px-4 sm:py-5">
@@ -38,7 +38,7 @@ export default function HomeLoading() {
       {/* Carousel sections skeleton */}
       {[1, 2, 3].map((section) => (
         <div key={section} className={`py-8 sm:py-12 ${section % 2 === 0 ? "section-gradient-alt border-t border-border" : "bg-background"}`}>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
             <div className="flex items-center gap-3 mb-6">
               <Skeleton className="h-8 w-8 rounded-lg" />
               <Skeleton className="h-6 w-40" />

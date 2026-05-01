@@ -31,7 +31,7 @@ export function MarketingHero({ stats }: MarketingHeroProps) {
       <HeroParticles />
 
       {/* Content */}
-      <div className="relative z-10 mx-auto max-w-7xl px-6 py-16 lg:py-20 w-full">
+      <div className="relative z-10 mx-auto max-w-[1680px] px-6 py-16 lg:py-20 lg:px-8 xl:px-10 w-full">
         <div className="max-w-2xl">
           {/* Animated stat badges */}
           <HeroStatBadges stats={stats} />

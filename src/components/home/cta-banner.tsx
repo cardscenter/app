@@ -11,7 +11,7 @@ export function CtaBanner() {
       {/* Animated gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-amber-500/10 background-size-[200%_200%] animate-gradient-shift" />
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto max-w-[1680px] px-4 text-center sm:px-6 lg:px-8 xl:px-10">
         <AnimatedSection>
           <h2 className="text-2xl font-bold text-white sm:text-3xl">{t("ctaTitle")}</h2>
           <p className="mx-auto mt-3 max-w-md text-white/70">{t("ctaDesc")}</p>

@@ -45,7 +45,7 @@ export function PlatformStatsSection({ stats }: PlatformStatsSectionProps) {
 
   return (
     <section className="py-8 sm:py-14 border-t border-border bg-background">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
         <AnimatedSection>
           <h2 className="text-center text-2xl font-bold text-foreground">{t("platformStats")}</h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">{t("platformStatsDesc")}</p>

@@ -34,7 +34,7 @@ export function PricingSection() {
         <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-6">
+      <div className="relative mx-auto max-w-7xl px-6">
         {/* Heading */}
         <div className="mx-auto mb-10 max-w-2xl text-center">
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">

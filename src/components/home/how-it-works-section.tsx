@@ -12,7 +12,7 @@ export function HowItWorksSection() {
 
   return (
     <section className="py-14 bg-background">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
         <h2 className="text-center text-2xl font-bold text-foreground">{t("howItWorks")}</h2>
         <StaggerContainer className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3" staggerDelay={0.15}>
           {steps.map((step) => (

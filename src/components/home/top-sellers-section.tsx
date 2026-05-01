@@ -15,7 +15,7 @@ export function TopSellersSection({ sellers }: TopSellersSectionProps) {
 
   return (
     <section className="py-8 sm:py-14 border-t border-border section-gradient">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
         <AnimatedSection>
           <div className="flex items-center gap-3 mb-8">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-300">

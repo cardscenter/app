@@ -45,7 +45,7 @@ export function CategoryStatsStrip({ stats }: CategoryStatsStripProps) {
 
   return (
     <section className="border-b border-border bg-background">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0 divide-border">
           {categories.map((cat) => (
             <Link

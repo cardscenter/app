@@ -53,7 +53,7 @@ const SECTIONS: Section[] = [
 export function MainSectionsGrid() {
   return (
     <section className="py-10 border-b border-border">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3">
           {SECTIONS.map((s, i) => (
             <motion.div
