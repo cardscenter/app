@@ -110,8 +110,9 @@ function HeaderContent() {
           </div>
         </div>
 
-        {/* Right side */}
-        <div className="flex shrink-0 items-center gap-1 md:gap-1.5">
+        {/* Right side — ml-auto zodat het rechts uitlijnt ook als de middelste
+            zoekbalk verborgen is (onder xl) */}
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-1.5">
           {/* Search toggle (md→lg widths only — inline bar takes over at lg+) */}
           <HeaderSearchToggle />
 
