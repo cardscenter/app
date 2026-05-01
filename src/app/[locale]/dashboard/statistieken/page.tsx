@@ -8,7 +8,6 @@ import {
   fetchSalesData,
   fetchBuyerData,
   fetchSellerPerformance,
-  fetchCommissionData,
   fetchXPData,
 } from "@/lib/statistics-queries";
 import {
@@ -67,8 +66,6 @@ export default async function StatistiekenPage({ searchParams }: Props) {
     prevBuyerData,
     perfData,
     prevPerfData,
-    commissionTx,
-    prevCommissionTx,
     xpRaw,
   ] = await Promise.all([
     fetchSalesData(session.user.id, start),
@@ -80,10 +77,6 @@ export default async function StatistiekenPage({ searchParams }: Props) {
       bundles: d.bundles.filter((b) => b.createdAt < start),
       reviews: d.reviews.filter((r) => r.createdAt < start),
     })),
-    fetchCommissionData(session.user.id, start),
-    fetchCommissionData(session.user.id, previousStart).then((txs) =>
-      txs.filter((tx) => tx.createdAt < start)
-    ),
     fetchXPData(session.user.id),
   ]);
 
@@ -224,11 +217,7 @@ export default async function StatistiekenPage({ searchParams }: Props) {
     };
   }
 
-  // === COMMISSION ===
-  const totalCommissionPaid = commissionTx.reduce((s, tx) => s + Math.abs(tx.amount), 0);
-  const prevCommissionPaid = prevCommissionTx.reduce((s, tx) => s + Math.abs(tx.amount), 0);
-
-  // Commission saved: what it would have been at FREE rate (3%) vs actual
+  // === COMMISSION SAVINGS (PRO/UNLIMITED voordeel t.o.v. FREE) ===
   const freeRate = 0.03;
   const currentRate = getCommissionRate(user.accountType);
   const hypotheticalFreeCommission = totalRevenue * freeRate;
@@ -238,21 +227,6 @@ export default async function StatistiekenPage({ searchParams }: Props) {
   // Projected annual savings: extrapolate from current period
   const periodDays = period === "30d" ? 30 : period === "90d" ? 90 : period === "1y" ? 365 : 365;
   const projectedAnnualSavings = periodDays > 0 ? (commissionSaved / periodDays) * 365 : 0;
-
-  // Commission over time
-  const commissionByMonth = new Map<string, number>();
-  for (const tx of commissionTx) {
-    const d = new Date(tx.createdAt);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    commissionByMonth.set(key, (commissionByMonth.get(key) ?? 0) + Math.abs(tx.amount));
-  }
-  const commissionOverTime = Array.from(commissionByMonth.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, total]) => {
-      const [year, month] = key.split("-");
-      const d = new Date(Number(year), Number(month) - 1);
-      return { month: d.toLocaleDateString("nl-NL", { month: "short", year: "2-digit" }), total };
-    });
 
   return (
     <div>
@@ -293,11 +267,8 @@ export default async function StatistiekenPage({ searchParams }: Props) {
         }}
         xp={xpData}
         commission={{
-          totalCommissionPaid,
-          previousCommissionPaid: prevCommissionPaid,
           commissionSaved,
           projectedAnnualSavings,
-          commissionOverTime,
         }}
       />
     </div>

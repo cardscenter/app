@@ -5,16 +5,16 @@ import {
   fetchSalesData,
   fetchBuyerData,
   fetchSellerPerformance,
-  fetchCommissionData,
   fetchXPData,
 } from "@/lib/statistics-queries";
 import { getPeriodDates } from "@/lib/statistics-helpers";
 import { calculateXP } from "@/lib/seller-levels";
+import { getCommissionRate } from "@/lib/subscription-tiers";
 import {
   buildSalesCsv,
   buildBuyerCsv,
   buildPerformanceCsv,
-  buildCommissionCsv,
+  buildCommissionSavingsCsv,
   buildXpCsv,
 } from "@/lib/csv-export";
 
@@ -70,8 +70,17 @@ export async function GET(
       break;
     }
     case "commission": {
-      const data = await fetchCommissionData(session.user.id, start);
-      csv = buildCommissionCsv(data);
+      const sales = await fetchSalesData(session.user.id, start);
+      const totalRevenue =
+        sales.auctions.reduce((s, i) => s + i.value, 0) +
+        sales.claimsales.reduce((s, i) => s + i.value, 0) +
+        sales.listings.reduce((s, i) => s + i.value, 0);
+      const freeRate = 0.03;
+      const currentRate = getCommissionRate(user.accountType);
+      const commissionSaved = Math.max(0, totalRevenue * freeRate - totalRevenue * currentRate);
+      const periodDays = period === "30d" ? 30 : period === "90d" ? 90 : 365;
+      const projectedAnnualSavings = (commissionSaved / periodDays) * 365;
+      csv = buildCommissionSavingsCsv({ commissionSaved, projectedAnnualSavings });
       break;
     }
     case "xp": {

@@ -63,16 +63,17 @@ export function buildPerformanceCsv(reviews: {
   );
 }
 
-export function buildCommissionCsv(transactions: {
-  amount: number;
-  createdAt: Date;
-}[]): string {
-  const rows = transactions.map((tx) => [
-    formatDate(tx.createdAt),
-    Math.abs(tx.amount).toFixed(2),
-  ]);
-
-  return rowsToCsv(["date", "amount_eur"], rows);
+export function buildCommissionSavingsCsv(data: {
+  commissionSaved: number;
+  projectedAnnualSavings: number;
+}): string {
+  return rowsToCsv(
+    ["metric", "amount_eur"],
+    [
+      ["commission_saved", data.commissionSaved.toFixed(2)],
+      ["projected_annual_savings", data.projectedAnnualSavings.toFixed(2)],
+    ]
+  );
 }
 
 export function buildXpCsv(xp: {

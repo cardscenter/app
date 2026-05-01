@@ -98,19 +98,6 @@ export async function fetchSellerPerformance(userId: string, since: Date) {
   return { bundles, reviews };
 }
 
-export async function fetchCommissionData(userId: string, since: Date) {
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      userId,
-      type: "COMMISSION",
-      createdAt: { gte: since },
-    },
-    select: { amount: true, createdAt: true },
-  });
-
-  return transactions;
-}
-
 export async function fetchXPData(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
