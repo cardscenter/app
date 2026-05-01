@@ -37,6 +37,8 @@ export const CRON_JOB_NAMES = [
   "proposal-payment-deadline",
   "cancellation-expiry",
   "cleanup-archived-chats",
+  "bundle-offer-expiry",
+  "bundle-offer-payment-deadline",
 ] as const;
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
 
@@ -105,6 +107,18 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     allowManualRun: false,
     runWarning:
       "Hard-delete van conversations en messages — kan niet teruggedraaid worden. Wordt alleen door de scheduler gedraaid.",
+  },
+  "bundle-offer-expiry": {
+    description:
+      "Markeert PENDING bundle-voorstellen die meer dan 3 dagen open staan als EXPIRED. Listings blijven ACTIVE (stonden nooit op RESERVED tijdens PENDING-fase).",
+    schedule: "Dagelijks",
+    allowManualRun: true,
+  },
+  "bundle-offer-payment-deadline": {
+    description:
+      "Verlopen ACCEPTED-AWAITING_PAYMENT bundle-voorstellen (PLATFORM-mode): paymentStatus → PAYMENT_FAILED, listings RESERVED → ACTIVE, PENDING bundle weg, beide partijen genotificeerd.",
+    schedule: "Dagelijks",
+    allowManualRun: true,
   },
 };
 
@@ -342,6 +356,9 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       if (remaining === 0) {
         await prisma.message.deleteMany({ where: { conversationId: convoId } });
         await prisma.proposal.deleteMany({ where: { conversationId: convoId } });
+        // Fase 27: bundle-proposals zonder cascade — handmatig opruimen voor de
+        // conversation-delete door FK kan.
+        await prisma.bundleProposal.deleteMany({ where: { conversationId: convoId } });
         await prisma.conversation.delete({ where: { id: convoId } });
         conversationsDeleted++;
       }
@@ -350,5 +367,77 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       itemsProcessed: deleted.count + conversationsDeleted,
       result: { participantsRemoved: deleted.count, conversationsDeleted },
     };
+  },
+  "bundle-offer-expiry": async () => {
+    const now = new Date();
+    const result = await prisma.bundleProposal.updateMany({
+      where: { status: "PENDING", expiresAt: { lt: now } },
+      data: { status: "EXPIRED", respondedAt: now },
+    });
+    // Notificaties voor de geëxpireerde voorstellen — apart fetch om buyer/seller
+    // te kennen (updateMany returnt geen rijen).
+    if (result.count > 0) {
+      const expired = await prisma.bundleProposal.findMany({
+        where: { status: "EXPIRED", respondedAt: now },
+        select: { id: true, buyerId: true, sellerId: true, conversationId: true, totalAmount: true },
+      });
+      for (const bp of expired) {
+        await createNotification(bp.buyerId, "NEW_MESSAGE", "Bundel-voorstel verlopen",
+          `Je bundel-voorstel van €${bp.totalAmount.toFixed(2)} is verlopen.`,
+          `/nl/berichten/${bp.conversationId}`);
+        await createNotification(bp.sellerId, "NEW_MESSAGE", "Bundel-voorstel verlopen",
+          `Een bundel-voorstel van €${bp.totalAmount.toFixed(2)} is verlopen zonder antwoord.`,
+          `/nl/berichten/${bp.conversationId}`);
+      }
+    }
+    return { itemsProcessed: result.count, result: { processed: result.count } };
+  },
+  "bundle-offer-payment-deadline": async () => {
+    const now = new Date();
+    const expired = await prisma.bundleProposal.findMany({
+      where: {
+        status: "ACCEPTED",
+        paymentStatus: "AWAITING_PAYMENT",
+        paymentMode: "PLATFORM",
+        paymentDeadline: { lt: now },
+      },
+      include: {
+        listings: { select: { listingId: true } },
+        shippingBundle: { select: { id: true, status: true } },
+      },
+    });
+
+    let processed = 0;
+    for (const bp of expired) {
+      const listingIds = bp.listings.map((l) => l.listingId);
+
+      await prisma.$transaction(async (tx) => {
+        // Listings RESERVED → ACTIVE (alleen die nog RESERVED zijn)
+        await tx.listing.updateMany({
+          where: { id: { in: listingIds }, status: "RESERVED" },
+          data: { status: "ACTIVE", buyerId: null },
+        });
+
+        // PENDING bundle weg
+        if (bp.shippingBundle && bp.shippingBundle.status === "PENDING") {
+          await tx.shippingBundle.delete({ where: { id: bp.shippingBundle.id } });
+        }
+
+        await tx.bundleProposal.update({
+          where: { id: bp.id },
+          data: { paymentStatus: "PAYMENT_FAILED" },
+        });
+      });
+
+      await createNotification(bp.buyerId, "NEW_MESSAGE", "Betaaltermijn verlopen",
+        `Je bundel-voorstel van €${bp.totalAmount.toFixed(2)} is verlopen omdat de betaling niet op tijd binnen was.`,
+        `/nl/berichten/${bp.conversationId}`);
+      await createNotification(bp.sellerId, "NEW_MESSAGE", "Betaaltermijn verlopen",
+        `De koper heeft een geaccepteerd bundel-voorstel van €${bp.totalAmount.toFixed(2)} niet betaald binnen de termijn. De advertenties staan weer actief.`,
+        `/nl/berichten/${bp.conversationId}`);
+      processed++;
+    }
+
+    return { itemsProcessed: processed, result: { processed, total: expired.length } };
   },
 };
