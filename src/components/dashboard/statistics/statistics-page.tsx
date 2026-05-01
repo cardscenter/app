@@ -51,17 +51,17 @@ export function StatisticsPage({ period, sales, performance, buyer, xp, commissi
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Sticky control bar */}
-      <div className="glass-subtle sticky top-0 z-10 -mx-1 rounded-xl p-4 space-y-3">
+      <div className="glass-subtle sticky top-0 z-10 rounded-xl p-3 sm:p-4 space-y-3">
         {/* Period selector */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-medium text-muted-foreground">{t("periodLabel")}</p>
           <PeriodSelector current={period} />
         </div>
 
         {/* Section quick-nav */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {SECTIONS.map(({ id, icon: Icon }) => (
             <button
               key={id}

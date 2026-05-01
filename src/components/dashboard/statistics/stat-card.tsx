@@ -27,15 +27,15 @@ export function StatCard({
   subtitle,
 }: StatCardProps) {
   return (
-    <div className="glass-subtle rounded-xl p-5">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
+    <div className="glass-subtle rounded-xl p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className={`rounded-lg p-2 ${iconBg}`}>
             <Icon className={`h-5 w-5 ${iconColor}`} />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="text-xl font-bold text-foreground">{value}</p>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">{label}</p>
+            <p className="text-lg sm:text-xl font-bold text-foreground truncate">{value}</p>
             {subtitle && (
               <p className="text-[10px] text-muted-foreground/70 mt-0.5">{subtitle}</p>
             )}
