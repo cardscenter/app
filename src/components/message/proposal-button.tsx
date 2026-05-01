@@ -10,6 +10,7 @@ interface ProposalButtonProps {
   conversationId: string;
   listingTitle?: string;
   listingPrice?: number | null;
+  listingShippingCost?: number | null;
   isSeller: boolean;
   availableBalance?: number;
 }
@@ -18,6 +19,7 @@ export function ProposalButton({
   conversationId,
   listingTitle,
   listingPrice,
+  listingShippingCost,
   isSeller,
   availableBalance,
 }: ProposalButtonProps) {
@@ -105,7 +107,7 @@ export function ProposalButton({
             )}
 
             {/* Amount */}
-            <div className="mb-5">
+            <div className="mb-3">
               <label className="mb-2 block text-sm font-medium text-foreground">
                 {t("amount")}
               </label>
@@ -121,7 +123,26 @@ export function ProposalButton({
                   className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
                 />
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">{t("amountExclShipping")}</p>
             </div>
+
+            {/* Totaal-overzicht zodra er een geldig bod is */}
+            {listingShippingCost !== undefined && listingShippingCost !== null && parseFloat(amount) > 0 && (
+              <div className="mb-5 space-y-1.5 rounded-lg border border-border bg-card p-3 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{t("amount")}</span>
+                  <span>€{parseFloat(amount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{t("shippingCost")}</span>
+                  <span>€{listingShippingCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between border-t border-border pt-1.5 font-semibold text-foreground">
+                  <span>{t("total")}</span>
+                  <span>€{(parseFloat(amount) + listingShippingCost).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
 
             {/* Balance info (buyer only) */}
             {!isSeller && availableBalance !== undefined && (

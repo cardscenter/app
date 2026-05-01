@@ -86,7 +86,7 @@ export default async function ConversationPage({
       },
       auction: { select: { title: true } },
       claimsale: { select: { title: true } },
-      listing: { select: { id: true, title: true, price: true, status: true, sellerId: true } },
+      listing: { select: { id: true, title: true, price: true, shippingCost: true, status: true, sellerId: true } },
       proposals: {
         orderBy: { createdAt: "desc" },
       },
@@ -125,6 +125,7 @@ export default async function ConversationPage({
     id: conversation.listing.id,
     title: conversation.listing.title,
     price: conversation.listing.price,
+    shippingCost: conversation.listing.shippingCost,
     status: conversation.listing.status,
     sellerId: conversation.listing.sellerId,
   } : null;

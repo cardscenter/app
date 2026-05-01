@@ -45,6 +45,7 @@ type ListingContext = {
   id: string;
   title: string;
   price: number | null;
+  shippingCost: number | null;
   status: string;
   sellerId: string;
 };
@@ -284,6 +285,7 @@ export function MessageThread({
                   conversationId={conversationId}
                   listingTitle={listingContext.title}
                   listingPrice={listingContext.price}
+                  listingShippingCost={listingContext.shippingCost}
                   isSeller={isSeller}
                   availableBalance={availableBalance}
                 />

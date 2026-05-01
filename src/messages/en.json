@@ -737,6 +737,7 @@
     "proposalFor": "Offer for: {title}",
     "enterAmount": "Enter an amount",
     "amount": "Amount",
+    "amountExclShipping": "Excl. shipping — shipping is added on top.",
     "submit": "Send offer",
     "buyerOffers": "{name} offers €{amount}",
     "sellerOffers": "{name} suggests €{amount}",

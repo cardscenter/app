@@ -737,6 +737,7 @@
     "proposalFor": "Voorstel voor: {title}",
     "enterAmount": "Voer een bedrag in",
     "amount": "Bedrag",
+    "amountExclShipping": "Excl. verzendkosten — verzending komt erbovenop.",
     "submit": "Verstuur voorstel",
     "buyerOffers": "{name} biedt €{amount}",
     "sellerOffers": "{name} stelt €{amount} voor",
