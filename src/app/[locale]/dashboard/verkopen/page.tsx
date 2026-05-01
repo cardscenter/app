@@ -38,6 +38,11 @@ export default async function MySalesPage() {
       listing: {
         select: { id: true, title: true, imageUrls: true, price: true, condition: true, listingType: true },
       },
+      bundleListings: {
+        include: {
+          listing: { select: { id: true, title: true, imageUrls: true } },
+        },
+      },
       dispute: {
         select: { id: true, status: true, reason: true },
       },
@@ -81,10 +86,19 @@ export default async function MySalesPage() {
     shippedAt: b.shippedAt?.toISOString() ?? null,
     refundedAmount: b.refundedAmount ?? 0,
     createdAt: b.createdAt.toISOString(),
-    sourceType: b.auctionId ? "auction" as const : b.listingId ? "listing" as const : "claimsale" as const,
-    sourceTitle: b.auction?.title ?? b.listing?.title ?? null,
+    sourceType: b.auctionId
+      ? "auction" as const
+      : (b.listingId || b.bundleListings.length > 0)
+        ? "listing" as const
+        : "claimsale" as const,
+    sourceTitle: b.auction?.title
+      ?? b.listing?.title
+      ?? (b.bundleListings.length > 0 ? `Bundel: ${b.bundleListings.length} advertenties` : null),
     sourceImageUrl: (() => {
-      const raw = b.auction?.imageUrls ?? b.listing?.imageUrls ?? null;
+      const raw = b.auction?.imageUrls
+        ?? b.listing?.imageUrls
+        ?? b.bundleListings[0]?.listing?.imageUrls
+        ?? null;
       if (!raw) return null;
       try { const urls = JSON.parse(raw); return urls[0] ?? null; } catch { return null; }
     })(),

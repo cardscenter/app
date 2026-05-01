@@ -3,11 +3,13 @@
 import { sendMessage } from "@/actions/message";
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Send, ImagePlus, X } from "lucide-react";
+import { Send, ImagePlus, X, Package } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { ProposalButton } from "@/components/message/proposal-button";
 import { ProposalMessage } from "@/components/message/proposal-message";
+import { BundleOfferMessage, type BundleProposalData } from "@/components/message/bundle-offer-message";
+import { BundleOfferForm } from "@/components/message/bundle-offer-form";
 
 type Message = {
   id: string;
@@ -17,6 +19,7 @@ type Message = {
   senderId: string;
   createdAt: string;
   proposalId?: string | null;
+  bundleProposalId?: string | null;
 };
 
 type ProposalData = {
@@ -28,6 +31,13 @@ type ProposalData = {
   paymentStatus?: string | null;
   paymentDeadline?: string | null;
 };
+
+interface SellerShippingMethodLite {
+  id: string;
+  carrier: string;
+  serviceName: string;
+  price: number;
+}
 
 type ListingContext = {
   id: string;
@@ -43,6 +53,9 @@ export function MessageThread({
   currentUserId,
   listingContext,
   proposals,
+  bundleProposals,
+  otherUserId,
+  sellerShippingMethods,
   contextType,
   availableBalance,
 }: {
@@ -51,6 +64,9 @@ export function MessageThread({
   currentUserId: string;
   listingContext?: ListingContext | null;
   proposals?: ProposalData[];
+  bundleProposals?: BundleProposalData[];
+  otherUserId?: string | null;
+  sellerShippingMethods?: SellerShippingMethodLite[];
   contextType?: "auction" | "claimsale" | "listing" | null;
   availableBalance?: number;
 }) {
@@ -77,6 +93,8 @@ export function MessageThread({
   }, [searchParams]);
 
   const proposalMap = new Map((proposals ?? []).map((p) => [p.id, p]));
+  const bundleProposalMap = new Map((bundleProposals ?? []).map((bp) => [bp.id, bp]));
+  const [showBundleForm, setShowBundleForm] = useState(false);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -165,6 +183,21 @@ export function MessageThread({
                 }
               }
 
+              // Render bundle-offer message (Fase 27)
+              if (msg.bundleProposalId) {
+                const bp = bundleProposalMap.get(msg.bundleProposalId);
+                if (bp) {
+                  return (
+                    <BundleOfferMessage
+                      key={msg.id}
+                      bundleProposal={bp}
+                      currentUserId={currentUserId}
+                      isOwn={isOwn}
+                    />
+                  );
+                }
+              }
+
               return (
                 <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[70%] rounded-xl px-4 py-2.5 ${
@@ -196,6 +229,16 @@ export function MessageThread({
           )}
         </div>
       </div>
+
+      {/* Bundle-offer modal (buyer-only) */}
+      {showBundleForm && otherUserId && (
+        <BundleOfferForm
+          conversationId={conversationId}
+          sellerId={otherUserId}
+          sellerShippingMethods={sellerShippingMethods ?? []}
+          onClose={() => setShowBundleForm(false)}
+        />
+      )}
 
       {/* Send form — fixed at bottom */}
       <div className="flex-shrink-0 border-t border-border bg-background px-4 py-3">
@@ -250,6 +293,19 @@ export function MessageThread({
                 availableBalance={availableBalance}
               />
             )
+          )}
+
+          {/* Bundle-offer button — alleen buyer (= niet seller van listingContext)
+              en alleen bij chats met een seller-tegenpartij (Fase 27) */}
+          {!isSeller && otherUserId && contextType !== "auction" && contextType !== "claimsale" && (
+            <button
+              type="button"
+              onClick={() => setShowBundleForm(true)}
+              title={t("bundleOffer")}
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            >
+              <Package className="h-5 w-5" />
+            </button>
           )}
 
           <form ref={formRef} action={handleSend} className="flex flex-1 items-end gap-2">

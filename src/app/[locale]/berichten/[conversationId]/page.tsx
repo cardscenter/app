@@ -90,6 +90,16 @@ export default async function ConversationPage({
       proposals: {
         orderBy: { createdAt: "desc" },
       },
+      bundleProposals: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          listings: {
+            include: {
+              listing: { select: { id: true, title: true, imageUrls: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -133,6 +143,42 @@ export default async function ConversationPage({
     paymentDeadline: p.paymentDeadline?.toISOString() ?? null,
   }));
 
+  // Bundle-proposals (Fase 27)
+  const { parseImageUrls } = await import("@/lib/upload");
+  const bundleProposals = conversation.bundleProposals.map((bp) => ({
+    id: bp.id,
+    buyerId: bp.buyerId,
+    sellerId: bp.sellerId,
+    totalAmount: bp.totalAmount,
+    deliveryMethod: bp.deliveryMethod,
+    paymentMode: bp.paymentMode,
+    status: bp.status,
+    paymentStatus: bp.paymentStatus,
+    paymentDeadline: bp.paymentDeadline?.toISOString() ?? null,
+    pickupReservationExpiresAt: bp.pickupReservationExpiresAt?.toISOString() ?? null,
+    expiresAt: bp.expiresAt?.toISOString() ?? null,
+    listings: bp.listings.map((bpl) => {
+      const imgs = parseImageUrls(bpl.listing.imageUrls);
+      return {
+        listingId: bpl.listingId,
+        title: bpl.listing.title,
+        imageUrl: imgs[0] ?? null,
+        priceSnapshot: bpl.priceSnapshot,
+      };
+    }),
+  }));
+
+  // Seller shipping-methods voor de bundle-offer-form (alleen relevant als buyer
+  // chat heeft met een seller — de "andere" partij). We laden van de
+  // tegenpartij; als die geen sellerShippingMethods heeft is array leeg.
+  const otherUserId = otherUser?.userId ?? null;
+  const sellerShippingMethods = otherUserId
+    ? await prisma.sellerShippingMethod.findMany({
+        where: { sellerId: otherUserId, isActive: true },
+        select: { id: true, carrier: true, serviceName: true, price: true },
+      })
+    : [];
+
   return (
     <ChatLayout conversations={previews} activeConversationId={conversationId}>
       <div className="flex h-full flex-col">
@@ -164,10 +210,14 @@ export default async function ConversationPage({
               senderId: m.senderId,
               createdAt: m.createdAt.toISOString(),
               proposalId: m.proposalId,
+              bundleProposalId: m.bundleProposalId,
             }))}
             currentUserId={session.user.id!}
             listingContext={listingContext}
             proposals={proposals}
+            bundleProposals={bundleProposals}
+            otherUserId={otherUserId}
+            sellerShippingMethods={sellerShippingMethods}
             contextType={contextType}
             availableBalance={availableBalance}
           />

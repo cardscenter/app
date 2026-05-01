@@ -651,7 +651,52 @@
     "send": "Verstuur",
     "attachPhoto": "Foto bijvoegen",
     "photoUploading": "Uploaden...",
-    "photoAttached": "Foto bijgevoegd"
+    "photoAttached": "Foto bijgevoegd",
+    "bundleOffer": "Bundel-voorstel doen"
+  },
+  "bundleOffer": {
+    "createTitle": "Bundel-voorstel doen",
+    "selectListings": "Kies advertenties",
+    "noListings": "Deze verkoper heeft geen actieve advertenties.",
+    "loading": "Laden...",
+    "chooseDelivery": "Kies bezorging",
+    "shippingOption": "Verzenden",
+    "pickupOption": "Ophalen",
+    "pickupHint": "Niet alle gekozen advertenties ondersteunen ophalen — alleen verzenden mogelijk.",
+    "shippingMethod": "Verzendmethode",
+    "selectShipping": "Selecteer verzendmethode",
+    "totalAmount": "Totaalbedrag (incl. verzending)",
+    "amountHint": "Verzendkosten zijn inbegrepen — voer één totaalbedrag in.",
+    "submit": "Verstuur voorstel",
+    "cancel": "Annuleren",
+    "withdraw": "Voorstel intrekken",
+    "accept": "Accepteren",
+    "reject": "Afwijzen",
+    "completePayment": "Betaling voltooien",
+    "paymentComplete": "Betaling voltooid",
+    "paymentFailed": "Betalingstermijn verlopen",
+    "messageBubble": {
+      "title": "Bundel-voorstel ({count} advertenties)"
+    },
+    "status": {
+      "pending": "Wacht op antwoord",
+      "accepted": "Geaccepteerd",
+      "rejected": "Afgewezen",
+      "withdrawn": "Ingetrokken",
+      "expired": "Verlopen",
+      "countered": "Tegenbod gedaan"
+    },
+    "paymentDeadline": {
+      "ship": "Nog {days} dagen om te betalen",
+      "pickup": "Ophalen binnen {days} dagen"
+    },
+    "errors": {
+      "minListings": "Selecteer minimaal {min} advertenties",
+      "invalidAmount": "Voer een geldig totaalbedrag in",
+      "noShippingMethod": "Kies een verzendmethode",
+      "noCommonShipping": "De geselecteerde advertenties delen geen gemeenschappelijke verzendmethode.",
+      "pickupNotSupported": "Niet alle gekozen advertenties ondersteunen ophalen"
+    }
   },
   "proposal": {
     "makeOffer": "Bod plaatsen",

@@ -651,7 +651,52 @@
     "send": "Send",
     "attachPhoto": "Attach photo",
     "photoUploading": "Uploading...",
-    "photoAttached": "Photo attached"
+    "photoAttached": "Photo attached",
+    "bundleOffer": "Make a bundle offer"
+  },
+  "bundleOffer": {
+    "createTitle": "Make a bundle offer",
+    "selectListings": "Choose listings",
+    "noListings": "This seller has no active listings.",
+    "loading": "Loading...",
+    "chooseDelivery": "Choose delivery",
+    "shippingOption": "Shipping",
+    "pickupOption": "Pickup",
+    "pickupHint": "Not all selected listings support pickup — only shipping is available.",
+    "shippingMethod": "Shipping method",
+    "selectShipping": "Select shipping method",
+    "totalAmount": "Total amount (shipping included)",
+    "amountHint": "Shipping is included — enter a single total.",
+    "submit": "Send offer",
+    "cancel": "Cancel",
+    "withdraw": "Withdraw offer",
+    "accept": "Accept",
+    "reject": "Reject",
+    "completePayment": "Complete payment",
+    "paymentComplete": "Payment completed",
+    "paymentFailed": "Payment deadline expired",
+    "messageBubble": {
+      "title": "Bundle offer ({count} listings)"
+    },
+    "status": {
+      "pending": "Awaiting response",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn",
+      "expired": "Expired",
+      "countered": "Countered"
+    },
+    "paymentDeadline": {
+      "ship": "{days} days left to pay",
+      "pickup": "Pickup within {days} days"
+    },
+    "errors": {
+      "minListings": "Select at least {min} listings",
+      "invalidAmount": "Enter a valid total amount",
+      "noShippingMethod": "Choose a shipping method",
+      "noCommonShipping": "The selected listings have no common shipping method.",
+      "pickupNotSupported": "Not all selected listings support pickup"
+    }
   },
   "proposal": {
     "makeOffer": "Make offer",
