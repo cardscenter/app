@@ -5,7 +5,7 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
 import { UserBalance } from "./user-balance";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Menu, X, MessageCircle, Search } from "lucide-react";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { SearchBar } from "@/components/search/search-bar";
@@ -101,8 +101,10 @@ function HeaderContent() {
           })}
         </nav>
 
-        {/* Search bar — always visible on desktop, takes available space */}
-        <div className="mx-2 hidden flex-1 justify-center md:flex lg:mx-6">
+        {/* Search bar — inline on lg+, takes available space.
+            Below lg the inline bar is hidden; HeaderSearchToggle below renders
+            an icon that expands into a search input. */}
+        <div className="mx-6 hidden flex-1 justify-center lg:flex">
           <div className="w-full max-w-xl">
             <SearchBar variant="header" />
           </div>
@@ -110,6 +112,9 @@ function HeaderContent() {
 
         {/* Right side */}
         <div className="flex shrink-0 items-center gap-1 md:gap-1.5">
+          {/* Search toggle (md→lg widths only — inline bar takes over at lg+) */}
+          <HeaderSearchToggle />
+
           {session?.user ? (
             <div className="hidden items-center gap-1 md:flex md:gap-1.5">
               {/* Balance */}
@@ -279,6 +284,87 @@ function MobileSearchBar() {
         />
       </div>
     </form>
+  );
+}
+
+// Click-to-expand search for md→lg widths waar de inline-bar geen ruimte heeft
+function HeaderSearchToggle() {
+  const t = useTranslations("search");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = value.trim();
+    if (trimmed) {
+      router.push(`/zoeken?q=${encodeURIComponent(trimmed)}`);
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative hidden md:block lg:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((s) => !s)}
+        className="rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+        aria-label={t("placeholder")}
+      >
+        <Search className="h-5 w-5" />
+      </button>
+
+      {open && (
+        <form
+          onSubmit={handleSubmit}
+          className="absolute right-0 top-full z-50 mt-1 w-[420px] max-w-[80vw]"
+        >
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder={t("placeholder")}
+              className="w-full rounded-lg bg-slate-800/95 pl-9 pr-9 py-2 text-sm text-white shadow-lg ring-1 ring-white/20 placeholder:text-slate-400 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Sluit"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
 

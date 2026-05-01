@@ -30,7 +30,7 @@ export function CartIcon() {
   return (
     <Link
       href={`/${locale}/winkelwagen`}
-      className="relative rounded-md p-2 text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10 dark:hover:text-white"
+      className="relative rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
       title="Winkelwagen"
     >
       <ShoppingCart className="h-5 w-5" />

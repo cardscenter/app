@@ -40,9 +40,10 @@ export function SearchBar({ variant, defaultValue = "" }: SearchBarProps) {
     );
   }
 
-  // Header variant: always-visible, integrates with dark header
+  // Header variant: always-visible inline bar (lg+ only — header.tsx renders
+  // a collapsible icon-toggle for md→lg widths)
   return (
-    <form onSubmit={handleSubmit} className="hidden w-full md:block">
+    <form onSubmit={handleSubmit} className="w-full">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
