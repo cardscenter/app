@@ -38,7 +38,7 @@ export function ContactSellerButton({
       <button
         onClick={handleContact}
         disabled={loading}
-        className="w-full rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground glass-subtle hover:bg-white/60 dark:hover:bg-white/10 disabled:opacity-50 transition-all"
+        className="w-full rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground glass-subtle hover:bg-muted disabled:opacity-50 transition-all"
       >
         {t("contactSeller")}
       </button>

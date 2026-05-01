@@ -39,7 +39,7 @@ export function Pagination({ currentPage, totalPages, baseUrl, locale, extraPara
       {currentPage > 1 ? (
         <Link
           href={pageUrl(currentPage - 1)}
-          className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-white/60 dark:hover:bg-white/5 transition-colors"
+          className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           {t("previousPage")}
@@ -63,7 +63,7 @@ export function Pagination({ currentPage, totalPages, baseUrl, locale, extraPara
             className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               page === currentPage
                 ? "bg-primary text-white"
-                : "text-muted-foreground hover:bg-white/60 dark:hover:bg-white/5"
+                : "text-muted-foreground hover:bg-muted"
             }`}
           >
             {page}
@@ -74,7 +74,7 @@ export function Pagination({ currentPage, totalPages, baseUrl, locale, extraPara
       {currentPage < totalPages ? (
         <Link
           href={pageUrl(currentPage + 1)}
-          className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-white/60 dark:hover:bg-white/5 transition-colors"
+          className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
         >
           {t("nextPage")}
           <ChevronRight className="h-4 w-4" />

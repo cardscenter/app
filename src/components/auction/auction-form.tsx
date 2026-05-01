@@ -52,7 +52,7 @@ export function AuctionForm({ seriesList }: { seriesList: SeriesWithSets[] }) {
             { value: "COLLECTION", label: t("collection") },
             { value: "BULK", label: t("bulk") },
           ].map((opt) => (
-            <label key={opt.value} className={`cursor-pointer rounded-xl border px-4 py-2.5 text-sm transition-all ${auctionType === opt.value ? "border-primary bg-primary text-white shadow-md" : "glass-subtle text-foreground hover:bg-white/60 dark:hover:bg-white/10"}`}>
+            <label key={opt.value} className={`cursor-pointer rounded-xl border px-4 py-2.5 text-sm transition-all ${auctionType === opt.value ? "border-primary bg-primary text-white shadow-md" : "glass-subtle text-foreground hover:bg-muted"}`}>
               <input type="radio" name="auctionType" value={opt.value} checked={auctionType === opt.value} onChange={(e) => setAuctionType(e.target.value)} className="sr-only" />
               {opt.label}
             </label>

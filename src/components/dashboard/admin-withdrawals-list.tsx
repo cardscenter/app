@@ -92,7 +92,7 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
   }
 
   return (
-    <li className="rounded-lg border border-border bg-white/40 px-4 py-3 dark:bg-white/5">
+    <li className="rounded-lg border border-border bg-muted px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="font-semibold text-foreground">

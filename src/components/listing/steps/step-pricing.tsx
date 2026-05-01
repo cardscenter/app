@@ -33,7 +33,7 @@ export function StepPricing({ pricingType, price, pricing, onChange }: StepPrici
               className={`rounded-xl border px-5 py-2.5 text-sm transition-all ${
                 pricingType === opt.value
                   ? "border-primary bg-primary text-white shadow-md"
-                  : "glass-subtle text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                  : "glass-subtle text-foreground hover:bg-muted"
               }`}
             >
               {opt.label}

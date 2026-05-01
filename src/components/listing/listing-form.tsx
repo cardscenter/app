@@ -94,7 +94,7 @@ export function ListingForm({ seriesList }: { seriesList: SeriesWithSets[] }) {
             { value: "FIXED", label: t("fixedPrice") },
             { value: "NEGOTIABLE", label: t("negotiable") },
           ].map((opt) => (
-            <label key={opt.value} className={`cursor-pointer rounded-xl border px-4 py-2.5 text-sm transition-all ${pricingType === opt.value ? "border-primary bg-primary text-white shadow-md" : "glass-subtle text-foreground hover:bg-white/60 dark:hover:bg-white/10"}`}>
+            <label key={opt.value} className={`cursor-pointer rounded-xl border px-4 py-2.5 text-sm transition-all ${pricingType === opt.value ? "border-primary bg-primary text-white shadow-md" : "glass-subtle text-foreground hover:bg-muted"}`}>
               <input type="radio" value={opt.value} checked={pricingType === opt.value} onChange={(e) => setPricingType(e.target.value)} className="sr-only" />
               {opt.label}
             </label>

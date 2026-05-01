@@ -70,7 +70,7 @@ export function StepPricing({
               className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-all ${
                 duration === d
                   ? "border-primary bg-primary text-white shadow-md"
-                  : "glass-subtle text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                  : "glass-subtle text-foreground hover:bg-muted"
               }`}
             >
               <Clock className="h-4 w-4" />

@@ -51,7 +51,7 @@ export function SellerInfoBlock({ seller }: { seller: SellerInfo }) {
   return (
     <Link
       href={`/verkoper/${seller.id}`}
-      className="glass-subtle flex items-center gap-4 rounded-xl p-4 transition-colors hover:bg-white/60 dark:hover:bg-white/5 group"
+      className="glass-subtle flex items-center gap-4 rounded-xl p-4 transition-colors hover:bg-muted group"
     >
       {/* Avatar */}
       {seller.avatarUrl ? (

@@ -54,8 +54,8 @@ export function RichTextEditor({ value, onChange, rows = 4, placeholder }: RichT
         e.preventDefault();
         exec(command);
       }}
-      className={`rounded-md p-1.5 transition-colors hover:bg-white/60 dark:hover:bg-white/10 ${
-        isActive(command) ? "bg-white/40 dark:bg-white/15 text-foreground" : "text-muted-foreground"
+      className={`rounded-md p-1.5 transition-colors hover:bg-muted ${
+        isActive(command) ? "bg-secondary text-foreground" : "text-muted-foreground"
       }`}
       title={label}
     >
@@ -77,7 +77,7 @@ export function RichTextEditor({ value, onChange, rows = 4, placeholder }: RichT
             e.preventDefault();
             exec("insertUnorderedList");
           }}
-          className="rounded-md p-1.5 transition-colors hover:bg-white/60 dark:hover:bg-white/10 text-muted-foreground"
+          className="rounded-md p-1.5 transition-colors hover:bg-muted text-muted-foreground"
           title="Opsommingslijst"
         >
           <List className="h-4 w-4" />

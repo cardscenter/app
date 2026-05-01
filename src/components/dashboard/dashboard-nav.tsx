@@ -231,7 +231,7 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
             className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
               isActive
                 ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-                : "text-muted-foreground hover:bg-white/50 hover:text-foreground dark:hover:bg-white/5"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
             <Icon className="h-4 w-4 shrink-0" />

@@ -44,7 +44,7 @@ export function StepType({ value, onChange }: StepTypeProps) {
               className={`flex flex-col items-center gap-3 rounded-2xl border-2 p-6 text-center transition-all ${
                 selected
                   ? "border-primary bg-primary/10 shadow-md"
-                  : "glass-subtle border-transparent hover:border-primary/30 hover:bg-white/60 dark:hover:bg-white/5"
+                  : "glass-subtle border-transparent hover:border-primary/30 hover:bg-muted"
               }`}
             >
               <Icon className={`h-8 w-8 ${selected ? "text-primary" : "text-muted-foreground"}`} />

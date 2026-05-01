@@ -81,7 +81,7 @@ export function BlockReportButtons({ targetUserId, targetDisplayName, initiallyB
         <button
           onClick={() => setShowReport((s) => !s)}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
         >
           <CircleAlert className="h-3.5 w-3.5" />
           {t("reportButton")}

@@ -163,7 +163,7 @@ function SuspendUserActions({
       <button
         onClick={() => setShowForm((s) => !s)}
         disabled={pending}
-        className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
+        className="rounded-lg border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
       >
         {t("suspendUser")}
       </button>
@@ -259,7 +259,7 @@ function ReportRow({ report }: { report: Report }) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-white/40 p-3 text-sm dark:bg-white/5">
+    <div className="rounded-lg border border-border bg-muted p-3 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">

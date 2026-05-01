@@ -58,7 +58,7 @@ export function AuctionPreview({ form, onBack, onPublish, pending, error }: Auct
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1 glass-subtle rounded-xl px-4 py-2.5 text-sm text-foreground transition-all hover:bg-white/60 dark:hover:bg-white/10"
+          className="flex items-center gap-1 glass-subtle rounded-xl px-4 py-2.5 text-sm text-foreground transition-all hover:bg-muted"
         >
           <ChevronLeft className="h-4 w-4" /> {t("backToEdit")}
         </button>
@@ -268,7 +268,7 @@ export function AuctionPreview({ form, onBack, onPublish, pending, error }: Auct
           <button
             type="button"
             onClick={onBack}
-            className="glass-subtle rounded-xl px-4 py-2.5 text-sm text-foreground transition-all hover:bg-white/60 dark:hover:bg-white/10"
+            className="glass-subtle rounded-xl px-4 py-2.5 text-sm text-foreground transition-all hover:bg-muted"
           >
             {t("backToEdit")}
           </button>

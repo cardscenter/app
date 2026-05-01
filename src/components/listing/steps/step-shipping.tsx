@@ -91,7 +91,7 @@ export function StepShipping({
                 className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-all ${
                   deliveryMethod === method
                     ? "border-primary bg-primary text-white shadow-md"
-                    : "glass-subtle text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                    : "glass-subtle text-foreground hover:bg-muted"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -156,7 +156,7 @@ export function StepShipping({
                 className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
                   carriers.includes("POSTNL")
                     ? "border-primary bg-primary/10"
-                    : "glass-subtle hover:bg-white/60 dark:hover:bg-white/10"
+                    : "glass-subtle hover:bg-muted"
                 }`}
               >
                 <input type="checkbox" checked={carriers.includes("POSTNL")} readOnly className="h-4 w-4 accent-primary" />
@@ -170,7 +170,7 @@ export function StepShipping({
                 className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
                   carriers.includes("DHL")
                     ? "border-primary bg-primary/10"
-                    : "glass-subtle hover:bg-white/60 dark:hover:bg-white/10"
+                    : "glass-subtle hover:bg-muted"
                 }`}
               >
                 <input type="checkbox" checked={carriers.includes("DHL")} readOnly className="h-4 w-4 accent-primary" />
@@ -184,7 +184,7 @@ export function StepShipping({
                 className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-all ${
                   carriers.includes("SELF")
                     ? "border-primary bg-primary/10 text-primary"
-                    : "glass-subtle text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                    : "glass-subtle text-foreground hover:bg-muted"
                 }`}
               >
                 <input type="checkbox" checked={carriers.includes("SELF")} readOnly className="h-4 w-4 accent-primary" />
@@ -206,7 +206,7 @@ export function StepShipping({
                   className={`rounded-xl border px-4 py-3 text-left text-sm transition-all ${
                     packageSize === size
                       ? "border-primary bg-primary/10 text-primary"
-                      : "glass-subtle text-foreground hover:bg-white/60 dark:hover:bg-white/10"
+                      : "glass-subtle text-foreground hover:bg-muted"
                   }`}
                 >
                   {t(PACKAGE_KEYS[size])}
