@@ -51,6 +51,8 @@ export async function createListing(formData: FormData) {
     packageCount: formData.get("packageCount") || "1",
     upsells: formData.get("upsells") || undefined,
     shippingMethodIds: formData.get("shippingMethodIds") || undefined,
+    pickupPostalCode: formData.get("pickupPostalCode") || undefined,
+    pickupCity: formData.get("pickupCity") || undefined,
   };
 
   const result = createListingSchema.safeParse(raw);
@@ -106,6 +108,8 @@ export async function createListing(formData: FormData) {
     carriers: data.carriers || null,
     packageSize: data.packageSize || null,
     packageCount: data.packageCount,
+    pickupPostalCode: data.pickupPostalCode || null,
+    pickupCity: data.pickupCity || null,
     sellerId: userId,
   };
 

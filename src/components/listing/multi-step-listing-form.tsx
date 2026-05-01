@@ -48,6 +48,8 @@ interface FormState {
   carriers: Carrier[];
   packageSize: PackageSize | "";
   packageCount: number;
+  pickupPostalCode: string;
+  pickupCity: string;
   upsells: UpsellEntry[];
 }
 
@@ -74,6 +76,8 @@ const INITIAL_STATE: FormState = {
   carriers: [],
   packageSize: "",
   packageCount: 1,
+  pickupPostalCode: "",
+  pickupCity: "",
   upsells: [],
 };
 
@@ -140,6 +144,8 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
+    if (form.pickupPostalCode) formData.set("pickupPostalCode", form.pickupPostalCode);
+    if (form.pickupCity) formData.set("pickupCity", form.pickupCity);
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
     return formData;
   };
@@ -227,18 +233,68 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
         />
       </section>
 
-      {/* Section 5: Shipping */}
+      {/* Section 5: Shipping + Pickup */}
       <section className="glass rounded-2xl p-6">
         <h2 className="text-lg font-semibold text-foreground mb-1">{t("stepShipping")}</h2>
         <p className="text-sm text-muted-foreground mb-4">{t("shippingMethodsHint")}</p>
 
-        <ShippingMethodSelector
-          methods={shippingMethods}
-          selected={selectedShippingMethods}
-          onChange={setSelectedShippingMethods}
-          context="listing"
-          freeShipping={form.freeShipping}
-        />
+        {/* Delivery-method toggle (Fase 27) */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-foreground mb-2">{t("deliveryMethodLabel")}</label>
+          <div className="flex flex-wrap gap-2">
+            {(["SHIP", "PICKUP", "BOTH"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => updateField("deliveryMethod", m)}
+                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
+                  form.deliveryMethod === m
+                    ? "border-primary bg-primary text-white"
+                    : "glass-subtle text-foreground hover:bg-muted"
+                }`}
+              >
+                {t(m === "SHIP" ? "deliveryShip" : m === "PICKUP" ? "deliveryPickup" : "deliveryBoth")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Pickup-locatie velden (alleen bij PICKUP/BOTH) */}
+        {(form.deliveryMethod === "PICKUP" || form.deliveryMethod === "BOTH") && (
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">{t("pickupLocation.postalCode")}</label>
+              <input
+                type="text"
+                value={form.pickupPostalCode}
+                onChange={(e) => updateField("pickupPostalCode", e.target.value)}
+                placeholder="3811"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">{t("pickupLocation.city")}</label>
+              <input
+                type="text"
+                value={form.pickupCity}
+                onChange={(e) => updateField("pickupCity", e.target.value)}
+                placeholder="Amersfoort"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground sm:col-span-2">{t("pickupLocation.privacyHint")}</p>
+          </div>
+        )}
+
+        {(form.deliveryMethod === "SHIP" || form.deliveryMethod === "BOTH") && (
+          <ShippingMethodSelector
+            methods={shippingMethods}
+            selected={selectedShippingMethods}
+            onChange={setSelectedShippingMethods}
+            context="listing"
+            freeShipping={form.freeShipping}
+          />
+        )}
 
         {/* Free shipping toggle */}
         <div className="flex items-center justify-between glass-subtle rounded-xl p-4 mt-4">

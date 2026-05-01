@@ -698,6 +698,30 @@
       "pickupNotSupported": "Not all selected listings support pickup"
     }
   },
+  "pickup": {
+    "proposeMoment": "Propose pickup time",
+    "proposeTitle": "Propose a pickup moment",
+    "dateLabel": "Date",
+    "windowStart": "From",
+    "windowEnd": "Until",
+    "submit": "Send proposal",
+    "cancel": "Cancel",
+    "accept": "Accept",
+    "reject": "Reject",
+    "scheduledOn": "Pickup scheduled: {date} between {start} and {end}",
+    "codeForBuyer": "Pickup code (show to seller at pickup)",
+    "enterCode": "Enter pickup code",
+    "confirmPickup": "Confirm pickup",
+    "wrongCode": "Wrong code",
+    "tooManyAttempts": "Too many wrong codes — locked for 1 hour.",
+    "completed": "Pickup confirmed",
+    "cancelReservation": "Cancel reservation",
+    "confirmCancelReservation": "Cancel this reservation? The listings will become available again.",
+    "errors": {
+      "invalidDate": "Date must be today or later",
+      "invalidWindow": "End time must be later than start time"
+    }
+  },
   "proposal": {
     "makeOffer": "Make offer",
     "suggestPrice": "Suggest price",
@@ -810,6 +834,15 @@
     "deliveryShip": "Ship",
     "deliveryBoth": "Pickup & Ship",
     "deliveryMethodLabel": "Delivery method",
+    "deliveryShip": "Shipping",
+    "deliveryPickup": "Pickup",
+    "deliveryBoth": "Both",
+    "pickupLocation": {
+      "label": "Pickup location",
+      "postalCode": "Postal code",
+      "city": "City",
+      "privacyHint": "Only the postal code + city are publicly visible. Exchange the exact address via chat."
+    },
     "freeShipping": "Free shipping",
     "freeShippingTooltip": "Shipping costs are included in the sale price",
     "carrierLabel": "Carrier",

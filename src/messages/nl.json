@@ -698,6 +698,30 @@
       "pickupNotSupported": "Niet alle gekozen advertenties ondersteunen ophalen"
     }
   },
+  "pickup": {
+    "proposeMoment": "Stel ophaalmoment voor",
+    "proposeTitle": "Ophaalmoment voorstellen",
+    "dateLabel": "Datum",
+    "windowStart": "Vanaf",
+    "windowEnd": "Tot",
+    "submit": "Voorstel versturen",
+    "cancel": "Annuleren",
+    "accept": "Accepteren",
+    "reject": "Afwijzen",
+    "scheduledOn": "Ophaal gepland: {date} tussen {start} en {end}",
+    "codeForBuyer": "Ophaalcode (laat zien aan verkoper bij ophalen)",
+    "enterCode": "Voer ophaalcode in",
+    "confirmPickup": "Ophaal bevestigen",
+    "wrongCode": "Verkeerde code",
+    "tooManyAttempts": "Te veel verkeerde codes — geblokkeerd voor 1 uur.",
+    "completed": "Ophaal bevestigd",
+    "cancelReservation": "Reservering annuleren",
+    "confirmCancelReservation": "Reservering annuleren? De advertenties komen weer beschikbaar.",
+    "errors": {
+      "invalidDate": "Datum moet vandaag of later zijn",
+      "invalidWindow": "Eindtijd moet later zijn dan starttijd"
+    }
+  },
   "proposal": {
     "makeOffer": "Bod plaatsen",
     "suggestPrice": "Prijs voorstellen",
@@ -810,6 +834,15 @@
     "deliveryShip": "Verzenden",
     "deliveryBoth": "Ophalen & Verzenden",
     "deliveryMethodLabel": "Bezorgmethode",
+    "deliveryShip": "Verzenden",
+    "deliveryPickup": "Ophalen",
+    "deliveryBoth": "Beide",
+    "pickupLocation": {
+      "label": "Ophaal-locatie",
+      "postalCode": "Postcode",
+      "city": "Plaats",
+      "privacyHint": "Alleen postcode + plaats zijn publiek zichtbaar. Het exacte adres wissel je via chat uit."
+    },
     "freeShipping": "Gratis verzending",
     "freeShippingTooltip": "Verzendkosten zijn inbegrepen in de verkoopprijs",
     "carrierLabel": "Vervoerder",

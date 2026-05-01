@@ -9,6 +9,7 @@ import {
   withdrawBundleOffer,
   completeBundleOfferPayment,
 } from "@/actions/bundle-offer";
+import { PickupActions, type PickupScheduleData } from "@/components/message/pickup-actions";
 
 interface BundleListingThumb {
   listingId: string;
@@ -30,6 +31,10 @@ export interface BundleProposalData {
   pickupReservationExpiresAt: string | null;
   expiresAt: string | null;
   listings: BundleListingThumb[];
+  // Optional — alleen voor ACCEPTED bundles met een gekoppelde ShippingBundle.
+  shippingBundleId?: string | null;
+  bundleStatus?: string | null;
+  pickupSchedule?: PickupScheduleData | null;
 }
 
 interface Props {
@@ -171,6 +176,20 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn }:
           >
             {t("completePayment")}
           </button>
+        )}
+
+        {/* Pickup-flow embed (Fase 27) — alleen bij ACCEPTED bundle met gekoppelde
+            ShippingBundle, en alleen voor PICKUP-bundles. */}
+        {bp.shippingBundleId && bp.bundleStatus && bp.deliveryMethod === "PICKUP" && bp.status === "ACCEPTED" && (
+          <PickupActions
+            shippingBundleId={bp.shippingBundleId}
+            bundleStatus={bp.bundleStatus}
+            paymentMode={bp.paymentMode}
+            schedule={bp.pickupSchedule ?? null}
+            currentUserId={currentUserId}
+            buyerId={bp.buyerId}
+            sellerId={bp.sellerId}
+          />
         )}
       </div>
     </div>

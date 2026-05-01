@@ -98,6 +98,9 @@ export default async function ConversationPage({
               listing: { select: { id: true, title: true, imageUrls: true } },
             },
           },
+          shippingBundle: {
+            include: { pickupSchedule: true },
+          },
         },
       },
     },
@@ -145,28 +148,48 @@ export default async function ConversationPage({
 
   // Bundle-proposals (Fase 27)
   const { parseImageUrls } = await import("@/lib/upload");
-  const bundleProposals = conversation.bundleProposals.map((bp) => ({
-    id: bp.id,
-    buyerId: bp.buyerId,
-    sellerId: bp.sellerId,
-    totalAmount: bp.totalAmount,
-    deliveryMethod: bp.deliveryMethod,
-    paymentMode: bp.paymentMode,
-    status: bp.status,
-    paymentStatus: bp.paymentStatus,
-    paymentDeadline: bp.paymentDeadline?.toISOString() ?? null,
-    pickupReservationExpiresAt: bp.pickupReservationExpiresAt?.toISOString() ?? null,
-    expiresAt: bp.expiresAt?.toISOString() ?? null,
-    listings: bp.listings.map((bpl) => {
-      const imgs = parseImageUrls(bpl.listing.imageUrls);
-      return {
-        listingId: bpl.listingId,
-        title: bpl.listing.title,
-        imageUrl: imgs[0] ?? null,
-        priceSnapshot: bpl.priceSnapshot,
-      };
-    }),
-  }));
+  const bundleProposals = conversation.bundleProposals.map((bp) => {
+    // Buyer mag de pickupCode zien; seller niet (die voert hem in tijdens ophaal).
+    const isBuyer = session.user!.id === bp.buyerId;
+    const sched = bp.shippingBundle?.pickupSchedule ?? null;
+    return {
+      id: bp.id,
+      buyerId: bp.buyerId,
+      sellerId: bp.sellerId,
+      totalAmount: bp.totalAmount,
+      deliveryMethod: bp.deliveryMethod,
+      paymentMode: bp.paymentMode,
+      status: bp.status,
+      paymentStatus: bp.paymentStatus,
+      paymentDeadline: bp.paymentDeadline?.toISOString() ?? null,
+      pickupReservationExpiresAt: bp.pickupReservationExpiresAt?.toISOString() ?? null,
+      expiresAt: bp.expiresAt?.toISOString() ?? null,
+      listings: bp.listings.map((bpl) => {
+        const imgs = parseImageUrls(bpl.listing.imageUrls);
+        return {
+          listingId: bpl.listingId,
+          title: bpl.listing.title,
+          imageUrl: imgs[0] ?? null,
+          priceSnapshot: bpl.priceSnapshot,
+        };
+      }),
+      shippingBundleId: bp.shippingBundle?.id ?? null,
+      bundleStatus: bp.shippingBundle?.status ?? null,
+      pickupSchedule: sched
+        ? {
+            id: sched.id,
+            proposedById: sched.proposedById,
+            proposedFor: sched.proposedFor.toISOString(),
+            windowStart: sched.windowStart,
+            windowEnd: sched.windowEnd,
+            status: sched.status,
+            pickupCode: isBuyer ? sched.pickupCode : null,
+            pickupCodeAttempts: sched.pickupCodeAttempts,
+            pickupLockedUntil: sched.pickupLockedUntil?.toISOString() ?? null,
+          }
+        : null,
+    };
+  });
 
   // Seller shipping-methods voor de bundle-offer-form (alleen relevant als buyer
   // chat heeft met een seller — de "andere" partij). We laden van de
