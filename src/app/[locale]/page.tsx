@@ -53,7 +53,7 @@ async function HomePageContent({
         <MarketingHero stats={data.stats} />
       )}
 
-      {/* Finn & Sage visual entry points to the three main sections (logged-in only) */}
+      {/* Visual entry points to the three main sections (logged-in only) */}
       {isLoggedIn && <MainSectionsGrid />}
 
       {/* Category Stats */}

@@ -6,9 +6,8 @@ import { Link } from "@/i18n/navigation";
 import { ArrowRight, Gavel, Tag, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Three big visual entry-points to veilingen / claimsales / marktplaats,
-// themed with the Finn & Sage illustrations. Rendered on the logged-in
-// homepage below the hero.
+// Three big visual entry-points to veilingen / claimsales / marktplaats.
+// Rendered on the logged-in homepage below the hero.
 
 interface Section {
   href: string;
@@ -25,7 +24,7 @@ const SECTIONS: Section[] = [
     href: "/veilingen",
     title: "Veilingen",
     description: "Bied mee op kavels en win!",
-    image: "/images/finnsage/images/auction.webp",
+    image: "/images/sections/auction.webp",
     icon: Gavel,
     accent: "from-blue-900/70 via-blue-950/50 to-transparent",
     shadow: "shadow-blue-500/20 hover:shadow-blue-500/40",
@@ -34,7 +33,7 @@ const SECTIONS: Section[] = [
     href: "/claimsales",
     title: "Claimsales",
     description: "Claim snel kaarten tegen vaste prijzen",
-    image: "/images/finnsage/images/claimsale.webp",
+    image: "/images/sections/claimsale.webp",
     icon: Tag,
     accent: "from-amber-900/70 via-amber-950/50 to-transparent",
     shadow: "shadow-amber-500/20 hover:shadow-amber-500/40",
@@ -43,7 +42,7 @@ const SECTIONS: Section[] = [
     href: "/marktplaats",
     title: "Marktplaats",
     description: "Koop en verkoop losse kaarten en collecties",
-    image: "/images/finnsage/images/marketplace.webp",
+    image: "/images/sections/marketplace.webp",
     icon: Store,
     accent: "from-emerald-900/70 via-emerald-950/50 to-transparent",
     shadow: "shadow-emerald-500/20 hover:shadow-emerald-500/40",

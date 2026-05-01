@@ -1,5 +1,4 @@
 import { useTranslations } from "next-intl";
-import Image from "next/image";
 import { HeroEmailForm } from "@/components/home/hero-email-form";
 import { HeroParticles } from "@/components/home/hero-particles";
 import { HeroStatBadges } from "@/components/home/hero-stat-badges";
@@ -13,17 +12,10 @@ export function MarketingHero({ stats }: MarketingHeroProps) {
   const t = useTranslations("home");
 
   return (
-    <section className="relative overflow-hidden min-h-[480px] flex items-center">
-      {/* Background image with parallax-ready positioning */}
+    <section className="relative overflow-hidden min-h-[480px] flex items-center bg-slate-900">
+      {/* Layered gradients for depth */}
       <div className="absolute inset-0">
-        <Image
-          src="/images/finnsage/homepage/herobanner.png"
-          alt=""
-          fill
-          className="object-cover object-center scale-110"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/75 to-slate-900/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950" />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent" />
       </div>
 
