@@ -142,6 +142,11 @@ model User {
 
   // Admin audit log (Fase 15)
   adminAuditLogs    AdminAuditLog[] @relation("AdminAuditLogActor")
+
+  // Bundle-offer + Pickup (Fase 27)
+  bundleProposalsAsBuyer  BundleProposal[] @relation("BundleProposalBuyer")
+  bundleProposalsAsSeller BundleProposal[] @relation("BundleProposalSeller")
+  pickupSchedulesProposed PickupSchedule[] @relation("PickupProposer")
 }
 
 // ============================================================
@@ -172,6 +177,7 @@ model SellerShippingMethod {
   listingShippingMethods   ListingShippingMethod[]
   auctionShippingMethods   AuctionShippingMethod[]
   shippingBundles          ShippingBundle[]
+  bundleProposals          BundleProposal[]
 
   @@index([sellerId])
 }
@@ -602,12 +608,19 @@ model Listing {
   packageSize     String?  // LETTER | SMALL | MEDIUM | LARGE
   packageCount    Int      @default(1)
 
+  // Pickup-locatie (verplicht als deliveryMethod ∈ {PICKUP, BOTH}). Geen exact
+  // adres voor privacy — alleen postcode + plaats.
+  pickupPostalCode String?
+  pickupCity       String?
+
   // Seller
   sellerId      String
   seller        User     @relation(fields: [sellerId], references: [id])
 
-  // Status
-  status        String   @default("ACTIVE") // ACTIVE | SOLD | DELETED
+  // Status (Fase 27): DRAFT | ACTIVE | PAUSED | RESERVED | SOLD | DELETED.
+  // RESERVED = gekoppeld aan een ACCEPTED bundle-offer of partial-balance proposal,
+  // tijdelijk niet-koopbaar voor anderen.
+  status        String   @default("ACTIVE")
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -621,6 +634,8 @@ model Listing {
   shippingMethods ListingShippingMethod[]
   shippingBundle ShippingBundle?
   proposals      Proposal[]
+  bundleProposalListings BundleProposalListing[]
+  bundleListing  BundleListing?
 
   @@index([sellerId])
   @@index([status])
@@ -700,7 +715,19 @@ model ShippingBundle {
 
   refundedAmount Float   @default(0) // Total amount refunded to buyer so far
 
-  status        String   @default("PENDING") // PENDING | PAID | SHIPPED | COMPLETED | CANCELLED | DISPUTED
+  // Status (Fase 27): PENDING | PAID | SCHEDULED | SHIPPED | COMPLETED | CANCELLED | DISPUTED.
+  // SCHEDULED = pickup-moment vastgelegd, wacht op code-confirm. Voor EXTERNAL-bundles:
+  // PENDING (RESERVED-fase) → SCHEDULED (na pickup-lock) → COMPLETED. PAID/SHIPPED wordt
+  // overgeslagen omdat er geen escrow is.
+  status        String   @default("PENDING")
+
+  // Payment mode (Fase 27). PLATFORM = escrow via wallet. EXTERNAL = off-platform
+  // (Tikkie/contant bij ophalen) — geen wallet-impact, geen commission.
+  paymentMode   String   @default("PLATFORM") // PLATFORM | EXTERNAL
+
+  // Reservation-timeout voor EXTERNAL pickup-bundles (now + 14 dagen na seller-accept).
+  // Cron `pickup-reservation-timeout` ruimt op zodat listings niet eeuwig vastzitten.
+  pickupReservationExpiresAt DateTime?
 
   cancellationRequests CancellationRequest[]
 
@@ -709,6 +736,15 @@ model ShippingBundle {
   auction       Auction? @relation(fields: [auctionId], references: [id])
   listingId     String?  @unique
   listing       Listing? @relation(fields: [listingId], references: [id])
+
+  // Multi-listing bundle (Fase 27). Als gevuld: listingId is null en bundle bevat
+  // meerdere listings via de BundleListing-join.
+  bundleProposalId String? @unique
+  bundleProposal   BundleProposal? @relation(fields: [bundleProposalId], references: [id])
+  bundleListings   BundleListing[]
+
+  // Pickup-schedule (Fase 27)
+  pickupSchedule   PickupSchedule?
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -719,6 +755,8 @@ model ShippingBundle {
   @@index([buyerId])
   @@index([sellerId])
   @@index([buyerId, sellerId, status])
+  @@index([paymentMode, status])
+  @@index([pickupReservationExpiresAt])
 }
 
 // ============================================================
@@ -836,6 +874,7 @@ model Conversation {
   participants ConversationParticipant[]
   messages     Message[]
   proposals    Proposal[]
+  bundleProposals BundleProposal[]
 
   @@index([auctionId])
   @@index([claimsaleId])
@@ -875,6 +914,15 @@ model Message {
   // Optional link to a proposal (rendered as special message)
   proposalId     String?
   proposal       Proposal? @relation(fields: [proposalId], references: [id])
+
+  // Optional link to a bundle-offer (Fase 27)
+  bundleProposalId String?
+  bundleProposal   BundleProposal? @relation(fields: [bundleProposalId], references: [id])
+
+  // Optional link to a pickup-schedule event (Fase 27). Een schedule heeft meerdere
+  // messages (propose, respond, reschedule).
+  pickupScheduleId String?
+  pickupSchedule   PickupSchedule? @relation(fields: [pickupScheduleId], references: [id])
 
   @@index([conversationId, createdAt])
   @@index([senderId])
@@ -1522,4 +1570,143 @@ model CronRun {
 
   @@index([jobName, startedAt])
   @@index([status])
+}
+
+// ============================================================
+// BUNDLE-OFFER + PICKUP (Fase 27)
+// ============================================================
+
+// Buyer-initiated multi-listing voorstel in een chat. Buyer kiest 2+ ACTIVE
+// listings van zelfde seller + één totaalbedrag + delivery (SHIP=PLATFORM /
+// PICKUP=EXTERNAL). Seller accepteert/weigert/counter't. Bij ACCEPT op SHIP met
+// 100% saldo: bundle PAID + listings SOLD direct. Bij ACCEPT op SHIP met
+// partial saldo: 5d payment-deadline + listings RESERVED. Bij ACCEPT op PICKUP:
+// 14d reservation-timeout + listings RESERVED, géén wallet-impact.
+model BundleProposal {
+  id             String   @id @default(cuid())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  buyerId  String
+  buyer    User   @relation("BundleProposalBuyer", fields: [buyerId], references: [id])
+
+  sellerId String
+  seller   User   @relation("BundleProposalSeller", fields: [sellerId], references: [id])
+
+  totalAmount Float
+
+  deliveryMethod   String  // SHIP | PICKUP
+  shippingMethodId String?
+  shippingMethod   SellerShippingMethod? @relation(fields: [shippingMethodId], references: [id])
+
+  // PLATFORM (escrow via wallet) of EXTERNAL (off-platform betaling bij ophalen).
+  paymentMode String @default("PLATFORM") // PLATFORM | EXTERNAL
+
+  // Voorstel-status: lifecycle van het aanbod zelf.
+  status String @default("PENDING") // PENDING | ACCEPTED | REJECTED | WITHDRAWN | EXPIRED | COUNTERED
+
+  // Betalings-status alleen relevant na ACCEPTED. Voor PLATFORM: AWAITING_PAYMENT
+  // (partial) → PAID. Voor EXTERNAL: altijd EXTERNAL (geen platform-tracking).
+  paymentStatus String? // AWAITING_PAYMENT | PAID | PAYMENT_FAILED | EXTERNAL
+
+  // Voor PLATFORM partial-balance: 5 dagen om bij te storten.
+  paymentDeadline DateTime?
+
+  // Voor PENDING-fase: 3 dagen om respons van seller te krijgen.
+  expiresAt DateTime?
+
+  // Voor EXTERNAL: 14 dagen om pickup te voltooien. Cron ruimt op.
+  pickupReservationExpiresAt DateTime?
+
+  // Counter-bod-keten. Het oude PENDING wordt COUNTERED, een nieuw kind-Proposal
+  // wordt aangemaakt met seller→buyer richting (rol-omgekeerd).
+  parentProposalId String?
+  parentProposal   BundleProposal?  @relation("BundleProposalCounter", fields: [parentProposalId], references: [id])
+  childProposals   BundleProposal[] @relation("BundleProposalCounter")
+
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  listings       BundleProposalListing[]
+  shippingBundle ShippingBundle?
+  messages       Message[]
+
+  @@index([conversationId])
+  @@index([status])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status, expiresAt])
+}
+
+// Join: welke listings zitten in een BundleProposal. priceSnapshot is de
+// individuele referentieprijs op moment van offer-creatie (informatief).
+model BundleProposalListing {
+  id               String  @id @default(cuid())
+
+  bundleProposalId String
+  bundleProposal   BundleProposal @relation(fields: [bundleProposalId], references: [id], onDelete: Cascade)
+
+  listingId        String
+  listing          Listing @relation(fields: [listingId], references: [id])
+
+  priceSnapshot    Float?
+
+  @@unique([bundleProposalId, listingId])
+  @@index([listingId])
+}
+
+// Join: welke listings zitten in een ShippingBundle (multi-listing). Wordt pas
+// gevuld wanneer een bundle-offer wordt geaccepteerd. listingId is @unique zodat
+// een listing maar in één bundle tegelijk kan zitten.
+model BundleListing {
+  id               String   @id @default(cuid())
+
+  shippingBundleId String
+  shippingBundle   ShippingBundle @relation(fields: [shippingBundleId], references: [id], onDelete: Cascade)
+
+  listingId        String   @unique
+  listing          Listing  @relation(fields: [listingId], references: [id])
+
+  priceSnapshot    Float
+
+  createdAt        DateTime @default(now())
+
+  @@index([shippingBundleId])
+}
+
+// Ophaal-afspraak voor een PICKUP-bundle. Beide partijen kunnen voorstellen
+// (PROPOSED), tegenpartij accepteert/weigert. 4-cijfer code wordt gegenereerd
+// bij bundle-creatie en getoond aan buyer; seller voert hem in bij ophaal.
+model PickupSchedule {
+  id String @id @default(cuid())
+
+  shippingBundleId String   @unique
+  shippingBundle   ShippingBundle @relation(fields: [shippingBundleId], references: [id], onDelete: Cascade)
+
+  proposedById String
+  proposedBy   User   @relation("PickupProposer", fields: [proposedById], references: [id])
+
+  proposedFor  DateTime  // gekozen datum
+  windowStart  String    // bv. "09:00"
+  windowEnd    String    // bv. "12:00"
+
+  status       String    @default("PROPOSED") // PROPOSED | ACCEPTED | REJECTED | RESCHEDULED | COMPLETED
+
+  pickupCode         String   // 4-cijfer code (server-generated)
+  pickupCodeAttempts Int      @default(0)
+  pickupLockedUntil  DateTime? // Lockout 1u na 5e foute attempt
+
+  respondedAt    DateTime?
+  completedAt    DateTime?
+  reminderSentAt DateTime?  // 24u-reminder cron-bookkeeping
+
+  messages  Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shippingBundleId, status])
+  @@index([status, proposedFor])
 }
