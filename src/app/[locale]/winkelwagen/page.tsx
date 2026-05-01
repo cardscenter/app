@@ -7,6 +7,7 @@ import { ShoppingCart } from "lucide-react";
 import { CartContent } from "@/components/cart/cart-content";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Link } from "@/i18n/navigation";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function CartPage() {
   const session = await auth();
@@ -28,7 +29,7 @@ export default async function CartPage() {
   const totalItems = groups.reduce((sum, g) => sum + g.items.length, 0);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       <Breadcrumbs
         items={[
           { label: tBreadcrumbs("home"), href: "/" },
@@ -61,6 +62,6 @@ export default async function CartPage() {
           availableBalance={availableBalance}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

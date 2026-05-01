@@ -19,6 +19,7 @@ import { SellerInfoBlock } from "@/components/ui/seller-info-block";
 import { getSellerInfo } from "@/lib/seller-info";
 import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
 import { getCardPricing } from "@/lib/card-helpers";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function AuctionDetailPage({
   params,
@@ -87,7 +88,7 @@ export default async function AuctionDetailPage({
   const highestBidderId = auction.bids[0]?.bidderId ?? null;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       <Breadcrumbs
         items={[
           { label: tBreadcrumbs("auctions"), href: "/veilingen" },
@@ -193,6 +194,6 @@ export default async function AuctionDetailPage({
         title={tCarousel("similarItems")}
         items={similarItems}
       />
-    </div>
+    </PageContainer>
   );
 }

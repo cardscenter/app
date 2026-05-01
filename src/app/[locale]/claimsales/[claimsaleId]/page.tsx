@@ -12,6 +12,7 @@ import { ItemCarousel } from "@/components/ui/item-carousel";
 import { getSellerOtherItems } from "@/lib/recommendations";
 import { SellerInfoBlock } from "@/components/ui/seller-info-block";
 import { getSellerInfo } from "@/lib/seller-info";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function ClaimsaleDetailPage({
   params,
@@ -48,7 +49,7 @@ export default async function ClaimsaleDetailPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       <Breadcrumbs
         items={[
           { label: tBreadcrumbs("claimsales"), href: "/claimsales" },
@@ -148,6 +149,6 @@ export default async function ClaimsaleDetailPage({
         title={tCarousel("otherItemsBySeller")}
         items={sellerItems}
       />
-    </div>
+    </PageContainer>
   );
 }

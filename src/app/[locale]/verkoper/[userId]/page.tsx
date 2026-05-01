@@ -11,6 +11,7 @@ import { ArrowLeft } from "lucide-react";
 import { getLevelByKey } from "@/lib/seller-levels";
 import { CosmeticBannerImage } from "@/components/customization/cosmetic-banner-image";
 import Image from "next/image";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function SellerProfilePage({
   params,
@@ -24,9 +25,9 @@ export default async function SellerProfilePage({
   const stats = await getSellerStats(userId);
   if (!stats) {
     return (
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+      <PageContainer width="default" className="py-8">
         <p className="text-center text-muted-foreground">{t("sellerNotFound")}</p>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -92,7 +93,7 @@ export default async function SellerProfilePage({
         </div>
       )}
 
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+      <PageContainer width="default" className="py-8">
       <Link
         href="/"
         className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -253,7 +254,7 @@ export default async function SellerProfilePage({
           )}
         </div>
       </div>
-      </div>
+      </PageContainer>
     </div>
   );
 }

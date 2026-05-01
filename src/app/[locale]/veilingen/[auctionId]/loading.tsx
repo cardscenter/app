@@ -1,8 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default function AuctionDetailLoading() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="default" className="py-8">
       {/* Breadcrumbs */}
       <div className="flex gap-2 mb-6">
         <Skeleton className="h-4 w-16" />
@@ -52,6 +53,6 @@ export default function AuctionDetailLoading() {
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
