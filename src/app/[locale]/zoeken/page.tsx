@@ -6,6 +6,7 @@ import { SearchFilters as SearchFiltersPanel } from "@/components/search/search-
 import { SearchSortBar } from "@/components/search/search-sort-bar";
 import { SearchResultCard } from "@/components/search/search-result-card";
 import { SearchX } from "lucide-react";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function SearchPage({
   searchParams,
@@ -42,7 +43,7 @@ export default async function SearchPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="wide" className="py-8">
       {/* Page header with search */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
@@ -62,7 +63,7 @@ export default async function SearchPage({
 
           {/* Results grid */}
           {results.length > 0 ? (
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {results.map((result) => (
                 <SearchResultCard key={`${result.type}-${result.id}`} result={result} />
               ))}
@@ -82,6 +83,6 @@ export default async function SearchPage({
           )}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

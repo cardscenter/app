@@ -10,6 +10,7 @@ import { AuctionSortBar } from "@/components/auction/auction-sort-bar";
 import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { auth } from "@/lib/auth";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
+import { PageContainer } from "@/components/layout/page-container";
 
 const PAGE_SIZE = 40;
 
@@ -92,8 +93,8 @@ export default async function AuctionsPage({
   });
   const sponsoredAuctions = seededShuffle(sponsoredRaw, seed);
 
-  // Single sponsored row — max 4 items
-  const sponsoredTop = sponsoredAuctions.slice(0, 4);
+  // Single sponsored row — up to 6 items (component reveals progressively per breakpoint)
+  const sponsoredTop = sponsoredAuctions.slice(0, 6);
 
   // Count ALL active auctions (sponsored included in main grid now)
   const totalCount = await prisma.auction.count({
@@ -136,7 +137,7 @@ export default async function AuctionsPage({
   const hasAuctions = auctions.length > 0;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="wide" className="py-8">
       <AuctionCreatedToast />
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -185,7 +186,7 @@ export default async function AuctionsPage({
           />
 
           {/* Main grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
             {auctions.map((auction) => (
               <AuctionCard key={auction.id} auction={auction} />
             ))}
@@ -201,6 +202,6 @@ export default async function AuctionsPage({
           />
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

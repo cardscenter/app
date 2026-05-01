@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { auth } from "@/lib/auth";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
+import { PageContainer } from "@/components/layout/page-container";
 
 const PAGE_SIZE = 40;
 
@@ -54,7 +55,7 @@ export default async function ClaimsalesPage({
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="wide" className="py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -89,7 +90,7 @@ export default async function ClaimsalesPage({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
             {claimsales.map((cs) => (
               <ClaimsaleCard key={cs.id} claimsale={cs} />
             ))}
@@ -103,6 +104,6 @@ export default async function ClaimsalesPage({
           />
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

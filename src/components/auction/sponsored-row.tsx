@@ -25,12 +25,21 @@ export function SponsoredAuctionRow({ auctions, title, tooltip }: SponsoredAucti
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-        {auctions.slice(0, 4).map((auction, i) => (
-          <div key={auction.id} className={i >= 2 ? (i === 2 ? "hidden lg:block" : "hidden xl:block") : i === 1 ? "hidden sm:block" : ""}>
-            <AuctionCard auction={auction} sponsored />
-          </div>
-        ))}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
+        {auctions.slice(0, 6).map((auction, i) => {
+          const visibility =
+            i === 0 ? "" :
+            i === 1 ? "hidden sm:block" :
+            i === 2 ? "hidden lg:block" :
+            i === 3 ? "hidden xl:block" :
+            i === 4 ? "hidden 2xl:block" :
+            "hidden [@media(min-width:1600px)]:block";
+          return (
+            <div key={auction.id} className={visibility}>
+              <AuctionCard auction={auction} sponsored />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

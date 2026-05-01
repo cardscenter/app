@@ -9,6 +9,7 @@ import { ListingSortBar } from "@/components/listing/listing-sort-bar";
 import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { auth } from "@/lib/auth";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
+import { PageContainer } from "@/components/layout/page-container";
 
 const PAGE_SIZE = 40;
 
@@ -103,7 +104,7 @@ export default async function MarktplaatsPage({
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="wide" className="py-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -143,7 +144,7 @@ export default async function MarktplaatsPage({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
             {listings.map((listing) => (
               <ListingCard key={listing.id} listing={listing} locale={locale} />
             ))}
@@ -159,6 +160,6 @@ export default async function MarktplaatsPage({
         </>
       )}
       </div>
-    </div>
+    </PageContainer>
   );
 }
