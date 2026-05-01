@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useRef } from "react";
 import { PeriodSelector } from "./period-selector";
+import { ExportCsvButton } from "./export-csv-button";
 import { SalesAnalytics, type SalesAnalyticsData } from "./sales-analytics";
 import { SellerPerformance, type SellerPerformanceData } from "./seller-performance";
 import { BuyerAnalytics, type BuyerAnalyticsData } from "./buyer-analytics";
@@ -76,27 +77,42 @@ export function StatisticsPage({ period, sales, performance, buyer, xp, commissi
 
       {/* Sections */}
       <section ref={(el) => { sectionRefs.current.sales = el; }} className="scroll-mt-20">
-        <h2 className="text-lg font-bold text-foreground mb-4">{t("salesAnalytics")}</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h2 className="text-lg font-bold text-foreground">{t("salesAnalytics")}</h2>
+          <ExportCsvButton section="sales" period={period} />
+        </div>
         <SalesAnalytics data={sales} />
       </section>
 
       <section ref={(el) => { sectionRefs.current.performance = el; }} className="scroll-mt-20">
-        <h2 className="text-lg font-bold text-foreground mb-4">{t("sellerPerformance")}</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h2 className="text-lg font-bold text-foreground">{t("sellerPerformance")}</h2>
+          <ExportCsvButton section="performance" period={period} />
+        </div>
         <SellerPerformance data={performance} />
       </section>
 
       <section ref={(el) => { sectionRefs.current.buyer = el; }} className="scroll-mt-20">
-        <h2 className="text-lg font-bold text-foreground mb-4">{t("buyerAnalytics")}</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h2 className="text-lg font-bold text-foreground">{t("buyerAnalytics")}</h2>
+          <ExportCsvButton section="buyer" period={period} />
+        </div>
         <BuyerAnalytics data={buyer} />
       </section>
 
       <section ref={(el) => { sectionRefs.current.xp = el; }} className="scroll-mt-20">
-        <h2 className="text-lg font-bold text-foreground mb-4">{t("xpProgress")}</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h2 className="text-lg font-bold text-foreground">{t("xpProgress")}</h2>
+          <ExportCsvButton section="xp" period={period} />
+        </div>
         <XPLevelProgress data={xp} />
       </section>
 
       <section ref={(el) => { sectionRefs.current.commission = el; }} className="scroll-mt-20">
-        <h2 className="text-lg font-bold text-foreground mb-4">{t("commissionTracker")}</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h2 className="text-lg font-bold text-foreground">{t("commissionTracker")}</h2>
+          <ExportCsvButton section="commission" period={period} />
+        </div>
         <CommissionTracker data={commission} />
       </section>
     </div>
