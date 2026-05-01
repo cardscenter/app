@@ -4,8 +4,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Core */
-  --background: #ffffff;
+  /* Core — Fase 26: page-bg lichtgrijs, card blijft wit voor surface-hiërarchie */
+  --background: #f5f6f8;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -19,20 +19,20 @@
   --primary-light: #eff6ff;
 
   /* Secondary & Accent */
-  --secondary: #f1f5f9;
+  --secondary: #e8eaee;
   --secondary-foreground: #0f172a;
-  --accent: #f1f5f9;
+  --accent: #e8eaee;
   --accent-foreground: #0f172a;
 
   /* Utility */
-  --muted: #f8fafc;
+  --muted: #eef0f3;
   --muted-foreground: #64748b;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
   /* Borders & Rings */
-  --border: #e2e8f0;
-  --input: #e2e8f0;
+  --border: #e1e4ea;
+  --input: #e1e4ea;
   --ring: #2563eb;
   --radius: 0.5rem;
 
@@ -51,15 +51,19 @@
   --chart-4: #f59e0b;
   --chart-5: #64748b;
 
-  /* Sidebar */
-  --sidebar: #f8fafc;
+  /* Sidebar — net iets witter dan bg, contrast met content */
+  --sidebar: #fafbfc;
   --sidebar-foreground: #0f172a;
   --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
+  --sidebar-accent: #e8eaee;
   --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;
+  --sidebar-border: #e1e4ea;
   --sidebar-ring: #2563eb;
+
+  /* Card-elevation shadows (Fase 26) */
+  --shadow-card:       0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.05);
+  --shadow-card-hover: 0 4px 8px -2px rgb(15 23 42 / 0.06), 0 2px 4px -1px rgb(15 23 42 / 0.04);
 }
 
 .dark {
@@ -115,6 +119,10 @@
   --sidebar-accent-foreground: #f1f5f9;
   --sidebar-border: #334155;
   --sidebar-ring: #3b82f6;
+
+  /* Card-elevation shadows — diepere variant voor dark-mode */
+  --shadow-card:       0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.25);
+  --shadow-card-hover: 0 4px 8px -2px rgb(0 0 0 / 0.4), 0 2px 4px -1px rgb(0 0 0 / 0.3);
 }
 
 @theme inline {
@@ -188,6 +196,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Shadows (Fase 26 — card-elevation tokens) */
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
 
   /* Animations */
   --animate-gradient-shift: gradient-shift 8s ease infinite;
