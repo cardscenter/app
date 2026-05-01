@@ -115,7 +115,7 @@ export default async function AdminOverviewPage() {
           {finTiles.map(({ labelKey, value, Icon }) => (
             <div
               key={labelKey}
-              className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+              className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 shadow-card"
             >
               <div className="flex items-center justify-between">
                 <Icon className="h-5 w-5 text-muted-foreground" />
@@ -135,21 +135,21 @@ export default async function AdminOverviewPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Link
             href="/dashboard/admin/bank-transfers"
-            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+            className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:bg-muted"
           >
             <CreditCard className="h-5 w-5 text-blue-600" />
             <span className="text-sm font-medium">{t("quickConfirmBankTransfer")}</span>
           </Link>
           <Link
             href="/dashboard/admin/users"
-            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+            className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:bg-muted"
           >
             <Search className="h-5 w-5 text-emerald-600" />
             <span className="text-sm font-medium">{t("quickFindUser")}</span>
           </Link>
           <Link
             href="/dashboard/admin/users?filter=suspended"
-            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+            className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-card transition-colors hover:bg-muted"
           >
             <Ban className="h-5 w-5 text-rose-600" />
             <span className="text-sm font-medium">{t("quickSuspendUser")}</span>
@@ -172,17 +172,17 @@ export default async function AdminOverviewPage() {
           </Link>
         </div>
         {recentActivity.length === 0 ? (
-          <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900/50">
+          <div className="mt-3 rounded-xl border border-dashed border-border bg-muted p-8 text-center">
             <p className="text-sm text-muted-foreground">{t("noRecentActivity")}</p>
           </div>
         ) : (
-          <ul className="mt-3 divide-y rounded-xl border bg-white dark:bg-slate-900">
+          <ul className="mt-3 divide-y divide-border rounded-xl border border-border bg-card shadow-card">
             {recentActivity.map((e) => (
               <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
                 <div className="min-w-0 flex-1">
                   <p>
                     <span className="font-medium">{e.admin.displayName}</span>{" "}
-                    <code className="rounded bg-slate-100 px-1 py-0.5 text-[10px] dark:bg-slate-800">{e.action}</code>{" "}
+                    <code className="rounded bg-muted px-1 py-0.5 text-[10px]">{e.action}</code>{" "}
                     <span className="text-muted-foreground">on</span>{" "}
                     <code className="text-[11px]">{e.targetType}{e.targetId ? `:${e.targetId.slice(0, 8)}…` : ""}</code>
                   </p>

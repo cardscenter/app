@@ -7,7 +7,7 @@ function StatusBadge({ status }: { status: string }) {
     SUCCESS: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
     FAILED: "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300",
     RUNNING: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  }[status] ?? "bg-slate-100 text-muted-foreground dark:bg-slate-800";
+  }[status] ?? "bg-muted text-muted-foreground";
   const Icon = status === "SUCCESS" ? CheckCircle2 : status === "FAILED" ? AlertCircle : status === "RUNNING" ? Loader2 : Clock;
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${cls}`}>
@@ -38,13 +38,13 @@ export default async function AdminCronsPage() {
 
       <div className="space-y-3">
         {jobs.map((job) => (
-          <div key={job.name} className="rounded-xl border bg-white p-4 dark:bg-slate-900">
+          <div key={job.name} className="rounded-xl border border-border bg-card p-4 shadow-card">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <code className="font-mono text-sm font-semibold">{job.name}</code>
                   {job.latest && <StatusBadge status={job.latest.status} />}
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-muted-foreground dark:bg-slate-800">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     {job.schedule}
                   </span>

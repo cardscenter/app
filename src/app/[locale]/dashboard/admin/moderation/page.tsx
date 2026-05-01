@@ -109,7 +109,7 @@ export default async function AdminModerationPage({
         </p>
       </div>
 
-      <nav className="flex gap-1 rounded-xl border bg-white p-1 dark:bg-slate-900">
+      <nav className="flex gap-1 rounded-xl border border-border bg-card p-1 shadow-card">
         {TABS.map((t) => {
           const active = t.key === tab;
           return (
@@ -117,7 +117,7 @@ export default async function AdminModerationPage({
               key={t.key}
               href={{ pathname: "/dashboard/admin/moderation", query: { tab: t.key } }}
               className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                active ? "bg-primary text-white" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
+                active ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {t.label}

@@ -97,7 +97,7 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
 
         <Link
           href={`/dashboard/admin/bank-transfers?q=${encodeURIComponent(userName)}`}
-          className="inline-flex items-center gap-1.5 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted"
         >
           <CreditCard className="h-4 w-4" /> Bevestig storting
         </Link>
@@ -106,7 +106,7 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
           <button
             onClick={handleResetIban}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
           >
             <RotateCcw className="h-4 w-4" /> Reset IBAN-cooldown
           </button>
@@ -116,7 +116,7 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
           <button
             onClick={handleResetUsername}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
           >
             <UserCog className="h-4 w-4" /> Reset username-cooldown
           </button>
@@ -127,14 +127,14 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <form
             onSubmit={handleSuspend}
-            className="w-full max-w-md space-y-3 rounded-xl border bg-white p-5 shadow-lg dark:bg-slate-900"
+            className="w-full max-w-md space-y-3 rounded-xl border border-border bg-card p-5 shadow-lg"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Opschorten: {userName}</h3>
               <button
                 type="button"
                 onClick={() => setSuspendOpen(false)}
-                className="rounded-md p-1 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="rounded-md p-1 hover:bg-muted"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -165,7 +165,7 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
                   max={365}
                   value={days}
                   onChange={(e) => setDays(e.target.value)}
-                  className="w-full rounded-md border bg-white px-3 py-1.5 text-sm dark:bg-slate-800"
+                  className="w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm"
                 />
               </div>
             )}
@@ -176,7 +176,7 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 placeholder="Min. 5 tekens"
-                className="w-full rounded-md border bg-white px-3 py-1.5 text-sm dark:bg-slate-800"
+                className="w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm"
               />
             </div>
             {error && <p className="text-xs text-rose-600">{error}</p>}
@@ -184,7 +184,7 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
               <button
                 type="button"
                 onClick={() => setSuspendOpen(false)}
-                className="rounded-md border bg-white px-3 py-1.5 text-sm hover:bg-slate-50 dark:bg-slate-800"
+                className="rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
               >
                 Annuleer
               </button>

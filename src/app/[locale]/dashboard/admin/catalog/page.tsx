@@ -29,7 +29,7 @@ export default async function AdminCatalogPage({
         </p>
       </div>
 
-      <nav className="flex gap-1 rounded-xl border bg-white p-1 dark:bg-slate-900">
+      <nav className="flex gap-1 rounded-xl border border-border bg-card p-1 shadow-card">
         {SUB_TABS.map((t) => {
           const active = t.key === tab;
           return (
@@ -37,7 +37,7 @@ export default async function AdminCatalogPage({
               key={t.key}
               href={{ pathname: "/dashboard/admin/catalog", query: { tab: t.key } }}
               className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                active ? "bg-primary text-white" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
+                active ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {t.label}
@@ -64,7 +64,7 @@ async function SeriesTab() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border bg-white p-4 dark:bg-slate-900">
+      <section className="rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">
           Nieuwe series toevoegen
         </h2>
@@ -81,9 +81,9 @@ async function SeriesTab() {
         />
       </section>
 
-      <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left dark:bg-slate-800/60">
+          <thead className="bg-muted text-left">
             <tr>
               <th className="px-3 py-2 font-medium">Naam</th>
               <th className="px-3 py-2 font-medium">Category</th>
@@ -144,7 +144,7 @@ async function CardSetsTab({ seriesId }: { seriesId?: string }) {
         <select
           name="series"
           defaultValue={seriesId ?? ""}
-          className="rounded-md border bg-white px-3 py-1.5 text-sm dark:bg-slate-900"
+          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
         >
           <option value="">— Alle series —</option>
           {seriesList.map((s) => (
@@ -156,7 +156,7 @@ async function CardSetsTab({ seriesId }: { seriesId?: string }) {
         </button>
       </form>
 
-      <section className="rounded-xl border bg-white p-4 dark:bg-slate-900">
+      <section className="rounded-xl border border-border bg-card p-4 shadow-card">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">
           Nieuwe set toevoegen
         </h2>
@@ -178,9 +178,9 @@ async function CardSetsTab({ seriesId }: { seriesId?: string }) {
         />
       </section>
 
-      <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left dark:bg-slate-800/60">
+          <thead className="bg-muted text-left">
             <tr>
               <th className="px-3 py-2 font-medium">Naam</th>
               <th className="px-3 py-2 font-medium">Series</th>
@@ -253,7 +253,7 @@ async function CardsTab({ setId, q }: { setId?: string; q: string }) {
         <select
           name="set"
           defaultValue={setId ?? ""}
-          className="rounded-md border bg-white px-3 py-1.5 text-sm dark:bg-slate-900"
+          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
         >
           <option value="">— Alle sets —</option>
           {sets.map((s) => (
@@ -267,7 +267,7 @@ async function CardsTab({ setId, q }: { setId?: string; q: string }) {
             name="q"
             defaultValue={q}
             placeholder="Zoek kaartnaam"
-            className="w-full rounded-md border bg-white py-1.5 pl-9 pr-3 text-sm dark:bg-slate-900"
+            className="w-full rounded-md border border-border bg-card py-1.5 pl-9 pr-3 text-sm"
           />
         </div>
         <button type="submit" className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white">
@@ -276,15 +276,15 @@ async function CardsTab({ setId, q }: { setId?: string; q: string }) {
       </form>
 
       {!setId && !q && (
-        <div className="rounded-xl border border-dashed bg-slate-50 p-8 text-center text-sm text-muted-foreground dark:bg-slate-900/50">
+        <div className="rounded-xl border border-dashed border-border bg-muted p-8 text-center text-sm text-muted-foreground">
           Selecteer een set of zoek op naam om kaarten te bekijken.
         </div>
       )}
 
       {(setId || q) && (
-        <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left dark:bg-slate-800/60">
+            <thead className="bg-muted text-left">
               <tr>
                 <th className="px-3 py-2 font-medium">Naam</th>
                 <th className="px-3 py-2 font-medium">Set</th>

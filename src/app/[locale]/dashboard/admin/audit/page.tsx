@@ -90,11 +90,11 @@ export default async function AdminAuditPage({
         <p className="text-sm text-muted-foreground">{total} entries</p>
       </div>
 
-      <form className="flex flex-wrap gap-2 rounded-xl border bg-white p-3 dark:bg-slate-900" method="get">
+      <form className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3 shadow-card" method="get">
         <select
           name="action"
           defaultValue={sp.action ?? ""}
-          className="rounded-md border bg-white px-3 py-1.5 text-sm dark:bg-slate-800"
+          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
         >
           <option value="">— Alle actions —</option>
           {ACTIONS.map((a) => (
@@ -104,7 +104,7 @@ export default async function AdminAuditPage({
         <select
           name="targetType"
           defaultValue={sp.targetType ?? ""}
-          className="rounded-md border bg-white px-3 py-1.5 text-sm dark:bg-slate-800"
+          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
         >
           <option value="">— Alle target-types —</option>
           {TARGET_TYPES.map((tt) => (
@@ -116,7 +116,7 @@ export default async function AdminAuditPage({
           name="targetId"
           defaultValue={sp.targetId ?? ""}
           placeholder="targetId bevat…"
-          className="flex-1 min-w-[150px] rounded-md border bg-white px-3 py-1.5 text-sm dark:bg-slate-800"
+          className="flex-1 min-w-[150px] rounded-md border border-border bg-card px-3 py-1.5 text-sm"
         />
         <button
           type="submit"
@@ -126,15 +126,15 @@ export default async function AdminAuditPage({
         </button>
         <Link
           href="/dashboard/admin/audit"
-          className="rounded-md border bg-white px-3 py-1.5 text-sm text-muted-foreground hover:bg-slate-50 dark:bg-slate-800"
+          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
         >
           Reset
         </Link>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left dark:bg-slate-800/60">
+          <thead className="bg-muted text-left">
             <tr>
               <th className="px-3 py-2 font-medium">Tijdstip</th>
               <th className="px-3 py-2 font-medium">Admin</th>
@@ -153,7 +153,7 @@ export default async function AdminAuditPage({
               </tr>
             )}
             {entries.map((e) => (
-              <tr key={e.id} className="border-t border-slate-200 align-top dark:border-slate-800">
+              <tr key={e.id} className="border-t border-border align-top">
                 <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                   {e.createdAt.toLocaleString("nl-NL")}
                 </td>
@@ -166,7 +166,7 @@ export default async function AdminAuditPage({
                   </Link>
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs dark:bg-slate-800">{e.action}</code>
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{e.action}</code>
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   <span className="text-xs text-muted-foreground">{e.targetType}</span>
@@ -208,7 +208,7 @@ export default async function AdminAuditPage({
                   pathname: "/dashboard/admin/audit",
                   query: { ...sp, page: String(page - 1) },
                 }}
-                className="rounded-md border px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
               >
                 Vorige
               </Link>
@@ -219,7 +219,7 @@ export default async function AdminAuditPage({
                   pathname: "/dashboard/admin/audit",
                   query: { ...sp, page: String(page + 1) },
                 }}
-                className="rounded-md border px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
               >
                 Volgende
               </Link>

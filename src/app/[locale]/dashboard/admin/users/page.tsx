@@ -82,13 +82,13 @@ export default async function AdminUsersPage({
             name="q"
             defaultValue={query}
             placeholder="Naam, email, id, IBAN of reference"
-            className="w-full rounded-md border bg-white py-2 pl-9 pr-3 text-sm dark:bg-slate-900"
+            className="w-full rounded-md border border-border bg-card py-2 pl-9 pr-3 text-sm"
           />
         </div>
         <select
           name="filter"
           defaultValue={filter}
-          className="rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-900"
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm"
         >
           <option value="">Alle gebruikers</option>
           <option value="suspended">Alleen opgeschort</option>
@@ -103,9 +103,9 @@ export default async function AdminUsersPage({
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left dark:bg-slate-800/60">
+          <thead className="bg-muted text-left">
             <tr>
               <th className="px-3 py-2 font-medium">Username</th>
               <th className="px-3 py-2 font-medium">Email</th>
@@ -126,7 +126,7 @@ export default async function AdminUsersPage({
             {users.map((u) => {
               const suspended = isUserSuspended(u);
               return (
-                <tr key={u.id} className="border-t border-slate-200 dark:border-slate-800">
+                <tr key={u.id} className="border-t border-border">
                   <td className="px-3 py-2 whitespace-nowrap">
                     <Link
                       href={`/dashboard/admin/users/${u.id}`}
@@ -137,7 +137,7 @@ export default async function AdminUsersPage({
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">{u.email}</td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] dark:bg-slate-800">
+                    <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">
                       {u.accountType}
                     </code>
                   </td>
@@ -154,7 +154,7 @@ export default async function AdminUsersPage({
                           <ShieldCheck className="h-3 w-3" /> Verified
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-muted-foreground dark:bg-slate-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                           <AlertCircle className="h-3 w-3" /> Unverified
                         </span>
                       )}
@@ -177,7 +177,7 @@ export default async function AdminUsersPage({
             {page > 1 && (
               <Link
                 href={{ pathname: "/dashboard/admin/users", query: { ...sp, page: String(page - 1) } }}
-                className="rounded-md border px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
               >
                 Vorige
               </Link>
@@ -185,7 +185,7 @@ export default async function AdminUsersPage({
             {page < totalPages && (
               <Link
                 href={{ pathname: "/dashboard/admin/users", query: { ...sp, page: String(page + 1) } }}
-                className="rounded-md border px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
               >
                 Volgende
               </Link>

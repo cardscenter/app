@@ -104,7 +104,7 @@ export function AdminNav({
             className={`flex items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
               active
                 ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-                : "text-muted-foreground hover:bg-white/50 hover:text-foreground dark:hover:bg-white/5"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
             <span className="flex items-center gap-2.5 min-w-0">
@@ -126,7 +126,7 @@ export function AdminNav({
     <Link
       href="/dashboard"
       onClick={() => setMobileOpen(false)}
-      className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+      className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-muted"
     >
       <ArrowLeft className="h-4 w-4 shrink-0" />
       {t("switchToUserDashboard")}

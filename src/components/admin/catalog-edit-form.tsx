@@ -46,7 +46,7 @@ export function CatalogEditForm({ fields, action, id, triggerLabel = "Bewerk", a
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 text-xs hover:bg-slate-50 dark:bg-slate-900"
+        className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-muted"
       >
         <Edit2 className="h-3 w-3" /> {triggerLabel}
       </button>
@@ -54,7 +54,7 @@ export function CatalogEditForm({ fields, action, id, triggerLabel = "Bewerk", a
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-lg border bg-slate-50 p-3 dark:bg-slate-800/40">
+    <form onSubmit={submit} className="space-y-2 rounded-lg border border-border bg-muted p-3">
       <div className={`grid gap-2 ${fields.length > 4 ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
         {fields.map((f) => (
           <div key={f.name} className="space-y-1">
@@ -63,7 +63,7 @@ export function CatalogEditForm({ fields, action, id, triggerLabel = "Bewerk", a
               name={f.name}
               type={f.type ?? "text"}
               defaultValue={f.defaultValue}
-              className="w-full rounded-md border bg-white px-2 py-1 text-sm dark:bg-slate-900"
+              className="w-full rounded-md border border-border bg-card px-2 py-1 text-sm"
             />
           </div>
         ))}
@@ -74,7 +74,7 @@ export function CatalogEditForm({ fields, action, id, triggerLabel = "Bewerk", a
           <button
             type="button"
             onClick={() => { setOpen(false); setError(null); }}
-            className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 text-xs hover:bg-slate-50 dark:bg-slate-900"
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-muted"
           >
             <X className="h-3 w-3" /> Annuleer
           </button>

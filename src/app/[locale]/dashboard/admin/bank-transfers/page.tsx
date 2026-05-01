@@ -58,7 +58,7 @@ export default async function BankTransfersPage({
             name="q"
             defaultValue={query}
             placeholder="Naam, email of reference (bv. atomicsnipz8729376290)"
-            className="w-full rounded-md border bg-white py-2 pl-9 pr-3 text-sm dark:bg-slate-900"
+            className="w-full rounded-md border border-border bg-card py-2 pl-9 pr-3 text-sm"
             autoFocus
           />
         </div>
@@ -76,13 +76,13 @@ export default async function BankTransfersPage({
             {query ? `Resultaten voor "${query}" (${matches.length})` : "Zoekresultaten"}
           </h2>
           {!query && (
-            <div className="rounded-xl border border-dashed bg-slate-50 p-8 text-center text-sm text-muted-foreground dark:bg-slate-900/50">
+            <div className="rounded-xl border border-dashed border-border bg-muted p-8 text-center text-sm text-muted-foreground">
               <CreditCard className="mx-auto mb-2 h-6 w-6 opacity-40" />
               Vul een zoekterm in om gebruikers te vinden.
             </div>
           )}
           {query && matches.length === 0 && (
-            <div className="rounded-xl border border-dashed bg-slate-50 p-8 text-center text-sm text-muted-foreground dark:bg-slate-900/50">
+            <div className="rounded-xl border border-dashed border-border bg-muted p-8 text-center text-sm text-muted-foreground">
               Geen gebruikers gevonden voor &quot;{query}&quot;.
             </div>
           )}
@@ -91,7 +91,7 @@ export default async function BankTransfersPage({
               {matches.map((u) => (
                 <div
                   key={u.id}
-                  className="rounded-xl border bg-white p-4 dark:bg-slate-900"
+                  className="rounded-xl border border-border bg-card p-4 shadow-card"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -105,7 +105,7 @@ export default async function BankTransfersPage({
                       {u.bankTransferReference && (
                         <p className="mt-1 text-xs">
                           Reference:{" "}
-                          <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] dark:bg-slate-800">
+                          <code className="rounded bg-muted px-1 py-0.5 text-[11px]">
                             {u.bankTransferReference}
                           </code>
                         </p>
@@ -132,7 +132,7 @@ export default async function BankTransfersPage({
           </h2>
           <div className="space-y-2">
             {recent.length === 0 && (
-              <p className="rounded-xl border border-dashed bg-slate-50 p-4 text-center text-xs text-muted-foreground dark:bg-slate-900/50">
+              <p className="rounded-xl border border-dashed border-border bg-muted p-4 text-center text-xs text-muted-foreground">
                 Nog geen bevestigingen gelogd.
               </p>
             )}
@@ -147,7 +147,7 @@ export default async function BankTransfersPage({
                 /* swallow */
               }
               return (
-                <div key={r.id} className="rounded-lg border bg-white p-3 text-xs dark:bg-slate-900">
+                <div key={r.id} className="rounded-lg border border-border bg-card p-3 text-xs shadow-card">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">€{amount?.toFixed(2) ?? "?"}</span>
                     <span className="text-muted-foreground">{r.createdAt.toLocaleString("nl-NL")}</span>

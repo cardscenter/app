@@ -76,9 +76,9 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border bg-white dark:bg-slate-900">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left dark:bg-slate-800/60">
+            <thead className="bg-muted text-left">
               <tr>
                 <th className="px-3 py-2 w-8">
                   <input
@@ -113,7 +113,7 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
                     </a>
                   </td>
                   <td className="px-3 py-2">
-                    <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] dark:bg-slate-800">{it.status}</code>
+                    <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{it.status}</code>
                   </td>
                   <td className="px-3 py-2 text-right">
                     {it.sellerOpenReports > 0 ? (
@@ -139,10 +139,10 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md space-y-3 rounded-xl border bg-white p-5 shadow-lg dark:bg-slate-900">
+          <div className="w-full max-w-md space-y-3 rounded-xl border border-border bg-card p-5 shadow-lg">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{selected.size} item(s) verwijderen</h3>
-              <button onClick={() => setShowModal(false)} className="rounded-md p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <button onClick={() => setShowModal(false)} className="rounded-md p-1 hover:bg-muted">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -154,11 +154,11 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
               onChange={(e) => setReason(e.target.value)}
               rows={3}
               placeholder="Reden voor verwijdering (min. 5 tekens, zichtbaar voor verkoper)"
-              className="w-full rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-800"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
             />
             {error && <p className="text-xs text-rose-600">{error}</p>}
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowModal(false)} className="rounded-md border bg-white px-3 py-1.5 text-sm hover:bg-slate-50 dark:bg-slate-800">
+              <button onClick={() => setShowModal(false)} className="rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted">
                 Annuleer
               </button>
               <button

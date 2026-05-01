@@ -91,7 +91,7 @@ export default async function AdminUserDetailPage({
       </Link>
 
       {/* Header */}
-      <header className="flex flex-col gap-4 rounded-xl border bg-white p-5 dark:bg-slate-900 md:flex-row md:items-start md:justify-between">
+      <header className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-card md:flex-row md:items-start md:justify-between">
         <div className="flex items-start gap-4">
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
@@ -104,7 +104,7 @@ export default async function AdminUserDetailPage({
             <h1 className="text-2xl font-bold">{user.displayName}</h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <code className="rounded bg-slate-100 px-2 py-0.5 text-[11px] dark:bg-slate-800">
+              <code className="rounded bg-muted px-2 py-0.5 text-[11px]">
                 {user.accountType}
               </code>
               {user.isVerified ? (
@@ -112,7 +112,7 @@ export default async function AdminUserDetailPage({
                   <ShieldCheck className="h-3 w-3" /> Geverifieerd
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-muted-foreground dark:bg-slate-800">
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                   <AlertCircle className="h-3 w-3" /> Ongeverifieerd
                 </span>
               )}
@@ -134,7 +134,7 @@ export default async function AdminUserDetailPage({
       </header>
 
       {/* Tab nav */}
-      <nav className="flex flex-wrap gap-1 rounded-xl border bg-white p-1 dark:bg-slate-900">
+      <nav className="flex flex-wrap gap-1 rounded-xl border border-border bg-card p-1 shadow-card">
         {TABS.map((t) => {
           const active = t.key === tab;
           return (
@@ -147,7 +147,7 @@ export default async function AdminUserDetailPage({
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 active
                   ? "bg-primary text-white"
-                  : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
+                  : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {t.label}
@@ -157,7 +157,7 @@ export default async function AdminUserDetailPage({
       </nav>
 
       {/* Tab content */}
-      <section className="rounded-xl border bg-white p-5 dark:bg-slate-900">
+      <section className="rounded-xl border border-border bg-card p-5 shadow-card">
         {tab === "profile" && <ProfileTab user={user} />}
         {tab === "wallet" && <WalletTab userId={user.id} balance={user.balance} held={user.heldBalance} reserved={user.reservedBalance} />}
         {tab === "sales" && <SalesTab userId={user.id} />}
@@ -238,7 +238,7 @@ async function WalletTab({ userId, balance, held, reserved }: { userId: string; 
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left dark:bg-slate-800/60">
+            <thead className="bg-muted text-left">
               <tr>
                 <th className="px-3 py-2 font-medium">Tijd</th>
                 <th className="px-3 py-2 font-medium">Type</th>
@@ -457,7 +457,7 @@ async function AuditTab({ userId }: { userId: string }) {
 
 function KPI({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border bg-slate-50 p-3 dark:bg-slate-800/30">
+    <div className="rounded-lg border border-border bg-muted p-3">
       <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70">{label}</p>
       <p className="mt-1 text-lg font-bold tabular-nums">{value}</p>
     </div>
@@ -471,7 +471,7 @@ function SimpleList({ title, items }: { title: string; items: { id: string; prim
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">Geen entries.</p>
       ) : (
-        <ul className="divide-y rounded-lg border bg-white dark:bg-slate-900">
+        <ul className="divide-y divide-border rounded-lg border border-border bg-card shadow-card">
           {items.map((it) => (
             <li key={it.id} className="flex flex-col gap-1 p-3 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">

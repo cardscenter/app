@@ -23,7 +23,7 @@ export function CronRunNowButton({
       <div className="space-y-1">
         <span
           title={runWarning ?? "Deze cron mag alleen door de scheduler gedraaid worden."}
-          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-muted-foreground dark:border-slate-800 dark:bg-slate-800/40"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
         >
           <Lock className="h-3 w-3" />
           Alleen scheduler
