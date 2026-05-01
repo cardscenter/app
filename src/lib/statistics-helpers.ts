@@ -74,8 +74,20 @@ export function computeAverage(values: number[]): number {
 
 export function getPeriodDates(period: string): { start: Date; previousStart: Date } {
   const now = new Date();
-  let daysBack: number;
 
+  if (period === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return { start, previousStart };
+  }
+
+  if (period === "ytd") {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const previousStart = new Date(now.getFullYear() - 1, 0, 1);
+    return { start, previousStart };
+  }
+
+  let daysBack: number;
   switch (period) {
     case "30d":
       daysBack = 30;
@@ -97,4 +109,15 @@ export function getPeriodDates(period: string): { start: Date; previousStart: Da
   const previousStart = new Date(start.getTime() - daysBack * 24 * 60 * 60 * 1000);
 
   return { start, previousStart };
+}
+
+/**
+ * Returns the number of days the current period covers, used for extrapolating
+ * annualized projections (e.g. projected commission savings).
+ */
+export function getPeriodDayCount(period: string): number {
+  const { start } = getPeriodDates(period);
+  const now = new Date();
+  const days = Math.max(1, Math.round((now.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)));
+  return days;
 }

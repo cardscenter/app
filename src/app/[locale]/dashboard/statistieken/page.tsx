@@ -16,6 +16,7 @@ import {
   buildRatingDistribution,
   computeAverage,
   getPeriodDates,
+  getPeriodDayCount,
 } from "@/lib/statistics-helpers";
 import {
   calculateXP,
@@ -225,8 +226,8 @@ export default async function StatistiekenPage({ searchParams }: Props) {
   const commissionSaved = Math.max(0, hypotheticalFreeCommission - actualCommission);
 
   // Projected annual savings: extrapolate from current period
-  const periodDays = period === "30d" ? 30 : period === "90d" ? 90 : period === "1y" ? 365 : 365;
-  const projectedAnnualSavings = periodDays > 0 ? (commissionSaved / periodDays) * 365 : 0;
+  const periodDays = getPeriodDayCount(period);
+  const projectedAnnualSavings = (commissionSaved / periodDays) * 365;
 
   return (
     <div>
