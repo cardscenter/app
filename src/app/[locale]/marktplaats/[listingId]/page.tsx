@@ -175,10 +175,10 @@ export default async function ListingDetailPage({
               </p>
             )}
 
-            {/* Owner actions */}
-            {isOwner && isActive && (
+            {/* Owner actions — status-aware (Fase 27) */}
+            {isOwner && (listing.status === "ACTIVE" || listing.status === "PAUSED" || listing.status === "DRAFT" || listing.status === "RESERVED") && (
               <div className="mt-6">
-                <ListingActions listingId={listing.id} />
+                <ListingActions listingId={listing.id} status={listing.status as never} />
               </div>
             )}
           </div>

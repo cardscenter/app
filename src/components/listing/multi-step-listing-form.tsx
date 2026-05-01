@@ -1,10 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useState, useRef, useEffect } from "react";
-import { createListing } from "@/actions/listing";
+import { useActionState, useState, useRef, useEffect, useTransition } from "react";
+import { createListing, saveDraft } from "@/actions/listing";
 import { useRouter } from "@/i18n/navigation";
-import { Eye } from "lucide-react";
+import { Eye, FileText } from "lucide-react";
 import type { Series, CardSet } from "@prisma/client";
 import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType, CardItemEntry } from "@/types";
 
@@ -112,7 +112,8 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  // Build FormData uit huidige form-state. Hergebruikt door zowel publish als save-draft.
+  const buildFormData = () => {
     const formData = new FormData();
     formData.set("listingType", form.listingType);
     formData.set("imageUrls", JSON.stringify(form.images));
@@ -124,7 +125,6 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     formData.set("shippingCost", String(form.shippingCost));
     formData.set("packageCount", String(form.packageCount));
 
-    // Append "(Reverse Holo)" so buyers see which print they're buying.
     const baseName = form.cardName;
     const needsReverseSuffix = form.variant === "reverse" && baseName && !/reverse/i.test(baseName);
     const cardName = needsReverseSuffix ? `${baseName} (Reverse Holo)` : baseName;
@@ -138,12 +138,26 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     if (form.packageSize) formData.set("packageSize", form.packageSize);
     if (form.cardItems.length > 0) formData.set("cardItems", JSON.stringify(form.cardItems));
     if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
-
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
+    return formData;
+  };
 
-    formAction(formData);
+  const handleSubmit = () => formAction(buildFormData());
+
+  const [draftPending, startDraftTransition] = useTransition();
+  const [draftError, setDraftError] = useState<string | null>(null);
+
+  const handleSaveDraft = () => {
+    setDraftError(null);
+    const formData = buildFormData();
+    if (!form.title.trim()) formData.set("title", "Concept");
+    startDraftTransition(async () => {
+      const result = await saveDraft(formData);
+      if (result?.error) setDraftError(result.error);
+      else router.push("/dashboard/marktplaats");
+    });
   };
 
   // Preview modal
@@ -254,29 +268,43 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
         />
       </section>
 
-      {/* Submit bar — only preview button, publish is in the preview */}
+      {/* Submit bar — preview gaat naar publish; save-draft slaat tussentijds op */}
       <div className="sticky bottom-4 z-10">
-        <div className="glass rounded-2xl p-4 flex items-center justify-between shadow-lg">
+        <div className="glass rounded-2xl p-4 flex items-center justify-between gap-3 shadow-lg">
           <div className="text-sm text-muted-foreground">
-            {form.images.length === 0 && (
+            {draftError && (
+              <span className="text-red-600 dark:text-red-400">{draftError}</span>
+            )}
+            {!draftError && form.images.length === 0 && (
               <span className="text-amber-600 dark:text-amber-400">{t("photoRequired")}</span>
             )}
-            {form.images.length > 0 && !form.title && (
+            {!draftError && form.images.length > 0 && !form.title && (
               <span className="text-amber-600 dark:text-amber-400">{t("titleRequired")}</span>
             )}
-            {form.images.length > 0 && form.title && form.pricingType === "FIXED" && !form.price && (
+            {!draftError && form.images.length > 0 && form.title && form.pricingType === "FIXED" && !form.price && (
               <span className="text-amber-600 dark:text-amber-400">{t("priceRequired")}</span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setShowPreview(true)}
-            disabled={form.images.length === 0}
-            className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
-          >
-            <Eye className="h-4 w-4" />
-            {t("preview")}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={draftPending}
+              className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-muted disabled:opacity-50"
+            >
+              <FileText className="h-4 w-4" />
+              {t("actions.saveDraft")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              disabled={form.images.length === 0}
+              className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
+            >
+              <Eye className="h-4 w-4" />
+              {t("preview")}
+            </button>
+          </div>
         </div>
       </div>
     </div>

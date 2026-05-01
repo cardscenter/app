@@ -711,6 +711,32 @@
     "sold": "Sold",
     "markSold": "Mark as sold",
     "deleteListing": "Delete listing",
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "paused": "Paused",
+      "reserved": "Reserved",
+      "sold": "Sold",
+      "deleted": "Deleted"
+    },
+    "sections": {
+      "drafts": "Drafts",
+      "active": "Active",
+      "paused": "Paused",
+      "reserved": "Reserved",
+      "sold": "Sold"
+    },
+    "actions": {
+      "saveDraft": "Save as draft",
+      "publish": "Publish",
+      "pause": "Pause",
+      "resume": "Resume",
+      "deleteDraft": "Delete draft",
+      "reservedHint": "This listing is linked to an active deal. Actions become available once the buyer pays or the reservation expires.",
+      "confirmPause": "Pause this listing? Any pending offers will be rejected.",
+      "confirmDelete": "Are you sure you want to delete this listing?",
+      "confirmDeleteDraft": "Permanently delete this draft?"
+    },
     "stepType": "Type",
     "stepPhotos": "Photos",
     "stepDetails": "Details",
