@@ -6,6 +6,7 @@ import { getSellerStats } from "@/actions/review";
 import { getLevel, getNextLevel, getLevelProgress } from "@/lib/seller-levels";
 import { isUserSuspended } from "@/lib/suspension";
 import { SuspensionBanner } from "@/components/dashboard/suspension-banner";
+import { PageContainer } from "@/components/layout/page-container";
 
 export default async function DashboardLayout({
   children,
@@ -36,7 +37,7 @@ export default async function DashboardLayout({
   const progress = getLevelProgress(xp);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <PageContainer width="wide" className="py-8">
       <div className="flex flex-col gap-8 md:flex-row">
         <aside className="w-full md:w-64 shrink-0">
           <DashboardNav
@@ -63,6 +64,6 @@ export default async function DashboardLayout({
           {children}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

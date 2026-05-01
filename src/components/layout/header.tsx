@@ -41,14 +41,14 @@ function HeaderContent() {
   ];
 
   const accentClasses: Record<"blue" | "amber" | "emerald", { active: string; idle: string; dot: string }> = {
-    blue:    { active: "bg-blue-500/20 text-blue-100",    idle: "text-slate-300 hover:bg-blue-500/10 hover:text-blue-200",    dot: "bg-blue-400" },
-    amber:   { active: "bg-amber-500/20 text-amber-100",  idle: "text-slate-300 hover:bg-amber-500/10 hover:text-amber-200",  dot: "bg-amber-400" },
-    emerald: { active: "bg-emerald-500/20 text-emerald-100", idle: "text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-200", dot: "bg-emerald-400" },
+    blue:    { active: "bg-blue-500/15 text-blue-100",       idle: "text-slate-300 hover:bg-blue-500/10 hover:text-blue-200",       dot: "bg-blue-400" },
+    amber:   { active: "bg-amber-500/15 text-amber-100",     idle: "text-slate-300 hover:bg-amber-500/10 hover:text-amber-200",     dot: "bg-amber-400" },
+    emerald: { active: "bg-emerald-500/15 text-emerald-100", idle: "text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-200", dot: "bg-emerald-400" },
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-slate-950 text-white">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/85">
+      <div className="mx-auto flex h-16 w-full max-w-[1680px] items-center gap-4 px-4 sm:px-6 lg:px-8 xl:px-10">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <Image
@@ -62,7 +62,7 @@ function HeaderContent() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-1 md:flex ml-8">
+        <nav className="hidden items-center gap-1 md:flex">
           {primaryLinks.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
             const a = accentClasses[link.accent];
@@ -101,13 +101,17 @@ function HeaderContent() {
           })}
         </nav>
 
-        {/* Right side */}
-        <div className="flex shrink-0 items-center gap-2 ml-auto">
-          {/* Search icon (desktop) — expands on click */}
-          <SearchBar variant="header" />
+        {/* Search bar — always visible on desktop, takes available space */}
+        <div className="mx-2 hidden flex-1 justify-center md:flex lg:mx-6">
+          <div className="w-full max-w-xl">
+            <SearchBar variant="header" />
+          </div>
+        </div>
 
+        {/* Right side */}
+        <div className="flex shrink-0 items-center gap-1 md:gap-1.5">
           {session?.user ? (
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="hidden items-center gap-1 md:flex md:gap-1.5">
               {/* Balance */}
               <UserBalance />
 
@@ -132,7 +136,7 @@ function HeaderContent() {
               {/* Dashboard / Avatar */}
               <Link
                 href="/dashboard"
-                className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                className="ml-1 flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/20"
               >
                 {(avatarOverride || session.user.image) ? (
                   <img
@@ -145,7 +149,7 @@ function HeaderContent() {
                     {session.user.name?.charAt(0).toUpperCase()}
                   </div>
                 )}
-                {session.user.name}
+                <span className="max-w-[120px] truncate">{session.user.name}</span>
               </Link>
             </div>
           ) : (
