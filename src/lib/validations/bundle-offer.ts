@@ -9,15 +9,16 @@ export const createBundleOfferSchema = z.object({
     .max(MAX_LISTINGS_PER_BUNDLE, `Maximaal ${MAX_LISTINGS_PER_BUNDLE} advertenties per bundel`),
   totalAmount: z.coerce.number().min(0.01, "Voer een totaalbedrag in"),
   deliveryMethod: z.enum(["SHIP", "PICKUP"]),
+  // Buyer geeft alleen voorkeur aan; seller kiest bij accept de daadwerkelijke
+  // SellerShippingMethod (server forceert isSigned=true wanneer deze flag aan is
+  // óf wanneer requiresSignedShipping naar true evalueert via de bestaande regels).
+  requestInsuredShipping: z.coerce.boolean().default(false),
+});
+
+export const acceptBundleOfferShippingSchema = z.object({
+  bundleProposalId: z.string().min(1),
+  // SellerShippingMethod-id van de seller. Bij PICKUP-bundles mag deze leeg.
   shippingMethodId: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (data.deliveryMethod === "SHIP" && !data.shippingMethodId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Kies een verzendmethode",
-      path: ["shippingMethodId"],
-    });
-  }
 });
 
 export const counterBundleOfferSchema = z.object({

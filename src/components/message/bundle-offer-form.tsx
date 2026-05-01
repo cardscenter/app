@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { X, Package, Truck, MapPin } from "lucide-react";
+import { X, Package, Truck, MapPin, ShieldCheck } from "lucide-react";
 import {
   createBundleOffer,
   getRecentSellerListingsForBuyer,
@@ -29,24 +29,15 @@ interface SellerListing {
   price: number | null;
   pricingType: string;
   deliveryMethod: string;
-  shippingMethods: { shippingMethodId: string; price: number }[];
-}
-
-interface SellerShippingMethodLite {
-  id: string;
-  carrier: string;
-  serviceName: string;
-  price: number;
 }
 
 interface Props {
   conversationId: string;
   sellerId: string;
-  sellerShippingMethods: SellerShippingMethodLite[];
   onClose: () => void;
 }
 
-export function BundleOfferForm({ conversationId, sellerId, sellerShippingMethods, onClose }: Props) {
+export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
   const t = useTranslations("bundleOffer");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -55,7 +46,7 @@ export function BundleOfferForm({ conversationId, sellerId, sellerShippingMethod
   const [loadingListings, setLoadingListings] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deliveryMethod, setDeliveryMethod] = useState<"SHIP" | "PICKUP">("SHIP");
-  const [shippingMethodId, setShippingMethodId] = useState<string>("");
+  const [requestInsured, setRequestInsured] = useState(false);
   const [totalAmount, setTotalAmount] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
@@ -83,20 +74,6 @@ export function BundleOfferForm({ conversationId, sellerId, sellerShippingMethod
     }
   }, [allSelectedSupportPickup, selected.length, deliveryMethod]);
 
-  // Shipping-methods die ALLE geselecteerde listings ondersteunen
-  const usableShippingMethodIds = selected.length > 0
-    ? sellerShippingMethods.filter((sm) =>
-        selected.every((l) => l.shippingMethods.some((ls) => ls.shippingMethodId === sm.id))
-      )
-    : sellerShippingMethods;
-
-  // Reset shippingMethodId als de geselecteerde niet meer kan
-  useEffect(() => {
-    if (shippingMethodId && !usableShippingMethodIds.find((sm) => sm.id === shippingMethodId)) {
-      setShippingMethodId("");
-    }
-  }, [shippingMethodId, usableShippingMethodIds]);
-
   function toggleListing(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -117,10 +94,6 @@ export function BundleOfferForm({ conversationId, sellerId, sellerShippingMethod
       setError(t("errors.invalidAmount"));
       return;
     }
-    if (deliveryMethod === "SHIP" && !shippingMethodId) {
-      setError(t("errors.noShippingMethod"));
-      return;
-    }
     if (deliveryMethod === "PICKUP" && !allSelectedSupportPickup) {
       setError(t("errors.pickupNotSupported"));
       return;
@@ -132,7 +105,7 @@ export function BundleOfferForm({ conversationId, sellerId, sellerShippingMethod
         listingIds: Array.from(selectedIds),
         totalAmount: amount,
         deliveryMethod,
-        shippingMethodId: deliveryMethod === "SHIP" ? shippingMethodId : undefined,
+        requestInsuredShipping: deliveryMethod === "SHIP" ? requestInsured : false,
       });
       if (result.error) setError(result.error);
       else {
@@ -228,25 +201,26 @@ export function BundleOfferForm({ conversationId, sellerId, sellerShippingMethod
           )}
         </div>
 
-        {/* Shipping method picker (SHIP only) */}
+        {/* Verzekerd-verzonden toggle (SHIP only). De verkoper kiest later de
+            daadwerkelijke verzendmethode bij accept; deze toggle dwingt
+            server-side een aangetekende methode af. */}
         {deliveryMethod === "SHIP" && (
           <div className="mb-5">
-            <label className="mb-2 block text-sm font-medium text-foreground">{t("shippingMethod")}</label>
-            <select
-              value={shippingMethodId}
-              onChange={(e) => setShippingMethodId(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-            >
-              <option value="">{t("selectShipping")}</option>
-              {usableShippingMethodIds.map((sm) => (
-                <option key={sm.id} value={sm.id}>
-                  {sm.carrier} {sm.serviceName} — €{sm.price.toFixed(2)}
-                </option>
-              ))}
-            </select>
-            {usableShippingMethodIds.length === 0 && selected.length > 0 && (
-              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{t("errors.noCommonShipping")}</p>
-            )}
+            <label className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={requestInsured}
+                onChange={(e) => setRequestInsured(e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  {t("requestInsured.label")}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{t("requestInsured.hint")}</p>
+              </div>
+            </label>
           </div>
         )}
 

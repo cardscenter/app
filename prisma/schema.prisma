@@ -177,7 +177,6 @@ model SellerShippingMethod {
   listingShippingMethods   ListingShippingMethod[]
   auctionShippingMethods   AuctionShippingMethod[]
   shippingBundles          ShippingBundle[]
-  bundleProposals          BundleProposal[]
 
   @@index([sellerId])
 }
@@ -608,9 +607,9 @@ model Listing {
   packageSize     String?  // LETTER | SMALL | MEDIUM | LARGE
   packageCount    Int      @default(1)
 
-  // Pickup-locatie (verplicht als deliveryMethod ∈ {PICKUP, BOTH}). Geen exact
-  // adres voor privacy — alleen postcode + plaats.
-  pickupPostalCode String?
+  // Pickup-locatie (verplicht als deliveryMethod ∈ {PICKUP, BOTH}). Alleen plaats
+  // is publiek zichtbaar; auto-gevuld uit User.city bij listing-creatie en niet
+  // editeerbaar in de form.
   pickupCity       String?
 
   // Seller
@@ -1597,8 +1596,11 @@ model BundleProposal {
   totalAmount Float
 
   deliveryMethod   String  // SHIP | PICKUP
-  shippingMethodId String?
-  shippingMethod   SellerShippingMethod? @relation(fields: [shippingMethodId], references: [id])
+  // Shipping-method NIET op offer-creation — seller kiest die pas bij ACCEPT.
+  // Wel een buyer-voorkeur: requestInsuredShipping forceert isSigned=true filter
+  // op de seller's keuze. Boven €150 / internationaal forceert het bestaande
+  // `requiresSignedShipping`-regelwerk dit sowieso.
+  requestInsuredShipping Boolean @default(false)
 
   // PLATFORM (escrow via wallet) of EXTERNAL (off-platform betaling bij ophalen).
   paymentMode String @default("PLATFORM") // PLATFORM | EXTERNAL

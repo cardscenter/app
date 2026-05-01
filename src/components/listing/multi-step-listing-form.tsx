@@ -48,8 +48,6 @@ interface FormState {
   carriers: Carrier[];
   packageSize: PackageSize | "";
   packageCount: number;
-  pickupPostalCode: string;
-  pickupCity: string;
   upsells: UpsellEntry[];
 }
 
@@ -76,8 +74,6 @@ const INITIAL_STATE: FormState = {
   carriers: [],
   packageSize: "",
   packageCount: 1,
-  pickupPostalCode: "",
-  pickupCity: "",
   upsells: [],
 };
 
@@ -85,10 +81,11 @@ interface MultiStepListingFormProps {
   seriesList: SeriesWithSets[];
   userBalance: number;
   userAccountType: string;
+  userCity?: string | null;
   shippingMethods?: SellerShippingMethod[];
 }
 
-export function MultiStepListingForm({ seriesList, userBalance, userAccountType, shippingMethods = [] }: MultiStepListingFormProps) {
+export function MultiStepListingForm({ seriesList, userBalance, userAccountType, userCity = null, shippingMethods = [] }: MultiStepListingFormProps) {
   const t = useTranslations("listing");
   const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
@@ -144,8 +141,6 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
-    if (form.pickupPostalCode) formData.set("pickupPostalCode", form.pickupPostalCode);
-    if (form.pickupCity) formData.set("pickupCity", form.pickupCity);
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
     return formData;
   };
@@ -259,30 +254,21 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           </div>
         </div>
 
-        {/* Pickup-locatie velden (alleen bij PICKUP/BOTH) */}
+        {/* Pickup-locatie (alleen bij PICKUP/BOTH) — read-only, gevuld uit
+            User.city. Als er geen woonplaats bekend is: melding tonen. */}
         {(form.deliveryMethod === "PICKUP" || form.deliveryMethod === "BOTH") && (
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">{t("pickupLocation.postalCode")}</label>
-              <input
-                type="text"
-                value={form.pickupPostalCode}
-                onChange={(e) => updateField("pickupPostalCode", e.target.value)}
-                placeholder="3811"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">{t("pickupLocation.city")}</label>
-              <input
-                type="text"
-                value={form.pickupCity}
-                onChange={(e) => updateField("pickupCity", e.target.value)}
-                placeholder="Amersfoort"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground sm:col-span-2">{t("pickupLocation.privacyHint")}</p>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-foreground mb-1">{t("pickupLocation.label")}</label>
+            {userCity ? (
+              <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground">
+                {userCity}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                {t("pickupLocation.noCityWarning")}
+              </div>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">{t("pickupLocation.privacyHint")}</p>
           </div>
         )}
 

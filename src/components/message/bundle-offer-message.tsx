@@ -3,13 +3,22 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Package, Check, X, Clock, AlertTriangle } from "lucide-react";
+import { Package, Check, X, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
 import {
   respondToBundleOffer,
   withdrawBundleOffer,
   completeBundleOfferPayment,
 } from "@/actions/bundle-offer";
 import { PickupActions, type PickupScheduleData } from "@/components/message/pickup-actions";
+
+interface SellerShippingMethodLite {
+  id: string;
+  carrier: string;
+  serviceName: string;
+  price: number;
+  isSigned: boolean;
+  shippingType: string;
+}
 
 interface BundleListingThumb {
   listingId: string;
@@ -25,6 +34,7 @@ export interface BundleProposalData {
   totalAmount: number;
   deliveryMethod: string;
   paymentMode: string;
+  requestInsuredShipping: boolean;
   status: string;
   paymentStatus: string | null;
   paymentDeadline: string | null;
@@ -41,13 +51,17 @@ interface Props {
   bundleProposal: BundleProposalData;
   currentUserId: string;
   isOwn: boolean;
+  // Voor seller-accept-modal (alleen relevant als currentUser=seller).
+  sellerShippingMethods?: SellerShippingMethodLite[];
 }
 
-export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn }: Props) {
+export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, sellerShippingMethods = [] }: Props) {
   const t = useTranslations("bundleOffer");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [selectedShippingId, setSelectedShippingId] = useState<string>("");
 
   const isBuyer = bp.buyerId === currentUserId;
   const isSeller = bp.sellerId === currentUserId;
@@ -142,7 +156,10 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn }:
         {canSellerRespond && (
           <div className="flex gap-2 mt-3">
             <button
-              onClick={() => run(() => respondToBundleOffer(bp.id, "ACCEPT"))}
+              onClick={() => {
+                if (bp.deliveryMethod === "SHIP") setShowAcceptModal(true);
+                else run(() => respondToBundleOffer(bp.id, "ACCEPT"));
+              }}
               disabled={loading}
               className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
@@ -157,6 +174,90 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn }:
             </button>
           </div>
         )}
+
+        {/* Seller-accept modal voor SHIP-bundles: kies verzendmethode */}
+        {showAcceptModal && (() => {
+          const usable = sellerShippingMethods.filter((sm) => sm.shippingType !== "LETTER");
+          const insuredRequired = bp.requestInsuredShipping || bp.totalAmount > 150;
+          const visible = insuredRequired ? usable.filter((sm) => sm.isSigned) : usable;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAcceptModal(false)}>
+              <div className="glass w-full max-w-md rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-foreground">{t("acceptShipping.title")}</h3>
+                  <button onClick={() => setShowAcceptModal(false)} className="rounded-lg p-1 text-muted-foreground hover:text-foreground">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <p className="mb-3 text-sm text-muted-foreground">{t("acceptShipping.hint")}</p>
+                {insuredRequired && (
+                  <div className="mb-3 flex items-center gap-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    {t("acceptShipping.insuredBadge")}
+                  </div>
+                )}
+                {visible.length === 0 ? (
+                  <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                    {t("acceptShipping.noMethods")}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {visible.map((sm) => (
+                      <label
+                        key={sm.id}
+                        className={`flex items-center gap-2 rounded-lg border p-2 text-sm cursor-pointer transition-colors ${
+                          selectedShippingId === sm.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="shipMethod"
+                          checked={selectedShippingId === sm.id}
+                          onChange={() => setSelectedShippingId(sm.id)}
+                          className="h-4 w-4"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-foreground">
+                            {sm.carrier} {sm.serviceName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">€{sm.price.toFixed(2)}{sm.isSigned ? " · aangetekend" : ""}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {error && <p className="mt-3 text-xs text-red-500">{error}</p>}
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => setShowAcceptModal(false)}
+                    disabled={loading}
+                    className="flex-1 rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                  >
+                    {t("cancel")}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!selectedShippingId) return;
+                      setLoading(true);
+                      setError(null);
+                      const result = await respondToBundleOffer(bp.id, "ACCEPT", selectedShippingId);
+                      if (result?.error) setError(result.error);
+                      else {
+                        setShowAcceptModal(false);
+                        router.refresh();
+                      }
+                      setLoading(false);
+                    }}
+                    disabled={loading || !selectedShippingId || visible.length === 0}
+                    className="flex-1 rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {t("acceptShipping.confirm")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {canBuyerWithdraw && (
           <button

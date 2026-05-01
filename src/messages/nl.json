@@ -663,8 +663,17 @@
     "shippingOption": "Verzenden",
     "pickupOption": "Ophalen",
     "pickupHint": "Niet alle gekozen advertenties ondersteunen ophalen — alleen verzenden mogelijk.",
-    "shippingMethod": "Verzendmethode",
-    "selectShipping": "Selecteer verzendmethode",
+    "requestInsured": {
+      "label": "Verzekerd verzonden gewenst",
+      "hint": "De verkoper kiest de exacte verzendmethode bij acceptatie, maar wordt verplicht een aangetekende methode te kiezen. Bedragen >€150 of internationale zendingen zijn sowieso verplicht aangetekend."
+    },
+    "acceptShipping": {
+      "title": "Kies een verzendmethode",
+      "hint": "Kies de methode waarmee je deze bundel gaat versturen. Het bedrag zit al in het totaal van de koper.",
+      "insuredBadge": "Aangetekend vereist",
+      "noMethods": "Je hebt geen pakket-verzendmethode geconfigureerd. Voeg er een toe via Dashboard → Verzending.",
+      "confirm": "Bundel accepteren"
+    },
     "totalAmount": "Totaalbedrag (incl. verzending)",
     "amountHint": "Verzendkosten zijn inbegrepen — voer één totaalbedrag in.",
     "submit": "Verstuur voorstel",
@@ -839,9 +848,8 @@
     "deliveryBoth": "Beide",
     "pickupLocation": {
       "label": "Ophaal-locatie",
-      "postalCode": "Postcode",
-      "city": "Plaats",
-      "privacyHint": "Alleen postcode + plaats zijn publiek zichtbaar. Het exacte adres wissel je via chat uit."
+      "privacyHint": "Alleen je woonplaats is publiek zichtbaar — niet je postcode of adres. Het exacte adres wissel je via chat uit.",
+      "noCityWarning": "Je hebt nog geen woonplaats ingevuld. Vul deze eerst in via Dashboard → Verzending voordat je een ophaal-advertentie plaatst."
     },
     "freeShipping": "Gratis verzending",
     "freeShippingTooltip": "Verzendkosten zijn inbegrepen in de verkoopprijs",

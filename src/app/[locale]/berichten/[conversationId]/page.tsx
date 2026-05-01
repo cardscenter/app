@@ -159,6 +159,7 @@ export default async function ConversationPage({
       totalAmount: bp.totalAmount,
       deliveryMethod: bp.deliveryMethod,
       paymentMode: bp.paymentMode,
+      requestInsuredShipping: bp.requestInsuredShipping,
       status: bp.status,
       paymentStatus: bp.paymentStatus,
       paymentDeadline: bp.paymentDeadline?.toISOString() ?? null,
@@ -191,16 +192,14 @@ export default async function ConversationPage({
     };
   });
 
-  // Seller shipping-methods voor de bundle-offer-form (alleen relevant als buyer
-  // chat heeft met een seller — de "andere" partij). We laden van de
-  // tegenpartij; als die geen sellerShippingMethods heeft is array leeg.
+  // Current user's eigen seller-shipping-methods voor de seller-accept-modal
+  // op een bundle-offer (Fase 27.10). Pas relevant als current user de seller
+  // van een binnenkomende offer is.
   const otherUserId = otherUser?.userId ?? null;
-  const sellerShippingMethods = otherUserId
-    ? await prisma.sellerShippingMethod.findMany({
-        where: { sellerId: otherUserId, isActive: true },
-        select: { id: true, carrier: true, serviceName: true, price: true },
-      })
-    : [];
+  const currentUserSellerShippingMethods = await prisma.sellerShippingMethod.findMany({
+    where: { sellerId: session.user.id!, isActive: true },
+    select: { id: true, carrier: true, serviceName: true, price: true, isSigned: true, shippingType: true },
+  });
 
   return (
     <ChatLayout conversations={previews} activeConversationId={conversationId}>
@@ -240,7 +239,7 @@ export default async function ConversationPage({
             proposals={proposals}
             bundleProposals={bundleProposals}
             otherUserId={otherUserId}
-            sellerShippingMethods={sellerShippingMethods}
+            currentUserSellerShippingMethods={currentUserSellerShippingMethods}
             contextType={contextType}
             availableBalance={availableBalance}
           />

@@ -42,25 +42,13 @@ export const createListingSchema = z.object({
   packageSize: z.enum(PACKAGE_SIZES).optional(),
   packageCount: z.coerce.number().int().min(1).max(10).default(1),
 
-  // Pickup-locatie (Fase 27) — verplicht bij deliveryMethod PICKUP/BOTH
-  pickupPostalCode: z.string().optional(),
-  pickupCity: z.string().optional(),
-
   // Shipping methods
   shippingMethodIds: z.string().optional(), // JSON array of shipping method IDs
 
   // Upsells
   upsells: z.string().optional(), // JSON array of {type, days}
-}).superRefine((data, ctx) => {
-  // Pickup-locatie verplicht bij PICKUP/BOTH
-  if ((data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH")
-    && (!data.pickupPostalCode || !data.pickupCity)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Postcode en plaats zijn verplicht bij ophalen",
-      path: ["pickupPostalCode"],
-    });
-  }
+}).superRefine(() => {
+  // Pickup-locatie wordt server-side uit User.city gevuld — geen form-input meer.
 
   // Price required for FIXED pricing
   if (data.pricingType === "FIXED" && (!data.price || data.price <= 0)) {
@@ -174,7 +162,5 @@ export const draftListingSchema = z.object({
   carriers: z.string().optional(),
   packageSize: z.enum(PACKAGE_SIZES).optional(),
   packageCount: z.coerce.number().int().min(1).max(10).default(1),
-  pickupPostalCode: z.string().optional(),
-  pickupCity: z.string().optional(),
   shippingMethodIds: z.string().optional(),
 });

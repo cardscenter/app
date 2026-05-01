@@ -26,10 +26,10 @@ export default async function NieuwListingPage({
       })
     : [];
 
-  // Get user balance and account type for upsells
+  // Get user balance, account type, and city (for pickup-listings auto-fill)
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { balance: true, accountType: true },
+    select: { balance: true, accountType: true, city: true },
   });
 
   // Get seller's shipping methods
@@ -45,6 +45,7 @@ export default async function NieuwListingPage({
         seriesList={seriesList}
         userBalance={user?.balance ?? 0}
         userAccountType={user?.accountType ?? "FREE"}
+        userCity={user?.city ?? null}
         shippingMethods={shippingMethods}
       />
     </PageContainer>

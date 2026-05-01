@@ -37,6 +37,8 @@ interface SellerShippingMethodLite {
   carrier: string;
   serviceName: string;
   price: number;
+  isSigned: boolean;
+  shippingType: string;
 }
 
 type ListingContext = {
@@ -55,7 +57,7 @@ export function MessageThread({
   proposals,
   bundleProposals,
   otherUserId,
-  sellerShippingMethods,
+  currentUserSellerShippingMethods,
   contextType,
   availableBalance,
 }: {
@@ -66,7 +68,7 @@ export function MessageThread({
   proposals?: ProposalData[];
   bundleProposals?: BundleProposalData[];
   otherUserId?: string | null;
-  sellerShippingMethods?: SellerShippingMethodLite[];
+  currentUserSellerShippingMethods?: SellerShippingMethodLite[];
   contextType?: "auction" | "claimsale" | "listing" | null;
   availableBalance?: number;
 }) {
@@ -193,6 +195,7 @@ export function MessageThread({
                       bundleProposal={bp}
                       currentUserId={currentUserId}
                       isOwn={isOwn}
+                      sellerShippingMethods={currentUserSellerShippingMethods ?? []}
                     />
                   );
                 }
@@ -235,7 +238,6 @@ export function MessageThread({
         <BundleOfferForm
           conversationId={conversationId}
           sellerId={otherUserId}
-          sellerShippingMethods={sellerShippingMethods ?? []}
           onClose={() => setShowBundleForm(false)}
         />
       )}

@@ -663,8 +663,17 @@
     "shippingOption": "Shipping",
     "pickupOption": "Pickup",
     "pickupHint": "Not all selected listings support pickup — only shipping is available.",
-    "shippingMethod": "Shipping method",
-    "selectShipping": "Select shipping method",
+    "requestInsured": {
+      "label": "Request insured shipping",
+      "hint": "The seller picks the exact shipping method on accept but is required to choose a signed-for method. Amounts >€150 or international shipments require signed shipping anyway."
+    },
+    "acceptShipping": {
+      "title": "Choose a shipping method",
+      "hint": "Pick the method you'll use to ship this bundle. Shipping cost is already included in the buyer's total.",
+      "insuredBadge": "Signed-for required",
+      "noMethods": "You have no parcel shipping methods configured. Add one via Dashboard → Shipping.",
+      "confirm": "Accept bundle"
+    },
     "totalAmount": "Total amount (shipping included)",
     "amountHint": "Shipping is included — enter a single total.",
     "submit": "Send offer",
@@ -839,9 +848,8 @@
     "deliveryBoth": "Both",
     "pickupLocation": {
       "label": "Pickup location",
-      "postalCode": "Postal code",
-      "city": "City",
-      "privacyHint": "Only the postal code + city are publicly visible. Exchange the exact address via chat."
+      "privacyHint": "Only your city is publicly visible — not your postal code or address. Exchange the exact address via chat.",
+      "noCityWarning": "You haven't set your city yet. Add it via Dashboard → Shipping before publishing a pickup listing."
     },
     "freeShipping": "Free shipping",
     "freeShippingTooltip": "Shipping costs are included in the sale price",

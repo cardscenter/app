@@ -51,8 +51,6 @@ export async function createListing(formData: FormData) {
     packageCount: formData.get("packageCount") || "1",
     upsells: formData.get("upsells") || undefined,
     shippingMethodIds: formData.get("shippingMethodIds") || undefined,
-    pickupPostalCode: formData.get("pickupPostalCode") || undefined,
-    pickupCity: formData.get("pickupCity") || undefined,
   };
 
   const result = createListingSchema.safeParse(raw);
@@ -75,12 +73,18 @@ export async function createListing(formData: FormData) {
     }
   }
 
-  // Get user for balance check and premium status
+  // Get user for balance check, premium status, and city (voor pickup-listings)
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { balance: true, reservedBalance: true, accountType: true },
+    select: { balance: true, reservedBalance: true, accountType: true, city: true },
   });
   if (!user) return { error: "Gebruiker niet gevonden" };
+
+  // Pickup-listings: User.city is verplicht en wordt automatisch overgenomen.
+  // Geen handmatige invoer in de form — privacy + minder vinger-werk.
+  if ((data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH") && !user.city) {
+    return { error: "Vul eerst je woonplaats in via Dashboard → Verzending voordat je een ophaal-advertentie plaatst" };
+  }
 
   if (upsellEntries.length > 0) {
     totalUpsellCost = upsellEntries.reduce(
@@ -108,8 +112,7 @@ export async function createListing(formData: FormData) {
     carriers: data.carriers || null,
     packageSize: data.packageSize || null,
     packageCount: data.packageCount,
-    pickupPostalCode: data.pickupPostalCode || null,
-    pickupCity: data.pickupCity || null,
+    pickupCity: (data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH") ? user.city : null,
     sellerId: userId,
   };
 
@@ -512,8 +515,6 @@ export async function saveDraft(formData: FormData) {
     carriers: formData.get("carriers") || undefined,
     packageSize: formData.get("packageSize") || undefined,
     packageCount: formData.get("packageCount") || "1",
-    pickupPostalCode: formData.get("pickupPostalCode") || undefined,
-    pickupCity: formData.get("pickupCity") || undefined,
     shippingMethodIds: formData.get("shippingMethodIds") || undefined,
   };
 
@@ -524,6 +525,14 @@ export async function saveDraft(formData: FormData) {
 
   const data = result.data;
   const userId = session.user.id;
+
+  // Auto-fill pickupCity uit User.city wanneer deliveryMethod PICKUP/BOTH is.
+  // DRAFTs hoeven geen city te hebben — die check gebeurt pas bij publishDraft.
+  const draftUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { city: true },
+  });
+  const isPickupMode = data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH";
 
   const listingData: Record<string, unknown> = {
     title: data.title,
@@ -538,8 +547,7 @@ export async function saveDraft(formData: FormData) {
     carriers: data.carriers || null,
     packageSize: data.packageSize || null,
     packageCount: data.packageCount,
-    pickupPostalCode: data.pickupPostalCode || null,
-    pickupCity: data.pickupCity || null,
+    pickupCity: isPickupMode ? draftUser?.city ?? null : null,
     cardName: data.cardName || null,
     cardSetId: data.cardSetId || null,
     tcgdexId: data.tcgdexId || null,
@@ -625,16 +633,27 @@ export async function publishDraft(listingId: string) {
     return { error: result.error.issues[0].message };
   }
 
-  // Pickup-locatie verplicht als deliveryMethod ∈ {PICKUP, BOTH}
-  if ((listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH")
-    && (!listing.pickupPostalCode || !listing.pickupCity)) {
-    return { error: "Vul postcode en plaats voor ophalen in" };
+  // Pickup-mode: synchroniseer pickupCity met huidige User.city (kan tussen
+  // saveDraft en publishDraft gewijzigd zijn). Vereist dat de seller een city
+  // heeft ingevuld in zijn account.
+  if (listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") {
+    const seller = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { city: true },
+    });
+    if (!seller?.city) {
+      return { error: "Vul eerst je woonplaats in via Dashboard → Verzending voordat je een ophaal-advertentie publiceert" };
+    }
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { status: "ACTIVE", pickupCity: seller.city },
+    });
+  } else {
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { status: "ACTIVE" },
+    });
   }
-
-  await prisma.listing.update({
-    where: { id: listingId },
-    data: { status: "ACTIVE" },
-  });
 
   return { success: true };
 }

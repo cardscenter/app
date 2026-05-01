@@ -8,19 +8,20 @@ import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { getBlockedUserIds } from "@/lib/blocking";
-import { createBundleOfferSchema } from "@/lib/validations/bundle-offer";
+import { createBundleOfferSchema, acceptBundleOfferShippingSchema } from "@/lib/validations/bundle-offer";
 import {
   BUNDLE_OFFER_EXPIRY_DAYS,
   BUNDLE_PAYMENT_DEADLINE_DAYS_SHIP,
   PICKUP_RESERVATION_DAYS,
 } from "@/lib/bundle-offer-config";
+import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
 
 interface CreateBundleOfferInput {
   conversationId: string;
   listingIds: string[];
   totalAmount: number;
   deliveryMethod: "SHIP" | "PICKUP";
-  shippingMethodId?: string;
+  requestInsuredShipping?: boolean;
 }
 
 // Buyer creates a bundle-offer in an existing chat. Listings stay ACTIVE during
@@ -65,7 +66,6 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
       title: true,
       price: true,
       deliveryMethod: true,
-      shippingMethods: { select: { shippingMethodId: true } },
     },
   });
   if (listings.length !== data.listingIds.length) {
@@ -78,21 +78,9 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
       return { error: `"${l.title}" ondersteunt geen ophalen` };
     }
   }
-
-  // SHIP: shippingMethodId moet van deze seller zijn én ondersteund door alle listings
-  if (data.deliveryMethod === "SHIP") {
-    const sellerMethod = await prisma.sellerShippingMethod.findFirst({
-      where: { id: data.shippingMethodId!, sellerId, isActive: true },
-    });
-    if (!sellerMethod) return { error: "Verzendmethode niet beschikbaar" };
-
-    const allListingsSupport = listings.every((l) =>
-      l.shippingMethods.some((sm) => sm.shippingMethodId === data.shippingMethodId)
-    );
-    if (!allListingsSupport) {
-      return { error: "Niet alle advertenties ondersteunen de gekozen verzendmethode" };
-    }
-  }
+  // Geen shippingMethodId-validatie meer bij offer-creation. Seller kiest die
+  // bij accept; server forceert isSigned als requestInsuredShipping=true of
+  // wanneer requiresSignedShipping(totalAmount, isInternational) true is.
 
   // Account-age cap voor de buyer (alleen relevant voor PLATFORM-flow waar
   // het echt geld kost; voor EXTERNAL kan een nieuwe gebruiker ook lokaal
@@ -121,7 +109,7 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
         sellerId,
         totalAmount: data.totalAmount,
         deliveryMethod: data.deliveryMethod,
-        shippingMethodId: data.deliveryMethod === "SHIP" ? data.shippingMethodId : null,
+        requestInsuredShipping: data.requestInsuredShipping,
         paymentMode,
         status: "PENDING",
         expiresAt,
@@ -194,10 +182,14 @@ export async function withdrawBundleOffer(bundleProposalId: string) {
 
 // Seller accepteert of weigert een bundle-offer.
 // ACCEPT-flow heeft 3 sub-flows: SHIP+full-balance, SHIP+partial-balance,
-// PICKUP (off-platform).
+// PICKUP (off-platform). Bij SHIP-bundles geeft de seller een shippingMethodId
+// op; server valideert isSigned wanneer buyer requestInsuredShipping=true
+// gevraagd heeft of wanneer het bedrag/internationale verzending
+// `requiresSignedShipping` triggeren.
 export async function respondToBundleOffer(
   bundleProposalId: string,
-  action: "ACCEPT" | "REJECT"
+  action: "ACCEPT" | "REJECT",
+  shippingMethodId?: string
 ) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
@@ -245,6 +237,36 @@ export async function respondToBundleOffer(
   const listingIds = bp.listings.map((bl) => bl.listingId);
   const totalAmount = bp.totalAmount;
 
+  // Voor SHIP-bundles: seller moet een shipping-method kiezen, server valideert
+  // de isSigned-eis (buyer-toggle of bedrag/internationaal-regelwerk).
+  let acceptedShippingMethodId: string | null = null;
+  if (bp.paymentMode === "PLATFORM" && bp.deliveryMethod === "SHIP") {
+    const parsed = acceptBundleOfferShippingSchema.safeParse({ bundleProposalId, shippingMethodId });
+    if (!parsed.success) return { error: parsed.error.issues[0].message };
+    if (!parsed.data.shippingMethodId) return { error: "Kies een verzendmethode om de bundel te accepteren" };
+
+    const method = await prisma.sellerShippingMethod.findFirst({
+      where: { id: parsed.data.shippingMethodId, sellerId: bp.sellerId, isActive: true },
+      select: { id: true, isTracked: true, isSigned: true, shippingType: true },
+    });
+    if (!method) return { error: "Verzendmethode niet beschikbaar" };
+    if (method.shippingType === "LETTER") {
+      return { error: "Briefpost is niet toegestaan voor bundels — kies een pakket-methode" };
+    }
+
+    const seller = await prisma.user.findUnique({ where: { id: bp.sellerId }, select: { country: true } });
+    const isInternational = seller?.country !== buyer.country;
+    const mustBeSigned = bp.requestInsuredShipping || requiresSignedShipping(totalAmount, isInternational);
+    if (mustBeSigned && !method.isSigned) {
+      return {
+        error: bp.requestInsuredShipping
+          ? "De koper heeft verzekerd verzonden gevraagd — kies een aangetekende methode."
+          : `Voor bundels >€150 of internationaal is aangetekende verzending verplicht.`,
+      };
+    }
+    acceptedShippingMethodId = method.id;
+  }
+
   if (bp.paymentMode === "PLATFORM") {
     if (!buyer.street || !buyer.postalCode || !buyer.city) {
       return { error: "Koper heeft nog geen adres ingevuld" };
@@ -273,7 +295,7 @@ export async function respondToBundleOffer(
             totalItemCost: totalAmount,
             totalCost: totalAmount,
             status: "PAID",
-            shippingMethodId: bp.shippingMethodId,
+            shippingMethodId: acceptedShippingMethodId,
             paymentMode: "PLATFORM",
             bundleProposalId: bp.id,
             buyerStreet: buyer.street,
@@ -335,7 +357,7 @@ export async function respondToBundleOffer(
             totalItemCost: totalAmount,
             totalCost: totalAmount,
             status: "PENDING",
-            shippingMethodId: bp.shippingMethodId,
+            shippingMethodId: acceptedShippingMethodId,
             paymentMode: "PLATFORM",
             bundleProposalId: bp.id,
             buyerStreet: buyer.street,
