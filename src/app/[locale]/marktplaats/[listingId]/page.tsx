@@ -9,6 +9,7 @@ import { ListingActions } from "@/components/listing/listing-actions";
 import { ListingItemsList } from "@/components/listing/listing-items-list";
 import { DescriptionEditor } from "@/components/listing/description-editor";
 import { BuyQuantityForm } from "@/components/listing/buy-quantity-form";
+import { BuyNowButton } from "@/components/listing/buy-now-button";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
 import { isWatched } from "@/actions/watchlist";
 import { Link } from "@/i18n/navigation";
@@ -192,6 +193,11 @@ export default async function ListingDetailPage({
                 <>
                   <p className="text-sm text-muted-foreground">{t("pricingType")}</p>
                   <p className="mt-1 text-xl font-bold text-foreground">{t("negotiable")}</p>
+                  {listing.suggestedPrice && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t("suggestedPriceLabel")}: <span className="font-semibold text-foreground">€{listing.suggestedPrice.toFixed(2)}</span>
+                    </p>
+                  )}
                 </>
               )}
             </div>
@@ -243,13 +249,51 @@ export default async function ListingDetailPage({
               </div>
             )}
 
-            {/* Contact seller — voor ACTIVE/PARTIALLY_SOLD listings die niet
-                stocked zijn (MULTI_CARD partial, COLLECTION, SINGLE_CARD).
-                Stocked listings hebben Direct-kopen-flow hierboven; chat
-                blijft toegankelijk via de "Vraag een deel aan"-flow elders. */}
+            {/* Koop-acties voor non-stocked listings (Fase 27.33).
+                Direct Kopen voor FIXED + allowDirectBuy, Bod doen voor
+                FIXED+acceptsOffers of NEGOTIABLE. PICKUP-only listings
+                krijgen alleen Contact (chat regelt EXTERNAL-reservering —
+                geen direct-buy escrow voor pickup). */}
             {!isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && (
-              <div className="mt-6">
-                <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
+              <div className="mt-6 space-y-3">
+                {/* Direct Kopen — alleen voor FIXED, allowDirectBuy aan, en
+                    deliveryMethod ondersteunt verzending (niet PICKUP-only). */}
+                {listing.pricingType === "FIXED" &&
+                  listing.allowDirectBuy &&
+                  listing.deliveryMethod !== "PICKUP" &&
+                  !isPartiallySold && (
+                    <BuyNowButton
+                      listingId={listing.id}
+                      listingTitle={listing.title}
+                      price={listing.price ?? 0}
+                      shippingCost={listing.shippingCost}
+                      freeShipping={listing.freeShipping}
+                      availableBalance={buyerAvailableBalance}
+                      shippingMethods={listing.shippingMethods.map((sm) => ({
+                        id: sm.shippingMethodId,
+                        carrier: sm.shippingMethod.carrier,
+                        serviceName: sm.shippingMethod.serviceName,
+                        price: sm.price,
+                        isSigned: sm.shippingMethod.isSigned,
+                      }))}
+                    />
+                  )}
+
+                {/* Bod-doen / chat-knop. Voor NEGOTIABLE altijd; voor FIXED
+                    alleen als acceptsOffers aan staat. PICKUP-only krijgt
+                    deze knop ook (chat regelt reservering). */}
+                {(listing.pricingType === "NEGOTIABLE" ||
+                  (listing.pricingType === "FIXED" && listing.acceptsOffers) ||
+                  listing.deliveryMethod === "PICKUP") && (
+                  <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
+                )}
+
+                {/* Hint als Direct Kopen uitstaat én biedingen niet welkom zijn */}
+                {listing.pricingType === "FIXED" && !listing.allowDirectBuy && !listing.acceptsOffers && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    {t("directBuy.directBuyDisabledByseller")}
+                  </p>
+                )}
               </div>
             )}
 

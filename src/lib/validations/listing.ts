@@ -59,7 +59,6 @@ export const createListingSchema = z.object({
   suggestedPrice: z.coerce.number().min(0.01).optional(),
   allowDirectBuy: z.coerce.boolean().default(true),
   acceptsOffers: z.coerce.boolean().default(true),
-  tradeable: z.coerce.boolean().default(false),
 }).superRefine(() => {
   // Pickup-locatie wordt server-side uit User.city gevuld — geen form-input meer.
 
@@ -181,5 +180,4 @@ export const draftListingSchema = z.object({
   suggestedPrice: z.coerce.number().min(0).optional(),
   allowDirectBuy: z.coerce.boolean().default(true),
   acceptsOffers: z.coerce.boolean().default(true),
-  tradeable: z.coerce.boolean().default(false),
 });

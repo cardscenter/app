@@ -911,10 +911,6 @@
       "acceptsOffers": {
         "label": "Biedingen accepteren",
         "hint": "Toont een 'Bod doen'-knop. Zet uit als je vasthoudt aan je vraagprijs en geen onderhandelingen wilt."
-      },
-      "tradeable": {
-        "label": "Ruilen mogelijk",
-        "hint": "Toont een 'Ruilvoorstel doen'-knop. Kopers kunnen via chat ruil-aanvragen doen i.p.v. (of naast) geld bieden."
       }
     },
     "conditionRange": {
@@ -927,19 +923,14 @@
       "label": "Direct Kopen voor",
       "confirm": "Bevestig aankoop",
       "errorPickupOnly": "Deze advertentie is alleen op te halen — geen verzend-aankoop mogelijk.",
-      "tradeableHint": "Liever ruilen? Open een chat met de verkoper.",
       "directBuyDisabledByseller": "De verkoper accepteert alleen biedingen via chat."
     },
     "offerButton": {
       "label": "Bod doen",
       "disabledHint": "De verkoper accepteert geen biedingen op dit aanbod."
     },
-    "tradeButton": {
-      "label": "Ruilvoorstel doen"
-    },
     "negotiableHint": "Onderhandelbaar — open chat om een bod uit te brengen.",
     "suggestedPriceLabel": "Vraagprijs (richtbedrag)",
-    "tradeableBadge": "Ruilen mogelijk",
     "deliveryMethodLabel": "Bezorgmethode",
     "deliveryShip": "Verzenden",
     "deliveryPickup": "Ophalen",

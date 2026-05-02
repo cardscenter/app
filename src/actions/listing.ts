@@ -130,7 +130,6 @@ export async function createListing(formData: FormData) {
       : null,
     allowDirectBuy: data.allowDirectBuy ?? true,
     acceptsOffers: data.acceptsOffers ?? true,
-    tradeable: data.tradeable ?? false,
     sellerId: userId,
   };
 
@@ -827,7 +826,6 @@ export async function saveDraft(formData: FormData) {
       : null,
     allowDirectBuy: data.allowDirectBuy ?? true,
     acceptsOffers: data.acceptsOffers ?? true,
-    tradeable: data.tradeable ?? false,
     cardName: data.cardName || null,
     cardSetId: data.cardSetId || null,
     tcgdexId: data.tcgdexId || null,

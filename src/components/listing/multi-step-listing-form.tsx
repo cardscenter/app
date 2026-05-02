@@ -48,7 +48,6 @@ interface FormState {
   suggestedPrice: number | null;
   allowDirectBuy: boolean;
   acceptsOffers: boolean;
-  tradeable: boolean;
   deliveryMethod: DeliveryMethod;
   freeShipping: boolean;
   shippingCost: number;
@@ -82,7 +81,6 @@ const INITIAL_STATE: FormState = {
   suggestedPrice: null,
   allowDirectBuy: true,
   acceptsOffers: true,
-  tradeable: false,
   deliveryMethod: "SHIP",
   freeShipping: false,
   shippingCost: 0,
@@ -187,7 +185,6 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     }
     formData.set("allowDirectBuy", String(form.allowDirectBuy));
     formData.set("acceptsOffers", String(form.acceptsOffers));
-    formData.set("tradeable", String(form.tradeable));
     return formData;
   };
 
@@ -290,7 +287,6 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           suggestedPrice={form.suggestedPrice}
           allowDirectBuy={form.allowDirectBuy}
           acceptsOffers={form.acceptsOffers}
-          tradeable={form.tradeable}
           pricing={form.variant === "reverse" ? (form.tcgdex?.pricingReverse ?? null) : (form.tcgdex?.pricing ?? null)}
           onChange={updateField}
         />

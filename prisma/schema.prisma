@@ -624,11 +624,8 @@ model Listing {
   // - acceptsOffers: voor FIXED-listings — knop "Bod doen" zichtbaar via chat.
   //   Voor NEGOTIABLE altijd true (geen vaste prijs = altijd onderhandelen).
   //   Voorkomt dat sellers boos worden om lage biedingen op een vaste prijs.
-  // - tradeable: koper mag voorstellen om te ruilen i.p.v. (of naast) geld.
-  //   Default false; toont badge en opent een ruil-conversation in chat.
   allowDirectBuy Boolean @default(true)
   acceptsOffers  Boolean @default(true)
-  tradeable      Boolean @default(false)
 
   // Shipping
   shippingCost    Float    @default(0)

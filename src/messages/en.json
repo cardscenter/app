@@ -911,10 +911,6 @@
       "acceptsOffers": {
         "label": "Accept offers",
         "hint": "Shows a 'Make offer' button. Disable if you stick to your asking price and don't want negotiations."
-      },
-      "tradeable": {
-        "label": "Trades allowed",
-        "hint": "Shows a 'Trade proposal' button. Buyers can request trades via chat instead of (or alongside) money."
       }
     },
     "conditionRange": {
@@ -927,19 +923,14 @@
       "label": "Buy Now for",
       "confirm": "Confirm purchase",
       "errorPickupOnly": "This listing is pickup-only — no shipping purchase available.",
-      "tradeableHint": "Prefer to trade? Open a chat with the seller.",
       "directBuyDisabledByseller": "The seller only accepts offers via chat."
     },
     "offerButton": {
       "label": "Make offer",
       "disabledHint": "The seller does not accept offers on this listing."
     },
-    "tradeButton": {
-      "label": "Trade proposal"
-    },
     "negotiableHint": "Negotiable — open a chat to make an offer.",
     "suggestedPriceLabel": "Asking price (target)",
-    "tradeableBadge": "Trades welcome",
     "deliveryMethodLabel": "Delivery method",
     "deliveryShip": "Shipping",
     "deliveryPickup": "Pickup",

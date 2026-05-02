@@ -10,7 +10,6 @@ interface StepPricingProps {
   suggestedPrice: number | null;
   allowDirectBuy: boolean;
   acceptsOffers: boolean;
-  tradeable: boolean;
   pricing?: CardPricingSnapshot | null;
   onChange: (field: string, value: unknown) => void;
 }
@@ -21,7 +20,6 @@ export function StepPricing({
   suggestedPrice,
   allowDirectBuy,
   acceptsOffers,
-  tradeable,
   pricing,
   onChange,
 }: StepPricingProps) {
@@ -106,13 +104,13 @@ export function StepPricing({
       )}
 
       {/* Koop-opties (Fase 27.31) — toggles voor wat een koper mag doen.
-          Bij FIXED kunnen sellers Direct Kopen uitzetten als ze alleen
-          biedingen willen. acceptsOffers controleert de Bod-knop. tradeable
-          opent de deur voor ruil-aanvragen. */}
-      <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold text-foreground">{t("buyOptions.title")}</h3>
+          Alleen relevant bij FIXED: sellers kunnen Direct Kopen uitzetten
+          als ze alleen biedingen willen, of biedingen blokkeren als ze
+          vasthouden aan hun vraagprijs. */}
+      {pricingType === "FIXED" && (
+        <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+          <h3 className="text-sm font-semibold text-foreground">{t("buyOptions.title")}</h3>
 
-        {pricingType === "FIXED" && (
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -125,9 +123,7 @@ export function StepPricing({
               <p className="mt-0.5 text-xs text-muted-foreground">{t("buyOptions.allowDirectBuy.hint")}</p>
             </div>
           </label>
-        )}
 
-        {pricingType === "FIXED" && (
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -140,21 +136,8 @@ export function StepPricing({
               <p className="mt-0.5 text-xs text-muted-foreground">{t("buyOptions.acceptsOffers.hint")}</p>
             </div>
           </label>
-        )}
-
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={tradeable}
-            onChange={(e) => onChange("tradeable", e.target.checked)}
-            className="mt-0.5 h-4 w-4"
-          />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-foreground">{t("buyOptions.tradeable.label")}</div>
-            <p className="mt-0.5 text-xs text-muted-foreground">{t("buyOptions.tradeable.hint")}</p>
-          </div>
-        </label>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
