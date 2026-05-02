@@ -3,13 +3,14 @@
 import { sendMessage } from "@/actions/message";
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Send, ImagePlus, X, Package } from "lucide-react";
+import { Send, ImagePlus, X, Package, ShoppingBasket } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { ProposalButton } from "@/components/message/proposal-button";
 import { ProposalMessage } from "@/components/message/proposal-message";
 import { BundleOfferMessage, type BundleProposalData } from "@/components/message/bundle-offer-message";
 import { BundleOfferForm } from "@/components/message/bundle-offer-form";
+import { PartialSaleForm } from "@/components/message/partial-sale-form";
 
 type Message = {
   id: string;
@@ -48,6 +49,8 @@ type ListingContext = {
   shippingCost: number | null;
   status: string;
   sellerId: string;
+  listingType: string;
+  allowPartialSale: boolean;
 };
 
 export function MessageThread({
@@ -98,6 +101,7 @@ export function MessageThread({
   const proposalMap = new Map((proposals ?? []).map((p) => [p.id, p]));
   const bundleProposalMap = new Map((bundleProposals ?? []).map((bp) => [bp.id, bp]));
   const [showBundleForm, setShowBundleForm] = useState(false);
+  const [showPartialSaleForm, setShowPartialSaleForm] = useState(false);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -243,6 +247,16 @@ export function MessageThread({
         />
       )}
 
+      {/* Partial-sale modal (buyer-only, listing-context required) */}
+      {showPartialSaleForm && listingContext && (
+        <PartialSaleForm
+          conversationId={conversationId}
+          listingId={listingContext.id}
+          listingTitle={listingContext.title}
+          onClose={() => setShowPartialSaleForm(false)}
+        />
+      )}
+
       {/* Send form — fixed at bottom */}
       <div className="flex-shrink-0 border-t border-border bg-background px-4 py-3">
         {/* Image preview */}
@@ -309,6 +323,23 @@ export function MessageThread({
               className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
             >
               <Package className="h-5 w-5" />
+            </button>
+          )}
+
+          {/* Partial-sale button — buyer in chat met een MULTI_CARD listing
+              die allowPartialSale=true heeft (Fase 27.13) */}
+          {!isSeller
+            && listingContext
+            && listingContext.listingType === "MULTI_CARD"
+            && listingContext.allowPartialSale
+            && (listingContext.status === "ACTIVE" || listingContext.status === "PARTIALLY_SOLD") && (
+            <button
+              type="button"
+              onClick={() => setShowPartialSaleForm(true)}
+              title={t("partialSale")}
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            >
+              <ShoppingBasket className="h-5 w-5" />
             </button>
           )}
 

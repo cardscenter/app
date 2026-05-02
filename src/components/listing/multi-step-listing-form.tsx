@@ -37,6 +37,7 @@ interface FormState {
   tcgdex: CardSearchSelectValue | null;
   variant: "normal" | "reverse";
   cardItems: CardItemEntry[];
+  allowPartialSale: boolean;
   estimatedCardCount: number | null;
   productType: string;
   itemCategory: string;
@@ -63,6 +64,7 @@ const INITIAL_STATE: FormState = {
   tcgdex: null,
   variant: "normal",
   cardItems: [],
+  allowPartialSale: false,
   estimatedCardCount: null,
   productType: "",
   itemCategory: "",
@@ -141,6 +143,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
+    if (form.listingType === "MULTI_CARD") formData.set("allowPartialSale", String(form.allowPartialSale));
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
     return formData;
   };
@@ -216,6 +219,22 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           itemCategory={form.itemCategory}
           onChange={updateField}
         />
+
+        {/* Allow partial sale toggle (MULTI_CARD only, Fase 27.13) */}
+        {form.listingType === "MULTI_CARD" && form.cardItems.length > 0 && (
+          <label className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-card p-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.allowPartialSale}
+              onChange={(e) => updateField("allowPartialSale", e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-foreground">{t("partialSale.label")}</div>
+              <p className="mt-1 text-xs text-muted-foreground">{t("partialSale.hint")}</p>
+            </div>
+          </label>
+        )}
       </section>
 
       {/* Section 4: Pricing */}

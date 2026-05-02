@@ -279,6 +279,9 @@ export async function buyListing(listingId: string, shippingMethodId?: string) {
     include: { shippingMethods: true },
   });
   if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.status === "PARTIALLY_SOLD") {
+    return { error: "Deze advertentie is gedeeltelijk verkocht — vraag de overgebleven items aan via chat." };
+  }
   if (listing.status !== "ACTIVE") return { error: "Advertentie is niet meer beschikbaar" };
   if (listing.sellerId === session.user.id) return { error: "Je kunt je eigen advertentie niet kopen" };
   if (listing.pricingType !== "FIXED" || !listing.price) return { error: "Deze advertentie heeft geen vaste prijs" };

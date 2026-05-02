@@ -652,7 +652,8 @@
     "attachPhoto": "Attach photo",
     "photoUploading": "Uploading...",
     "photoAttached": "Photo attached",
-    "bundleOffer": "Make a bundle offer"
+    "bundleOffer": "Make a bundle offer",
+    "partialSale": "Request a partial sale"
   },
   "bundleOffer": {
     "createTitle": "Make a bundle offer",
@@ -705,6 +706,25 @@
       "noShippingMethod": "Choose a shipping method",
       "noCommonShipping": "The selected listings have no common shipping method.",
       "pickupNotSupported": "Not all selected listings support pickup"
+    }
+  },
+  "partialSaleForm": {
+    "title": "Request a partial sale",
+    "subtitle": "From: {title}",
+    "selectItems": "Choose items",
+    "noItems": "No items available for partial sale.",
+    "loading": "Loading...",
+    "totalAmount": "Total amount (shipping included)",
+    "amountHint": "Shipping is included — enter a single total.",
+    "requestInsured": {
+      "label": "Request insured shipping",
+      "hint": "The seller will be required to pick a signed-for method on accept."
+    },
+    "submit": "Send proposal",
+    "cancel": "Cancel",
+    "errors": {
+      "noItems": "Select at least one item",
+      "invalidAmount": "Enter a valid total amount"
     }
   },
   "pickup": {
@@ -843,6 +863,11 @@
     "deliveryPickup": "Pickup",
     "deliveryShip": "Ship",
     "deliveryBoth": "Pickup & Ship",
+    "partialSale": {
+      "label": "Allow partial sale",
+      "hint": "Buyers can then propose to buy a subset of the items via chat. After accept the remaining items stay available as 'partially sold'.",
+      "badge": "{available} of {total} available"
+    },
     "deliveryMethodLabel": "Delivery method",
     "deliveryShip": "Shipping",
     "deliveryPickup": "Pickup",

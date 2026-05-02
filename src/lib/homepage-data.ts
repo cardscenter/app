@@ -52,7 +52,7 @@ export async function getHomepageData() {
     // Counts
     prisma.auction.count({ where: { status: "ACTIVE" } }),
     prisma.claimsale.count({ where: { status: "LIVE" } }),
-    prisma.listing.count({ where: { status: "ACTIVE" } }),
+    prisma.listing.count({ where: { status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } } }),
     prisma.user.count(),
 
     // Recent items (8 each for carousels)
@@ -76,7 +76,7 @@ export async function getHomepageData() {
       },
     }),
     prisma.listing.findMany({
-      where: { status: "ACTIVE" },
+      where: { status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
       orderBy: { createdAt: "desc" },
       take: 8,
       include: {
@@ -126,7 +126,7 @@ export async function getHomepageData() {
     // Sponsored listings
     prisma.listing.findMany({
       where: {
-        status: "ACTIVE",
+        status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
         upsells: { some: { type: "HOMEPAGE_SPOTLIGHT", expiresAt: { gt: now } } },
       },
       take: 4,

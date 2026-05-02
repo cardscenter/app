@@ -86,7 +86,7 @@ export default async function ConversationPage({
       },
       auction: { select: { title: true } },
       claimsale: { select: { title: true } },
-      listing: { select: { id: true, title: true, price: true, shippingCost: true, status: true, sellerId: true } },
+      listing: { select: { id: true, title: true, price: true, shippingCost: true, status: true, sellerId: true, listingType: true, allowPartialSale: true } },
       proposals: {
         orderBy: { createdAt: "desc" },
       },
@@ -128,6 +128,8 @@ export default async function ConversationPage({
     shippingCost: conversation.listing.shippingCost,
     status: conversation.listing.status,
     sellerId: conversation.listing.sellerId,
+    listingType: conversation.listing.listingType,
+    allowPartialSale: conversation.listing.allowPartialSale,
   } : null;
 
   // Determine conversation context type

@@ -39,8 +39,10 @@ export async function checkListingLimit(userId: string) {
   if (!user) throw new Error("User not found");
 
   const tier = getTierConfig(user.accountType);
+  // PARTIALLY_SOLD telt mee — anders kan een seller via partial-sales onbeperkt
+  // nieuwe listings publiceren door telkens de eerste deels te verkopen.
   const activeCount = await prisma.listing.count({
-    where: { sellerId: userId, status: "ACTIVE" },
+    where: { sellerId: userId, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
   });
 
   return {

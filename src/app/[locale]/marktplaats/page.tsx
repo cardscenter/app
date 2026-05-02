@@ -53,7 +53,7 @@ export default async function MarktplaatsPage({
   // Fetch sponsored listings (active CATEGORY_HIGHLIGHT upsell)
   const sponsoredListings = await prisma.listing.findMany({
     where: {
-      status: "ACTIVE",
+      status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
       ...countryFilter,
       ...blockingFilter,
       upsells: {
@@ -76,7 +76,7 @@ export default async function MarktplaatsPage({
   // Count total non-sponsored active listings
   const totalCount = await prisma.listing.count({
     where: {
-      status: "ACTIVE",
+      status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
       ...countryFilter,
       ...blockingFilter,
       ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
@@ -89,7 +89,7 @@ export default async function MarktplaatsPage({
   // Fetch paginated main listings (excluding sponsored)
   const listings = await prisma.listing.findMany({
     where: {
-      status: "ACTIVE",
+      status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
       ...countryFilter,
       ...blockingFilter,
       ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),

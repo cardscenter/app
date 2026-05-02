@@ -117,7 +117,7 @@ export default async function CardDetailPage({ params }: Props) {
       data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
     }),
     prisma.listing.findMany({
-      where: { tcgdexId: initialCard.id, status: "ACTIVE" },
+      where: { tcgdexId: initialCard.id, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
       include: { seller: { select: { displayName: true, id: true } } },
       orderBy: { price: "asc" },
       take: 10,

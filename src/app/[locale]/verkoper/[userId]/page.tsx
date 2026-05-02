@@ -51,7 +51,7 @@ export default async function SellerProfilePage({
 
   // Get seller's active listings for the sidebar
   const activeListings = await prisma.listing.findMany({
-    where: { sellerId: userId, status: "ACTIVE" },
+    where: { sellerId: userId, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
     take: 5,
     orderBy: { createdAt: "desc" },
   });

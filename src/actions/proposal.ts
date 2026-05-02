@@ -27,6 +27,28 @@ async function recomputeListingStatusAfterPartialSale(
 // Buyer maakt een partial-sale-aanvraag op een listing met allowPartialSale=true.
 // Implementatie hergebruikt het Proposal-model: itemIds-veld onderscheidt
 // partial van full-listing proposals.
+// Read-only helper voor de partial-sale-modal: alle AVAILABLE items van een
+// listing die de buyer mag zien. Listing moet allowPartialSale=true hebben.
+export async function getListingItemsForPartialSale(listingId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd", items: [] as never[], allowPartialSale: false };
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { allowPartialSale: true, status: true, listingType: true },
+  });
+  if (!listing) return { error: "Advertentie niet gevonden", items: [] as never[], allowPartialSale: false };
+  if (!listing.allowPartialSale) return { error: "Geen gedeeltelijke verkoop", items: [] as never[], allowPartialSale: false };
+
+  const items = await prisma.listingCardItem.findMany({
+    where: { listingId, status: "AVAILABLE" },
+    select: { id: true, cardName: true, condition: true, quantity: true, cardSetId: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return { success: true, items, allowPartialSale: true };
+}
+
 export async function createPartialSaleProposal(input: {
   conversationId: string;
   listingId: string;

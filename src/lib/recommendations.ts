@@ -35,7 +35,7 @@ export async function getSellerOtherItems(
     prisma.listing.findMany({
       where: {
         sellerId,
-        status: "ACTIVE",
+        status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
         id: exclude.listingId ? { not: exclude.listingId } : undefined,
       },
       include: { seller: { select: { displayName: true } } },
@@ -122,7 +122,7 @@ export async function getSimilarItems(
       }),
       prisma.listing.findMany({
         where: {
-          status: "ACTIVE",
+          status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
           cardSetId: params.cardSetId,
           id: params.itemType === "listing" ? { not: params.excludeId } : undefined,
         },

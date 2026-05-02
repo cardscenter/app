@@ -152,7 +152,7 @@ export async function searchAll(
     shouldSearchListings
       ? prisma.listing.findMany({
           where: {
-            status: "ACTIVE",
+            status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
             ...textConditions,
             ...(filters.condition ? { condition: filters.condition } : {}),
             ...(filters.cardSetId ? { cardSetId: filters.cardSetId } : {}),

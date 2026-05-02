@@ -652,7 +652,8 @@
     "attachPhoto": "Foto bijvoegen",
     "photoUploading": "Uploaden...",
     "photoAttached": "Foto bijgevoegd",
-    "bundleOffer": "Bundel-voorstel doen"
+    "bundleOffer": "Bundel-voorstel doen",
+    "partialSale": "Vraag een deel aan"
   },
   "bundleOffer": {
     "createTitle": "Bundel-voorstel doen",
@@ -705,6 +706,25 @@
       "noShippingMethod": "Kies een verzendmethode",
       "noCommonShipping": "De geselecteerde advertenties delen geen gemeenschappelijke verzendmethode.",
       "pickupNotSupported": "Niet alle gekozen advertenties ondersteunen ophalen"
+    }
+  },
+  "partialSaleForm": {
+    "title": "Vraag een deel aan",
+    "subtitle": "Uit: {title}",
+    "selectItems": "Kies items",
+    "noItems": "Geen items beschikbaar voor gedeeltelijke verkoop.",
+    "loading": "Laden...",
+    "totalAmount": "Totaalbedrag (incl. verzending)",
+    "amountHint": "Verzendkosten zijn inbegrepen — voer één totaalbedrag in.",
+    "requestInsured": {
+      "label": "Verzekerd verzonden gewenst",
+      "hint": "De verkoper wordt bij accept verplicht een aangetekende methode te kiezen."
+    },
+    "submit": "Verstuur voorstel",
+    "cancel": "Annuleren",
+    "errors": {
+      "noItems": "Selecteer minimaal één item",
+      "invalidAmount": "Voer een geldig totaalbedrag in"
     }
   },
   "pickup": {
@@ -843,6 +863,11 @@
     "deliveryPickup": "Ophalen",
     "deliveryShip": "Verzenden",
     "deliveryBoth": "Ophalen & Verzenden",
+    "partialSale": {
+      "label": "Sta gedeeltelijke verkoop toe",
+      "hint": "Kopers kunnen dan via chat een voorstel doen voor een deel van de items. Bij accept blijven de overgebleven items beschikbaar als 'gedeeltelijk verkocht'.",
+      "badge": "{available} van {total} beschikbaar"
+    },
     "deliveryMethodLabel": "Bezorgmethode",
     "deliveryShip": "Verzenden",
     "deliveryPickup": "Ophalen",
