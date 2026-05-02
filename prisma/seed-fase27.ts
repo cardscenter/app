@@ -19,6 +19,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import * as bcrypt from "bcryptjs";
+import { generatePickupCode } from "../src/lib/pickup-config";
 
 const adapter = new PrismaLibSql({ url: "file:dev.db" });
 const prisma = new PrismaClient({ adapter });
@@ -45,10 +46,6 @@ function imgJson(index: number, count = 1): string {
 
 function generateOrderNumber(): string {
   return `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-}
-
-function generatePickupCode(): string {
-  return Math.floor(Math.random() * 10000).toString().padStart(4, "0");
 }
 
 async function cleanupExistingTestUsers() {
