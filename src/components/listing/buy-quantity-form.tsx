@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { Minus, Plus, ShoppingCart, AlertTriangle } from "lucide-react";
+import { Minus, Plus, ShoppingCart, AlertTriangle, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { buyListing } from "@/actions/listing";
+import { buyListing, type DeliveryChoice } from "@/actions/listing";
 import { PaymentMethodModal } from "@/components/checkout/payment-method-modal";
 
 interface ShippingMethodOption {
@@ -25,12 +25,16 @@ interface Props {
   available: number;
   shippingMethods: ShippingMethodOption[];
   availableBalance: number;
+  // Fase 27.39: SHIP (verzending, default) of PICKUP_PLATFORM (ophalen +
+  // vooraf via wallet). EXTERNAL pickup voor stocked listings loopt via
+  // PickupReserveButton (quantity=1) — niet via dit component.
+  deliveryChoice?: "SHIP" | "PICKUP_PLATFORM";
 }
 
 // Direct-buy-flow voor SEALED_PRODUCT en OTHER met stockQuantity. Toont een
 // stepper voor "hoeveel?" + het rolling totaal en triggert buyListing met
 // quantity. Verzending = één keer (niet × N) want de hele bestelling gaat
-// als één pakket.
+// als één pakket. Bij PICKUP_PLATFORM: geen shipping-picker, geen verzendkosten.
 export function BuyQuantityForm({
   listingId,
   listingTitle,
@@ -40,7 +44,9 @@ export function BuyQuantityForm({
   available,
   shippingMethods,
   availableBalance,
+  deliveryChoice = "SHIP",
 }: Props) {
+  const isPickup = deliveryChoice === "PICKUP_PLATFORM";
   const t = useTranslations("listing");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -56,7 +62,7 @@ export function BuyQuantityForm({
   const [submitted, setSubmitted] = useState(false);
 
   const selectedMethod = shippingMethods.find((m) => m.id === selectedShippingId) ?? null;
-  const shippingCost = freeShipping ? 0 : selectedMethod?.price ?? defaultShippingCost;
+  const shippingCost = isPickup ? 0 : freeShipping ? 0 : selectedMethod?.price ?? defaultShippingCost;
   const itemSubtotal = unitPrice * quantity;
   const total = itemSubtotal + shippingCost;
 
@@ -74,7 +80,12 @@ export function BuyQuantityForm({
     setError(null);
     setSubmitted(true);
     startTransition(async () => {
-      const result = await buyListing(listingId, selectedShippingId || undefined, quantity);
+      const result = await buyListing(
+        listingId,
+        isPickup ? undefined : selectedShippingId || undefined,
+        quantity,
+        deliveryChoice as DeliveryChoice
+      );
       if (result.error) {
         // Fout: modal sluiten, melding inline + toast, lock vrijgeven zodat
         // de buyer kan corrigeren (bv. saldo aanvullen) en opnieuw proberen.
@@ -135,8 +146,8 @@ export function BuyQuantityForm({
         <p className="text-xs text-muted-foreground">{t("stockQuantity.available", { count: available })}</p>
       )}
 
-      {/* Shipping picker — only when seller offers methods */}
-      {shippingMethods.length > 0 && !freeShipping && (
+      {/* Shipping picker — only for SHIP, when seller offers methods */}
+      {!isPickup && shippingMethods.length > 0 && !freeShipping && (
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
             {t("buyQuantity.shippingLabel")}
@@ -163,10 +174,17 @@ export function BuyQuantityForm({
           <span>{quantity}× €{unitPrice.toFixed(2)}</span>
           <span>€{itemSubtotal.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between text-muted-foreground">
-          <span>{t("shippingCost")}</span>
-          <span>{freeShipping ? t("freeShipping") : `€${shippingCost.toFixed(2)}`}</span>
-        </div>
+        {!isPickup && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>{t("shippingCost")}</span>
+            <span>{freeShipping ? t("freeShipping") : `€${shippingCost.toFixed(2)}`}</span>
+          </div>
+        )}
+        {isPickup && (
+          <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
+            <MapPin className="h-3 w-3" /> {t("directBuy.pickupHint")}
+          </div>
+        )}
         <div className="flex justify-between border-t border-border pt-1 font-semibold text-foreground">
           <span>{t("buyQuantity.total")}</span>
           <span>€{total.toFixed(2)}</span>
@@ -186,8 +204,12 @@ export function BuyQuantityForm({
         disabled={pending || submitted || quantity < 1}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
       >
-        <ShoppingCart className="h-4 w-4" />
-        {pending || submitted ? "..." : t("buyQuantity.buyNow")}
+        {isPickup ? <MapPin className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+        {pending || submitted
+          ? "..."
+          : isPickup
+            ? `${t("directBuy.pickupLabel")} €${total.toFixed(2)}`
+            : t("buyQuantity.buyNow")}
       </button>
 
       {/* Confirm-modal — zelfde modal als cart-checkout zodat de UI

@@ -228,25 +228,57 @@ export default async function ListingDetailPage({
               </div>
             )}
 
-            {/* Direct-buy-flow voor stocked SEALED_PRODUCT/OTHER (Fase 27.23) */}
+            {/* Direct-buy-flows voor stocked SEALED_PRODUCT/OTHER (Fase 27.23 + 27.39).
+                Per deliveryMethod + seller-toggles tot 3 koop-routes onder elkaar. */}
             {isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && availableItems > 0 && (
-              <div className="mt-6">
-                <BuyQuantityForm
-                  listingId={listing.id}
-                  listingTitle={listing.title}
-                  unitPrice={listing.price ?? 0}
-                  shippingCost={listing.shippingCost}
-                  freeShipping={listing.freeShipping}
-                  available={availableItems}
-                  availableBalance={buyerAvailableBalance}
-                  shippingMethods={listing.shippingMethods.map((sm) => ({
-                    id: sm.shippingMethodId,
-                    carrier: sm.shippingMethod.carrier,
-                    serviceName: sm.shippingMethod.serviceName,
-                    price: sm.price,
-                    isSigned: sm.shippingMethod.isSigned,
-                  }))}
-                />
+              <div className="mt-6 space-y-4">
+                {/* SHIP via wallet (default) */}
+                {(listing.deliveryMethod === "SHIP" || listing.deliveryMethod === "BOTH") && (
+                  <BuyQuantityForm
+                    listingId={listing.id}
+                    listingTitle={listing.title}
+                    unitPrice={listing.price ?? 0}
+                    shippingCost={listing.shippingCost}
+                    freeShipping={listing.freeShipping}
+                    available={availableItems}
+                    availableBalance={buyerAvailableBalance}
+                    deliveryChoice="SHIP"
+                    shippingMethods={listing.shippingMethods.map((sm) => ({
+                      id: sm.shippingMethodId,
+                      carrier: sm.shippingMethod.carrier,
+                      serviceName: sm.shippingMethod.serviceName,
+                      price: sm.price,
+                      isSigned: sm.shippingMethod.isSigned,
+                    }))}
+                  />
+                )}
+
+                {/* PICKUP via wallet (PLATFORM) — geen verzending */}
+                {(listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
+                  listing.allowPlatformPickup && (
+                    <BuyQuantityForm
+                      listingId={listing.id}
+                      listingTitle={listing.title}
+                      unitPrice={listing.price ?? 0}
+                      shippingCost={0}
+                      freeShipping={true}
+                      available={availableItems}
+                      availableBalance={buyerAvailableBalance}
+                      deliveryChoice="PICKUP_PLATFORM"
+                      shippingMethods={[]}
+                    />
+                  )}
+
+                {/* PICKUP-EXTERNAL — quantity=1 reserveer-knop. Voor meer
+                    stuks bij ophalen: koper regelt via chat. */}
+                {(listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
+                  listing.allowExternalPickup && (
+                    <PickupReserveButton
+                      listingId={listing.id}
+                      listingTitle={listing.title}
+                      price={listing.price ?? 0}
+                    />
+                  )}
               </div>
             )}
 
