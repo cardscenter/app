@@ -952,6 +952,7 @@
     "pickupReserve": {
       "headline": "Reserve for pickup — €{price}",
       "hint": "Pay seller directly at pickup (Tikkie/cash). No platform protection.",
+      "payAtPickup": "pay seller at pickup",
       "button": "Reserve for pickup",
       "confirmDialog": "Reserve \"{title}\" for pickup? Listing held for you for 14 days. Pay seller at pickup.",
       "reserved": "Reserved. Arrange pickup time in chat."

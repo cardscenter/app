@@ -11,6 +11,7 @@ import { DescriptionEditor } from "@/components/listing/description-editor";
 import { BuyQuantityForm } from "@/components/listing/buy-quantity-form";
 import { BuyNowButton } from "@/components/listing/buy-now-button";
 import { PickupReserveButton } from "@/components/listing/pickup-reserve-button";
+import { BuyRouteCard } from "@/components/listing/buy-route-card";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
 import { isWatched } from "@/actions/watchlist";
 import { Link } from "@/i18n/navigation";
@@ -229,77 +230,24 @@ export default async function ListingDetailPage({
             )}
 
             {/* Direct-buy-flows voor stocked SEALED_PRODUCT/OTHER (Fase 27.23 + 27.39).
-                Per deliveryMethod + seller-toggles tot 3 koop-routes onder elkaar. */}
+                Per deliveryMethod + seller-toggles tot 3 koop-routes met elk een
+                duidelijke header (BuyRouteCard) zodat koper niet verward raakt
+                tussen vooraf-vs-bij-ophalen-betalen. */}
             {isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && availableItems > 0 && (
-              <div className="mt-6 space-y-4">
-                {/* SHIP via wallet (default) */}
+              <div className="mt-6 space-y-3">
                 {(listing.deliveryMethod === "SHIP" || listing.deliveryMethod === "BOTH") && (
-                  <BuyQuantityForm
-                    listingId={listing.id}
-                    listingTitle={listing.title}
-                    unitPrice={listing.price ?? 0}
-                    shippingCost={listing.shippingCost}
-                    freeShipping={listing.freeShipping}
-                    available={availableItems}
-                    availableBalance={buyerAvailableBalance}
-                    deliveryChoice="SHIP"
-                    shippingMethods={listing.shippingMethods.map((sm) => ({
-                      id: sm.shippingMethodId,
-                      carrier: sm.shippingMethod.carrier,
-                      serviceName: sm.shippingMethod.serviceName,
-                      price: sm.price,
-                      isSigned: sm.shippingMethod.isSigned,
-                    }))}
-                  />
-                )}
-
-                {/* PICKUP via wallet (PLATFORM) — geen verzending */}
-                {(listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
-                  listing.allowPlatformPickup && (
+                  <BuyRouteCard
+                    variant="ship"
+                    title="Verzenden — vooraf via wallet"
+                    subtitle="Koper betaalt nu via platform-saldo. Escrow tot ontvangst."
+                  >
                     <BuyQuantityForm
                       listingId={listing.id}
                       listingTitle={listing.title}
                       unitPrice={listing.price ?? 0}
-                      shippingCost={0}
-                      freeShipping={true}
-                      available={availableItems}
-                      availableBalance={buyerAvailableBalance}
-                      deliveryChoice="PICKUP_PLATFORM"
-                      shippingMethods={[]}
-                    />
-                  )}
-
-                {/* PICKUP-EXTERNAL — quantity=1 reserveer-knop. Voor meer
-                    stuks bij ophalen: koper regelt via chat. */}
-                {(listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
-                  listing.allowExternalPickup && (
-                    <PickupReserveButton
-                      listingId={listing.id}
-                      listingTitle={listing.title}
-                      price={listing.price ?? 0}
-                    />
-                  )}
-              </div>
-            )}
-
-            {/* Koop-acties voor non-stocked listings (Fase 27.33 + 27.39).
-                Per deliveryMethod + seller-toggles wordt 1-3 koop-routes
-                getoond. PICKUP-listings krijgen ook Direct Kopen (via wallet
-                of reserveer) — niet meer chat-only. */}
-            {!isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && (
-              <div className="mt-6 space-y-3">
-                {/* Direct Kopen via verzending — voor SHIP/BOTH listings
-                    met allowDirectBuy. Niet voor PARTIALLY_SOLD (chat-only). */}
-                {listing.pricingType === "FIXED" &&
-                  listing.allowDirectBuy &&
-                  (listing.deliveryMethod === "SHIP" || listing.deliveryMethod === "BOTH") &&
-                  !isPartiallySold && (
-                    <BuyNowButton
-                      listingId={listing.id}
-                      listingTitle={listing.title}
-                      price={listing.price ?? 0}
                       shippingCost={listing.shippingCost}
                       freeShipping={listing.freeShipping}
+                      available={availableItems}
                       availableBalance={buyerAvailableBalance}
                       deliveryChoice="SHIP"
                       shippingMethods={listing.shippingMethods.map((sm) => ({
@@ -310,39 +258,120 @@ export default async function ListingDetailPage({
                         isSigned: sm.shippingMethod.isSigned,
                       }))}
                     />
+                  </BuyRouteCard>
+                )}
+
+                {(listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
+                  listing.allowPlatformPickup && (
+                    <BuyRouteCard
+                      variant="pickup_platform"
+                      title="Ophalen — vooraf via wallet"
+                      subtitle="Betaal nu via platform; haal op met code-bevestiging. Escrow + bescherming."
+                    >
+                      <BuyQuantityForm
+                        listingId={listing.id}
+                        listingTitle={listing.title}
+                        unitPrice={listing.price ?? 0}
+                        shippingCost={0}
+                        freeShipping={true}
+                        available={availableItems}
+                        availableBalance={buyerAvailableBalance}
+                        deliveryChoice="PICKUP_PLATFORM"
+                        shippingMethods={[]}
+                      />
+                    </BuyRouteCard>
                   )}
 
-                {/* Ophalen + vooraf via wallet (PLATFORM) — PICKUP/BOTH
-                    listings waar seller wallet-betaling toestaat. */}
+                {(listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
+                  listing.allowExternalPickup && (
+                    <BuyRouteCard
+                      variant="pickup_external"
+                      title="Ophalen — bij ophalen aan verkoper betalen"
+                      subtitle="Geen platform-betaling; betaal Tikkie of contant ter plekke. Geen escrow."
+                    >
+                      <PickupReserveButton
+                        listingId={listing.id}
+                        listingTitle={listing.title}
+                        price={listing.price ?? 0}
+                      />
+                    </BuyRouteCard>
+                  )}
+              </div>
+            )}
+
+            {/* Koop-acties voor non-stocked listings (Fase 27.33 + 27.39).
+                Per deliveryMethod + seller-toggles wordt 1-3 koop-routes
+                getoond. PICKUP-listings krijgen ook Direct Kopen (via wallet
+                of reserveer) — niet meer chat-only. */}
+            {!isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && (
+              <div className="mt-6 space-y-3">
+                {listing.pricingType === "FIXED" &&
+                  listing.allowDirectBuy &&
+                  (listing.deliveryMethod === "SHIP" || listing.deliveryMethod === "BOTH") &&
+                  !isPartiallySold && (
+                    <BuyRouteCard
+                      variant="ship"
+                      title="Verzenden — vooraf via wallet"
+                      subtitle="Koper betaalt nu via platform-saldo. Escrow tot ontvangst."
+                    >
+                      <BuyNowButton
+                        listingId={listing.id}
+                        listingTitle={listing.title}
+                        price={listing.price ?? 0}
+                        shippingCost={listing.shippingCost}
+                        freeShipping={listing.freeShipping}
+                        availableBalance={buyerAvailableBalance}
+                        deliveryChoice="SHIP"
+                        shippingMethods={listing.shippingMethods.map((sm) => ({
+                          id: sm.shippingMethodId,
+                          carrier: sm.shippingMethod.carrier,
+                          serviceName: sm.shippingMethod.serviceName,
+                          price: sm.price,
+                          isSigned: sm.shippingMethod.isSigned,
+                        }))}
+                      />
+                    </BuyRouteCard>
+                  )}
+
                 {listing.pricingType === "FIXED" &&
                   listing.allowDirectBuy &&
                   (listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
                   listing.allowPlatformPickup &&
                   !isPartiallySold && (
-                    <BuyNowButton
-                      listingId={listing.id}
-                      listingTitle={listing.title}
-                      price={listing.price ?? 0}
-                      shippingCost={0}
-                      freeShipping={true}
-                      availableBalance={buyerAvailableBalance}
-                      deliveryChoice="PICKUP_PLATFORM"
-                      shippingMethods={[]}
-                    />
+                    <BuyRouteCard
+                      variant="pickup_platform"
+                      title="Ophalen — vooraf via wallet"
+                      subtitle="Betaal nu via platform; haal op met code-bevestiging. Escrow + bescherming."
+                    >
+                      <BuyNowButton
+                        listingId={listing.id}
+                        listingTitle={listing.title}
+                        price={listing.price ?? 0}
+                        shippingCost={0}
+                        freeShipping={true}
+                        availableBalance={buyerAvailableBalance}
+                        deliveryChoice="PICKUP_PLATFORM"
+                        shippingMethods={[]}
+                      />
+                    </BuyRouteCard>
                   )}
 
-                {/* Reserveer voor ophalen (EXTERNAL) — geen wallet, betalen
-                    bij ophalen aan verkoper. PICKUP/BOTH met allowExternal. */}
                 {listing.pricingType === "FIXED" &&
                   listing.allowDirectBuy &&
                   (listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
                   listing.allowExternalPickup &&
                   !isPartiallySold && (
-                    <PickupReserveButton
-                      listingId={listing.id}
-                      listingTitle={listing.title}
-                      price={listing.price ?? 0}
-                    />
+                    <BuyRouteCard
+                      variant="pickup_external"
+                      title="Ophalen — bij ophalen aan verkoper betalen"
+                      subtitle="Geen platform-betaling; betaal Tikkie of contant ter plekke. Geen escrow."
+                    >
+                      <PickupReserveButton
+                        listingId={listing.id}
+                        listingTitle={listing.title}
+                        price={listing.price ?? 0}
+                      />
+                    </BuyRouteCard>
                   )}
 
                 {/* Bod-doen / chat-knop. Voor NEGOTIABLE altijd; voor FIXED

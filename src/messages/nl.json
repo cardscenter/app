@@ -952,6 +952,7 @@
     "pickupReserve": {
       "headline": "Reserveer voor ophalen — €{price}",
       "hint": "Je betaalt direct aan de verkoper bij ophalen (Tikkie/contant). Geen platform-bescherming.",
+      "payAtPickup": "betalen aan verkoper bij ophalen",
       "button": "Reserveer voor ophalen",
       "confirmDialog": "Reserveer \"{title}\" voor ophalen? Listing wordt 14 dagen voor jou vastgehouden. Je betaalt aan verkoper bij ophalen.",
       "reserved": "Gereserveerd. Spreek een ophaalmoment af in de chat."
