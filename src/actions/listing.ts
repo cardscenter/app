@@ -1103,6 +1103,44 @@ export async function updateListingDescription(listingId: string, description: s
   return { success: true };
 }
 
+// Fase 27.34: "Rest sluiten" voor PARTIALLY_SOLD listing. Markeert de listing
+// als SOLD zonder de overgebleven AVAILABLE items naar een buyer te koppelen
+// (er is geen koper voor de rest — seller geeft aan dat ze op zijn of niet
+// meer verkocht hoeven te worden). Cascade-rejects lopende proposals zoals
+// bij DELETED. Items blijven historisch op AVAILABLE staan; de listing-status
+// is leidend voor zichtbaarheid (SOLD = niet meer publiek koopbaar).
+export async function closePartiallySoldListing(listingId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (listing.status !== "PARTIALLY_SOLD") {
+    return { error: "Alleen gedeeltelijk verkochte advertenties kunnen op deze manier gesloten worden" };
+  }
+
+  const flipped = await prisma.listing.updateMany({
+    where: { id: listingId, status: "PARTIALLY_SOLD" },
+    data: { status: "SOLD" },
+  });
+  if (flipped.count === 0) {
+    return { error: "Advertentie kon niet gesloten worden — status is gewijzigd" };
+  }
+
+  await cascadeRejectProposalsAndBundleOffers({
+    listingId,
+    listingTitle: listing.title,
+    systemMessageReason: "afgesloten door de verkoper (overige items niet meer beschikbaar)",
+    sellerId: session.user.id,
+  });
+
+  return { success: true };
+}
+
 // Fase 27: hard-delete van een DRAFT-listing (concept). Geen cascade nodig
 // omdat een DRAFT nooit publiek is geweest, dus geen proposals/bundle-offers.
 export async function deleteDraft(listingId: string) {

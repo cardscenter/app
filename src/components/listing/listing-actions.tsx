@@ -7,6 +7,7 @@ import {
   resumeListing,
   publishDraft,
   deleteDraft,
+  closePartiallySoldListing,
 } from "@/actions/listing";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -87,11 +88,15 @@ export function ListingActions({ listingId, status }: Props) {
   }
 
   if (status === "PARTIALLY_SOLD") {
-    // Eigen variant: SOLD-markering ontbreekt (zou alle nog-AVAILABLE items
-    // automatisch SOLD moeten maken — dat is een aparte "rest sluiten"-flow).
-    // Voor nu: pauze + verwijderen, gelijk aan ACTIVE-set zonder markSold.
     return (
       <div className="space-y-2">
+        <button
+          onClick={() => run(() => closePartiallySoldListing(listingId), "actions.confirmCloseRest")}
+          disabled={loading}
+          className={`${baseBtn} bg-green-600 text-white hover:bg-green-700`}
+        >
+          {t("actions.closeRest")}
+        </button>
         <button
           onClick={() => run(() => pauseListing(listingId), "actions.confirmPause")}
           disabled={loading}

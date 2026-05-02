@@ -837,6 +837,8 @@
       "deleteDraft": "Delete draft",
       "reservedHint": "This listing is linked to an active deal. Actions become available once the buyer pays or the reservation expires.",
       "confirmPause": "Pause this listing? Any pending offers will be rejected.",
+      "closeRest": "Close listing",
+      "confirmCloseRest": "Are you sure you want to close this listing? Remaining items will no longer be available. Pending offers will be rejected.",
       "confirmDelete": "Are you sure you want to delete this listing?",
       "confirmDeleteDraft": "Permanently delete this draft?",
       "editDescription": "Edit description",

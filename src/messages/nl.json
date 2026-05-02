@@ -839,6 +839,8 @@
       "confirmPause": "Weet je zeker dat je deze advertentie wilt pauzeren? Lopende voorstellen worden afgewezen.",
       "confirmDelete": "Weet je zeker dat je deze advertentie wilt verwijderen?",
       "confirmDeleteDraft": "Concept definitief verwijderen?",
+      "closeRest": "Advertentie afsluiten",
+      "confirmCloseRest": "Weet je zeker dat je deze advertentie wilt afsluiten? De overige items worden niet meer als beschikbaar getoond. Lopende voorstellen worden afgewezen.",
       "editDescription": "Beschrijving aanpassen",
       "saveDescription": "Opslaan",
       "cancel": "Annuleren"
