@@ -67,7 +67,7 @@ export default async function MyPurchasesPage() {
       },
       bundleListings: {
         include: {
-          listing: { select: { id: true, title: true, imageUrls: true } },
+          listing: { select: { id: true, title: true, imageUrls: true, condition: true } },
         },
       },
       // ListingCardItem-rijen voor stocked-buy en partial-sale flows.
@@ -178,6 +178,22 @@ export default async function MyPurchasesPage() {
         price: ci.listing?.price ?? 0,
         imageUrl: (() => {
           const raw = ci.listing?.imageUrls;
+          if (!raw) return null;
+          try { const urls = JSON.parse(raw); return urls[0] ?? null; } catch { return null; }
+        })(),
+        reference: null,
+        sellerNote: null,
+      })),
+      // Multi-listing bundle (Fase 27.38): elke listing in de bundle als
+      // eigen item-rij zodat koper precies ziet welke advertenties hij heeft
+      // gekocht i.p.v. "Bundel: N advertenties".
+      ...b.bundleListings.map((bl) => ({
+        id: bl.id,
+        cardName: bl.listing.title,
+        condition: bl.listing.condition ?? "",
+        price: bl.priceSnapshot,
+        imageUrl: (() => {
+          const raw = bl.listing.imageUrls;
           if (!raw) return null;
           try { const urls = JSON.parse(raw); return urls[0] ?? null; } catch { return null; }
         })(),

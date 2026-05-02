@@ -67,7 +67,7 @@ export default async function MySalesPage() {
       },
       bundleListings: {
         include: {
-          listing: { select: { id: true, title: true, imageUrls: true } },
+          listing: { select: { id: true, title: true, imageUrls: true, condition: true } },
         },
       },
       cardItems: {
@@ -176,6 +176,25 @@ export default async function MySalesPage() {
         price: ci.listing?.price ?? 0,
         imageUrl: (() => {
           const raw = ci.listing?.imageUrls;
+          if (!raw) return null;
+          try { const urls = JSON.parse(raw); return urls[0] ?? null; } catch { return null; }
+        })(),
+        reference: null,
+        sellerNote: null,
+        refundedAt: null,
+      })),
+      // Multi-listing bundle (Fase 27.38): elke listing in de bundle als
+      // eigen item-rij. Titel = listing.title, prijs = priceSnapshot
+      // (vastgelegd op moment van bundle-accept). Hiermee zien koper én
+      // verkoper precies welke advertenties in de bundel zaten i.p.v.
+      // alleen "Bundel: N advertenties".
+      ...b.bundleListings.map((bl) => ({
+        id: bl.id,
+        cardName: bl.listing.title,
+        condition: bl.listing.condition ?? "",
+        price: bl.priceSnapshot,
+        imageUrl: (() => {
+          const raw = bl.listing.imageUrls;
           if (!raw) return null;
           try { const urls = JSON.parse(raw); return urls[0] ?? null; } catch { return null; }
         })(),
