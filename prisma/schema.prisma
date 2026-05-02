@@ -583,7 +583,14 @@ model Listing {
   tcgdexId      String?  // Stable TCGdex card identifier, e.g. "base1-4"
 
   // Multi-card details (for MULTI_CARD)
+  // cardItems blijft als snapshot/legacy. Daadwerkelijke per-item state staat
+  // in `cardItemRows ListingCardItem[]` (Fase 27.13) — die worden bij
+  // listing-creatie afgeleid uit cardItems en daarna leidend voor partial-sales.
   cardItems     String?  // JSON array: [{cardName, cardSetId, condition, quantity}]
+
+  // Partial-sale support (Fase 27.13). Default false — buyer kan dan alleen
+  // de hele listing kopen of er een full-listing proposal voor doen.
+  allowPartialSale Boolean @default(false)
 
   // Collection details (for COLLECTION)
   estimatedCardCount Int?
@@ -616,9 +623,11 @@ model Listing {
   sellerId      String
   seller        User     @relation(fields: [sellerId], references: [id])
 
-  // Status (Fase 27): DRAFT | ACTIVE | PAUSED | RESERVED | SOLD | DELETED.
+  // Status (Fase 27): DRAFT | ACTIVE | PAUSED | RESERVED | PARTIALLY_SOLD | SOLD | DELETED.
   // RESERVED = gekoppeld aan een ACCEPTED bundle-offer of partial-balance proposal,
   // tijdelijk niet-koopbaar voor anderen.
+  // PARTIALLY_SOLD (Fase 27.13) = MULTI_CARD listing waar één of meer items SOLD
+  // zijn maar er nog AVAILABLE items zijn. Blijft publiek zichtbaar met badge.
   status        String   @default("ACTIVE")
 
   createdAt     DateTime @default(now())
@@ -635,6 +644,7 @@ model Listing {
   proposals      Proposal[]
   bundleProposalListings BundleProposalListing[]
   bundleListing  BundleListing?
+  cardItemRows   ListingCardItem[]
 
   @@index([sellerId])
   @@index([status])
@@ -942,13 +952,21 @@ model Proposal {
 
   proposerId     String   // userId who made the proposal
 
-  amount         Float    // Proposed price
+  amount         Float    // Proposed price (totaal voor partial-sale, item-only voor full listing)
   type           String   // BUY | SELL
   status         String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | WITHDRAWN
 
   // Payment deadline (for buyers with >= 40% but < 100% balance)
   paymentDeadline DateTime?
   paymentStatus   String?  // AWAITING_PAYMENT | PAID | PAYMENT_FAILED
+
+  // Partial-sale (Fase 27.13). Wanneer gevuld: dit is een gedeeltelijke
+  // verkoop-aanvraag voor specifieke ListingCardItem-ids in JSON-array vorm.
+  // Bij accept worden die items SOLD i.p.v. de hele listing.
+  itemIds         String?
+  // Buyer-voorkeur die verzekerde verzending forceert bij seller-accept,
+  // analoog aan BundleProposal.requestInsuredShipping.
+  requestInsuredShipping Boolean @default(false)
 
   respondedAt    DateTime?
 
@@ -1711,4 +1729,38 @@ model PickupSchedule {
 
   @@index([shippingBundleId, status])
   @@index([status, proposedFor])
+}
+
+// ============================================================
+// PARTIAL-SALE — per-item state binnen een MULTI_CARD listing (Fase 27.13)
+// ============================================================
+
+// Eén rij per item-entry in een MULTI_CARD listing. Bij listing-creatie wordt
+// dit afgeleid uit het cardItems-JSON. Daarna leidend voor partial-sales:
+// status flipt AVAILABLE → RESERVED (bij accepted partial-sale met partial
+// balance) → SOLD, of direct AVAILABLE → SOLD bij full-balance accept.
+//
+// `quantity` representeert de hoeveelheid binnen DEZE entry (bv. "5x Pikachu");
+// status flipt voor de hele entry tegelijk. Per-stuk-quantity-tracking is een
+// follow-up.
+model ListingCardItem {
+  id        String   @id @default(cuid())
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  cardName  String
+  cardSetId String?
+  condition String?
+  quantity  Int      @default(1)
+
+  // AVAILABLE | RESERVED | SOLD
+  status    String   @default("AVAILABLE")
+  buyerId   String?
+  soldAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([listingId, status])
 }
