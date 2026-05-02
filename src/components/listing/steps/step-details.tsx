@@ -52,8 +52,10 @@ export function StepDetails({
   const ttcg = useTranslations("tcg");
   const hasReverse = tcgdex?.variants?.includes("reverse") ?? false;
 
+  // Nieuwe items worden bovenaan toegevoegd (zelfde patroon als claimsale)
+  // zodat de seller direct bij de nieuwste row landt zonder te scrollen.
   const addCardItem = () => {
-    onChange("cardItems", [...cardItems, { cardName: "", cardSetId: "", condition: "Near Mint", quantity: 1, tcgdex: null }]);
+    onChange("cardItems", [{ cardName: "", cardSetId: "", condition: "Near Mint", quantity: 1, tcgdex: null }, ...cardItems]);
   };
 
   const setItemTcgdex = (index: number, tcgdex: CardSearchSelectValue | null) => {
