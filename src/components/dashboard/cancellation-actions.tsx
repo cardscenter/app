@@ -9,9 +9,8 @@ import {
   requestCancellation,
   respondToCancellation,
   getActiveCancellationRequest,
-  CANCELLATION_REASONS,
-  type CancellationReason,
 } from "@/actions/cancellation";
+import { CANCELLATION_REASONS, type CancellationReason } from "@/lib/cancellation-config";
 
 interface CancellationActionsProps {
   bundleId: string;

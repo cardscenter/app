@@ -5,17 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { refundEscrow } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { z } from "zod";
-
-const CANCELLATION_DEADLINE_DAYS = 7;
-
-export const CANCELLATION_REASONS = [
-  "BUYER_CHANGED_MIND",
-  "SELLER_OUT_OF_STOCK",
-  "DAMAGED",
-  "UNRESPONSIVE",
-  "OTHER",
-] as const;
-export type CancellationReason = (typeof CANCELLATION_REASONS)[number];
+import { CANCELLATION_DEADLINE_DAYS, CANCELLATION_REASONS } from "@/lib/cancellation-config";
 
 const requestSchema = z.object({
   reason: z.enum(CANCELLATION_REASONS),
