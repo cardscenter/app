@@ -821,6 +821,7 @@
     "sections": {
       "drafts": "Concepten",
       "active": "Actief",
+      "partiallySold": "Gedeeltelijk verkocht",
       "paused": "Gepauzeerd",
       "reserved": "Gereserveerd",
       "sold": "Verkocht"

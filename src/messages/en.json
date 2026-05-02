@@ -821,6 +821,7 @@
     "sections": {
       "drafts": "Drafts",
       "active": "Active",
+      "partiallySold": "Partially sold",
       "paused": "Paused",
       "reserved": "Reserved",
       "sold": "Sold"

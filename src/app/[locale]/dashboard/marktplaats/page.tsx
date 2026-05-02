@@ -24,11 +24,12 @@ export default async function DashboardMarktplaatsPage({
     include: { seller: { select: { displayName: true } } },
   });
 
-  const drafts   = listings.filter((l) => l.status === "DRAFT");
-  const active   = listings.filter((l) => l.status === "ACTIVE");
-  const reserved = listings.filter((l) => l.status === "RESERVED");
-  const paused   = listings.filter((l) => l.status === "PAUSED");
-  const sold     = listings.filter((l) => l.status === "SOLD");
+  const drafts          = listings.filter((l) => l.status === "DRAFT");
+  const active          = listings.filter((l) => l.status === "ACTIVE");
+  const partiallySold   = listings.filter((l) => l.status === "PARTIALLY_SOLD");
+  const reserved        = listings.filter((l) => l.status === "RESERVED");
+  const paused          = listings.filter((l) => l.status === "PAUSED");
+  const sold            = listings.filter((l) => l.status === "SOLD");
 
   return (
     <div className="space-y-8">
@@ -44,6 +45,7 @@ export default async function DashboardMarktplaatsPage({
 
       <Section title={t("sections.drafts")} status="DRAFT" items={drafts} locale={locale} emptyKey="" />
       <Section title={t("sections.active")} status="ACTIVE" items={active} locale={locale} emptyKey="noListings" />
+      {partiallySold.length > 0 && <Section title={t("sections.partiallySold")} status="PARTIALLY_SOLD" items={partiallySold} locale={locale} emptyKey="" />}
       {reserved.length > 0 && <Section title={t("sections.reserved")} status="RESERVED" items={reserved} locale={locale} emptyKey="" />}
       {paused.length > 0 && <Section title={t("sections.paused")} status="PAUSED" items={paused} locale={locale} emptyKey="" />}
       {sold.length > 0 && <Section title={t("sections.sold")} status="SOLD" items={sold} locale={locale} emptyKey="" />}
@@ -65,6 +67,7 @@ interface SectionProps {
     price: number | null;
     shippingCost: number;
     freeShipping?: boolean;
+    status?: string;
     seller: { displayName: string };
   }>;
   locale: string;
