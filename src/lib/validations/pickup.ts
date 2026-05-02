@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PICKUP_CODE_LENGTH } from "@/lib/pickup-config";
+import { PICKUP_CODE_REGEX } from "@/lib/pickup-config";
 
 const TIME_HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
@@ -22,7 +22,10 @@ export const proposePickupSchema = z.object({
 
 export const confirmPickupSchema = z.object({
   shippingBundleId: z.string().min(1),
+  // Code-formaat: 4 cijfers gevolgd door 1 hoofdletter (zonder O/I). Input-veld
+  // upper-cased voor parsing zodat een buyer "4837k" mag intoetsen.
   code: z
     .string()
-    .regex(new RegExp(`^\\d{${PICKUP_CODE_LENGTH}}$`), `Code moet ${PICKUP_CODE_LENGTH} cijfers zijn`),
+    .transform((s) => s.trim().toUpperCase())
+    .pipe(z.string().regex(PICKUP_CODE_REGEX, "Code moet 4 cijfers + 1 hoofdletter zijn (bijv. 4837K)")),
 });

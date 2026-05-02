@@ -10,7 +10,16 @@ import {
   confirmPickup,
   cancelExternalReservation,
 } from "@/actions/pickup";
-import { PICKUP_CODE_LENGTH } from "@/lib/pickup-config";
+import { PICKUP_CODE_LENGTH, PICKUP_CODE_REGEX } from "@/lib/pickup-config";
+
+// Input-sanitizer voor pickup-code: laat alleen 0-9 en toegestane hoofdletters
+// (A-Z behalve I/O) door, upper-case automatisch, maximaal 5 tekens.
+function sanitizePickupInput(raw: string): string {
+  return raw
+    .toUpperCase()
+    .replace(/[^0-9A-HJ-NP-Z]/g, "")
+    .slice(0, PICKUP_CODE_LENGTH);
+}
 
 export interface PickupScheduleData {
   id: string;
@@ -96,7 +105,7 @@ export function PickupActions({
   }
 
   function handleConfirmPickup() {
-    if (code.length !== PICKUP_CODE_LENGTH) {
+    if (!PICKUP_CODE_REGEX.test(code)) {
       setError(t("wrongCode"));
       return;
     }
@@ -183,18 +192,20 @@ export function PickupActions({
               <div className="flex gap-2">
                 <input
                   type="text"
-                  inputMode="numeric"
-                  pattern="\d*"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
                   maxLength={PICKUP_CODE_LENGTH}
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, PICKUP_CODE_LENGTH))}
-                  placeholder={"•".repeat(PICKUP_CODE_LENGTH)}
-                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-widest text-foreground"
+                  onChange={(e) => setCode(sanitizePickupInput(e.target.value))}
+                  placeholder="0000A"
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-widest uppercase text-foreground"
                 />
                 <button
                   type="button"
                   onClick={handleConfirmPickup}
-                  disabled={pending || code.length !== PICKUP_CODE_LENGTH}
+                  disabled={pending || !PICKUP_CODE_REGEX.test(code)}
                   className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                 >
                   <Check className="h-4 w-4" />
