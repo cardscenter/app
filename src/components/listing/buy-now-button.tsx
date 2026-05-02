@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { ShoppingCart, AlertTriangle, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { buyListing, type DeliveryChoice } from "@/actions/listing";
+import { buyListing } from "@/actions/listing";
+import type { DeliveryChoice } from "@/lib/listing-types";
 import { PaymentMethodModal } from "@/components/checkout/payment-method-modal";
 
 interface ShippingMethodOption {

@@ -20,7 +20,8 @@ interface CreateBundleOfferInput {
   conversationId: string;
   listingIds: string[];
   totalAmount: number;
-  deliveryMethod: "SHIP" | "PICKUP";
+  // Fase 27.43: 3-way keuze (SHIP / PICKUP_PLATFORM / PICKUP_EXTERNAL).
+  deliveryChoice: "SHIP" | "PICKUP_PLATFORM" | "PICKUP_EXTERNAL";
   requestInsuredShipping?: boolean;
 }
 
@@ -66,26 +67,37 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
       title: true,
       price: true,
       deliveryMethod: true,
+      allowPlatformPickup: true,
+      allowExternalPickup: true,
     },
   });
   if (listings.length !== data.listingIds.length) {
     return { error: "Eén of meer advertenties niet gevonden" };
   }
+  const wantsPickup = data.deliveryChoice !== "SHIP";
+  const wantsPlatformPickup = data.deliveryChoice === "PICKUP_PLATFORM";
+  const wantsExternalPickup = data.deliveryChoice === "PICKUP_EXTERNAL";
   for (const l of listings) {
     if (l.sellerId !== sellerId) return { error: "Alle advertenties moeten van dezelfde verkoper zijn" };
     if (l.status !== "ACTIVE") return { error: `"${l.title}" is niet meer beschikbaar` };
-    if (data.deliveryMethod === "PICKUP" && l.deliveryMethod !== "PICKUP" && l.deliveryMethod !== "BOTH") {
+    if (wantsPickup && l.deliveryMethod !== "PICKUP" && l.deliveryMethod !== "BOTH") {
       return { error: `"${l.title}" ondersteunt geen ophalen` };
+    }
+    if (wantsPlatformPickup && !l.allowPlatformPickup) {
+      return { error: `"${l.title}" accepteert geen wallet-betaling voor ophalen` };
+    }
+    if (wantsExternalPickup && !l.allowExternalPickup) {
+      return { error: `"${l.title}" accepteert geen Tikkie/contant — kies wallet-vooraf` };
     }
   }
   // Geen shippingMethodId-validatie meer bij offer-creation. Seller kiest die
   // bij accept; server forceert isSigned als requestInsuredShipping=true of
   // wanneer requiresSignedShipping(totalAmount, isInternational) true is.
 
-  // Account-age cap voor de buyer (alleen relevant voor PLATFORM-flow waar
-  // het echt geld kost; voor EXTERNAL kan een nieuwe gebruiker ook lokaal
-  // ophalen zonder platform-saldo). We doen wel een sanity-check op SHIP.
-  if (data.deliveryMethod === "SHIP") {
+  // Account-age cap voor de buyer (relevant voor PLATFORM-flows waar geld
+  // van wallet weggaat; voor EXTERNAL geen platform-saldo nodig).
+  const isPlatformFlow = data.deliveryChoice === "SHIP" || data.deliveryChoice === "PICKUP_PLATFORM";
+  if (isPlatformFlow) {
     const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
     if (!buyer) return { error: "Koper niet gevonden" };
     const ageCheck = checkAmountAllowed(buyer, data.totalAmount);
@@ -98,8 +110,20 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
   });
   if (existing) return { error: "Er staat al een bundel-voorstel open. Trek dat eerst in." };
 
-  const paymentMode = data.deliveryMethod === "PICKUP" ? "EXTERNAL" : "PLATFORM";
+  // deliveryMethod (SHIP|PICKUP) en paymentMode (PLATFORM|EXTERNAL) afgeleid
+  // uit de 3-way keuze. Beide worden los opgeslagen op BundleProposal voor
+  // backward compat met bestaande respondToBundleOffer-branches.
+  const deliveryMethodForDb = data.deliveryChoice === "SHIP" ? "SHIP" : "PICKUP";
+  const paymentMode = data.deliveryChoice === "PICKUP_EXTERNAL" ? "EXTERNAL" : "PLATFORM";
   const expiresAt = new Date(Date.now() + BUNDLE_OFFER_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+
+  // Korte chat-omschrijving per keuze. NL strings — chat-bubble blijft NL.
+  const choiceLabel =
+    data.deliveryChoice === "SHIP"
+      ? "verzenden"
+      : data.deliveryChoice === "PICKUP_PLATFORM"
+        ? "ophalen, vooraf via wallet"
+        : "ophalen, betalen bij ophalen";
 
   const created = await prisma.$transaction(async (tx) => {
     const bp = await tx.bundleProposal.create({
@@ -108,7 +132,7 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
         buyerId,
         sellerId,
         totalAmount: data.totalAmount,
-        deliveryMethod: data.deliveryMethod,
+        deliveryMethod: deliveryMethodForDb,
         requestInsuredShipping: data.requestInsuredShipping,
         paymentMode,
         status: "PENDING",
@@ -123,7 +147,7 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
       data: {
         conversationId: data.conversationId,
         senderId: buyerId,
-        body: `Bundel-voorstel: ${listings.length} advertenties voor €${data.totalAmount.toFixed(2)} (${data.deliveryMethod === "PICKUP" ? "ophalen" : "verzenden"})`,
+        body: `Bundel-voorstel: ${listings.length} advertenties voor €${data.totalAmount.toFixed(2)} (${choiceLabel})`,
         bundleProposalId: bp.id,
       },
     });
@@ -297,6 +321,7 @@ export async function respondToBundleOffer(
             status: "PAID",
             shippingMethodId: acceptedShippingMethodId,
             paymentMode: "PLATFORM",
+            deliveryMethod: bp.deliveryMethod,
             bundleProposalId: bp.id,
             buyerStreet: buyer.street,
             buyerHouseNumber: buyer.houseNumber,
@@ -359,6 +384,7 @@ export async function respondToBundleOffer(
             status: "PENDING",
             shippingMethodId: acceptedShippingMethodId,
             paymentMode: "PLATFORM",
+            deliveryMethod: bp.deliveryMethod,
             bundleProposalId: bp.id,
             buyerStreet: buyer.street,
             buyerHouseNumber: buyer.houseNumber,
@@ -408,6 +434,7 @@ export async function respondToBundleOffer(
           totalCost: totalAmount,
           status: "PENDING",
           paymentMode: "EXTERNAL",
+          deliveryMethod: "PICKUP",
           bundleProposalId: bp.id,
           pickupReservationExpiresAt: reservationExpiresAt,
           bundleListings: {
@@ -552,6 +579,8 @@ export async function getRecentSellerListingsForBuyer(sellerId: string) {
       price: true,
       pricingType: true,
       deliveryMethod: true,
+      allowPlatformPickup: true,
+      allowExternalPickup: true,
       shippingMethods: { select: { shippingMethodId: true, price: true } },
     },
     orderBy: { createdAt: "desc" },

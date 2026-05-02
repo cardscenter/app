@@ -317,14 +317,7 @@ export async function createListing(formData: FormData) {
   return { success: true, listingId: listing.id };
 }
 
-// Deliverychoice (Fase 27.39): hoe de koper het product wil ontvangen + betalen.
-// SHIP = verzenden via PLATFORM-escrow (huidige default).
-// PICKUP_PLATFORM = ophalen, vooraf betalen via wallet (escrow). Listing → SOLD,
-//   bundle PAID, escrow vrijgegeven bij confirmPickup-code.
-// PICKUP_EXTERNAL = ophalen, betalen aan seller bij ophaal (Tikkie/contant).
-//   Geen wallet-mutatie, listing → RESERVED, bundle PENDING+EXTERNAL met 14d
-//   reservation-timeout. Koper bevestigt ophaal met 1 klik (geen code nodig).
-export type DeliveryChoice = "SHIP" | "PICKUP_PLATFORM" | "PICKUP_EXTERNAL";
+import type { DeliveryChoice } from "@/lib/listing-types";
 
 export async function buyListing(
   listingId: string,

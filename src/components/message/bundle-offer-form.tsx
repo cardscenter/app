@@ -29,7 +29,11 @@ interface SellerListing {
   price: number | null;
   pricingType: string;
   deliveryMethod: string;
+  allowPlatformPickup: boolean;
+  allowExternalPickup: boolean;
 }
+
+type DeliveryChoice = "SHIP" | "PICKUP_PLATFORM" | "PICKUP_EXTERNAL";
 
 interface Props {
   conversationId: string;
@@ -45,7 +49,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
   const [listings, setListings] = useState<SellerListing[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [deliveryMethod, setDeliveryMethod] = useState<"SHIP" | "PICKUP">("SHIP");
+  const [deliveryChoice, setDeliveryChoice] = useState<DeliveryChoice>("SHIP");
   const [requestInsured, setRequestInsured] = useState(false);
   const [totalAmount, setTotalAmount] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -66,13 +70,27 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
   const allSelectedSupportPickup = selected.every(
     (l) => l.deliveryMethod === "PICKUP" || l.deliveryMethod === "BOTH"
   );
+  const allSelectedSupportShip = selected.every(
+    (l) => l.deliveryMethod === "SHIP" || l.deliveryMethod === "BOTH"
+  );
+  const allSelectedAllowPlatformPickup = selected.every((l) => l.allowPlatformPickup);
+  const allSelectedAllowExternalPickup = selected.every((l) => l.allowExternalPickup);
 
-  // Wanneer pickup niet meer mogelijk is, val terug op SHIP
+  const canShip = selected.length === 0 || allSelectedSupportShip;
+  const canPickupPlatform = selected.length > 0 && allSelectedSupportPickup && allSelectedAllowPlatformPickup;
+  const canPickupExternal = selected.length > 0 && allSelectedSupportPickup && allSelectedAllowExternalPickup;
+
+  // Auto-fallback bij niet-mogelijke keuze
   useEffect(() => {
-    if (deliveryMethod === "PICKUP" && !allSelectedSupportPickup && selected.length > 0) {
-      setDeliveryMethod("SHIP");
+    if (selected.length === 0) return;
+    if (deliveryChoice === "SHIP" && !canShip) {
+      setDeliveryChoice(canPickupPlatform ? "PICKUP_PLATFORM" : canPickupExternal ? "PICKUP_EXTERNAL" : "SHIP");
+    } else if (deliveryChoice === "PICKUP_PLATFORM" && !canPickupPlatform) {
+      setDeliveryChoice(canShip ? "SHIP" : canPickupExternal ? "PICKUP_EXTERNAL" : "SHIP");
+    } else if (deliveryChoice === "PICKUP_EXTERNAL" && !canPickupExternal) {
+      setDeliveryChoice(canShip ? "SHIP" : canPickupPlatform ? "PICKUP_PLATFORM" : "SHIP");
     }
-  }, [allSelectedSupportPickup, selected.length, deliveryMethod]);
+  }, [canShip, canPickupPlatform, canPickupExternal, selected.length, deliveryChoice]);
 
   function toggleListing(id: string) {
     setSelectedIds((prev) => {
@@ -94,7 +112,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
       setError(t("errors.invalidAmount"));
       return;
     }
-    if (deliveryMethod === "PICKUP" && !allSelectedSupportPickup) {
+    if (deliveryChoice !== "SHIP" && !allSelectedSupportPickup) {
       setError(t("errors.pickupNotSupported"));
       return;
     }
@@ -104,8 +122,8 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
         conversationId,
         listingIds: Array.from(selectedIds),
         totalAmount: amount,
-        deliveryMethod,
-        requestInsuredShipping: deliveryMethod === "SHIP" ? requestInsured : false,
+        deliveryChoice,
+        requestInsuredShipping: deliveryChoice === "SHIP" ? requestInsured : false,
       });
       if (result.error) setError(result.error);
       else {
@@ -170,15 +188,18 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
           )}
         </div>
 
-        {/* Delivery method */}
+        {/* Delivery method — Fase 27.43: 3-way keuze (SHIP / PICKUP_PLATFORM /
+            PICKUP_EXTERNAL). Disabled-state per knop bij niet-ondersteunde
+            keuze (gebaseerd op gekozen listings + seller-toggles). */}
         <div className="mb-5">
           <h3 className="mb-2 text-sm font-medium text-foreground">{t("chooseDelivery")}</h3>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <button
               type="button"
-              onClick={() => setDeliveryMethod("SHIP")}
-              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
-                deliveryMethod === "SHIP" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted"
+              onClick={() => setDeliveryChoice("SHIP")}
+              disabled={selected.length > 0 && !canShip}
+              className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                deliveryChoice === "SHIP" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted"
               }`}
             >
               <Truck className="h-4 w-4" />
@@ -186,16 +207,30 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => setDeliveryMethod("PICKUP")}
-              disabled={selected.length > 0 && !allSelectedSupportPickup}
-              className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-                deliveryMethod === "PICKUP" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted"
+              onClick={() => setDeliveryChoice("PICKUP_PLATFORM")}
+              disabled={selected.length > 0 && !canPickupPlatform}
+              className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                deliveryChoice === "PICKUP_PLATFORM" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted"
               }`}
             >
               <MapPin className="h-4 w-4" />
-              {t("pickupOption")}
+              {t("pickupPlatformOption")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeliveryChoice("PICKUP_EXTERNAL")}
+              disabled={selected.length > 0 && !canPickupExternal}
+              className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                deliveryChoice === "PICKUP_EXTERNAL" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              <MapPin className="h-4 w-4" />
+              {t("pickupExternalOption")}
             </button>
           </div>
+          {selected.length > 0 && !canShip && !canPickupPlatform && !canPickupExternal && (
+            <p className="mt-2 text-xs text-red-500">{t("noDeliveryAvailable")}</p>
+          )}
           {selected.length > 0 && !allSelectedSupportPickup && (
             <p className="mt-2 text-xs text-muted-foreground">{t("pickupHint")}</p>
           )}
@@ -204,7 +239,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
         {/* Verzekerd-verzonden toggle (SHIP only). De verkoper kiest later de
             daadwerkelijke verzendmethode bij accept; deze toggle dwingt
             server-side een aangetekende methode af. */}
-        {deliveryMethod === "SHIP" && (
+        {deliveryChoice === "SHIP" && (
           <div className="mb-5">
             <label className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 cursor-pointer">
               <input

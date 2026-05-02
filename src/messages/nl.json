@@ -660,9 +660,12 @@
     "selectListings": "Kies advertenties",
     "noListings": "Deze verkoper heeft geen actieve advertenties.",
     "loading": "Laden...",
-    "chooseDelivery": "Kies bezorging",
+    "chooseDelivery": "Kies bezorging en betaling",
     "shippingOption": "Verzenden",
     "pickupOption": "Ophalen",
+    "pickupPlatformOption": "Ophalen + wallet",
+    "pickupExternalOption": "Ophalen + Tikkie/contant",
+    "noDeliveryAvailable": "Geen bezorgkeuze mogelijk voor deze combinatie van advertenties.",
     "pickupHint": "Niet alle gekozen advertenties ondersteunen ophalen — alleen verzenden mogelijk.",
     "requestInsured": {
       "label": "Verzekerd verzonden gewenst",

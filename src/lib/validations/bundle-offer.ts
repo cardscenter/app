@@ -8,7 +8,12 @@ export const createBundleOfferSchema = z.object({
     .min(MIN_LISTINGS_PER_BUNDLE, `Selecteer minimaal ${MIN_LISTINGS_PER_BUNDLE} advertenties`)
     .max(MAX_LISTINGS_PER_BUNDLE, `Maximaal ${MAX_LISTINGS_PER_BUNDLE} advertenties per bundel`),
   totalAmount: z.coerce.number().min(0.01, "Voer een totaalbedrag in"),
-  deliveryMethod: z.enum(["SHIP", "PICKUP"]),
+  // Fase 27.43: deliveryChoice combineert bezorg-route + betaal-modus tot één
+  // keuze (3 opties). Backend leidt deliveryMethod + paymentMode hieruit af.
+  // - SHIP = verzenden via PLATFORM-escrow (default)
+  // - PICKUP_PLATFORM = ophalen, vooraf via wallet (escrow + code-confirm)
+  // - PICKUP_EXTERNAL = ophalen, betalen aan seller bij ophalen (Tikkie/contant)
+  deliveryChoice: z.enum(["SHIP", "PICKUP_PLATFORM", "PICKUP_EXTERNAL"]).default("SHIP"),
   // Buyer geeft alleen voorkeur aan; seller kiest bij accept de daadwerkelijke
   // SellerShippingMethod (server forceert isSigned=true wanneer deze flag aan is
   // óf wanneer requiresSignedShipping naar true evalueert via de bestaande regels).

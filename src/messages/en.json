@@ -660,9 +660,12 @@
     "selectListings": "Choose listings",
     "noListings": "This seller has no active listings.",
     "loading": "Loading...",
-    "chooseDelivery": "Choose delivery",
+    "chooseDelivery": "Choose delivery + payment",
     "shippingOption": "Shipping",
     "pickupOption": "Pickup",
+    "pickupPlatformOption": "Pickup + wallet",
+    "pickupExternalOption": "Pickup + Tikkie/cash",
+    "noDeliveryAvailable": "No delivery option possible for this combination of listings.",
     "pickupHint": "Not all selected listings support pickup — only shipping is available.",
     "requestInsured": {
       "label": "Request insured shipping",
