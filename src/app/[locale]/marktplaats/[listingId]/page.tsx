@@ -226,6 +226,7 @@ export default async function ListingDetailPage({
               <div className="mt-6">
                 <BuyQuantityForm
                   listingId={listing.id}
+                  listingTitle={listing.title}
                   unitPrice={listing.price ?? 0}
                   shippingCost={listing.shippingCost}
                   freeShipping={listing.freeShipping}

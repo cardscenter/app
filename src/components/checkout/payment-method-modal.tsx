@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Wallet, CreditCard, X, ArrowUpCircle } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import type { ReactNode } from "react";
 
 interface PaymentMethodModalProps {
   totalCost: number;
@@ -10,6 +11,10 @@ interface PaymentMethodModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   loading: boolean;
+  // Optionele samenvatting van wat de koper afrekent — bv. voor de
+  // direct-buy-flow waarbij geen winkelwagen-pagina ervoor zit.
+  // Wordt gerenderd boven de totaal-regel, onder de payment-keuzes.
+  summary?: ReactNode;
 }
 
 export function PaymentMethodModal({
@@ -18,6 +23,7 @@ export function PaymentMethodModal({
   onConfirm,
   onCancel,
   loading,
+  summary,
 }: PaymentMethodModalProps) {
   const t = useTranslations("cart");
 
@@ -93,8 +99,15 @@ export function PaymentMethodModal({
           </div>
         </div>
 
+        {/* Optionele samenvatting (bv. items voor direct-buy) */}
+        {summary && (
+          <div className="mt-4 border-t border-border pt-4">
+            {summary}
+          </div>
+        )}
+
         {/* Total */}
-        <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+        <div className={`${summary ? "mt-3" : "mt-4 border-t border-border pt-4"} flex items-center justify-between`}>
           <span className="font-medium text-muted-foreground">{t("total")}</span>
           <span className="text-lg font-bold text-foreground">&euro;{totalCost.toFixed(2)}</span>
         </div>

@@ -18,6 +18,7 @@ interface ShippingMethodOption {
 
 interface Props {
   listingId: string;
+  listingTitle: string;
   unitPrice: number;
   shippingCost: number;
   freeShipping: boolean;
@@ -32,6 +33,7 @@ interface Props {
 // als één pakket.
 export function BuyQuantityForm({
   listingId,
+  listingTitle,
   unitPrice,
   shippingCost: defaultShippingCost,
   freeShipping,
@@ -199,6 +201,34 @@ export function BuyQuantityForm({
           onConfirm={handleConfirm}
           onCancel={() => !submitted && setShowConfirmModal(false)}
           loading={submitted}
+          summary={
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground">
+                    {quantity > 1 && (
+                      <span className="text-muted-foreground">{quantity}× </span>
+                    )}
+                    {listingTitle}
+                  </p>
+                  {quantity > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      {quantity} × €{unitPrice.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                <span className="font-medium text-foreground tabular-nums shrink-0">
+                  €{itemSubtotal.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>{t("shippingCost")}{selectedMethod ? ` — ${selectedMethod.carrier} ${selectedMethod.serviceName}` : ""}</span>
+                <span className="tabular-nums">
+                  {freeShipping ? t("freeShipping") : `€${shippingCost.toFixed(2)}`}
+                </span>
+              </div>
+            </div>
+          }
         />
       )}
     </div>
