@@ -179,7 +179,7 @@ export function StepDetails({
         </div>
       )}
 
-      {/* MULTI_CARD specific */}
+      {/* MULTI_CARD specific (Fase 27.16: kaart-database-search per item) */}
       {listingType === "MULTI_CARD" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -192,46 +192,91 @@ export function StepDetails({
               <Plus className="h-3.5 w-3.5" /> {t("addCard")}
             </button>
           </div>
-          {cardItems.map((item, index) => (
-            <div key={index} className="glass-subtle rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
-                <button
-                  type="button"
-                  onClick={() => removeCardItem(index)}
-                  className="text-red-500 hover:text-red-600 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <input
-                  type="text"
-                  placeholder={t("cardName")}
-                  value={item.cardName}
-                  onChange={(e) => updateCardItem(index, "cardName", e.target.value)}
-                  className="glass-input px-3 py-2 text-sm text-foreground"
+          {cardItems.map((item, index) => {
+            // Reconstrueer een thin CardSearchSelectValue uit form-state zodat
+            // de typeahead de huidige selectie toont. Geen rich metadata
+            // (series/rarity/pricing) opgeslagen — die wordt voor MULTI_CARD-
+            // listings niet getoond, dus thumbnail-only is genoeg.
+            const value: CardSearchSelectValue | null = item.tcgdexId
+              ? {
+                  id: item.tcgdexId,
+                  name: item.cardName,
+                  localId: "",
+                  thumbnailUrl: null,
+                  setId: item.cardSetId || null,
+                }
+              : null;
+            return (
+              <div key={index} className="glass-subtle rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeCardItem(index)}
+                    className="text-red-500 hover:text-red-600 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Kaart-database picker (zelfde patroon als SINGLE_CARD) */}
+                <CardSearchSelect
+                  value={value}
+                  onChange={(v) => {
+                    if (v) {
+                      // updateCardItem alleen kan één veld tegelijk; voor 3
+                      // velden moeten we direct de array muteren.
+                      const updated = cardItems.map((it, i) =>
+                        i === index
+                          ? {
+                              ...it,
+                              cardName: v.name,
+                              tcgdexId: v.id,
+                              cardSetId: v.setId ?? "",
+                            }
+                          : it
+                      );
+                      onChange("cardItems", updated);
+                    } else {
+                      // Cleared: alleen tcgdexId en cardSetId resetten,
+                      // cardName mag gehouden worden voor handmatige input.
+                      const updated = cardItems.map((it, i) =>
+                        i === index ? { ...it, tcgdexId: undefined, cardSetId: "" } : it
+                      );
+                      onChange("cardItems", updated);
+                    }
+                  }}
                 />
-                <select
-                  value={item.condition}
-                  onChange={(e) => updateCardItem(index, "condition", e.target.value)}
-                  className="glass-input px-3 py-2 text-sm text-foreground"
-                >
-                  {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-muted-foreground">{t("quantity")}</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(e) => updateCardItem(index, "quantity", parseInt(e.target.value) || 1)}
-                    className="w-20 glass-input px-3 py-2 text-sm text-foreground"
-                  />
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      {t("condition")}
+                    </label>
+                    <select
+                      value={item.condition}
+                      onChange={(e) => updateCardItem(index, "condition", e.target.value)}
+                      className="block w-full glass-input px-3 py-2 text-sm text-foreground"
+                    >
+                      {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      {t("quantity")}
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={item.quantity}
+                      onChange={(e) => updateCardItem(index, "quantity", parseInt(e.target.value) || 1)}
+                      className="block w-full glass-input px-3 py-2 text-sm text-foreground"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {cardItems.length === 0 && (
             <div className="glass-subtle rounded-xl p-6 text-center text-sm text-muted-foreground">
               {t("addCard")}

@@ -1752,6 +1752,7 @@ model ListingCardItem {
 
   cardName  String
   cardSetId String?
+  tcgdexId  String?  // Fase 27.16: link naar eigen kaart-database voor thumbs + pricing
   condition String?
   quantity  Int      @default(1)
 

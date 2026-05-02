@@ -122,6 +122,10 @@ export interface CardItemEntry {
   cardSetId: string;
   condition: string;
   quantity: number;
+  // Fase 27.16: optionele referentie naar de eigen kaart-database (TCGdex-id
+  // formaat). Wordt gevuld als de seller een kaart kiest via CardSearchSelect.
+  // Plain-text invoer blijft mogelijk — dan blijft tcgdexId leeg.
+  tcgdexId?: string;
 }
 
 // Dispute types

@@ -182,7 +182,7 @@ export async function createListing(formData: FormData) {
     // dit overgeslagen.
     if (data.listingType === "MULTI_CARD" && data.cardItems) {
       try {
-        const items: Array<{ cardName: string; cardSetId?: string; condition?: string; quantity?: number }> =
+        const items: Array<{ cardName: string; cardSetId?: string; tcgdexId?: string; condition?: string; quantity?: number }> =
           JSON.parse(data.cardItems);
         for (const item of items) {
           if (!item.cardName) continue;
@@ -191,6 +191,7 @@ export async function createListing(formData: FormData) {
               listingId: newListing.id,
               cardName: item.cardName,
               cardSetId: item.cardSetId || null,
+              tcgdexId: item.tcgdexId || null,
               condition: item.condition || null,
               quantity: item.quantity ?? 1,
               status: "AVAILABLE",
@@ -694,7 +695,7 @@ export async function publishDraft(listingId: string) {
       await tx.listingCardItem.deleteMany({ where: { listingId } });
       if (listing.cardItems) {
         try {
-          const items: Array<{ cardName: string; cardSetId?: string; condition?: string; quantity?: number }> =
+          const items: Array<{ cardName: string; cardSetId?: string; tcgdexId?: string; condition?: string; quantity?: number }> =
             JSON.parse(listing.cardItems);
           for (const item of items) {
             if (!item.cardName) continue;
@@ -703,6 +704,7 @@ export async function publishDraft(listingId: string) {
                 listingId,
                 cardName: item.cardName,
                 cardSetId: item.cardSetId || null,
+                tcgdexId: item.tcgdexId || null,
                 condition: item.condition || null,
                 quantity: item.quantity ?? 1,
                 status: "AVAILABLE",
