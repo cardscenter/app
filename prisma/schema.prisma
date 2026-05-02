@@ -602,6 +602,13 @@ model Listing {
   // Other/Collectibles details (for OTHER)
   itemCategory  String?  // "Playmat", "Binder", "Figuur", etc.
 
+  // Voorraad (Fase 27.23) — voor SEALED_PRODUCT en OTHER. Bij stockQuantity > 1
+  // worden N ListingCardItem-rijen aangemaakt op publish zodat dezelfde
+  // partial-sale-infrastructuur gebruikt kan worden voor stock-tracking en
+  // buy-quantity-flows. Default 1; voor andere listing-types blijft het 1
+  // en heeft het geen effect.
+  stockQuantity Int      @default(1)
+
   // Pricing
   pricingType   String   // FIXED | NEGOTIABLE
   price         Float?   // null if NEGOTIABLE

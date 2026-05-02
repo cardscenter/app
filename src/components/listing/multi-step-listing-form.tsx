@@ -49,6 +49,7 @@ interface FormState {
   carriers: Carrier[];
   packageSize: PackageSize | "";
   packageCount: number;
+  stockQuantity: number;
   upsells: UpsellEntry[];
 }
 
@@ -76,6 +77,7 @@ const INITIAL_STATE: FormState = {
   carriers: [],
   packageSize: "",
   packageCount: 1,
+  stockQuantity: 1,
   upsells: [],
 };
 
@@ -156,6 +158,9 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
     if (form.listingType === "MULTI_CARD") formData.set("allowPartialSale", String(form.allowPartialSale));
+    if (form.listingType === "SEALED_PRODUCT" || form.listingType === "OTHER") {
+      formData.set("stockQuantity", String(Math.max(1, form.stockQuantity)));
+    }
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
     return formData;
   };
@@ -229,6 +234,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
 
           productType={form.productType}
           itemCategory={form.itemCategory}
+          stockQuantity={form.stockQuantity}
           onChange={updateField}
         />
 

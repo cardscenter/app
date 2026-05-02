@@ -50,6 +50,10 @@ export const createListingSchema = z.object({
 
   // Partial-sale toggle (Fase 27.13). Alleen relevant voor MULTI_CARD.
   allowPartialSale: z.coerce.boolean().default(false),
+
+  // Voorraad (Fase 27.23) — alleen relevant voor SEALED_PRODUCT en OTHER.
+  // Validatie checkt min 1, max 999 (sanity).
+  stockQuantity: z.coerce.number().int().min(1).max(999).default(1),
 }).superRefine(() => {
   // Pickup-locatie wordt server-side uit User.city gevuld — geen form-input meer.
 
@@ -167,4 +171,5 @@ export const draftListingSchema = z.object({
   packageCount: z.coerce.number().int().min(1).max(10).default(1),
   shippingMethodIds: z.string().optional(),
   allowPartialSale: z.coerce.boolean().default(false),
+  stockQuantity: z.coerce.number().int().min(1).max(999).default(1),
 });

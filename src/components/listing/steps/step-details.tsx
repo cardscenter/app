@@ -30,6 +30,8 @@ interface StepDetailsProps {
   productType: string;
   // OTHER
   itemCategory: string;
+  // SEALED_PRODUCT + OTHER (Fase 27.23)
+  stockQuantity: number;
   onChange: (field: string, value: unknown) => void;
 }
 
@@ -46,6 +48,7 @@ export function StepDetails({
   estimatedCardCount,
   productType,
   itemCategory,
+  stockQuantity,
   onChange,
 }: StepDetailsProps) {
   const t = useTranslations("listing");
@@ -307,24 +310,58 @@ export function StepDetails({
 
       {/* SEALED_PRODUCT specific */}
       {listingType === "SEALED_PRODUCT" && (
-        <div>
-          <label className="block text-sm font-medium text-foreground">{t("productType")}</label>
-          <select
-            value={productType}
-            onChange={(e) => onChange("productType", e.target.value)}
-            className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground sm:w-64"
-          >
-            <option value="">--</option>
-            {SEALED_PRODUCT_TYPES.map((pt) => (
-              <option key={pt} value={pt}>
-                {t(`product${pt.charAt(0)}${pt.slice(1).toLowerCase().replace(/_/g, "")}` as never) || pt}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground">{t("productType")}</label>
+            <select
+              value={productType}
+              onChange={(e) => onChange("productType", e.target.value)}
+              className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground sm:w-64"
+            >
+              <option value="">--</option>
+              {SEALED_PRODUCT_TYPES.map((pt) => (
+                <option key={pt} value={pt}>
+                  {t(`product${pt.charAt(0)}${pt.slice(1).toLowerCase().replace(/_/g, "")}` as never) || pt}
+                </option>
+              ))}
+            </select>
+          </div>
+          <StockQuantityInput value={stockQuantity} onChange={(n) => onChange("stockQuantity", n)} t={t} />
         </div>
       )}
 
-      {/* OTHER has no extra fields — title + description are sufficient */}
+      {/* OTHER specific (Fase 27.23: stockQuantity beschikbaar) */}
+      {listingType === "OTHER" && (
+        <StockQuantityInput value={stockQuantity} onChange={(n) => onChange("stockQuantity", n)} t={t} />
+      )}
+    </div>
+  );
+}
+
+// Mini-component voor de voorraad-input. Default 1; > 1 betekent dat er
+// meerdere stuks van hetzelfde product worden aangeboden voor directe koop
+// per stuk (Fase 27.23).
+function StockQuantityInput({
+  value,
+  onChange,
+  t,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-foreground">{t("stockQuantity.label")}</label>
+      <input
+        type="number"
+        min={1}
+        max={999}
+        value={value}
+        onChange={(e) => onChange(Math.max(1, parseInt(e.target.value) || 1))}
+        className="mt-1 block w-32 glass-input px-3 py-2.5 text-foreground"
+      />
+      <p className="mt-1 text-xs text-muted-foreground">{t("stockQuantity.hint")}</p>
     </div>
   );
 }

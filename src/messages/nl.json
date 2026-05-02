@@ -886,6 +886,17 @@
       "badge": "{available} van {total} beschikbaar"
     },
     "multiCardItemsHint": "Optioneel — laat leeg als je alleen een algemene beschrijving wilt geven. Vul je hier kaarten in dan kan een koper later, mits jij gedeeltelijke verkoop toestaat hieronder, kiezen welke specifieke kaarten hij wil kopen en daar een eigen bod op doen via de chat.",
+    "stockQuantity": {
+      "label": "Voorraad (aantal stuks)",
+      "hint": "Vul hoeveel stuks je hebt van dit product. Bij meer dan 1 kunnen kopers per stuk afnemen via een 'Hoeveel wil je?'-keuze op de detailpagina.",
+      "available": "{count} beschikbaar"
+    },
+    "buyQuantity": {
+      "label": "Hoeveel wil je?",
+      "shippingLabel": "Verzendmethode",
+      "total": "Totaal",
+      "buyNow": "Direct kopen"
+    },
     "deliveryMethodLabel": "Bezorgmethode",
     "deliveryShip": "Verzenden",
     "deliveryPickup": "Ophalen",

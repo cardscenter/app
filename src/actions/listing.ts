@@ -52,6 +52,7 @@ export async function createListing(formData: FormData) {
     upsells: formData.get("upsells") || undefined,
     shippingMethodIds: formData.get("shippingMethodIds") || undefined,
     allowPartialSale: formData.get("allowPartialSale") === "true",
+    stockQuantity: formData.get("stockQuantity") || "1",
   };
 
   const result = createListingSchema.safeParse(raw);
@@ -115,6 +116,11 @@ export async function createListing(formData: FormData) {
     packageCount: data.packageCount,
     pickupCity: (data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH") ? user.city : null,
     allowPartialSale: data.listingType === "MULTI_CARD" ? data.allowPartialSale : false,
+    // stockQuantity is alleen betekenisvol voor SEALED_PRODUCT/OTHER. Voor
+    // andere types blijft het 1 (default).
+    stockQuantity: (data.listingType === "SEALED_PRODUCT" || data.listingType === "OTHER")
+      ? Math.max(1, data.stockQuantity ?? 1)
+      : 1,
     sellerId: userId,
   };
 
@@ -211,6 +217,27 @@ export async function createListing(formData: FormData) {
       }
     }
 
+    // Fase 27.23: SEALED_PRODUCT en OTHER met stockQuantity > 1 krijgen
+    // ook N rijen voor stock-tracking + buy-quantity-flow. Bij stock=1
+    // wordt 1 rij aangemaakt voor uniformiteit (buyListing routeert op
+    // basis van rijen i.p.v. listing-status).
+    if (data.listingType === "SEALED_PRODUCT" || data.listingType === "OTHER") {
+      const stock = Math.max(1, data.stockQuantity ?? 1);
+      const itemLabel = data.listingType === "SEALED_PRODUCT"
+        ? (data.productType ?? data.title)
+        : (data.itemCategory ?? data.title);
+      for (let i = 0; i < stock; i++) {
+        await tx.listingCardItem.create({
+          data: {
+            listingId: newListing.id,
+            cardName: itemLabel,
+            quantity: 1,
+            status: "AVAILABLE",
+          },
+        });
+      }
+    }
+
     // Create shipping method links
     if (methodSnapshots.length > 0) {
       for (const m of methodSnapshots) {
@@ -276,7 +303,7 @@ export async function createListing(formData: FormData) {
   return { success: true, listingId: listing.id };
 }
 
-export async function buyListing(listingId: string, shippingMethodId?: string) {
+export async function buyListing(listingId: string, shippingMethodId?: string, quantity: number = 1) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -285,15 +312,36 @@ export async function buyListing(listingId: string, shippingMethodId?: string) {
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
-    include: { shippingMethods: true },
+    include: {
+      shippingMethods: true,
+      cardItemRows: { where: { status: "AVAILABLE" }, select: { id: true } },
+    },
   });
   if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.sellerId === session.user.id) return { error: "Je kunt je eigen advertentie niet kopen" };
+  if (listing.pricingType !== "FIXED" || !listing.price) return { error: "Deze advertentie heeft geen vaste prijs" };
+
+  // Stock-based flow voor SEALED_PRODUCT en OTHER (Fase 27.23). Alleen wanneer
+  // de listing daadwerkelijk gematerialiseerde rijen heeft — zo blijven legacy
+  // listings zonder rijen werken via het direct-flip pad hieronder.
+  const hasStockRows =
+    (listing.listingType === "SEALED_PRODUCT" || listing.listingType === "OTHER") &&
+    listing.cardItemRows.length > 0;
+
+  if (hasStockRows) {
+    return buyListingStocked({
+      session,
+      listing,
+      quantity,
+      shippingMethodId,
+    });
+  }
+
+  // === Single-flip flow (SINGLE_CARD, COLLECTION, of legacy SEALED/OTHER) ===
   if (listing.status === "PARTIALLY_SOLD") {
     return { error: "Deze advertentie is gedeeltelijk verkocht — vraag de overgebleven items aan via chat." };
   }
   if (listing.status !== "ACTIVE") return { error: "Advertentie is niet meer beschikbaar" };
-  if (listing.sellerId === session.user.id) return { error: "Je kunt je eigen advertentie niet kopen" };
-  if (listing.pricingType !== "FIXED" || !listing.price) return { error: "Deze advertentie heeft geen vaste prijs" };
 
   const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!buyer) return { error: "Gebruiker niet gevonden" };
@@ -407,6 +455,176 @@ export async function buyListing(listingId: string, shippingMethodId?: string) {
     "ORDER_PAID",
     "Advertentie verkocht!",
     `"${listing.title}" is verkocht voor €${listing.price.toFixed(2)}. Bekijk je verkopen om te verzenden.`,
+    "/dashboard/verkopen"
+  );
+
+  return { success: true };
+}
+
+// Fase 27.23: stock-based buyListing voor SEALED_PRODUCT/OTHER met
+// gematerialiseerde rijen. Buyer kiest hoeveel exemplaren; we flippen
+// N rijen atomair AVAILABLE → SOLD en plakken ze aan een nieuwe bundle.
+// Verzending = één keer (niet keer N) — sellers verzenden de bestelling
+// als één pakket.
+async function buyListingStocked(args: {
+  session: { user?: { id?: string } };
+  listing: {
+    id: string;
+    title: string;
+    price: number | null;
+    shippingCost: number;
+    freeShipping: boolean;
+    sellerId: string;
+    status: string;
+    listingType: string;
+    shippingMethods: Array<{ shippingMethodId: string; price: number }>;
+    cardItemRows: Array<{ id: string }>;
+  };
+  quantity: number;
+  shippingMethodId?: string;
+}) {
+  const { session, listing } = args;
+  const userId = session.user!.id!;
+  const qty = Math.max(1, Math.floor(args.quantity));
+
+  if (listing.status !== "ACTIVE" && listing.status !== "PARTIALLY_SOLD") {
+    return { error: "Advertentie niet meer beschikbaar" };
+  }
+  const available = listing.cardItemRows.length;
+  if (available === 0) return { error: "Geen voorraad meer beschikbaar" };
+  if (qty > available) return { error: `Slechts ${available} stuks beschikbaar` };
+
+  const buyer = await prisma.user.findUnique({ where: { id: userId } });
+  if (!buyer) return { error: "Gebruiker niet gevonden" };
+  if (!buyer.street || !buyer.postalCode || !buyer.city) {
+    return { error: "Vul eerst je adres in via Dashboard → Verzending" };
+  }
+
+  // Shipping
+  let shippingCost = listing.shippingCost;
+  let selectedMethodId: string | null = null;
+  if (args.shippingMethodId && listing.shippingMethods.length > 0) {
+    const method = listing.shippingMethods.find((m) => m.shippingMethodId === args.shippingMethodId);
+    if (method) {
+      shippingCost = method.price;
+      selectedMethodId = method.shippingMethodId;
+    }
+  }
+  if (listing.freeShipping) shippingCost = 0;
+
+  const itemSubtotal = (listing.price ?? 0) * qty;
+  const totalCost = itemSubtotal + shippingCost;
+
+  // Account-age + balance
+  const ageCheck = checkAmountAllowed(buyer, totalCost);
+  if (!ageCheck.allowed) return { error: ageCheck.error! };
+  const buyerAvailable = buyer.balance - buyer.reservedBalance;
+  if (buyerAvailable < totalCost) {
+    return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalCost.toFixed(2)}` };
+  }
+
+  // Shipping enforcement (op TOTAAL, want het is één pakket)
+  if (selectedMethodId) {
+    const seller = await prisma.user.findUnique({ where: { id: listing.sellerId }, select: { country: true } });
+    const isInternational = seller?.country !== buyer.country;
+    const shippingMethod = await prisma.sellerShippingMethod.findUnique({
+      where: { id: selectedMethodId },
+      select: { isSigned: true, isTracked: true },
+    });
+    if (shippingMethod && !shippingMethod.isTracked && !isUntrackedAllowed(itemSubtotal)) {
+      return { error: "Briefpost is niet beschikbaar voor bestellingen boven €25. Kies een verzendmethode met tracking." };
+    }
+    if (requiresSignedShipping(itemSubtotal, isInternational)) {
+      if (shippingMethod && !shippingMethod.isSigned) {
+        return {
+          error: isInternational
+            ? "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen"
+            : "Aangetekende verzending is verplicht voor bestellingen boven €150",
+        };
+      }
+    }
+  }
+
+  // Pak de eerste N AVAILABLE rijen — alle rows zijn equivalent qua product
+  const targetIds = listing.cardItemRows.slice(0, qty).map((r) => r.id);
+
+  // Atomair: flip rijen + maak bundle. Wallet-mutaties buiten de tx omdat
+  // deductBalance/escrowCredit zelf transacties zijn.
+  const bundle = await prisma.$transaction(async (tx) => {
+    const flipped = await tx.listingCardItem.updateMany({
+      where: { id: { in: targetIds }, status: "AVAILABLE" },
+      data: { status: "SOLD", buyerId: userId, soldAt: new Date() },
+    });
+    if (flipped.count !== qty) {
+      throw new Error("Eén of meer items zijn net door iemand anders gekocht");
+    }
+
+    const created = await tx.shippingBundle.create({
+      data: {
+        orderNumber: generateOrderNumber(),
+        buyerId: userId,
+        sellerId: listing.sellerId,
+        shippingCost,
+        totalItemCost: itemSubtotal,
+        totalCost,
+        status: "PAID",
+        // listingId blijft null — `listingId @unique` blokkeert anders
+        // meerdere onafhankelijke koop-bundles op dezelfde listing.
+        listingId: null,
+        shippingMethodId: selectedMethodId,
+        buyerStreet: buyer.street,
+        buyerHouseNumber: buyer.houseNumber,
+        buyerPostalCode: buyer.postalCode,
+        buyerCity: buyer.city,
+        buyerCountry: buyer.country,
+      },
+    });
+
+    await tx.listingCardItem.updateMany({
+      where: { id: { in: targetIds } },
+      data: { shippingBundleId: created.id },
+    });
+
+    // Listing-status bijwerken op basis van resterende voorraad.
+    const remaining = await tx.listingCardItem.count({
+      where: { listingId: listing.id, status: { in: ["AVAILABLE", "RESERVED"] } },
+    });
+    await tx.listing.update({
+      where: { id: listing.id },
+      data: { status: remaining === 0 ? "SOLD" : "PARTIALLY_SOLD" },
+    });
+
+    return created;
+  });
+
+  try {
+    await deductBalance(userId, totalCost, "PURCHASE", `Gekocht: ${qty}× ${listing.title}`, undefined, undefined, listing.id);
+    await escrowCredit(listing.sellerId, totalCost, `Verkocht (escrow): ${qty}× ${listing.title}`, bundle.id);
+  } catch (e) {
+    // Best-effort rollback: rijen + listing-status terug, bundle weg
+    await prisma.listingCardItem.updateMany({
+      where: { id: { in: targetIds }, status: "SOLD", buyerId: userId },
+      data: { status: "AVAILABLE", buyerId: null, soldAt: null, shippingBundleId: null },
+    });
+    await prisma.shippingBundle.delete({ where: { id: bundle.id } }).catch(() => {});
+    const remaining = await prisma.listingCardItem.count({
+      where: { listingId: listing.id, status: { in: ["AVAILABLE", "RESERVED"] } },
+    });
+    const sold = await prisma.listingCardItem.count({
+      where: { listingId: listing.id, status: "SOLD" },
+    });
+    await prisma.listing.update({
+      where: { id: listing.id },
+      data: { status: remaining === 0 ? "SOLD" : sold > 0 ? "PARTIALLY_SOLD" : "ACTIVE" },
+    });
+    throw e;
+  }
+
+  await createNotification(
+    listing.sellerId,
+    "ORDER_PAID",
+    qty > 1 ? `${qty}× verkocht!` : "Advertentie verkocht!",
+    `${qty}× "${listing.title}" verkocht voor €${itemSubtotal.toFixed(2)}. Bekijk je verkopen om te verzenden.`,
     "/dashboard/verkopen"
   );
 
@@ -556,6 +774,7 @@ export async function saveDraft(formData: FormData) {
     packageCount: formData.get("packageCount") || "1",
     shippingMethodIds: formData.get("shippingMethodIds") || undefined,
     allowPartialSale: formData.get("allowPartialSale") === "true",
+    stockQuantity: formData.get("stockQuantity") || "1",
   };
 
   const result = draftListingSchema.safeParse(raw);
@@ -589,6 +808,9 @@ export async function saveDraft(formData: FormData) {
     packageCount: data.packageCount,
     pickupCity: isPickupMode ? draftUser?.city ?? null : null,
     allowPartialSale: data.listingType === "MULTI_CARD" ? data.allowPartialSale : false,
+    stockQuantity: (data.listingType === "SEALED_PRODUCT" || data.listingType === "OTHER")
+      ? Math.max(1, data.stockQuantity ?? 1)
+      : 1,
     cardName: data.cardName || null,
     cardSetId: data.cardSetId || null,
     tcgdexId: data.tcgdexId || null,
@@ -726,6 +948,25 @@ export async function publishDraft(listingId: string) {
         } catch {
           // Defensieve catch
         }
+      }
+    }
+
+    // Fase 27.23: SEALED_PRODUCT/OTHER materialiseren bij publish
+    if (listing.listingType === "SEALED_PRODUCT" || listing.listingType === "OTHER") {
+      await tx.listingCardItem.deleteMany({ where: { listingId } });
+      const stock = Math.max(1, listing.stockQuantity);
+      const itemLabel = listing.listingType === "SEALED_PRODUCT"
+        ? (listing.productType ?? listing.title)
+        : (listing.itemCategory ?? listing.title);
+      for (let i = 0; i < stock; i++) {
+        await tx.listingCardItem.create({
+          data: {
+            listingId,
+            cardName: itemLabel,
+            quantity: 1,
+            status: "AVAILABLE",
+          },
+        });
       }
     }
   });

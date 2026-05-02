@@ -8,6 +8,7 @@ import { ContactSellerButton } from "@/components/message/contact-seller-button"
 import { ListingActions } from "@/components/listing/listing-actions";
 import { ListingItemsList } from "@/components/listing/listing-items-list";
 import { DescriptionEditor } from "@/components/listing/description-editor";
+import { BuyQuantityForm } from "@/components/listing/buy-quantity-form";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
 import { isWatched } from "@/actions/watchlist";
 import { Link } from "@/i18n/navigation";
@@ -36,8 +37,11 @@ export default async function ListingDetailPage({
       seller: { select: { id: true, displayName: true } },
       cardSet: { include: { series: true } },
       cardItemRows: {
-        select: { id: true, cardName: true, condition: true, quantity: true, status: true },
+        select: { id: true, cardName: true, condition: true, quantity: true, status: true, tcgdexId: true, cardSetId: true },
         orderBy: [{ status: "asc" }, { createdAt: "asc" }],
+      },
+      shippingMethods: {
+        include: { shippingMethod: true },
       },
     },
   });
@@ -48,18 +52,25 @@ export default async function ListingDetailPage({
   const isOwner = session?.user?.id === listing.sellerId;
   const isActive = listing.status === "ACTIVE";
   const isPartiallySold = listing.status === "PARTIALLY_SOLD";
-  // Voor MULTI_CARD: counts voor titel-suffix (Fase 27.14). Reserved telt mee
-  // als "nog niet verkocht" zodat de koper geen verkeerd beeld krijgt.
+  // Counts voor titel-suffix + buy-quantity. Reserved telt mee als "nog niet
+  // verkocht" zodat de koper geen verkeerd beeld krijgt.
   const totalItems = listing.cardItemRows.length;
   const availableItems = listing.cardItemRows.filter(
     (i) => i.status === "AVAILABLE" || i.status === "RESERVED"
   ).length;
-  // Server-side titel met automatische suffix bij PARTIALLY_SOLD. Niet
-  // editeerbaar door seller — voorkomt dat een listing claimt nog
-  // alles-bevattend te zijn terwijl een deel weg is.
-  const displayTitle = isPartiallySold && totalItems > 0
-    ? `${listing.title} ${t("titleSuffix.partiallySold", { available: availableItems, total: totalItems })}`
-    : listing.title;
+  // Stock-gebaseerde flow detectie (Fase 27.23): SEALED_PRODUCT en OTHER met
+  // gematerialiseerde rijen → "Direct kopen" stepper i.p.v. enkel chat.
+  const isStockedListing =
+    (listing.listingType === "SEALED_PRODUCT" || listing.listingType === "OTHER") &&
+    listing.cardItemRows.length > 0;
+  // Server-side titel met automatische suffix bij PARTIALLY_SOLD én bij
+  // stocked listings met meerdere stuks. Niet editeerbaar door seller.
+  let displayTitle = listing.title;
+  if (isPartiallySold && totalItems > 0) {
+    displayTitle = `${listing.title} ${t("titleSuffix.partiallySold", { available: availableItems, total: totalItems })}`;
+  } else if (isStockedListing && totalItems > 1 && availableItems > 0) {
+    displayTitle = `${listing.title} (${availableItems}× beschikbaar)`;
+  }
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
   const [watched, sellerItems, similarItems, sellerInfo, pricing] = await Promise.all([
@@ -191,15 +202,39 @@ export default async function ListingDetailPage({
               </div>
             )}
 
-            {/* PARTIALLY_SOLD-banner: koop kan alleen via chat (Fase 27.14) */}
-            {isPartiallySold && (
+            {/* PARTIALLY_SOLD-banner — voor MULTI_CARD partial-sale alleen
+                (chat-only). Stocked SEALED/OTHER blijven direct koopbaar. */}
+            {isPartiallySold && !isStockedListing && (
               <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
                 {t("partiallySoldHint", { available: availableItems, total: totalItems })}
               </div>
             )}
 
-            {/* Contact seller — voor zowel ACTIVE als PARTIALLY_SOLD */}
-            {(isActive || isPartiallySold) && !isOwner && session?.user && (
+            {/* Direct-buy-flow voor stocked SEALED_PRODUCT/OTHER (Fase 27.23) */}
+            {isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && availableItems > 0 && (
+              <div className="mt-6">
+                <BuyQuantityForm
+                  listingId={listing.id}
+                  unitPrice={listing.price ?? 0}
+                  shippingCost={listing.shippingCost}
+                  freeShipping={listing.freeShipping}
+                  available={availableItems}
+                  shippingMethods={listing.shippingMethods.map((sm) => ({
+                    id: sm.shippingMethodId,
+                    carrier: sm.shippingMethod.carrier,
+                    serviceName: sm.shippingMethod.serviceName,
+                    price: sm.price,
+                    isSigned: sm.shippingMethod.isSigned,
+                  }))}
+                />
+              </div>
+            )}
+
+            {/* Contact seller — voor ACTIVE/PARTIALLY_SOLD listings die niet
+                stocked zijn (MULTI_CARD partial, COLLECTION, SINGLE_CARD).
+                Stocked listings hebben Direct-kopen-flow hierboven; chat
+                blijft toegankelijk via de "Vraag een deel aan"-flow elders. */}
+            {!isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && (
               <div className="mt-6">
                 <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
               </div>
