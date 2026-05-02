@@ -23,6 +23,10 @@ interface ListingCardProps {
     status?: string;
     seller: { displayName: string; isVerified?: boolean };
     upsells?: ListingUpsellInfo[];
+    // Voor stocked SEALED_PRODUCT/OTHER (Fase 27.36): aantal AVAILABLE rijen.
+    // Toont "X stuks beschikbaar"-badge wanneer > 1. Optioneel — caller kan
+    // het overslaan als hij de count niet heeft gequery'd.
+    availableStock?: number;
   };
   locale: string;
 }
@@ -76,6 +80,14 @@ export function ListingCard({ listing, locale }: ListingCardProps) {
         {listing.status === "PARTIALLY_SOLD" && (
           <span className="absolute left-2 top-2 rounded-full bg-violet-600 px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white shadow-md">
             {locale === "en" ? "Partially sold" : "Gedeeltelijk verkocht"}
+          </span>
+        )}
+        {/* Stock-badge (Fase 27.36) — voor stocked SEALED/OTHER met > 1
+            stuks. Toont alleen als caller de count meegestuurd heeft, anders
+            blijft de card visueel identiek aan een single-stuk listing. */}
+        {listing.availableStock !== undefined && listing.availableStock > 1 && listing.status !== "PARTIALLY_SOLD" && (
+          <span className="absolute left-2 top-2 rounded-full bg-blue-600 px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white shadow-md">
+            {listing.availableStock}× {locale === "en" ? "in stock" : "op voorraad"}
           </span>
         )}
       </div>

@@ -100,8 +100,24 @@ export default async function MarktplaatsPage({
     include: {
       seller: { select: { displayName: true, isVerified: true } },
       upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
+      // Fase 27.36: stock-count voor SEALED_PRODUCT/OTHER badge ("3× op voorraad").
+      // Voor andere listing-types is dit altijd 1 of 0 en triggert de badge niet.
+      _count: {
+        select: { cardItemRows: { where: { status: "AVAILABLE" } } },
+      },
     },
   });
+
+  // Verrijk listings met availableStock zodat ListingCard de badge kan tonen.
+  // Alleen relevant voor SEALED_PRODUCT en OTHER — voor andere types laten we
+  // het undefined zodat geen badge verschijnt.
+  const enrichedListings = listings.map((l) => ({
+    ...l,
+    availableStock:
+      l.listingType === "SEALED_PRODUCT" || l.listingType === "OTHER"
+        ? l._count.cardItemRows
+        : undefined,
+  }));
 
   return (
     <PageContainer width="wide" className="py-8">
@@ -145,7 +161,7 @@ export default async function MarktplaatsPage({
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
-            {listings.map((listing) => (
+            {enrichedListings.map((listing) => (
               <ListingCard key={listing.id} listing={listing} locale={locale} />
             ))}
           </div>
