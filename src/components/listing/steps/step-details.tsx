@@ -198,7 +198,7 @@ export function StepDetails({
       {/* MULTI_CARD specific (Fase 27.16: kaart-database-search per item) */}
       {listingType === "MULTI_CARD" && (
         <div className="space-y-3">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-foreground">{t("cardNames")}</label>
               <p className="mt-0.5 text-xs text-muted-foreground">{t("multiCardItemsHint")}</p>
@@ -206,7 +206,7 @@ export function StepDetails({
             <button
               type="button"
               onClick={addCardItem}
-              className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+              className="flex w-full shrink-0 items-center justify-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:py-1.5"
             >
               <Plus className="h-3.5 w-3.5" /> {t("addCard")}
             </button>
