@@ -938,9 +938,18 @@
     },
     "directBuy": {
       "label": "Buy Now for",
+      "pickupLabel": "Pickup — pay upfront",
+      "pickupHint": "No shipping cost — buyer collects from seller",
       "confirm": "Confirm purchase",
       "errorPickupOnly": "This listing is pickup-only — no shipping purchase available.",
       "directBuyDisabledByseller": "The seller only accepts offers via chat."
+    },
+    "pickupReserve": {
+      "headline": "Reserve for pickup — €{price}",
+      "hint": "Pay seller directly at pickup (Tikkie/cash). No platform protection.",
+      "button": "Reserve for pickup",
+      "confirmDialog": "Reserve \"{title}\" for pickup? Listing held for you for 14 days. Pay seller at pickup.",
+      "reserved": "Reserved. Arrange pickup time in chat."
     },
     "offerButton": {
       "label": "Make offer",

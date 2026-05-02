@@ -10,6 +10,7 @@ import { ListingItemsList } from "@/components/listing/listing-items-list";
 import { DescriptionEditor } from "@/components/listing/description-editor";
 import { BuyQuantityForm } from "@/components/listing/buy-quantity-form";
 import { BuyNowButton } from "@/components/listing/buy-now-button";
+import { PickupReserveButton } from "@/components/listing/pickup-reserve-button";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
 import { isWatched } from "@/actions/watchlist";
 import { Link } from "@/i18n/navigation";
@@ -249,18 +250,17 @@ export default async function ListingDetailPage({
               </div>
             )}
 
-            {/* Koop-acties voor non-stocked listings (Fase 27.33).
-                Direct Kopen voor FIXED + allowDirectBuy, Bod doen voor
-                FIXED+acceptsOffers of NEGOTIABLE. PICKUP-only listings
-                krijgen alleen Contact (chat regelt EXTERNAL-reservering —
-                geen direct-buy escrow voor pickup). */}
+            {/* Koop-acties voor non-stocked listings (Fase 27.33 + 27.39).
+                Per deliveryMethod + seller-toggles wordt 1-3 koop-routes
+                getoond. PICKUP-listings krijgen ook Direct Kopen (via wallet
+                of reserveer) — niet meer chat-only. */}
             {!isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && (
               <div className="mt-6 space-y-3">
-                {/* Direct Kopen — alleen voor FIXED, allowDirectBuy aan, en
-                    deliveryMethod ondersteunt verzending (niet PICKUP-only). */}
+                {/* Direct Kopen via verzending — voor SHIP/BOTH listings
+                    met allowDirectBuy. Niet voor PARTIALLY_SOLD (chat-only). */}
                 {listing.pricingType === "FIXED" &&
                   listing.allowDirectBuy &&
-                  listing.deliveryMethod !== "PICKUP" &&
+                  (listing.deliveryMethod === "SHIP" || listing.deliveryMethod === "BOTH") &&
                   !isPartiallySold && (
                     <BuyNowButton
                       listingId={listing.id}
@@ -269,6 +269,7 @@ export default async function ListingDetailPage({
                       shippingCost={listing.shippingCost}
                       freeShipping={listing.freeShipping}
                       availableBalance={buyerAvailableBalance}
+                      deliveryChoice="SHIP"
                       shippingMethods={listing.shippingMethods.map((sm) => ({
                         id: sm.shippingMethodId,
                         carrier: sm.shippingMethod.carrier,
@@ -279,12 +280,43 @@ export default async function ListingDetailPage({
                     />
                   )}
 
+                {/* Ophalen + vooraf via wallet (PLATFORM) — PICKUP/BOTH
+                    listings waar seller wallet-betaling toestaat. */}
+                {listing.pricingType === "FIXED" &&
+                  listing.allowDirectBuy &&
+                  (listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
+                  listing.allowPlatformPickup &&
+                  !isPartiallySold && (
+                    <BuyNowButton
+                      listingId={listing.id}
+                      listingTitle={listing.title}
+                      price={listing.price ?? 0}
+                      shippingCost={0}
+                      freeShipping={true}
+                      availableBalance={buyerAvailableBalance}
+                      deliveryChoice="PICKUP_PLATFORM"
+                      shippingMethods={[]}
+                    />
+                  )}
+
+                {/* Reserveer voor ophalen (EXTERNAL) — geen wallet, betalen
+                    bij ophalen aan verkoper. PICKUP/BOTH met allowExternal. */}
+                {listing.pricingType === "FIXED" &&
+                  listing.allowDirectBuy &&
+                  (listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
+                  listing.allowExternalPickup &&
+                  !isPartiallySold && (
+                    <PickupReserveButton
+                      listingId={listing.id}
+                      listingTitle={listing.title}
+                      price={listing.price ?? 0}
+                    />
+                  )}
+
                 {/* Bod-doen / chat-knop. Voor NEGOTIABLE altijd; voor FIXED
-                    alleen als acceptsOffers aan staat. PICKUP-only krijgt
-                    deze knop ook (chat regelt reservering). */}
+                    alleen als acceptsOffers aan staat. */}
                 {(listing.pricingType === "NEGOTIABLE" ||
-                  (listing.pricingType === "FIXED" && listing.acceptsOffers) ||
-                  listing.deliveryMethod === "PICKUP") && (
+                  (listing.pricingType === "FIXED" && listing.acceptsOffers)) && (
                   <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
                 )}
 

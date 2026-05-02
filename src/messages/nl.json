@@ -938,9 +938,18 @@
     },
     "directBuy": {
       "label": "Direct Kopen voor",
+      "pickupLabel": "Ophalen — vooraf betalen",
+      "pickupHint": "Geen verzendkosten — koper haalt zelf op bij verkoper",
       "confirm": "Bevestig aankoop",
       "errorPickupOnly": "Deze advertentie is alleen op te halen — geen verzend-aankoop mogelijk.",
       "directBuyDisabledByseller": "De verkoper accepteert alleen biedingen via chat."
+    },
+    "pickupReserve": {
+      "headline": "Reserveer voor ophalen — €{price}",
+      "hint": "Je betaalt direct aan de verkoper bij ophalen (Tikkie/contant). Geen platform-bescherming.",
+      "button": "Reserveer voor ophalen",
+      "confirmDialog": "Reserveer \"{title}\" voor ophalen? Listing wordt 14 dagen voor jou vastgehouden. Je betaalt aan verkoper bij ophalen.",
+      "reserved": "Gereserveerd. Spreek een ophaalmoment af in de chat."
     },
     "offerButton": {
       "label": "Bod doen",

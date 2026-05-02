@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { ShoppingCart, AlertTriangle } from "lucide-react";
+import { ShoppingCart, AlertTriangle, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { buyListing } from "@/actions/listing";
+import { buyListing, type DeliveryChoice } from "@/actions/listing";
 import { PaymentMethodModal } from "@/components/checkout/payment-method-modal";
 
 interface ShippingMethodOption {
@@ -24,6 +24,11 @@ interface Props {
   freeShipping: boolean;
   shippingMethods: ShippingMethodOption[];
   availableBalance: number;
+  // Fase 27.39: bepaalt of dit een SHIP-aankoop is of een PICKUP_PLATFORM
+  // (ophalen + vooraf betalen via wallet). Default SHIP voor backward compat.
+  // PICKUP_PLATFORM verbergt de shipping-method-picker en knop-tekst toont
+  // "Ophalen — vooraf betalen" i.p.v. "Direct Kopen".
+  deliveryChoice?: "SHIP" | "PICKUP_PLATFORM";
 }
 
 // Direct-buy-knop voor non-stocked FIXED-listings (SINGLE_CARD, MULTI_CARD,
@@ -38,7 +43,9 @@ export function BuyNowButton({
   freeShipping,
   shippingMethods,
   availableBalance,
+  deliveryChoice = "SHIP",
 }: Props) {
+  const isPickup = deliveryChoice === "PICKUP_PLATFORM";
   const t = useTranslations("listing");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -50,7 +57,8 @@ export function BuyNowButton({
   const [submitted, setSubmitted] = useState(false);
 
   const selectedMethod = shippingMethods.find((m) => m.id === selectedShippingId) ?? null;
-  const shippingCost = freeShipping ? 0 : selectedMethod?.price ?? defaultShippingCost;
+  // Bij PICKUP_PLATFORM: geen shipping cost (koper haalt zelf op).
+  const shippingCost = isPickup ? 0 : freeShipping ? 0 : selectedMethod?.price ?? defaultShippingCost;
   const total = price + shippingCost;
 
   function handleBuyClick() {
@@ -63,7 +71,12 @@ export function BuyNowButton({
     setError(null);
     setSubmitted(true);
     startTransition(async () => {
-      const result = await buyListing(listingId, selectedShippingId || undefined, 1);
+      const result = await buyListing(
+        listingId,
+        isPickup ? undefined : selectedShippingId || undefined,
+        1,
+        deliveryChoice as DeliveryChoice
+      );
       if (result.error) {
         setError(result.error);
         setShowConfirmModal(false);
@@ -79,10 +92,10 @@ export function BuyNowButton({
 
   return (
     <div className="space-y-3">
-      {/* Shipping picker — alleen als seller methods aanbiedt en geen
-          gratis verzending. Bij gratis verzending of geen methods: buy-knop
-          gebruikt de listing-default. */}
-      {shippingMethods.length > 0 && !freeShipping && (
+      {/* Shipping picker — alleen voor SHIP-aankopen, en alleen als seller
+          methods aanbiedt en geen gratis verzending. PICKUP_PLATFORM verbergt
+          deze hele sectie (geen verzendkosten). */}
+      {!isPickup && shippingMethods.length > 0 && !freeShipping && (
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
             {t("buyQuantity.shippingLabel")}
@@ -109,10 +122,17 @@ export function BuyNowButton({
           <span>{listingTitle}</span>
           <span>€{price.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between text-muted-foreground">
-          <span>{t("shippingCost")}</span>
-          <span>{freeShipping ? t("freeShipping") : `€${shippingCost.toFixed(2)}`}</span>
-        </div>
+        {!isPickup && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>{t("shippingCost")}</span>
+            <span>{freeShipping ? t("freeShipping") : `€${shippingCost.toFixed(2)}`}</span>
+          </div>
+        )}
+        {isPickup && (
+          <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
+            <MapPin className="h-3 w-3" /> {t("directBuy.pickupHint")}
+          </div>
+        )}
         <div className="flex justify-between border-t border-border pt-1 font-semibold text-foreground">
           <span>{t("buyQuantity.total")}</span>
           <span>€{total.toFixed(2)}</span>
@@ -132,8 +152,12 @@ export function BuyNowButton({
         disabled={pending || submitted}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
       >
-        <ShoppingCart className="h-4 w-4" />
-        {pending || submitted ? "..." : `${t("directBuy.label")} €${price.toFixed(2)}`}
+        {isPickup ? <MapPin className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+        {pending || submitted
+          ? "..."
+          : isPickup
+            ? `${t("directBuy.pickupLabel")} €${total.toFixed(2)}`
+            : `${t("directBuy.label")} €${price.toFixed(2)}`}
       </button>
 
       {showConfirmModal && (
