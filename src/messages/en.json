@@ -565,7 +565,8 @@
         "openDisputes": "Open disputes",
         "awaitingPaymentAuctions": "Payment due",
         "bundlesToShip": "To ship",
-        "pendingCancellations": "Cancellation requests"
+        "pendingCancellations": "Cancellation requests",
+        "pendingPickups": "Pickup arrangements"
       },
       "balance": {
         "title": "Balance overview",
@@ -752,6 +753,12 @@
     "cancelReservation": "Cancel reservation",
     "confirmCancelReservation": "Cancel this reservation? The listings will become available again.",
     "upcomingPickups": "Upcoming pickups",
+    "pendingPickups": "Pickup time to be agreed",
+    "noScheduleYet": "Arrange a pickup time in chat.",
+    "awaitingResponse": "Waiting for response to pickup proposal in chat.",
+    "openChat": "Chat with counterparty",
+    "scheduleInChat": "Arrange in chat",
+    "noConversationSeller": "Open the chat via Messages — buyer starts the conversation.",
     "paymentModePlatform": "Already paid via wallet — pickup only",
     "paymentModeExternal": "Pay seller at pickup (Tikkie/cash)",
     "confirmExternalButton": "Confirm pickup",

@@ -10,6 +10,7 @@ import {
   Package,
   XCircle,
   CheckCircle2,
+  MapPin,
 } from "lucide-react";
 import type { ActionItemsCounts } from "@/lib/dashboard-queries";
 
@@ -75,6 +76,14 @@ export function ActionItemsWidget({ counts }: Props) {
       icon: XCircle,
       iconColor: "text-purple-600 dark:text-purple-400",
       bgColor: "bg-purple-500/10",
+    },
+    {
+      key: "pendingPickups",
+      count: counts.pendingPickups,
+      href: "/dashboard/aankopen",
+      icon: MapPin,
+      iconColor: "text-blue-600 dark:text-blue-400",
+      bgColor: "bg-blue-500/10",
     },
   ];
 

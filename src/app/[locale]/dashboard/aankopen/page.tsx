@@ -97,26 +97,41 @@ export default async function MyPurchasesPage() {
           windowEnd: true,
         },
       },
+      // Bundle-proposal voor conversation-link in pickup-sectie chat-knop.
+      bundleProposal: { select: { conversationId: true } },
     },
   });
 
-  // Pickup-bundles met geaccepteerd ophaalmoment voor de prominente sectie.
+  // Pickup-bundles voor de prominente sectie. Twee soorten:
+  // - SCHEDULED + ACCEPTED schedule → afspraak vast, ofwel code-toon (PLATFORM)
+  //   ofwel confirm-knop (EXTERNAL)
+  // - PENDING (EXTERNAL) of SCHEDULED zonder ACCEPTED schedule → nog afspreken,
+  //   chat-knop "Spreek af in chat"
   const activePickups = bundles
-    .filter(
-      (b) =>
-        b.status === "SCHEDULED" &&
-        b.pickupSchedule?.status === "ACCEPTED" &&
-        b.pickupSchedule?.pickupCode
-    )
+    .filter((b) => {
+      const isPickupBundle = b.deliveryMethod === "PICKUP";
+      if (!isPickupBundle) return false;
+      // Toon SCHEDULED met ACCEPTED schedule of PENDING/SCHEDULED zonder.
+      if (b.status === "COMPLETED" || b.status === "CANCELLED") return false;
+      if (b.status === "PAID" && b.paymentMode === "PLATFORM" && !b.pickupSchedule) return true;
+      if (b.status === "SCHEDULED") return true;
+      if (b.status === "PENDING" && b.paymentMode === "EXTERNAL") return true;
+      return false;
+    })
     .map((b) => ({
       id: b.id,
       orderNumber: b.orderNumber,
-      sellerName: b.seller.displayName,
-      pickupCode: b.pickupSchedule!.pickupCode,
-      proposedFor: b.pickupSchedule!.proposedFor.toISOString(),
-      windowStart: b.pickupSchedule!.windowStart,
-      windowEnd: b.pickupSchedule!.windowEnd,
+      counterpartyName: b.seller.displayName,
+      counterpartyId: b.seller.id,
+      pickupCode: b.pickupSchedule?.pickupCode ?? null,
+      proposedFor: b.pickupSchedule?.proposedFor?.toISOString() ?? null,
+      windowStart: b.pickupSchedule?.windowStart ?? null,
+      windowEnd: b.pickupSchedule?.windowEnd ?? null,
       paymentMode: b.paymentMode,
+      scheduleStatus: b.pickupSchedule?.status ?? null,
+      conversationId: b.bundleProposal?.conversationId ?? null,
+      listingId: b.listingId,
+      perspective: "buyer" as const,
     }));
 
   const serialized = bundles.map((b) => ({

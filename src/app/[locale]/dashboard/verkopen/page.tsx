@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { SalesContent } from "@/components/dashboard/sales-content";
 import { CancellationsSection } from "@/components/dashboard/cancellations-section";
+import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
 
 // Idem als in /aankopen: groepeer items met dezelfde cardName + conditie
 // tot één rij met aantal + subtotaal.
@@ -82,8 +83,46 @@ export default async function MySalesPage() {
       dispute: {
         select: { id: true, status: true, reason: true },
       },
+      pickupSchedule: {
+        select: {
+          status: true,
+          pickupCode: true,
+          proposedFor: true,
+          windowStart: true,
+          windowEnd: true,
+        },
+      },
+      bundleProposal: { select: { conversationId: true } },
     },
   });
+
+  // Pickup-bundles voor seller-perspectief — zelfde sectie als bij aankopen.
+  // Seller ziet ophaal-afspraken die nog openstaan en kan via chat-knop snel
+  // naar het gesprek navigeren. Code-confirm voor PLATFORM gebeurt in chat-bubble.
+  const sellerActivePickups = bundles
+    .filter((b) => {
+      if (b.deliveryMethod !== "PICKUP") return false;
+      if (b.status === "COMPLETED" || b.status === "CANCELLED") return false;
+      if (b.status === "PAID" && b.paymentMode === "PLATFORM" && !b.pickupSchedule) return true;
+      if (b.status === "SCHEDULED") return true;
+      if (b.status === "PENDING" && b.paymentMode === "EXTERNAL") return true;
+      return false;
+    })
+    .map((b) => ({
+      id: b.id,
+      orderNumber: b.orderNumber,
+      counterpartyName: b.buyer.displayName,
+      counterpartyId: b.buyer.id,
+      pickupCode: b.pickupSchedule?.pickupCode ?? null,
+      proposedFor: b.pickupSchedule?.proposedFor?.toISOString() ?? null,
+      windowStart: b.pickupSchedule?.windowStart ?? null,
+      windowEnd: b.pickupSchedule?.windowEnd ?? null,
+      paymentMode: b.paymentMode,
+      scheduleStatus: b.pickupSchedule?.status ?? null,
+      conversationId: b.bundleProposal?.conversationId ?? null,
+      listingId: b.listingId,
+      perspective: "seller" as const,
+    }));
 
   // Fetch auctions awaiting payment (buyer won but hasn't fully paid)
   const awaitingPaymentAuctions = await prisma.auction.findMany({
@@ -241,6 +280,7 @@ export default async function MySalesPage() {
         </p>
       ) : (
         <>
+          <ActivePickupsSection pickups={sellerActivePickups} />
           <CancellationsSection
             currentUserId={userId}
             paidBundles={serialized

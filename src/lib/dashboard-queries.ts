@@ -7,6 +7,7 @@ export type ActionItemsCounts = {
   awaitingPaymentAuctions: number;
   bundlesToShip: number;
   pendingCancellations: number;
+  pendingPickups: number;
 };
 
 export async function fetchActionItems(userId: string): Promise<ActionItemsCounts> {
@@ -17,6 +18,7 @@ export async function fetchActionItems(userId: string): Promise<ActionItemsCount
     awaitingPaymentAuctions,
     bundlesToShip,
     pendingCancellations,
+    pendingPickups,
   ] = await Promise.all([
     prisma.conversationParticipant.findMany({
       where: { userId, status: "ACTIVE" },
@@ -56,6 +58,26 @@ export async function fetchActionItems(userId: string): Promise<ActionItemsCount
         shippingBundle: { OR: [{ buyerId: userId }, { sellerId: userId }] },
       },
     }),
+    // Pickup-bundles waar nog actie nodig is voor zowel buyer als seller:
+    // SCHEDULED (bevestig of wacht op bevestiging) of PENDING+EXTERNAL
+    // (afspraak nog vast te leggen). Telt voor allebei zodat beide partijen
+    // het zien in hun action-items widget.
+    prisma.shippingBundle.count({
+      where: {
+        deliveryMethod: "PICKUP",
+        OR: [{ buyerId: userId }, { sellerId: userId }],
+        AND: [
+          { status: { notIn: ["COMPLETED", "CANCELLED"] } },
+          {
+            OR: [
+              { status: "SCHEDULED" },
+              { AND: [{ status: "PENDING" }, { paymentMode: "EXTERNAL" }] },
+              { AND: [{ status: "PAID" }, { paymentMode: "PLATFORM" }, { pickupSchedule: null }] },
+            ],
+          },
+        ],
+      },
+    }),
   ]);
 
   const unreadConversations = myParticipations.filter((p) => {
@@ -71,6 +93,7 @@ export async function fetchActionItems(userId: string): Promise<ActionItemsCount
     awaitingPaymentAuctions,
     bundlesToShip,
     pendingCancellations,
+    pendingPickups,
   };
 }
 

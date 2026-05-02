@@ -565,7 +565,8 @@
         "openDisputes": "Open geschillen",
         "awaitingPaymentAuctions": "Betaling nodig",
         "bundlesToShip": "Te verzenden",
-        "pendingCancellations": "Annuleringsverzoeken"
+        "pendingCancellations": "Annuleringsverzoeken",
+        "pendingPickups": "Ophaalafspraken"
       },
       "balance": {
         "title": "Saldo-overzicht",
@@ -752,6 +753,12 @@
     "cancelReservation": "Reservering annuleren",
     "confirmCancelReservation": "Reservering annuleren? De advertenties komen weer beschikbaar.",
     "upcomingPickups": "Aankomende ophaalafspraken",
+    "pendingPickups": "Ophaal-afspraak nog vast te leggen",
+    "noScheduleYet": "Spreek nog een ophaalmoment af in de chat.",
+    "awaitingResponse": "Wacht op reactie op het ophaalvoorstel in de chat.",
+    "openChat": "Chatten met tegenpartij",
+    "scheduleInChat": "Spreek af in chat",
+    "noConversationSeller": "Open de chat via Berichten — koper start de conversatie.",
     "paymentModePlatform": "Al betaald via wallet — alleen ophalen",
     "paymentModeExternal": "Betaal aan verkoper bij ophalen (Tikkie/contant)",
     "confirmExternalButton": "Bevestig ophaal",
