@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Minus, Plus, ShoppingCart, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import { buyListing } from "@/actions/listing";
 import { PaymentMethodModal } from "@/components/checkout/payment-method-modal";
 
@@ -47,6 +48,10 @@ export function BuyQuantityForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  // Eenmalig aankoop-vergrendel: zodra de transactie start blijft deze true
+  // tot we navigeren — voorkomt dat een ge-router-refreshte modal opnieuw
+  // gebruikt kan worden voor een tweede aankoop.
+  const [submitted, setSubmitted] = useState(false);
 
   const selectedMethod = shippingMethods.find((m) => m.id === selectedShippingId) ?? null;
   const shippingCost = freeShipping ? 0 : selectedMethod?.price ?? defaultShippingCost;
@@ -63,16 +68,25 @@ export function BuyQuantityForm({
   }
 
   function handleConfirm() {
+    if (submitted) return; // dubbel-klik / re-render guard
     setError(null);
+    setSubmitted(true);
     startTransition(async () => {
       const result = await buyListing(listingId, selectedShippingId || undefined, quantity);
       if (result.error) {
+        // Fout: modal sluiten, melding inline + toast, lock vrijgeven zodat
+        // de buyer kan corrigeren (bv. saldo aanvullen) en opnieuw proberen.
         setError(result.error);
         setShowConfirmModal(false);
+        setSubmitted(false);
+        toast.error(result.error);
       } else {
-        // Niet sluiten van modal hier — router.refresh ververst de pagina
-        // en de modal verdwijnt vanzelf bij re-mount na navigatie.
-        router.refresh();
+        // Succes: modal sluiten en navigeren naar /aankopen — analoog aan
+        // cart-checkout. Voorkomt dat de modal her-bruikbaar wordt na een
+        // succesvolle transactie. `submitted` blijft true tot navigatie.
+        setShowConfirmModal(false);
+        toast.success(t("buyQuantity.purchaseComplete"));
+        router.push("/dashboard/aankopen");
       }
     });
   }
@@ -167,22 +181,24 @@ export function BuyQuantityForm({
       <button
         type="button"
         onClick={handleBuyClick}
-        disabled={pending || quantity < 1}
+        disabled={pending || submitted || quantity < 1}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
       >
         <ShoppingCart className="h-4 w-4" />
-        {pending ? "..." : t("buyQuantity.buyNow")}
+        {pending || submitted ? "..." : t("buyQuantity.buyNow")}
       </button>
 
       {/* Confirm-modal — zelfde modal als cart-checkout zodat de UI
-          uniform is over alle koop-paden. */}
+          uniform is over alle koop-paden. `loading=submitted` houdt de
+          confirm-knop in de modal disabled tijdens en na de transactie
+          tot navigatie de hele page unmount. */}
       {showConfirmModal && (
         <PaymentMethodModal
           totalCost={total}
           availableBalance={availableBalance}
           onConfirm={handleConfirm}
-          onCancel={() => setShowConfirmModal(false)}
-          loading={pending}
+          onCancel={() => !submitted && setShowConfirmModal(false)}
+          loading={submitted}
         />
       )}
     </div>

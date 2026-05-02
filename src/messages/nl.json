@@ -895,7 +895,8 @@
       "label": "Hoeveel wil je?",
       "shippingLabel": "Verzendmethode",
       "total": "Totaal",
-      "buyNow": "Direct kopen"
+      "buyNow": "Direct kopen",
+      "purchaseComplete": "Aankoop gelukt — bekijk je bestelling in /aankopen."
     },
     "deliveryMethodLabel": "Bezorgmethode",
     "deliveryShip": "Verzenden",

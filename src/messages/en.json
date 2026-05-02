@@ -895,7 +895,8 @@
       "label": "How many?",
       "shippingLabel": "Shipping method",
       "total": "Total",
-      "buyNow": "Buy now"
+      "buyNow": "Buy now",
+      "purchaseComplete": "Purchase successful — check your order in /aankopen."
     },
     "deliveryMethodLabel": "Delivery method",
     "deliveryShip": "Shipping",
