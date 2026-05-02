@@ -60,8 +60,8 @@ async function cleanupExistingTestUsers() {
   if (existing.length === 0) return;
   const ids = existing.map((u) => u.id);
 
-  // Delete in dependency order. Conversations en bundles tussen test-users
-  // worden via cascades opgeruimd waar mogelijk; voor de rest expliciet.
+  // Delete in dependency order. User heeft veel non-cascading FKs — we
+  // ruimen actief op of nullifiëren waar nodig.
   await prisma.bundleProposal.deleteMany({ where: { OR: [{ buyerId: { in: ids } }, { sellerId: { in: ids } }] } });
   await prisma.proposal.deleteMany({ where: { proposerId: { in: ids } } });
   await prisma.pickupSchedule.deleteMany({
@@ -76,10 +76,23 @@ async function cleanupExistingTestUsers() {
     select: { id: true },
   });
   await prisma.conversation.deleteMany({ where: { id: { in: orphanConvos.map((c) => c.id) } } });
-  await prisma.listingCardItem.deleteMany({ where: { listing: { sellerId: { in: ids } } } });
-  await prisma.listingShippingMethod.deleteMany({ where: { listing: { sellerId: { in: ids } } } });
+
+  // Verwijder direct user-owned data
+  await prisma.notification.deleteMany({ where: { userId: { in: ids } } }).catch(() => {});
+  await prisma.transaction.deleteMany({ where: { userId: { in: ids } } }).catch(() => {});
+  await prisma.watchlist.deleteMany({ where: { userId: { in: ids } } }).catch(() => {});
+  await prisma.usernameHistory.deleteMany({ where: { userId: { in: ids } } }).catch(() => {});
+  await prisma.activityLog.deleteMany({ where: { userId: { in: ids } } }).catch(() => {});
+  await prisma.emberTransaction.deleteMany({ where: { userId: { in: ids } } }).catch(() => {});
+
+  // Listing-gerelateerd
+  await prisma.listingCardItem.deleteMany({ where: { listing: { sellerId: { in: ids } } } }).catch(() => {});
+  await prisma.listingShippingMethod.deleteMany({ where: { listing: { sellerId: { in: ids } } } }).catch(() => {});
+  // Nullify buyer-references op listings van andere sellers (theoretisch)
+  await prisma.listing.updateMany({ where: { buyerId: { in: ids } }, data: { buyerId: null } }).catch(() => {});
   await prisma.listing.deleteMany({ where: { sellerId: { in: ids } } });
   await prisma.sellerShippingMethod.deleteMany({ where: { sellerId: { in: ids } } });
+
   await prisma.user.deleteMany({ where: { id: { in: ids } } });
 }
 
@@ -172,6 +185,7 @@ async function createListing(opts: {
   productType?: string;
   itemCategory?: string;
   allowPartialSale?: boolean;
+  stockQuantity?: number;
   imageOffset?: number;
   shippingMethodId?: string;
 }) {
@@ -197,6 +211,7 @@ async function createListing(opts: {
       productType: opts.productType ?? null,
       itemCategory: opts.itemCategory ?? null,
       allowPartialSale: opts.allowPartialSale ?? false,
+      stockQuantity: Math.max(1, opts.stockQuantity ?? 1),
       status: opts.status ?? "ACTIVE",
       sellerId: opts.sellerId,
     },
@@ -218,6 +233,25 @@ async function createListing(opts: {
           },
         });
       }
+    }
+  }
+
+  // Fase 27.23: SEALED_PRODUCT en OTHER met stockQuantity > 1 worden ook
+  // gematerialiseerd in N rijen voor de direct-buy-quantity-flow.
+  if ((opts.listingType === "SEALED_PRODUCT" || opts.listingType === "OTHER") && (opts.stockQuantity ?? 1) > 0) {
+    const stock = Math.max(1, opts.stockQuantity ?? 1);
+    const itemLabel = opts.listingType === "SEALED_PRODUCT"
+      ? (opts.productType ?? opts.title)
+      : (opts.itemCategory ?? opts.title);
+    for (let i = 0; i < stock; i++) {
+      await prisma.listingCardItem.create({
+        data: {
+          listingId: listing.id,
+          cardName: itemLabel,
+          quantity: 1,
+          status: "AVAILABLE",
+        },
+      });
     }
   }
 
@@ -446,6 +480,98 @@ async function main() {
     imageOffset: 3,
   });
 
+  // === Stocked sealed-products (Fase 27.23) — real-world Marktplaats scenario ===
+  // De seller heeft meerdere stuks van hetzelfde product. Buyer kan via
+  // stepper kiezen hoeveel, "Direct kopen", betaling + escrow direct.
+  console.log("→ Creating stocked listings (direct-buy quantity flow)");
+
+  // 13. 20× Booster pack @ €9.50 — de hoofdmoot van het scenario
+  const stockBoosters = await createListing({
+    sellerId: seller.id,
+    title: "Destined Rivals booster pack",
+    description: "Verzegelde booster pack uit Destined Rivals. Voorraad: 20 stuks. Direct kopen mogelijk per stuk via de keuze-stepper.",
+    listingType: "SEALED_PRODUCT",
+    productType: "BOOSTER",
+    price: 9.5,
+    stockQuantity: 20,
+    shippingMethodId: parcelId,
+    shippingCost: 7.25,
+    imageOffset: 5,
+  });
+
+  // 14. 9× Elite Trainer Box @ €75 — hoger bedrag, dus aangetekend verplicht (>€150 bij 3+ stuks)
+  await createListing({
+    sellerId: seller.id,
+    title: "Perfect Order Elite Trainer Box",
+    description: "Verzegelde ETB. Voorraad: 9 stuks. Bij 3+ stuks wordt aangetekend automatisch verplicht door het systeem (>€150).",
+    listingType: "SEALED_PRODUCT",
+    productType: "ETB",
+    price: 75,
+    stockQuantity: 9,
+    shippingMethodId: signedId,
+    shippingCost: 9.95,
+    imageOffset: 1,
+  });
+
+  // 15. 2× Mini tin @ €23
+  await createListing({
+    sellerId: seller.id,
+    title: "Ascended Heroes mini tin",
+    description: "Verzegelde mini tin. Voorraad: 2 stuks.",
+    listingType: "SEALED_PRODUCT",
+    productType: "TIN",
+    price: 23,
+    stockQuantity: 2,
+    shippingMethodId: parcelId,
+    shippingCost: 7.25,
+    imageOffset: 6,
+  });
+
+  // 16. OTHER met stock — 5× sleeves
+  await createListing({
+    sellerId: seller.id,
+    title: "Card sleeves — Charizard art",
+    description: "Pakje van 65 sleeves, voorraad: 5 pakjes.",
+    listingType: "OTHER",
+    itemCategory: "Sleeves",
+    price: 12.5,
+    stockQuantity: 5,
+    shippingMethodId: mailboxId,
+    shippingCost: 4.45,
+    imageOffset: 7,
+  });
+
+  // 17. PARTIALLY_SOLD stocked listing — 6 van 10 al verkocht. Demo van
+  // PARTIALLY_SOLD-status binnen de stocked-flow (BuyQuantityForm blijft
+  // beschikbaar, maar maximaal 4 te koop).
+  const stockPartiallySold = await createListing({
+    sellerId: seller.id,
+    title: "Brilliant Stars booster — bijna op",
+    description: "Originele voorraad 10 stuks; al 6 verkocht. Nog 4 beschikbaar.",
+    listingType: "SEALED_PRODUCT",
+    productType: "BOOSTER",
+    price: 8,
+    stockQuantity: 10,
+    shippingMethodId: mailboxId,
+    shippingCost: 4.45,
+    imageOffset: 0,
+  });
+  // Flip 6 rijen handmatig naar SOLD (toegekend aan buyer2 als "vorige koper")
+  const soldRows = await prisma.listingCardItem.findMany({
+    where: { listingId: stockPartiallySold.id, status: "AVAILABLE" },
+    take: 6,
+  });
+  for (const r of soldRows) {
+    await prisma.listingCardItem.update({
+      where: { id: r.id },
+      data: { status: "SOLD", buyerId: buyer2.id, soldAt: new Date() },
+    });
+  }
+  await prisma.listing.update({
+    where: { id: stockPartiallySold.id },
+    data: { status: "PARTIALLY_SOLD" },
+  });
+
   console.log("→ Creating chat with PENDING bundle-offer (buyer → seller)");
   // Conversation tussen seller en buyer voor de listings 'single' + 'multiPartial' + 'multiNoPartial'.
   const convoBundle = await prisma.conversation.create({
@@ -580,6 +706,13 @@ async function main() {
   console.log("========================================");
   console.log("✓ Fase-27 testdata aangemaakt");
   console.log("========================================");
+  console.log("");
+  console.log("Stocked listings (direct-buy met stepper, Fase 27.23):");
+  console.log(`  - 20× Destined Rivals booster pack @ €9.50  ★ "${stockBoosters.title}"`);
+  console.log(`  - 9× Perfect Order ETB @ €75 (aangetekend bij 3+)`);
+  console.log(`  - 2× Ascended Heroes mini tin @ €23`);
+  console.log(`  - 5× Card sleeves @ €12.50 (OTHER-type met stock)`);
+  console.log(`  - PARTIALLY_SOLD: 4 van 10 Brilliant Stars over @ €8/stuk`);
   console.log("");
   console.log("Login (alle test-users hebben wachtwoord 'test1234'):");
   console.log(`  • seller${TEST_DOMAIN}    — verkoper, €100 saldo`);
