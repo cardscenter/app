@@ -759,6 +759,7 @@ model ShippingBundle {
   updatedAt     DateTime @updatedAt
 
   items         ClaimsaleItem[]
+  cardItems     ListingCardItem[] @relation("BundleCardItems")
   dispute       Dispute?
 
   @@index([buyerId])
@@ -1759,8 +1760,14 @@ model ListingCardItem {
   buyerId   String?
   soldAt    DateTime?
 
+  // Wanneer SOLD/RESERVED via een partial-sale: link naar de bundle. Wordt
+  // ge-null'd bij cancellation zodat het item weer AVAILABLE kan worden.
+  shippingBundleId String?
+  shippingBundle   ShippingBundle? @relation("BundleCardItems", fields: [shippingBundleId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([listingId, status])
+  @@index([shippingBundleId])
 }

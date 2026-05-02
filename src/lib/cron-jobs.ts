@@ -313,10 +313,33 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
 
       await prisma.proposal.update({ where: { id: proposal.id }, data: { paymentStatus: "PAYMENT_FAILED" } });
       if (proposal.listing) {
-        await prisma.listing.update({ where: { id: proposal.listing.id }, data: { status: "ACTIVE", buyerId: null } });
-        const bundle = await prisma.shippingBundle.findUnique({ where: { listingId: proposal.listing.id } });
-        if (bundle && bundle.status === "PENDING") {
-          await prisma.shippingBundle.delete({ where: { id: bundle.id } });
+        const partialItemIds: string[] | null = proposal.itemIds ? JSON.parse(proposal.itemIds) : null;
+        if (partialItemIds && partialItemIds.length > 0) {
+          // Partial-sale: items terug naar AVAILABLE + listing-status hercomputeren
+          await prisma.listingCardItem.updateMany({
+            where: { id: { in: partialItemIds }, status: "RESERVED" },
+            data: { status: "AVAILABLE", buyerId: null, shippingBundleId: null },
+          });
+          const sold = await prisma.listingCardItem.count({
+            where: { listingId: proposal.listing.id, status: "SOLD" },
+          });
+          await prisma.listing.update({
+            where: { id: proposal.listing.id },
+            data: { status: sold > 0 ? "PARTIALLY_SOLD" : "ACTIVE" },
+          });
+          // Pending bundle (partial) opruimen
+          const pending = await prisma.shippingBundle.findFirst({
+            where: { buyerId: buyerId!, sellerId: sellerId!, status: "PENDING", listingId: null },
+            orderBy: { createdAt: "desc" },
+          });
+          if (pending) await prisma.shippingBundle.delete({ where: { id: pending.id } });
+        } else {
+          // Full-listing flow (bestaand)
+          await prisma.listing.update({ where: { id: proposal.listing.id }, data: { status: "ACTIVE", buyerId: null } });
+          const bundle = await prisma.shippingBundle.findUnique({ where: { listingId: proposal.listing.id } });
+          if (bundle && bundle.status === "PENDING") {
+            await prisma.shippingBundle.delete({ where: { id: bundle.id } });
+          }
         }
       }
       const contextTitle = proposal.listing?.title ?? "betaalverzoek";

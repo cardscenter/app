@@ -51,6 +51,7 @@ export async function createListing(formData: FormData) {
     packageCount: formData.get("packageCount") || "1",
     upsells: formData.get("upsells") || undefined,
     shippingMethodIds: formData.get("shippingMethodIds") || undefined,
+    allowPartialSale: formData.get("allowPartialSale") === "true",
   };
 
   const result = createListingSchema.safeParse(raw);
@@ -113,6 +114,7 @@ export async function createListing(formData: FormData) {
     packageSize: data.packageSize || null,
     packageCount: data.packageCount,
     pickupCity: (data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH") ? user.city : null,
+    allowPartialSale: data.listingType === "MULTI_CARD" ? data.allowPartialSale : false,
     sellerId: userId,
   };
 
@@ -174,6 +176,31 @@ export async function createListing(formData: FormData) {
   // Atomic transaction: create listing + shipping methods + upsells + deduct balance
   const listing = await prisma.$transaction(async (tx) => {
     const newListing = await tx.listing.create({ data: listingData as never });
+
+    // MULTI_CARD: leid per-item ListingCardItem-rows af uit het cardItems-JSON
+    // (Fase 27.13). Vereist voor partial-sale-flow; voor non-MULTI_CARD wordt
+    // dit overgeslagen.
+    if (data.listingType === "MULTI_CARD" && data.cardItems) {
+      try {
+        const items: Array<{ cardName: string; cardSetId?: string; condition?: string; quantity?: number }> =
+          JSON.parse(data.cardItems);
+        for (const item of items) {
+          if (!item.cardName) continue;
+          await tx.listingCardItem.create({
+            data: {
+              listingId: newListing.id,
+              cardName: item.cardName,
+              cardSetId: item.cardSetId || null,
+              condition: item.condition || null,
+              quantity: item.quantity ?? 1,
+              status: "AVAILABLE",
+            },
+          });
+        }
+      } catch {
+        // Ongeldige JSON al door zod afgevangen; defensieve catch.
+      }
+    }
 
     // Create shipping method links
     if (methodSnapshots.length > 0) {
@@ -516,6 +543,7 @@ export async function saveDraft(formData: FormData) {
     packageSize: formData.get("packageSize") || undefined,
     packageCount: formData.get("packageCount") || "1",
     shippingMethodIds: formData.get("shippingMethodIds") || undefined,
+    allowPartialSale: formData.get("allowPartialSale") === "true",
   };
 
   const result = draftListingSchema.safeParse(raw);
@@ -548,6 +576,7 @@ export async function saveDraft(formData: FormData) {
     packageSize: data.packageSize || null,
     packageCount: data.packageCount,
     pickupCity: isPickupMode ? draftUser?.city ?? null : null,
+    allowPartialSale: data.listingType === "MULTI_CARD" ? data.allowPartialSale : false,
     cardName: data.cardName || null,
     cardSetId: data.cardSetId || null,
     tcgdexId: data.tcgdexId || null,
@@ -636,6 +665,7 @@ export async function publishDraft(listingId: string) {
   // Pickup-mode: synchroniseer pickupCity met huidige User.city (kan tussen
   // saveDraft en publishDraft gewijzigd zijn). Vereist dat de seller een city
   // heeft ingevuld in zijn account.
+  let pickupCityToSet: string | null = null;
   if (listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") {
     const seller = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -644,16 +674,44 @@ export async function publishDraft(listingId: string) {
     if (!seller?.city) {
       return { error: "Vul eerst je woonplaats in via Dashboard → Verzending voordat je een ophaal-advertentie publiceert" };
     }
-    await prisma.listing.update({
-      where: { id: listingId },
-      data: { status: "ACTIVE", pickupCity: seller.city },
-    });
-  } else {
-    await prisma.listing.update({
-      where: { id: listingId },
-      data: { status: "ACTIVE" },
-    });
+    pickupCityToSet = seller.city;
   }
+
+  // Atomic publish: listing → ACTIVE + pickup-locatie sync + (voor MULTI_CARD)
+  // ListingCardItem-rows materialiseren uit cardItems JSON. Eerdere rows
+  // worden weggegooid voor een schone state — DRAFTs hebben geen sales dus
+  // veilig.
+  await prisma.$transaction(async (tx) => {
+    await tx.listing.update({
+      where: { id: listingId },
+      data: pickupCityToSet ? { status: "ACTIVE", pickupCity: pickupCityToSet } : { status: "ACTIVE" },
+    });
+
+    if (listing.listingType === "MULTI_CARD") {
+      await tx.listingCardItem.deleteMany({ where: { listingId } });
+      if (listing.cardItems) {
+        try {
+          const items: Array<{ cardName: string; cardSetId?: string; condition?: string; quantity?: number }> =
+            JSON.parse(listing.cardItems);
+          for (const item of items) {
+            if (!item.cardName) continue;
+            await tx.listingCardItem.create({
+              data: {
+                listingId,
+                cardName: item.cardName,
+                cardSetId: item.cardSetId || null,
+                condition: item.condition || null,
+                quantity: item.quantity ?? 1,
+                status: "AVAILABLE",
+              },
+            });
+          }
+        } catch {
+          // Defensieve catch
+        }
+      }
+    }
+  });
 
   return { success: true };
 }

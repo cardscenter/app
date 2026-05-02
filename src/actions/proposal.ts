@@ -9,6 +9,116 @@ import { createPendingBundle } from "@/lib/shipping-bundle";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { requireNotSuspended } from "@/lib/suspension";
 
+// Helper: bereken nieuwe listing-status na een items-status-flip.
+// SOLD als geen items meer AVAILABLE/RESERVED, anders PARTIALLY_SOLD.
+async function recomputeListingStatusAfterPartialSale(
+  tx: { listingCardItem: { count: (args: unknown) => Promise<number> }; listing: { update: (args: unknown) => Promise<unknown> } },
+  listingId: string
+) {
+  const remaining = await tx.listingCardItem.count({
+    where: { listingId, status: { in: ["AVAILABLE", "RESERVED"] } },
+  });
+  await tx.listing.update({
+    where: { id: listingId },
+    data: { status: remaining === 0 ? "SOLD" : "PARTIALLY_SOLD" },
+  });
+}
+
+// Buyer maakt een partial-sale-aanvraag op een listing met allowPartialSale=true.
+// Implementatie hergebruikt het Proposal-model: itemIds-veld onderscheidt
+// partial van full-listing proposals.
+export async function createPartialSaleProposal(input: {
+  conversationId: string;
+  listingId: string;
+  itemIds: string[];
+  totalAmount: number;
+  requestInsuredShipping?: boolean;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  if (input.totalAmount <= 0) return { error: "Bedrag moet groter zijn dan 0" };
+  if (!input.itemIds || input.itemIds.length === 0) return { error: "Selecteer minimaal één item" };
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: input.conversationId },
+    include: { participants: true },
+  });
+  if (!conversation) return { error: "Gesprek niet gevonden" };
+  const isParticipant = conversation.participants.some((p) => p.userId === session.user!.id);
+  if (!isParticipant) return { error: "Niet geautoriseerd" };
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: input.listingId },
+    select: { id: true, sellerId: true, status: true, allowPartialSale: true, listingType: true, title: true },
+  });
+  if (!listing) return { error: "Advertentie niet gevonden" };
+  if (!listing.allowPartialSale) return { error: "Deze advertentie staat geen gedeeltelijke verkoop toe" };
+  if (listing.listingType !== "MULTI_CARD") return { error: "Gedeeltelijke verkoop is alleen mogelijk bij multi-card advertenties" };
+  if (listing.status !== "ACTIVE" && listing.status !== "PARTIALLY_SOLD") {
+    return { error: "Advertentie is niet meer beschikbaar" };
+  }
+  if (listing.sellerId === session.user.id) return { error: "Je kunt geen voorstel doen op je eigen advertentie" };
+
+  // Items moeten van deze listing zijn én AVAILABLE
+  const items = await prisma.listingCardItem.findMany({
+    where: { id: { in: input.itemIds }, listingId: input.listingId },
+    select: { id: true, status: true, cardName: true },
+  });
+  if (items.length !== input.itemIds.length) return { error: "Eén of meer items niet gevonden" };
+  for (const it of items) {
+    if (it.status !== "AVAILABLE") return { error: `"${it.cardName}" is niet meer beschikbaar` };
+  }
+
+  const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!buyer) return { error: "Koper niet gevonden" };
+  const ageCheck = checkAmountAllowed(buyer, input.totalAmount);
+  if (!ageCheck.allowed) return { error: ageCheck.error! };
+
+  // Maximaal één PENDING (partial of full) per (conversation, proposer)
+  const existingPending = await prisma.proposal.findFirst({
+    where: { conversationId: input.conversationId, proposerId: session.user.id, status: "PENDING" },
+  });
+  if (existingPending) return { error: "Er staat al een openstaand voorstel — trek dat eerst in." };
+
+  const created = await prisma.$transaction(async (tx) => {
+    const proposal = await tx.proposal.create({
+      data: {
+        conversationId: input.conversationId,
+        listingId: input.listingId,
+        proposerId: session.user!.id,
+        amount: input.totalAmount,
+        type: "BUY",
+        status: "PENDING",
+        itemIds: JSON.stringify(input.itemIds),
+        requestInsuredShipping: input.requestInsuredShipping ?? false,
+      },
+    });
+    await tx.message.create({
+      data: {
+        conversationId: input.conversationId,
+        senderId: session.user!.id,
+        body: `Gedeeltelijke verkoop: ${items.length} item(s) voor €${input.totalAmount.toFixed(2)} (incl. verzending).`,
+        proposalId: proposal.id,
+      },
+    });
+    return proposal;
+  });
+
+  await createNotification(
+    listing.sellerId,
+    "NEW_MESSAGE",
+    "Gedeeltelijke verkoop voorgesteld",
+    `Een koper biedt €${input.totalAmount.toFixed(2)} voor ${items.length} item(s) uit "${listing.title}".`,
+    `/nl/berichten/${input.conversationId}`
+  );
+
+  return { success: true, proposalId: created.id };
+}
+
 export async function createProposal(
   conversationId: string,
   amount: number,
@@ -222,34 +332,75 @@ export async function respondToProposal(
 
   const contextTitle = proposal.listing?.title ?? "betaalverzoek";
 
+  // Partial-sale (Fase 27.13): proposal.itemIds bevat een JSON-array van
+  // ListingCardItem-ids. We flippen die items i.p.v. de hele listing.
+  const partialItemIds: string[] | null = proposal.itemIds ? JSON.parse(proposal.itemIds) : null;
+  const isPartial = !!partialItemIds && partialItemIds.length > 0 && proposal.listing;
+
   if (availableBalance >= totalCost) {
     // Full payment: immediate purchase
     await deductBalance(buyerId, totalCost, "PURCHASE", `Betaalverzoek: ${contextTitle}`, undefined, undefined, proposal.listing?.id);
     await escrowCredit(sellerId, totalCost, `Betaalverzoek (escrow): ${contextTitle}`);
 
     if (proposal.listing) {
-      await prisma.listing.update({
-        where: { id: proposal.listing.id },
-        data: { status: "SOLD", buyerId },
-      });
-
-      await prisma.shippingBundle.create({
-        data: {
-          orderNumber: generateOrderNumber(),
-          buyerId,
-          sellerId,
-          shippingCost,
-          totalItemCost: amount,
-          totalCost,
-          status: "PAID",
-          listingId: proposal.listing.id,
-          buyerStreet: buyer.street,
-          buyerHouseNumber: buyer.houseNumber,
-          buyerPostalCode: buyer.postalCode,
-          buyerCity: buyer.city,
-          buyerCountry: buyer.country,
-        },
-      });
+      if (isPartial) {
+        await prisma.$transaction(async (tx) => {
+          const flipped = await tx.listingCardItem.updateMany({
+            where: { id: { in: partialItemIds! }, status: "AVAILABLE" },
+            data: { status: "SOLD", buyerId, soldAt: new Date() },
+          });
+          if (flipped.count !== partialItemIds!.length) {
+            throw new Error("Eén of meer items zijn niet meer beschikbaar");
+          }
+          const bundle = await tx.shippingBundle.create({
+            data: {
+              orderNumber: generateOrderNumber(),
+              buyerId,
+              sellerId,
+              shippingCost,
+              totalItemCost: amount,
+              totalCost,
+              status: "PAID",
+              // listingId blijft null — bundle.listingId is @unique en kan dus
+              // maar één partial-sale per listing dragen. Items linken via
+              // shippingBundleId.
+              listingId: null,
+              buyerStreet: buyer.street,
+              buyerHouseNumber: buyer.houseNumber,
+              buyerPostalCode: buyer.postalCode,
+              buyerCity: buyer.city,
+              buyerCountry: buyer.country,
+            },
+          });
+          await tx.listingCardItem.updateMany({
+            where: { id: { in: partialItemIds! } },
+            data: { shippingBundleId: bundle.id },
+          });
+          await recomputeListingStatusAfterPartialSale(tx, proposal.listing!.id);
+        });
+      } else {
+        await prisma.listing.update({
+          where: { id: proposal.listing.id },
+          data: { status: "SOLD", buyerId },
+        });
+        await prisma.shippingBundle.create({
+          data: {
+            orderNumber: generateOrderNumber(),
+            buyerId,
+            sellerId,
+            shippingCost,
+            totalItemCost: amount,
+            totalCost,
+            status: "PAID",
+            listingId: proposal.listing.id,
+            buyerStreet: buyer.street,
+            buyerHouseNumber: buyer.houseNumber,
+            buyerPostalCode: buyer.postalCode,
+            buyerCity: buyer.city,
+            buyerCountry: buyer.country,
+          },
+        });
+      }
     }
 
     await prisma.proposal.update({
@@ -271,29 +422,53 @@ export async function respondToProposal(
     });
 
     if (proposal.listing) {
-      await prisma.listing.update({
-        where: { id: proposal.listing.id },
-        data: { status: "SOLD", buyerId },
-      });
-
-      // D1: pre-create PENDING bundle so the buyer sees a "wacht op
-      // betaling" order and the seller sees a pending sale. Listing-based
-      // proposals already require a buyer address (validated above) so we
-      // pass it directly. completeProposalPayment will flip this to PAID.
-      await createPendingBundle({
-        buyerId,
-        sellerId,
-        totalItemCost: amount,
-        shippingCost,
-        listingId: proposal.listing.id,
-        address: {
-          street: buyer.street,
-          houseNumber: buyer.houseNumber,
-          postalCode: buyer.postalCode,
-          city: buyer.city,
-          country: buyer.country,
-        },
-      });
+      if (isPartial) {
+        await prisma.$transaction(async (tx) => {
+          const flipped = await tx.listingCardItem.updateMany({
+            where: { id: { in: partialItemIds! }, status: "AVAILABLE" },
+            data: { status: "RESERVED", buyerId },
+          });
+          if (flipped.count !== partialItemIds!.length) {
+            throw new Error("Eén of meer items zijn niet meer beschikbaar");
+          }
+          await recomputeListingStatusAfterPartialSale(tx, proposal.listing!.id);
+        });
+        // Pending bundle voor partial-sale (zonder listingId)
+        await createPendingBundle({
+          buyerId,
+          sellerId,
+          totalItemCost: amount,
+          shippingCost,
+          listingId: undefined,
+          address: {
+            street: buyer.street,
+            houseNumber: buyer.houseNumber,
+            postalCode: buyer.postalCode,
+            city: buyer.city,
+            country: buyer.country,
+          },
+        });
+        // Note: pending-bundle ↔ items link wordt pas gelegd bij completeProposalPayment.
+      } else {
+        await prisma.listing.update({
+          where: { id: proposal.listing.id },
+          data: { status: "SOLD", buyerId },
+        });
+        await createPendingBundle({
+          buyerId,
+          sellerId,
+          totalItemCost: amount,
+          shippingCost,
+          listingId: proposal.listing.id,
+          address: {
+            street: buyer.street,
+            houseNumber: buyer.houseNumber,
+            postalCode: buyer.postalCode,
+            city: buyer.city,
+            country: buyer.country,
+          },
+        });
+      }
     }
   }
 
@@ -381,41 +556,92 @@ export async function completeProposalPayment(proposalId: string) {
   await escrowCredit(sellerId, totalCost, `Betaalverzoek (escrow): ${contextTitle}`);
 
   if (proposal.listing) {
-    // Promote the PENDING bundle (created by respondToProposal) to PAID.
-    // Defensive create-fallback for older data without a PENDING row.
-    const existing = await prisma.shippingBundle.findUnique({
-      where: { listingId: proposal.listing.id },
-    });
-    if (existing) {
-      await prisma.shippingBundle.update({
-        where: { id: existing.id },
-        data: {
-          status: "PAID",
-          buyerStreet: buyer.street,
-          buyerHouseNumber: buyer.houseNumber,
-          buyerPostalCode: buyer.postalCode,
-          buyerCity: buyer.city,
-          buyerCountry: buyer.country,
+    const partialItemIds: string[] | null = proposal.itemIds ? JSON.parse(proposal.itemIds) : null;
+    const isPartial = !!partialItemIds && partialItemIds.length > 0;
+
+    if (isPartial) {
+      // Partial-sale: vind de pending bundle (listingId=null) van deze
+      // (buyer, seller, AWAITING_PAYMENT-vlag) — most recent. Geen FK want
+      // listingId @unique blokkeert meerdere partial-sales op één listing.
+      const pending = await prisma.shippingBundle.findFirst({
+        where: {
+          buyerId, sellerId, status: "PENDING", listingId: null,
         },
+        orderBy: { createdAt: "desc" },
+      });
+      await prisma.$transaction(async (tx) => {
+        if (pending) {
+          await tx.shippingBundle.update({
+            where: { id: pending.id },
+            data: {
+              status: "PAID",
+              buyerStreet: buyer.street,
+              buyerHouseNumber: buyer.houseNumber,
+              buyerPostalCode: buyer.postalCode,
+              buyerCity: buyer.city,
+              buyerCountry: buyer.country,
+            },
+          });
+          await tx.listingCardItem.updateMany({
+            where: { id: { in: partialItemIds! } },
+            data: { status: "SOLD", soldAt: new Date(), shippingBundleId: pending.id },
+          });
+        } else {
+          // Defensive fallback: create fresh PAID bundle + flip items
+          const fresh = await tx.shippingBundle.create({
+            data: {
+              orderNumber: generateOrderNumber(),
+              buyerId, sellerId,
+              shippingCost, totalItemCost: proposal.amount, totalCost,
+              status: "PAID", listingId: null,
+              buyerStreet: buyer.street, buyerHouseNumber: buyer.houseNumber,
+              buyerPostalCode: buyer.postalCode, buyerCity: buyer.city,
+              buyerCountry: buyer.country,
+            },
+          });
+          await tx.listingCardItem.updateMany({
+            where: { id: { in: partialItemIds! } },
+            data: { status: "SOLD", soldAt: new Date(), shippingBundleId: fresh.id },
+          });
+        }
+        await recomputeListingStatusAfterPartialSale(tx, proposal.listing!.id);
       });
     } else {
-      await prisma.shippingBundle.create({
-        data: {
-          orderNumber: generateOrderNumber(),
-          buyerId,
-          sellerId,
-          shippingCost,
-          totalItemCost: proposal.amount,
-          totalCost,
-          status: "PAID",
-          listingId: proposal.listing.id,
-          buyerStreet: buyer.street,
-          buyerHouseNumber: buyer.houseNumber,
-          buyerPostalCode: buyer.postalCode,
-          buyerCity: buyer.city,
-          buyerCountry: buyer.country,
-        },
+      // Full-listing flow (bestaand)
+      const existing = await prisma.shippingBundle.findUnique({
+        where: { listingId: proposal.listing.id },
       });
+      if (existing) {
+        await prisma.shippingBundle.update({
+          where: { id: existing.id },
+          data: {
+            status: "PAID",
+            buyerStreet: buyer.street,
+            buyerHouseNumber: buyer.houseNumber,
+            buyerPostalCode: buyer.postalCode,
+            buyerCity: buyer.city,
+            buyerCountry: buyer.country,
+          },
+        });
+      } else {
+        await prisma.shippingBundle.create({
+          data: {
+            orderNumber: generateOrderNumber(),
+            buyerId,
+            sellerId,
+            shippingCost,
+            totalItemCost: proposal.amount,
+            totalCost,
+            status: "PAID",
+            listingId: proposal.listing.id,
+            buyerStreet: buyer.street,
+            buyerHouseNumber: buyer.houseNumber,
+            buyerPostalCode: buyer.postalCode,
+            buyerCity: buyer.city,
+            buyerCountry: buyer.country,
+          },
+        });
+      }
     }
   }
 
