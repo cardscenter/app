@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { ChatLayout, type ConversationPreview } from "@/components/message/chat-layout";
 import { MessageThread } from "@/components/message/message-thread";
 import { ChatActions } from "@/components/message/chat-actions";
+import { PickupActions } from "@/components/message/pickup-actions";
+import { MapPin } from "lucide-react";
 
 export default async function ConversationPage({
   params,
@@ -204,6 +206,55 @@ export default async function ConversationPage({
     select: { id: true, carrier: true, serviceName: true, price: true, isSigned: true, shippingType: true },
   });
 
+  // Fase 27.48: actieve single-listing pickup-bundle voor deze conversation —
+  // niet via bundle-proposal maar via directe buyListing met PICKUP_PLATFORM
+  // of PICKUP_EXTERNAL. Tonen we als sticky widget bovenaan de chat-thread
+  // zodat beide partijen kunnen voorstellen/bevestigen zonder dat 'r een
+  // bericht-bubble voor bestaat. Filter: pickup-bundle voor deze listing
+  // tussen deze twee participants, niet COMPLETED/CANCELLED.
+  const conversationListingId = conversation.listing?.id ?? null;
+  const activePickupBundle = conversationListingId && otherUserId
+    ? await prisma.shippingBundle.findFirst({
+        where: {
+          listingId: conversationListingId,
+          deliveryMethod: "PICKUP",
+          status: { notIn: ["COMPLETED", "CANCELLED"] },
+          OR: [
+            { buyerId: session.user.id!, sellerId: otherUserId },
+            { buyerId: otherUserId, sellerId: session.user.id! },
+          ],
+        },
+        include: { pickupSchedule: true },
+        orderBy: { createdAt: "desc" },
+      })
+    : null;
+  const pickupWidgetData = activePickupBundle
+    ? {
+        shippingBundleId: activePickupBundle.id,
+        bundleStatus: activePickupBundle.status,
+        paymentMode: activePickupBundle.paymentMode,
+        buyerId: activePickupBundle.buyerId,
+        sellerId: activePickupBundle.sellerId,
+        schedule: activePickupBundle.pickupSchedule
+          ? {
+              id: activePickupBundle.pickupSchedule.id,
+              proposedById: activePickupBundle.pickupSchedule.proposedById,
+              proposedFor: activePickupBundle.pickupSchedule.proposedFor.toISOString(),
+              windowStart: activePickupBundle.pickupSchedule.windowStart,
+              windowEnd: activePickupBundle.pickupSchedule.windowEnd,
+              status: activePickupBundle.pickupSchedule.status,
+              // Code alleen aan buyer tonen — seller voert in (PLATFORM) of
+              // ziet 'm helemaal niet (EXTERNAL met 1-knops confirm).
+              pickupCode: session.user!.id === activePickupBundle.buyerId
+                ? activePickupBundle.pickupSchedule.pickupCode
+                : null,
+              pickupCodeAttempts: activePickupBundle.pickupSchedule.pickupCodeAttempts,
+              pickupLockedUntil: activePickupBundle.pickupSchedule.pickupLockedUntil?.toISOString() ?? null,
+            }
+          : null,
+      }
+    : null;
+
   return (
     <ChatLayout conversations={previews} activeConversationId={conversationId}>
       <div className="flex h-full flex-col">
@@ -222,6 +273,27 @@ export default async function ConversationPage({
             status={previews.find((c) => c.id === conversationId)?.participantStatus ?? "ACTIVE"}
           />
         </div>
+
+        {/* Pickup-bundle widget (Fase 27.48) — sticky bovenaan voor single-listing
+            pickup-bundles. Voor bundle-offer pickups blijft PickupActions in de
+            BundleOfferMessage chat-bubble. */}
+        {pickupWidgetData && (
+          <div className="border-b border-blue-200 bg-blue-50/50 px-6 py-3 dark:border-blue-900 dark:bg-blue-950/20">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-900 dark:text-blue-200">
+              <MapPin className="h-4 w-4" />
+              Ophaal-afspraak voor deze advertentie
+            </div>
+            <PickupActions
+              shippingBundleId={pickupWidgetData.shippingBundleId}
+              bundleStatus={pickupWidgetData.bundleStatus}
+              paymentMode={pickupWidgetData.paymentMode}
+              schedule={pickupWidgetData.schedule}
+              currentUserId={session.user.id!}
+              buyerId={pickupWidgetData.buyerId}
+              sellerId={pickupWidgetData.sellerId}
+            />
+          </div>
+        )}
 
         {/* Messages + input */}
         <div className="flex-1 overflow-hidden">
