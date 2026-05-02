@@ -198,7 +198,7 @@ export function StepDetails({
       {/* MULTI_CARD specific (Fase 27.16: kaart-database-search per item) */}
       {listingType === "MULTI_CARD" && (
         <div className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-foreground">{t("cardNames")}</label>
               <p className="mt-0.5 text-xs text-muted-foreground">{t("multiCardItemsHint")}</p>
