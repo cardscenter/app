@@ -34,6 +34,9 @@ type BundleItem = {
   reference: string | null;
   sellerNote: string | null;
   refundedAt: string | null;
+  // Fase 27.29: gegroepeerde rijen — 5× dezelfde booster wordt één rij.
+  quantity?: number;
+  subtotal?: number;
 };
 
 type DisputeInfo = {
@@ -517,24 +520,40 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
           {/* Items */}
           <div className="divide-y divide-border/50">
             {bundle.items.length > 0 ? (
-              bundle.items.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-                  {item.imageUrl ? (
-                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      <Image src={item.imageUrl} alt={item.cardName} fill className="object-cover" sizes="48px" />
+              bundle.items.map((item) => {
+                const qty = item.quantity ?? 1;
+                const subtotal = item.subtotal ?? item.price;
+                return (
+                  <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                    {item.imageUrl ? (
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                        <Image src={item.imageUrl} alt={item.cardName} fill className="object-cover" sizes="48px" />
+                      </div>
+                    ) : (
+                      <div className="h-12 w-12 shrink-0 rounded-lg bg-muted" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {qty > 1 && <span className="text-muted-foreground">{qty}× </span>}
+                        {item.cardName}
+                      </p>
+                      {item.condition && (
+                        <p className="text-xs text-muted-foreground">{item.condition}</p>
+                      )}
                     </div>
-                  ) : (
-                    <div className="h-12 w-12 shrink-0 rounded-lg bg-muted" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{item.cardName}</p>
-                    <p className="text-xs text-muted-foreground">{item.condition}</p>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-medium text-foreground tabular-nums">
+                        &euro;{subtotal.toFixed(2)}
+                      </p>
+                      {qty > 1 && (
+                        <p className="text-[11px] text-muted-foreground tabular-nums">
+                          {qty} × &euro;{item.price.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-sm font-medium text-foreground shrink-0">
-                    &euro;{item.price.toFixed(2)}
-                  </span>
-                </div>
-              ))
+                );
+              })
             ) : bundle.sourceTitle ? (
               <div className="flex items-center gap-3 px-4 py-3">
                 {bundle.sourceImageUrl ? (

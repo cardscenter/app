@@ -4,6 +4,33 @@ import { getTranslations } from "next-intl/server";
 import { SalesContent } from "@/components/dashboard/sales-content";
 import { CancellationsSection } from "@/components/dashboard/cancellations-section";
 
+// Idem als in /aankopen: groepeer items met dezelfde cardName + conditie
+// tot één rij met aantal + subtotaal.
+type RawItem = {
+  id: string;
+  cardName: string;
+  condition: string;
+  price: number;
+  imageUrl: string | null;
+  reference: string | null;
+  sellerNote: string | null;
+  refundedAt: string | null;
+};
+function groupBundleItems(items: RawItem[]) {
+  const groups = new Map<string, RawItem & { quantity: number; subtotal: number }>();
+  for (const it of items) {
+    const key = `${it.cardName}|${it.condition}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.quantity += 1;
+      existing.subtotal += it.price;
+    } else {
+      groups.set(key, { ...it, quantity: 1, subtotal: it.price });
+    }
+  }
+  return Array.from(groups.values());
+}
+
 export default async function MySalesPage() {
   const session = await auth();
   const t = await getTranslations("sales");
@@ -126,8 +153,10 @@ export default async function MySalesPage() {
     buyerLastName: b.buyer.lastName ?? null,
     disputeInfo: b.dispute ? { id: b.dispute.id, status: b.dispute.status, reason: b.dispute.reason } : null,
     // Items: claimsale-items (legacy) + ListingCardItem-rijen (stocked-buy
-    // en partial-sale, Fase 27.13/27.23). Beide naar dezelfde shape.
-    items: [
+    // en partial-sale, Fase 27.13/27.23). Beide naar dezelfde shape, en
+    // identieke rijen gegroepeerd per (cardName + conditie) met aantal +
+    // subtotaal — 5× boosters wordt één rij i.p.v. vijf herhalingen.
+    items: groupBundleItems([
       ...b.items.map((i) => ({
         id: i.id,
         cardName: i.cardName,
@@ -154,7 +183,7 @@ export default async function MySalesPage() {
         sellerNote: null,
         refundedAt: null,
       })),
-    ],
+    ]),
   }));
 
   const pendingAuctions = awaitingPaymentAuctions.map((a) => ({

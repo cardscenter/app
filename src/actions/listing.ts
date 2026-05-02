@@ -221,16 +221,17 @@ export async function createListing(formData: FormData) {
     // ook N rijen voor stock-tracking + buy-quantity-flow. Bij stock=1
     // wordt 1 rij aangemaakt voor uniformiteit (buyListing routeert op
     // basis van rijen i.p.v. listing-status).
+    //
+    // cardName = listing-titel zodat de items-lijst in /aankopen + /verkopen
+    // de productnaam toont (bv. "Destined Rivals booster pack") in plaats
+    // van een type-code als "BOOSTER".
     if (data.listingType === "SEALED_PRODUCT" || data.listingType === "OTHER") {
       const stock = Math.max(1, data.stockQuantity ?? 1);
-      const itemLabel = data.listingType === "SEALED_PRODUCT"
-        ? (data.productType ?? data.title)
-        : (data.itemCategory ?? data.title);
       for (let i = 0; i < stock; i++) {
         await tx.listingCardItem.create({
           data: {
             listingId: newListing.id,
-            cardName: itemLabel,
+            cardName: data.title,
             quantity: 1,
             status: "AVAILABLE",
           },
@@ -951,18 +952,16 @@ export async function publishDraft(listingId: string) {
       }
     }
 
-    // Fase 27.23: SEALED_PRODUCT/OTHER materialiseren bij publish
+    // Fase 27.23: SEALED_PRODUCT/OTHER materialiseren bij publish.
+    // cardName = listing-titel (zie ook createListing).
     if (listing.listingType === "SEALED_PRODUCT" || listing.listingType === "OTHER") {
       await tx.listingCardItem.deleteMany({ where: { listingId } });
       const stock = Math.max(1, listing.stockQuantity);
-      const itemLabel = listing.listingType === "SEALED_PRODUCT"
-        ? (listing.productType ?? listing.title)
-        : (listing.itemCategory ?? listing.title);
       for (let i = 0; i < stock; i++) {
         await tx.listingCardItem.create({
           data: {
             listingId,
-            cardName: itemLabel,
+            cardName: listing.title,
             quantity: 1,
             status: "AVAILABLE",
           },

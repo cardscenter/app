@@ -238,16 +238,14 @@ async function createListing(opts: {
 
   // Fase 27.23: SEALED_PRODUCT en OTHER met stockQuantity > 1 worden ook
   // gematerialiseerd in N rijen voor de direct-buy-quantity-flow.
+  // cardName = listing-titel (zelfde als createListing-action).
   if ((opts.listingType === "SEALED_PRODUCT" || opts.listingType === "OTHER") && (opts.stockQuantity ?? 1) > 0) {
     const stock = Math.max(1, opts.stockQuantity ?? 1);
-    const itemLabel = opts.listingType === "SEALED_PRODUCT"
-      ? (opts.productType ?? opts.title)
-      : (opts.itemCategory ?? opts.title);
     for (let i = 0; i < stock; i++) {
       await prisma.listingCardItem.create({
         data: {
           listingId: listing.id,
-          cardName: itemLabel,
+          cardName: opts.title,
           quantity: 1,
           status: "AVAILABLE",
         },

@@ -4,6 +4,34 @@ import { getTranslations } from "next-intl/server";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
 import { CancellationsSection } from "@/components/dashboard/cancellations-section";
 
+// Groepeer items met dezelfde cardName + conditie tot één rij met aantal +
+// subtotaal. Voor stocked-buy ("5× Destined Rivals booster pack") en voor
+// partial-sale waarbij dezelfde kaart vaker voorkomt. Items met unieke
+// namen blijven elk een eigen rij.
+type RawItem = {
+  id: string;
+  cardName: string;
+  condition: string;
+  price: number;
+  imageUrl: string | null;
+  reference: string | null;
+  sellerNote: string | null;
+};
+function groupBundleItems(items: RawItem[]) {
+  const groups = new Map<string, RawItem & { quantity: number; subtotal: number }>();
+  for (const it of items) {
+    const key = `${it.cardName}|${it.condition}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.quantity += 1;
+      existing.subtotal += it.price;
+    } else {
+      groups.set(key, { ...it, quantity: 1, subtotal: it.price });
+    }
+  }
+  return Array.from(groups.values());
+}
+
 export default async function MyPurchasesPage() {
   const session = await auth();
   const t = await getTranslations("purchases");
@@ -96,9 +124,10 @@ export default async function MyPurchasesPage() {
       try { const urls = JSON.parse(raw); return urls[0] ?? null; } catch { return null; }
     })(),
     // Items: claimsale-items (legacy) + ListingCardItem-rijen (stocked-buy
-    // en partial-sale). Beide gemapped naar dezelfde BundleItem-shape zodat
-    // PurchasesContent ze uniform kan renderen.
-    items: [
+    // en partial-sale). Identieke regels worden gegroepeerd per (cardName +
+    // conditie) zodat 5× dezelfde booster één rij wordt met aantal +
+    // subtotaal i.p.v. 5 identieke regels onder elkaar.
+    items: groupBundleItems([
       ...b.items.map((i) => ({
         id: i.id,
         cardName: i.cardName,
@@ -123,7 +152,7 @@ export default async function MyPurchasesPage() {
         reference: null,
         sellerNote: null,
       })),
-    ],
+    ]),
   }));
 
   return (
