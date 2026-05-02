@@ -6,6 +6,8 @@ import { ImageGallery } from "@/components/ui/image-gallery";
 import { parseImageUrls } from "@/lib/upload";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
 import { ListingActions } from "@/components/listing/listing-actions";
+import { ListingItemsList } from "@/components/listing/listing-items-list";
+import { DescriptionEditor } from "@/components/listing/description-editor";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
 import { isWatched } from "@/actions/watchlist";
 import { Link } from "@/i18n/navigation";
@@ -33,6 +35,10 @@ export default async function ListingDetailPage({
     include: {
       seller: { select: { id: true, displayName: true } },
       cardSet: { include: { series: true } },
+      cardItemRows: {
+        select: { id: true, cardName: true, condition: true, quantity: true, status: true },
+        orderBy: [{ status: "asc" }, { createdAt: "asc" }],
+      },
     },
   });
 
@@ -41,6 +47,19 @@ export default async function ListingDetailPage({
   const images = parseImageUrls(listing.imageUrls);
   const isOwner = session?.user?.id === listing.sellerId;
   const isActive = listing.status === "ACTIVE";
+  const isPartiallySold = listing.status === "PARTIALLY_SOLD";
+  // Voor MULTI_CARD: counts voor titel-suffix (Fase 27.14). Reserved telt mee
+  // als "nog niet verkocht" zodat de koper geen verkeerd beeld krijgt.
+  const totalItems = listing.cardItemRows.length;
+  const availableItems = listing.cardItemRows.filter(
+    (i) => i.status === "AVAILABLE" || i.status === "RESERVED"
+  ).length;
+  // Server-side titel met automatische suffix bij PARTIALLY_SOLD. Niet
+  // editeerbaar door seller — voorkomt dat een listing claimt nog
+  // alles-bevattend te zijn terwijl een deel weg is.
+  const displayTitle = isPartiallySold && totalItems > 0
+    ? `${listing.title} ${t("titleSuffix.partiallySold", { available: availableItems, total: totalItems })}`
+    : listing.title;
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
   const [watched, sellerItems, similarItems, sellerInfo, pricing] = await Promise.all([
@@ -63,7 +82,7 @@ export default async function ListingDetailPage({
         items={[
           { label: tBreadcrumbs("marketplace"), href: "/marktplaats" },
           ...(listing.cardSet ? [{ label: listing.cardSet.name }] : []),
-          { label: listing.title },
+          { label: displayTitle },
         ]}
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -72,7 +91,7 @@ export default async function ListingDetailPage({
           {/* Title above image */}
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{listing.title}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{displayTitle}</h1>
               <Link href={`/verkoper/${listing.sellerId}`} className="mt-1 inline-block text-sm text-primary hover:underline">
                 {listing.seller.displayName}
               </Link>
@@ -119,9 +138,19 @@ export default async function ListingDetailPage({
             <PricingInfoBlock pricing={pricing} variant="full" label="Marktwaarde" />
           )}
 
+          {/* Items-lijst voor MULTI_CARD listings (Fase 27.14) */}
+          {listing.listingType === "MULTI_CARD" && listing.cardItemRows.length > 0 && (
+            <ListingItemsList items={listing.cardItemRows} />
+          )}
+
           {/* Description */}
           <div>
-            <h2 className="text-lg font-semibold text-foreground">{t("description")}</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">{t("description")}</h2>
+              {isOwner && (isActive || isPartiallySold) && (
+                <DescriptionEditor listingId={listing.id} initialDescription={listing.description} />
+              )}
+            </div>
             <div className="mt-2 whitespace-pre-wrap text-muted-foreground prose prose-sm dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5" dangerouslySetInnerHTML={{ __html: listing.description }} />
           </div>
         </div>
@@ -153,30 +182,37 @@ export default async function ListingDetailPage({
               )}
             </div>
 
-            {/* Status badge */}
-            {!isActive && (
+            {/* Status badge — niet-koopbare statussen */}
+            {!isActive && !isPartiallySold && (
               <div className="mt-4 text-center">
                 <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
-                  {listing.status === "SOLD" ? t("sold") : listing.status}
+                  {t(`status.${listing.status.toLowerCase()}`)}
                 </span>
               </div>
             )}
 
-            {/* Contact seller */}
-            {isActive && !isOwner && session?.user && (
+            {/* PARTIALLY_SOLD-banner: koop kan alleen via chat (Fase 27.14) */}
+            {isPartiallySold && (
+              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+                {t("partiallySoldHint", { available: availableItems, total: totalItems })}
+              </div>
+            )}
+
+            {/* Contact seller — voor zowel ACTIVE als PARTIALLY_SOLD */}
+            {(isActive || isPartiallySold) && !isOwner && session?.user && (
               <div className="mt-6">
                 <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
               </div>
             )}
 
-            {!session?.user && isActive && (
+            {!session?.user && (isActive || isPartiallySold) && (
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Log in om contact op te nemen
               </p>
             )}
 
             {/* Owner actions — status-aware (Fase 27) */}
-            {isOwner && (listing.status === "ACTIVE" || listing.status === "PAUSED" || listing.status === "DRAFT" || listing.status === "RESERVED") && (
+            {isOwner && (listing.status === "ACTIVE" || listing.status === "PAUSED" || listing.status === "DRAFT" || listing.status === "RESERVED" || listing.status === "PARTIALLY_SOLD") && (
               <div className="mt-6">
                 <ListingActions listingId={listing.id} status={listing.status as never} />
               </div>

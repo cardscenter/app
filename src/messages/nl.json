@@ -834,7 +834,20 @@
       "reservedHint": "Deze advertentie is gekoppeld aan een lopende deal. Acties zijn beschikbaar zodra de koper betaalt of de reservering verloopt.",
       "confirmPause": "Weet je zeker dat je deze advertentie wilt pauzeren? Lopende voorstellen worden afgewezen.",
       "confirmDelete": "Weet je zeker dat je deze advertentie wilt verwijderen?",
-      "confirmDeleteDraft": "Concept definitief verwijderen?"
+      "confirmDeleteDraft": "Concept definitief verwijderen?",
+      "editDescription": "Beschrijving aanpassen",
+      "saveDescription": "Opslaan",
+      "cancel": "Annuleren"
+    },
+    "titleSuffix": {
+      "partiallySold": "(gedeeltelijk verkocht — {available} van {total} beschikbaar)"
+    },
+    "partiallySoldHint": "Deze advertentie is gedeeltelijk verkocht. Nog {available} van {total} items beschikbaar. Vraag de gewenste items aan via chat.",
+    "itemsList": {
+      "title": "Items in deze advertentie",
+      "statusAvailable": "Beschikbaar",
+      "statusReserved": "Gereserveerd",
+      "statusSold": "Verkocht"
     },
     "stepType": "Type",
     "stepPhotos": "Foto's",

@@ -733,11 +733,16 @@ export async function pauseListing(listingId: string) {
   const listing = await prisma.listing.findUnique({ where: { id: listingId } });
   if (!listing) return { error: "Advertentie niet gevonden" };
   if (listing.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
-  if (listing.status !== "ACTIVE") return { error: "Alleen actieve advertenties kunnen gepauzeerd worden" };
+  if (listing.status !== "ACTIVE" && listing.status !== "PARTIALLY_SOLD") {
+    return { error: "Alleen actieve advertenties kunnen gepauzeerd worden" };
+  }
 
-  // Race-safe flip
+  // Race-safe flip — sta zowel ACTIVE als PARTIALLY_SOLD toe (Fase 27.14).
+  // Bij PARTIALLY_SOLD: AVAILABLE items blijven AVAILABLE op de items-rows;
+  // de listing-status zelf gaat naar PAUSED. Bij resume wordt status
+  // hercomputeerd: PARTIALLY_SOLD als er nog SOLD items zijn, anders ACTIVE.
   const flipped = await prisma.listing.updateMany({
-    where: { id: listingId, status: "ACTIVE" },
+    where: { id: listingId, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
     data: { status: "PAUSED" },
   });
   if (flipped.count === 0) {
@@ -755,6 +760,8 @@ export async function pauseListing(listingId: string) {
 }
 
 // Fase 27: pauze opheffen. Geen cascade — eerdere proposals zijn al gerejecteerd.
+// Status-restore (Fase 27.14): PARTIALLY_SOLD als er nog SOLD items zijn,
+// anders ACTIVE.
 export async function resumeListing(listingId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
@@ -774,13 +781,56 @@ export async function resumeListing(listingId: string) {
     return { error: `Je hebt het maximum aantal actieve advertenties bereikt (${limit.max})` };
   }
 
+  // Voor MULTI_CARD-listings met al verkochte items: terug naar PARTIALLY_SOLD
+  // i.p.v. ACTIVE, anders zou de listing claimen "alle items beschikbaar".
+  let restoreStatus: "ACTIVE" | "PARTIALLY_SOLD" = "ACTIVE";
+  if (listing.listingType === "MULTI_CARD") {
+    const sold = await prisma.listingCardItem.count({
+      where: { listingId, status: "SOLD" },
+    });
+    if (sold > 0) restoreStatus = "PARTIALLY_SOLD";
+  }
+
   const flipped = await prisma.listing.updateMany({
     where: { id: listingId, status: "PAUSED" },
-    data: { status: "ACTIVE" },
+    data: { status: restoreStatus },
   });
   if (flipped.count === 0) {
     return { error: "Advertentie kon niet hervat worden — status is gewijzigd" };
   }
+
+  return { success: true };
+}
+
+// Fase 27.14: alleen-beschrijving update. Voor PARTIALLY_SOLD listings staat
+// edit van het description-veld toe zodat seller kan clarificeren wat er nog
+// in zit. Titel/foto's/prijs blijven gelocked om misbruik te voorkomen.
+// Werkt op ACTIVE en PARTIALLY_SOLD.
+export async function updateListingDescription(listingId: string, description: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const trimmed = description.trim();
+  if (trimmed.length < 10) return { error: "Beschrijving moet minimaal 10 tekens zijn" };
+  if (trimmed.length > 2000) return { error: "Beschrijving mag maximaal 2000 tekens zijn" };
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { sellerId: true, status: true },
+  });
+  if (!listing) return { error: "Advertentie niet gevonden" };
+  if (listing.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (listing.status !== "ACTIVE" && listing.status !== "PARTIALLY_SOLD") {
+    return { error: "Beschrijving alleen aanpasbaar bij actieve advertenties" };
+  }
+
+  await prisma.listing.update({
+    where: { id: listingId },
+    data: { description: trimmed },
+  });
 
   return { success: true };
 }

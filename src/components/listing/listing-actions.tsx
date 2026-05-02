@@ -86,6 +86,30 @@ export function ListingActions({ listingId, status }: Props) {
     );
   }
 
+  if (status === "PARTIALLY_SOLD") {
+    // Eigen variant: SOLD-markering ontbreekt (zou alle nog-AVAILABLE items
+    // automatisch SOLD moeten maken — dat is een aparte "rest sluiten"-flow).
+    // Voor nu: pauze + verwijderen, gelijk aan ACTIVE-set zonder markSold.
+    return (
+      <div className="space-y-2">
+        <button
+          onClick={() => run(() => pauseListing(listingId), "actions.confirmPause")}
+          disabled={loading}
+          className={`${baseBtn} border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30`}
+        >
+          {t("actions.pause")}
+        </button>
+        <button
+          onClick={() => run(() => updateListingStatus(listingId, "DELETED"), "actions.confirmDelete")}
+          disabled={loading}
+          className={`${baseBtn} border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30`}
+        >
+          {t("deleteListing")}
+        </button>
+      </div>
+    );
+  }
+
   if (status !== "ACTIVE") return null;
 
   return (
