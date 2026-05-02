@@ -180,23 +180,31 @@ export async function createListing(formData: FormData) {
     // MULTI_CARD: leid per-item ListingCardItem-rows af uit het cardItems-JSON
     // (Fase 27.13). Vereist voor partial-sale-flow; voor non-MULTI_CARD wordt
     // dit overgeslagen.
+    //
+    // Fase 27.17: een entry met quantity > 1 wordt geëxpandeerd naar N rijen
+    // van qty 1 zodat partial-sale precies kan kiezen hoeveel exemplaren
+    // (UI groepeert bij display + biedt een stepper). De originele cardItems-
+    // JSON blijft ongewijzigd voor compatibility en als snapshot.
     if (data.listingType === "MULTI_CARD" && data.cardItems) {
       try {
         const items: Array<{ cardName: string; cardSetId?: string; tcgdexId?: string; condition?: string; quantity?: number }> =
           JSON.parse(data.cardItems);
         for (const item of items) {
           if (!item.cardName) continue;
-          await tx.listingCardItem.create({
-            data: {
-              listingId: newListing.id,
-              cardName: item.cardName,
-              cardSetId: item.cardSetId || null,
-              tcgdexId: item.tcgdexId || null,
-              condition: item.condition || null,
-              quantity: item.quantity ?? 1,
-              status: "AVAILABLE",
-            },
-          });
+          const qty = Math.max(1, item.quantity ?? 1);
+          for (let i = 0; i < qty; i++) {
+            await tx.listingCardItem.create({
+              data: {
+                listingId: newListing.id,
+                cardName: item.cardName,
+                cardSetId: item.cardSetId || null,
+                tcgdexId: item.tcgdexId || null,
+                condition: item.condition || null,
+                quantity: 1,
+                status: "AVAILABLE",
+              },
+            });
+          }
         }
       } catch {
         // Ongeldige JSON al door zod afgevangen; defensieve catch.
@@ -699,17 +707,21 @@ export async function publishDraft(listingId: string) {
             JSON.parse(listing.cardItems);
           for (const item of items) {
             if (!item.cardName) continue;
-            await tx.listingCardItem.create({
-              data: {
-                listingId,
-                cardName: item.cardName,
-                cardSetId: item.cardSetId || null,
-                tcgdexId: item.tcgdexId || null,
-                condition: item.condition || null,
-                quantity: item.quantity ?? 1,
-                status: "AVAILABLE",
-              },
-            });
+            // Fase 27.17: split quantity-N naar N rijen van qty 1
+            const qty = Math.max(1, item.quantity ?? 1);
+            for (let i = 0; i < qty; i++) {
+              await tx.listingCardItem.create({
+                data: {
+                  listingId,
+                  cardName: item.cardName,
+                  cardSetId: item.cardSetId || null,
+                  tcgdexId: item.tcgdexId || null,
+                  condition: item.condition || null,
+                  quantity: 1,
+                  status: "AVAILABLE",
+                },
+              });
+            }
           }
         } catch {
           // Defensieve catch

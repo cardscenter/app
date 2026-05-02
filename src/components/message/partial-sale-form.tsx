@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { X, ShoppingBasket, ShieldCheck } from "lucide-react";
+import { X, ShoppingBasket, ShieldCheck, Minus, Plus } from "lucide-react";
 import {
   createPartialSaleProposal,
   getListingItemsForPartialSale,
@@ -15,6 +15,44 @@ interface ListingItem {
   condition: string | null;
   quantity: number;
   cardSetId: string | null;
+  tcgdexId: string | null;
+}
+
+// Groep van identieke items zodat de UI één rij per kaart toont met een
+// stepper, ipv N losse checkboxes voor bv. "5x Pikachu". Backend krijgt
+// alsnog losse item-ids — we picken er N uit de groep bij submit.
+interface ItemGroup {
+  key: string;
+  cardName: string;
+  condition: string | null;
+  cardSetId: string | null;
+  tcgdexId: string | null;
+  itemIds: string[]; // alle AVAILABLE items in deze groep
+}
+
+function groupKey(it: ListingItem) {
+  return `${it.cardName}|${it.condition ?? ""}|${it.tcgdexId ?? ""}|${it.cardSetId ?? ""}`;
+}
+
+function groupItems(items: ListingItem[]): ItemGroup[] {
+  const map = new Map<string, ItemGroup>();
+  for (const it of items) {
+    const key = groupKey(it);
+    const existing = map.get(key);
+    if (existing) {
+      existing.itemIds.push(it.id);
+    } else {
+      map.set(key, {
+        key,
+        cardName: it.cardName,
+        condition: it.condition,
+        cardSetId: it.cardSetId,
+        tcgdexId: it.tcgdexId,
+        itemIds: [it.id],
+      });
+    }
+  }
+  return Array.from(map.values());
 }
 
 interface Props {
@@ -31,7 +69,8 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
 
   const [items, setItems] = useState<ListingItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // selectedCounts: hoeveel exemplaren van elke groep de buyer wil
+  const [selectedCounts, setSelectedCounts] = useState<Map<string, number>>(new Map());
   const [requestInsured, setRequestInsured] = useState(false);
   const [totalAmount, setTotalAmount] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -48,18 +87,25 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
     })();
   }, [listingId]);
 
-  function toggleItem(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const groups = useMemo(() => groupItems(items), [items]);
+  const totalSelected = useMemo(
+    () => Array.from(selectedCounts.values()).reduce((sum, n) => sum + n, 0),
+    [selectedCounts]
+  );
+
+  function setCountFor(key: string, n: number, max: number) {
+    const clamped = Math.max(0, Math.min(n, max));
+    setSelectedCounts((prev) => {
+      const next = new Map(prev);
+      if (clamped === 0) next.delete(key);
+      else next.set(key, clamped);
       return next;
     });
   }
 
   function handleSubmit() {
     setError(null);
-    if (selectedIds.size === 0) {
+    if (totalSelected === 0) {
       setError(t("errors.noItems"));
       return;
     }
@@ -69,11 +115,20 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
       return;
     }
 
+    // Resolveer selectedCounts naar concrete itemIds — pak de eerste N uit
+    // elke groep (volgorde maakt niet uit; alle items in de groep zijn
+    // identiek qua naam/conditie).
+    const itemIds: string[] = [];
+    for (const group of groups) {
+      const n = selectedCounts.get(group.key) ?? 0;
+      itemIds.push(...group.itemIds.slice(0, n));
+    }
+
     startTransition(async () => {
       const result = await createPartialSaleProposal({
         conversationId,
         listingId,
-        itemIds: Array.from(selectedIds),
+        itemIds,
         totalAmount: amount,
         requestInsuredShipping: requestInsured,
       });
@@ -105,40 +160,69 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
           {t("subtitle", { title: listingTitle })}
         </p>
 
-        {/* Items selector */}
+        {/* Items selector — grouped by (name, condition, tcgdex) met stepper */}
         <div className="mb-5">
           <h3 className="mb-2 text-sm font-medium text-foreground">
-            {t("selectItems")} ({selectedIds.size}/{items.length})
+            {t("selectItems")} ({totalSelected}/{items.length})
           </h3>
           {loadingItems ? (
             <p className="text-sm text-muted-foreground">{t("loading")}</p>
-          ) : items.length === 0 ? (
+          ) : groups.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noItems")}</p>
           ) : (
             <div className="grid grid-cols-1 gap-2">
-              {items.map((it) => {
-                const checked = selectedIds.has(it.id);
+              {groups.map((g) => {
+                const max = g.itemIds.length;
+                const count = selectedCounts.get(g.key) ?? 0;
+                const isSelected = count > 0;
                 return (
-                  <button
-                    type="button"
-                    key={it.id}
-                    onClick={() => toggleItem(it.id)}
-                    className={`flex items-center gap-2 rounded-lg border p-2 text-left transition-colors ${
-                      checked
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:bg-muted"
+                  <div
+                    key={g.key}
+                    className={`flex items-center gap-3 rounded-lg border p-2 transition-colors ${
+                      isSelected ? "border-primary bg-primary/5" : "border-border"
                     }`}
                   >
-                    <input type="checkbox" checked={checked} readOnly className="h-4 w-4" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">
-                        {it.quantity > 1 ? `${it.quantity}× ` : ""}{it.cardName}
+                        {g.cardName}
                       </p>
-                      {it.condition && (
-                        <p className="text-xs text-muted-foreground">{it.condition}</p>
-                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {g.condition && <>{g.condition} · </>}
+                        {max > 1 ? t("availableMulti", { count: max }) : t("availableSingle")}
+                      </p>
                     </div>
-                  </button>
+                    {max === 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => setCountFor(g.key, isSelected ? 0 : 1, 1)}
+                        className="h-8 w-8 rounded-md border border-border text-sm font-medium hover:bg-muted"
+                      >
+                        {isSelected ? "✓" : "+"}
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setCountFor(g.key, count - 1, max)}
+                          disabled={count === 0}
+                          className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted disabled:opacity-40"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="w-8 text-center text-sm font-medium tabular-nums">
+                          {count} <span className="text-muted-foreground">/ {max}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCountFor(g.key, count + 1, max)}
+                          disabled={count >= max}
+                          className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-foreground hover:bg-muted disabled:opacity-40"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -198,7 +282,7 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
           </button>
           <button
             onClick={handleSubmit}
-            disabled={pending || selectedIds.size === 0}
+            disabled={pending || totalSelected === 0}
             className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
             {pending ? "..." : t("submit")}

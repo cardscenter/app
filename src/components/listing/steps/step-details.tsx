@@ -183,7 +183,10 @@ export function StepDetails({
       {listingType === "MULTI_CARD" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="block text-sm font-medium text-foreground">{t("cardName")}en</label>
+            <div>
+              <label className="block text-sm font-medium text-foreground">{t("cardName")}en</label>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t("multiCardItemsHint")}</p>
+            </div>
             <button
               type="button"
               onClick={addCardItem}

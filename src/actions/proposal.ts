@@ -42,7 +42,7 @@ export async function getListingItemsForPartialSale(listingId: string) {
 
   const items = await prisma.listingCardItem.findMany({
     where: { listingId, status: "AVAILABLE" },
-    select: { id: true, cardName: true, condition: true, quantity: true, cardSetId: true },
+    select: { id: true, cardName: true, condition: true, quantity: true, cardSetId: true, tcgdexId: true },
     orderBy: { createdAt: "asc" },
   });
 

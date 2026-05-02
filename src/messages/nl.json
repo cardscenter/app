@@ -712,6 +712,8 @@
     "title": "Vraag een deel aan",
     "subtitle": "Uit: {title}",
     "selectItems": "Kies items",
+    "availableSingle": "1 beschikbaar",
+    "availableMulti": "{count} beschikbaar",
     "noItems": "Geen items beschikbaar voor gedeeltelijke verkoop.",
     "loading": "Laden...",
     "totalAmount": "Totaalbedrag (incl. verzending)",
@@ -882,6 +884,7 @@
       "hint": "Kopers kunnen dan via chat een voorstel doen voor een deel van de items. Bij accept blijven de overgebleven items beschikbaar als 'gedeeltelijk verkocht'.",
       "badge": "{available} van {total} beschikbaar"
     },
+    "multiCardItemsHint": "Optioneel — laat leeg als je alleen een algemene beschrijving wilt geven. Vul je hier kaarten in dan kan een koper later, mits jij gedeeltelijke verkoop toestaat hieronder, kiezen welke specifieke kaarten hij wil kopen en daar een eigen bod op doen via de chat.",
     "deliveryMethodLabel": "Bezorgmethode",
     "deliveryShip": "Verzenden",
     "deliveryPickup": "Ophalen",

@@ -712,6 +712,8 @@
     "title": "Request a partial sale",
     "subtitle": "From: {title}",
     "selectItems": "Choose items",
+    "availableSingle": "1 available",
+    "availableMulti": "{count} available",
     "noItems": "No items available for partial sale.",
     "loading": "Loading...",
     "totalAmount": "Total amount (shipping included)",
@@ -882,6 +884,7 @@
       "hint": "Buyers can then propose to buy a subset of the items via chat. After accept the remaining items stay available as 'partially sold'.",
       "badge": "{available} of {total} available"
     },
+    "multiCardItemsHint": "Optional — leave empty if you only want to give a general description. If you fill in cards here, a buyer can later (provided you also enable partial sale below) pick which specific cards they want and place their own offer via chat.",
     "deliveryMethodLabel": "Delivery method",
     "deliveryShip": "Shipping",
     "deliveryPickup": "Pickup",
