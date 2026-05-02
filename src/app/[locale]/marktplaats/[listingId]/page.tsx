@@ -73,7 +73,7 @@ export default async function ListingDetailPage({
   }
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
-  const [watched, sellerItems, similarItems, sellerInfo, pricing] = await Promise.all([
+  const [watched, sellerItems, similarItems, sellerInfo, pricing, currentUser] = await Promise.all([
     session?.user ? isWatched({ listingId: listing.id }) : false,
     getSellerOtherItems(listing.sellerId, { listingId: listing.id }),
     getSimilarItems({
@@ -85,7 +85,18 @@ export default async function ListingDetailPage({
     }),
     getSellerInfo(listing.sellerId),
     getCardPricing(listing.tcgdexId),
+    // Saldo van de ingelogde koper voor de payment-confirm-modal van
+    // buy-quantity. Owner heeft het niet nodig (kan eigen listing niet kopen).
+    session?.user?.id
+      ? prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { balance: true, reservedBalance: true },
+        })
+      : Promise.resolve(null),
   ]);
+  const buyerAvailableBalance = currentUser
+    ? currentUser.balance - currentUser.reservedBalance
+    : 0;
 
   return (
     <PageContainer width="default" className="py-8">
@@ -219,6 +230,7 @@ export default async function ListingDetailPage({
                   shippingCost={listing.shippingCost}
                   freeShipping={listing.freeShipping}
                   available={availableItems}
+                  availableBalance={buyerAvailableBalance}
                   shippingMethods={listing.shippingMethods.map((sm) => ({
                     id: sm.shippingMethodId,
                     carrier: sm.shippingMethod.carrier,

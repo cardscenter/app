@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, ShoppingCart, AlertTriangle } from "lucide-react";
 import { buyListing } from "@/actions/listing";
+import { PaymentMethodModal } from "@/components/checkout/payment-method-modal";
 
 interface ShippingMethodOption {
   id: string;
@@ -21,6 +22,7 @@ interface Props {
   freeShipping: boolean;
   available: number;
   shippingMethods: ShippingMethodOption[];
+  availableBalance: number;
 }
 
 // Direct-buy-flow voor SEALED_PRODUCT en OTHER met stockQuantity. Toont een
@@ -34,6 +36,7 @@ export function BuyQuantityForm({
   freeShipping,
   available,
   shippingMethods,
+  availableBalance,
 }: Props) {
   const t = useTranslations("listing");
   const router = useRouter();
@@ -43,6 +46,7 @@ export function BuyQuantityForm({
     shippingMethods[0]?.id ?? ""
   );
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const selectedMethod = shippingMethods.find((m) => m.id === selectedShippingId) ?? null;
   const shippingCost = freeShipping ? 0 : selectedMethod?.price ?? defaultShippingCost;
@@ -51,12 +55,25 @@ export function BuyQuantityForm({
 
   const setQty = (n: number) => setQuantity(Math.max(1, Math.min(n, available)));
 
-  function handleBuy() {
+  // Open de confirm-modal — zelfde patroon als cart-checkout. Pas op confirm
+  // wordt buyListing aangeroepen.
+  function handleBuyClick() {
+    setError(null);
+    setShowConfirmModal(true);
+  }
+
+  function handleConfirm() {
     setError(null);
     startTransition(async () => {
       const result = await buyListing(listingId, selectedShippingId || undefined, quantity);
-      if (result.error) setError(result.error);
-      else router.refresh();
+      if (result.error) {
+        setError(result.error);
+        setShowConfirmModal(false);
+      } else {
+        // Niet sluiten van modal hier — router.refresh ververst de pagina
+        // en de modal verdwijnt vanzelf bij re-mount na navigatie.
+        router.refresh();
+      }
     });
   }
 
@@ -149,13 +166,25 @@ export function BuyQuantityForm({
 
       <button
         type="button"
-        onClick={handleBuy}
+        onClick={handleBuyClick}
         disabled={pending || quantity < 1}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
       >
         <ShoppingCart className="h-4 w-4" />
         {pending ? "..." : t("buyQuantity.buyNow")}
       </button>
+
+      {/* Confirm-modal — zelfde modal als cart-checkout zodat de UI
+          uniform is over alle koop-paden. */}
+      {showConfirmModal && (
+        <PaymentMethodModal
+          totalCost={total}
+          availableBalance={availableBalance}
+          onConfirm={handleConfirm}
+          onCancel={() => setShowConfirmModal(false)}
+          loading={pending}
+        />
+      )}
     </div>
   );
 }
