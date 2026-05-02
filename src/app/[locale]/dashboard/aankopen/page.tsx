@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
 import { CancellationsSection } from "@/components/dashboard/cancellations-section";
+import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
 
 // Groepeer items met dezelfde cardName + conditie tot één rij met aantal +
 // subtotaal. Voor stocked-buy ("5× Destined Rivals booster pack") en voor
@@ -84,8 +85,39 @@ export default async function MyPurchasesPage() {
         where: { status: "PENDING" },
         select: { id: true },
       },
+      // Pickup-schedule: voor SCHEDULED bundles met ACCEPTED schedule tonen
+      // we de code prominent in een aparte sectie bovenaan zodat de koper
+      // hem niet uit de chat hoeft te zoeken.
+      pickupSchedule: {
+        select: {
+          status: true,
+          pickupCode: true,
+          proposedFor: true,
+          windowStart: true,
+          windowEnd: true,
+        },
+      },
     },
   });
+
+  // Pickup-bundles met geaccepteerd ophaalmoment voor de prominente sectie.
+  const activePickups = bundles
+    .filter(
+      (b) =>
+        b.status === "SCHEDULED" &&
+        b.pickupSchedule?.status === "ACCEPTED" &&
+        b.pickupSchedule?.pickupCode
+    )
+    .map((b) => ({
+      id: b.id,
+      orderNumber: b.orderNumber,
+      sellerName: b.seller.displayName,
+      pickupCode: b.pickupSchedule!.pickupCode,
+      proposedFor: b.pickupSchedule!.proposedFor.toISOString(),
+      windowStart: b.pickupSchedule!.windowStart,
+      windowEnd: b.pickupSchedule!.windowEnd,
+      paymentMode: b.paymentMode,
+    }));
 
   const serialized = bundles.map((b) => ({
     id: b.id,
@@ -166,6 +198,7 @@ export default async function MyPurchasesPage() {
         </p>
       ) : (
         <>
+          <ActivePickupsSection pickups={activePickups} />
           <CancellationsSection
             currentUserId={userId}
             paidBundles={serialized

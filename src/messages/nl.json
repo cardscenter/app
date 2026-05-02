@@ -748,6 +748,9 @@
     "completed": "Ophaal bevestigd",
     "cancelReservation": "Reservering annuleren",
     "confirmCancelReservation": "Reservering annuleren? De advertenties komen weer beschikbaar.",
+    "upcomingPickups": "Aankomende ophaalafspraken",
+    "paymentModePlatform": "Al betaald via wallet — alleen ophalen",
+    "paymentModeExternal": "Betaal aan verkoper bij ophalen (Tikkie/contant)",
     "errors": {
       "invalidDate": "Datum moet vandaag of later zijn",
       "invalidWindow": "Eindtijd moet later zijn dan starttijd"
