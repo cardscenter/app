@@ -139,7 +139,19 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     if (selectedShippingMethods.length > 0) formData.set("shippingMethodIds", JSON.stringify(selectedShippingMethods));
     if (form.carriers.length > 0) formData.set("carriers", JSON.stringify(form.carriers));
     if (form.packageSize) formData.set("packageSize", form.packageSize);
-    if (form.cardItems.length > 0) formData.set("cardItems", JSON.stringify(form.cardItems));
+    // MULTI_CARD: backend leest cardName + cardSetId + tcgdexId + condition +
+    // quantity. We mappen de form-state naar dat afgeslankte formaat zodat
+    // de rich `tcgdex`-snapshot niet meegestuurd hoeft te worden.
+    if (form.cardItems.length > 0) {
+      const items = form.cardItems.map((it) => ({
+        cardName: it.cardName,
+        cardSetId: it.tcgdex?.setId ?? it.cardSetId ?? "",
+        tcgdexId: it.tcgdex?.id,
+        condition: it.condition,
+        quantity: it.quantity,
+      }));
+      formData.set("cardItems", JSON.stringify(items));
+    }
     if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);

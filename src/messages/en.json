@@ -797,6 +797,7 @@
     "title": "Title",
     "description": "Description",
     "cardName": "Card name",
+    "cardNames": "Card names",
     "condition": "Condition",
     "set": "Set",
     "series": "Series",

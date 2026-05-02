@@ -53,7 +53,21 @@ export function StepDetails({
   const hasReverse = tcgdex?.variants?.includes("reverse") ?? false;
 
   const addCardItem = () => {
-    onChange("cardItems", [...cardItems, { cardName: "", cardSetId: "", condition: "Near Mint", quantity: 1 }]);
+    onChange("cardItems", [...cardItems, { cardName: "", cardSetId: "", condition: "Near Mint", quantity: 1, tcgdex: null }]);
+  };
+
+  const setItemTcgdex = (index: number, tcgdex: CardSearchSelectValue | null) => {
+    const updated = cardItems.map((it, i) =>
+      i === index
+        ? {
+            ...it,
+            tcgdex,
+            cardName: tcgdex?.name ?? it.cardName,
+            cardSetId: tcgdex?.setId ?? it.cardSetId,
+          }
+        : it
+    );
+    onChange("cardItems", updated);
   };
 
   const removeCardItem = (index: number) => {
@@ -182,33 +196,20 @@ export function StepDetails({
       {/* MULTI_CARD specific (Fase 27.16: kaart-database-search per item) */}
       {listingType === "MULTI_CARD" && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="block text-sm font-medium text-foreground">{t("cardName")}en</label>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-foreground">{t("cardNames")}</label>
               <p className="mt-0.5 text-xs text-muted-foreground">{t("multiCardItemsHint")}</p>
             </div>
             <button
               type="button"
               onClick={addCardItem}
-              className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+              className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
             >
               <Plus className="h-3.5 w-3.5" /> {t("addCard")}
             </button>
           </div>
           {cardItems.map((item, index) => {
-            // Reconstrueer een thin CardSearchSelectValue uit form-state zodat
-            // de typeahead de huidige selectie toont. Geen rich metadata
-            // (series/rarity/pricing) opgeslagen — die wordt voor MULTI_CARD-
-            // listings niet getoond, dus thumbnail-only is genoeg.
-            const value: CardSearchSelectValue | null = item.tcgdexId
-              ? {
-                  id: item.tcgdexId,
-                  name: item.cardName,
-                  localId: "",
-                  thumbnailUrl: null,
-                  setId: item.cardSetId || null,
-                }
-              : null;
             return (
               <div key={index} className="glass-subtle rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -222,34 +223,33 @@ export function StepDetails({
                   </button>
                 </div>
 
-                {/* Kaart-database picker (zelfde patroon als SINGLE_CARD) */}
+                {/* Kaart-database picker — zelfde patroon als claimsale-form */}
                 <CardSearchSelect
-                  value={value}
-                  onChange={(v) => {
-                    if (v) {
-                      // updateCardItem alleen kan één veld tegelijk; voor 3
-                      // velden moeten we direct de array muteren.
-                      const updated = cardItems.map((it, i) =>
-                        i === index
-                          ? {
-                              ...it,
-                              cardName: v.name,
-                              tcgdexId: v.id,
-                              cardSetId: v.setId ?? "",
-                            }
-                          : it
-                      );
-                      onChange("cardItems", updated);
-                    } else {
-                      // Cleared: alleen tcgdexId en cardSetId resetten,
-                      // cardName mag gehouden worden voor handmatige input.
-                      const updated = cardItems.map((it, i) =>
-                        i === index ? { ...it, tcgdexId: undefined, cardSetId: "" } : it
-                      );
-                      onChange("cardItems", updated);
-                    }
-                  }}
+                  value={item.tcgdex ?? null}
+                  onChange={(v) => setItemTcgdex(index, v)}
                 />
+
+                {/* Extra info chips zodra een DB-kaart is gekozen — read-only
+                    metadata (serie, set, rarity). 1-op-1 met claimsale-stijl. */}
+                {item.tcgdex && (item.tcgdex.series?.name || item.tcgdex.setName || item.tcgdex.rarity) && (
+                  <div className="flex flex-wrap gap-1.5 text-[11px]">
+                    {item.tcgdex.series?.name && (
+                      <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                        <span className="opacity-60">Serie:</span> <span className="font-medium text-foreground">{item.tcgdex.series.name}</span>
+                      </span>
+                    )}
+                    {item.tcgdex.setName && (
+                      <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                        <span className="opacity-60">Set:</span> <span className="font-medium text-foreground">{item.tcgdex.setName}</span>
+                      </span>
+                    )}
+                    {item.tcgdex.rarity && (
+                      <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
+                        <span className="opacity-60">Zeldzaamheid:</span> <span className="font-medium text-foreground">{item.tcgdex.rarity}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>

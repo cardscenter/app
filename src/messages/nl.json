@@ -797,6 +797,7 @@
     "title": "Titel",
     "description": "Beschrijving",
     "cardName": "Kaartnaam",
+    "cardNames": "Kaartnamen",
     "condition": "Conditie",
     "set": "Set",
     "series": "Serie",
