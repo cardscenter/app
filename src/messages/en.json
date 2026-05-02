@@ -751,6 +751,8 @@
     "upcomingPickups": "Upcoming pickups",
     "paymentModePlatform": "Already paid via wallet — pickup only",
     "paymentModeExternal": "Pay seller at pickup (Tikkie/cash)",
+    "confirmExternalButton": "Confirm pickup",
+    "confirmExternalDialog": "Did you collect the product and pay the seller? This closes the order.",
     "errors": {
       "invalidDate": "Date must be today or later",
       "invalidWindow": "End time must be later than start time"

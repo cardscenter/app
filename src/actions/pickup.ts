@@ -323,6 +323,107 @@ export async function confirmPickup(input: { shippingBundleId: string; code: str
   return { success: true };
 }
 
+// Fase 27.42: koper-confirm voor EXTERNAL pickup. Geen code nodig — er staat
+// geen geld op het spel via platform, dus de extra security-stap is overkill.
+// Koper klikt "Bevestig ophaal" in /aankopen → bundle COMPLETED, listings
+// RESERVED→SOLD. Symmetrisch met confirmDelivery voor SHIP-bundles.
+// Anti-self-inflation: alleen koper kan bevestigen, seller niet — voorkomt
+// dat sellers eigen sales fakes om level-tier te boosten.
+export async function confirmExternalPickup(shippingBundleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const bundle = await prisma.shippingBundle.findUnique({
+    where: { id: shippingBundleId },
+    include: {
+      pickupSchedule: { select: { id: true } },
+      bundleListings: { select: { listingId: true } },
+    },
+  });
+  if (!bundle) return { error: "Bestelling niet gevonden" };
+  if (bundle.buyerId !== session.user.id) {
+    return { error: "Alleen de koper kan ophalen bevestigen" };
+  }
+  if (bundle.paymentMode !== "EXTERNAL") {
+    return { error: "Deze bestelling vereist code-confirm door de verkoper" };
+  }
+  if (bundle.status !== "PENDING" && bundle.status !== "SCHEDULED") {
+    return { error: "Bestelling kan niet meer bevestigd worden in deze status" };
+  }
+
+  const listingIds = bundle.bundleListings.map((bl) => bl.listingId);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const flipped = await tx.shippingBundle.updateMany({
+      where: {
+        id: bundle.id,
+        paymentMode: "EXTERNAL",
+        status: { in: ["PENDING", "SCHEDULED"] },
+      },
+      data: { status: "COMPLETED", deliveredAt: new Date() },
+    });
+    if (flipped.count === 0) throw new Error("Status is gewijzigd");
+
+    if (bundle.pickupSchedule) {
+      await tx.pickupSchedule.update({
+        where: { id: bundle.pickupSchedule.id },
+        data: { status: "COMPLETED", completedAt: new Date() },
+      });
+    }
+
+    // Multi-listing bundle: listings RESERVED → SOLD
+    if (listingIds.length > 0) {
+      await tx.listing.updateMany({
+        where: { id: { in: listingIds }, status: "RESERVED" },
+        data: { status: "SOLD", buyerId: bundle.buyerId },
+      });
+    } else if (bundle.listingId) {
+      // Single-listing pickup-bundle (via reserveListingForExternalPickup)
+      await tx.listing.updateMany({
+        where: { id: bundle.listingId, status: "RESERVED" },
+        data: { status: "SOLD", buyerId: bundle.buyerId },
+      });
+    }
+
+    // Stocked items (ListingCardItem) RESERVED → SOLD
+    await tx.listingCardItem.updateMany({
+      where: { shippingBundleId: bundle.id, status: "RESERVED" },
+      data: { status: "SOLD", soldAt: new Date() },
+    });
+
+    // Stocked listing-status hercomputeren — als alle items weg, listing → SOLD
+    if (!bundle.listingId && listingIds.length === 0) {
+      const items = await tx.listingCardItem.findMany({
+        where: { shippingBundleId: bundle.id },
+        select: { listingId: true },
+        distinct: ["listingId"],
+      });
+      for (const it of items) {
+        const remaining = await tx.listingCardItem.count({
+          where: { listingId: it.listingId, status: { in: ["AVAILABLE", "RESERVED"] } },
+        });
+        await tx.listing.update({
+          where: { id: it.listingId },
+          data: { status: remaining === 0 ? "SOLD" : "PARTIALLY_SOLD" },
+        });
+      }
+    }
+
+    return { ok: true };
+  });
+  if (!result.ok) return { error: "Status is gewijzigd" };
+
+  await createNotification(
+    bundle.sellerId,
+    "ORDER_PAID",
+    "Ophaal bevestigd",
+    `Bestelling ${bundle.orderNumber} is bevestigd door de koper.`,
+    "/dashboard/verkopen"
+  );
+
+  return { success: true };
+}
+
 // Beide partijen kunnen een EXTERNAL-bundle vroegtijdig annuleren (geen
 // wederzijds-akkoord nodig, want er staat geen geld op het spel).
 export async function cancelExternalReservation(shippingBundleId: string) {

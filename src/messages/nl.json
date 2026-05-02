@@ -751,6 +751,8 @@
     "upcomingPickups": "Aankomende ophaalafspraken",
     "paymentModePlatform": "Al betaald via wallet — alleen ophalen",
     "paymentModeExternal": "Betaal aan verkoper bij ophalen (Tikkie/contant)",
+    "confirmExternalButton": "Bevestig ophaal",
+    "confirmExternalDialog": "Heb je het product opgehaald en de verkoper betaald? Dit sluit de bestelling af.",
     "errors": {
       "invalidDate": "Datum moet vandaag of later zijn",
       "invalidWindow": "Eindtijd moet later zijn dan starttijd"

@@ -1,11 +1,12 @@
 import { Key, CalendarClock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { ExternalPickupConfirmButton } from "./external-pickup-confirm-button";
 
 interface ActivePickup {
   id: string;
   orderNumber: string;
   sellerName: string;
-  pickupCode: string;
+  pickupCode: string | null;
   proposedFor: string; // ISO date
   windowStart: string;
   windowEnd: string;
@@ -16,12 +17,10 @@ interface Props {
   pickups: ActivePickup[];
 }
 
-// Sectie bovenaan /aankopen die de pickup-codes prominent toont voor alle
-// SCHEDULED pickup-bundles waar de buyer betrokken bij is. Anders moet de
-// koper de chat openzoeken om z'n code te vinden — slechte UX op het moment
-// dat hij voor de deur staat. Toont datum + tijdvenster + betalings-modus
-// zodat de koper weet of hij bij ophalen nog moet betalen (EXTERNAL) of
-// niet (PLATFORM = al via wallet).
+// Sectie bovenaan /aankopen voor SCHEDULED pickup-bundles van de buyer.
+// PLATFORM: prominent code-blok zodat koper bij de deur niet hoeft te zoeken.
+// EXTERNAL: confirm-knop (geen code — koper bevestigt 1-klik na ophaal).
+// Beide tonen datum + tijdvenster + payment-mode hint.
 export async function ActivePickupsSection({ pickups }: Props) {
   if (pickups.length === 0) return null;
 
@@ -59,13 +58,20 @@ export async function ActivePickupsSection({ pickups }: Props) {
                 </p>
               </div>
               <div className="flex flex-col items-start gap-1 sm:items-end">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-blue-800 dark:text-blue-200">
-                  <Key className="h-3.5 w-3.5" />
-                  {t("codeForBuyer")}
-                </div>
-                <div className="font-mono text-2xl font-bold tracking-widest text-blue-900 dark:text-blue-100">
-                  {p.pickupCode}
-                </div>
+                {/* PLATFORM: code prominent voor seller. EXTERNAL: koper-confirm. */}
+                {isExternal ? (
+                  <ExternalPickupConfirmButton shippingBundleId={p.id} />
+                ) : p.pickupCode ? (
+                  <>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-blue-800 dark:text-blue-200">
+                      <Key className="h-3.5 w-3.5" />
+                      {t("codeForBuyer")}
+                    </div>
+                    <div className="font-mono text-2xl font-bold tracking-widest text-blue-900 dark:text-blue-100">
+                      {p.pickupCode}
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
           );

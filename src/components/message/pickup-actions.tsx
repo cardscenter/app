@@ -8,6 +8,7 @@ import {
   proposePickup,
   respondToPickup,
   confirmPickup,
+  confirmExternalPickup,
   cancelExternalReservation,
 } from "@/actions/pickup";
 import { PICKUP_CODE_LENGTH, PICKUP_CODE_REGEX } from "@/lib/pickup-config";
@@ -75,8 +76,21 @@ export function PickupActions({
     (paymentMode === "PLATFORM" && bundleStatus === "PAID");
   const canRespondToProposal =
     schedule?.status === "PROPOSED" && schedule.proposedById !== currentUserId;
-  const canConfirmCode = isSeller && bundleStatus === "SCHEDULED" && schedule?.status === "ACCEPTED";
-  const showBuyerCode = isBuyer && bundleStatus === "SCHEDULED" && schedule?.status === "ACCEPTED" && schedule?.pickupCode;
+  // Code-confirm alleen voor PLATFORM-bundles (escrow-release rechtvaardigt
+  // extra security). EXTERNAL bundles: koper bevestigt met 1 klik (Fase 27.42).
+  const canConfirmCode =
+    isSeller && bundleStatus === "SCHEDULED" && schedule?.status === "ACCEPTED" &&
+    paymentMode === "PLATFORM";
+  const showBuyerCode =
+    isBuyer && bundleStatus === "SCHEDULED" && schedule?.status === "ACCEPTED" &&
+    schedule?.pickupCode && paymentMode === "PLATFORM";
+  // Buyer-confirm voor EXTERNAL: zichtbaar zodra er een ACCEPTED schedule is
+  // (koper kan al voor de daadwerkelijke ophaal bevestigen). Of zelfs bij
+  // PENDING — maar dan zou koper kunnen klikken voor er ooit afgesproken is.
+  // We tonen 'm vanaf SCHEDULED voor consistentie met PLATFORM-flow.
+  const canBuyerConfirmExternal =
+    isBuyer && paymentMode === "EXTERNAL" && bundleStatus === "SCHEDULED" &&
+    schedule?.status === "ACCEPTED";
   const canCancelExternal = paymentMode === "EXTERNAL" && (bundleStatus === "PENDING" || bundleStatus === "SCHEDULED");
 
   function run(fn: () => Promise<{ error?: string; success?: boolean }>) {
@@ -166,7 +180,7 @@ export function PickupActions({
         </div>
       )}
 
-      {/* Buyer-code-display */}
+      {/* Buyer-code-display (alleen PLATFORM) */}
       {showBuyerCode && schedule && (
         <div className="rounded-lg border border-blue-300 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-950/40">
           <div className="flex items-center gap-2 text-xs font-medium text-blue-800 dark:text-blue-200">
@@ -177,6 +191,23 @@ export function PickupActions({
             {schedule.pickupCode}
           </div>
         </div>
+      )}
+
+      {/* Buyer-confirm voor EXTERNAL — 1 klik (Fase 27.42) */}
+      {canBuyerConfirmExternal && (
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm(t("confirmExternalDialog"))) {
+              run(() => confirmExternalPickup(shippingBundleId));
+            }
+          }}
+          disabled={pending}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+        >
+          <Check className="h-4 w-4" />
+          {t("confirmExternalButton")}
+        </button>
       )}
 
       {/* Seller-confirm-form */}
