@@ -43,6 +43,10 @@ export default async function MySalesPage() {
           listing: { select: { id: true, title: true, imageUrls: true } },
         },
       },
+      cancellationRequests: {
+        where: { status: "PENDING" },
+        select: { id: true },
+      },
       dispute: {
         select: { id: true, status: true, reason: true },
       },
@@ -76,6 +80,7 @@ export default async function MySalesPage() {
     buyerName: b.buyer.displayName,
     buyerId: b.buyer.id,
     status: b.status,
+    hasActiveCancellation: b.cancellationRequests.length > 0,
     shippingCost: b.shippingCost,
     totalItemCost: b.totalItemCost,
     totalCost: b.totalCost,
@@ -163,7 +168,9 @@ export default async function MySalesPage() {
           <CancellationsSection
             currentUserId={userId}
             paidBundles={serialized
-              .filter((b) => b.status === "PAID")
+              // Alleen bundles met een actief PENDING annuleringsverzoek —
+              // anders zou alle PAID-verkopen hier dubbel verschijnen.
+              .filter((b) => b.status === "PAID" && b.hasActiveCancellation)
               .map((b) => ({
                 id: b.id,
                 orderNumber: b.orderNumber,

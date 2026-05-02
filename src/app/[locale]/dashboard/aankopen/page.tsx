@@ -41,6 +41,13 @@ export default async function MyPurchasesPage() {
           listing: { select: { id: true, title: true, imageUrls: true } },
         },
       },
+      // Voor de "Lopende annuleringsverzoeken"-sectie: we hoeven alleen
+      // de bundles te tonen waar daadwerkelijk een actief PENDING verzoek
+      // op staat. Een lege array betekent geen actieve cancellation-flow.
+      cancellationRequests: {
+        where: { status: "PENDING" },
+        select: { id: true },
+      },
     },
   });
 
@@ -50,6 +57,7 @@ export default async function MyPurchasesPage() {
     sellerName: b.seller.displayName,
     sellerId: b.seller.id,
     status: b.status,
+    hasActiveCancellation: b.cancellationRequests.length > 0,
     shippingCost: b.shippingCost,
     totalItemCost: b.totalItemCost,
     totalCost: b.totalCost,
@@ -101,7 +109,10 @@ export default async function MyPurchasesPage() {
           <CancellationsSection
             currentUserId={userId}
             paidBundles={serialized
-              .filter((b) => b.status === "PAID")
+              // Alleen bundles met een actief PENDING annuleringsverzoek —
+              // anders zou de hele PAID-lijst hier dubbel verschijnen
+              // (rommelige UX bij meer dan een paar aankopen).
+              .filter((b) => b.status === "PAID" && b.hasActiveCancellation)
               .map((b) => ({
                 id: b.id,
                 orderNumber: b.orderNumber,
