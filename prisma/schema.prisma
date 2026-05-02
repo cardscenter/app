@@ -640,6 +640,17 @@ model Listing {
   // editeerbaar in de form.
   pickupCity       String?
 
+  // Pickup-betaal-modi (Fase 27.39). Voor PICKUP/BOTH listings bepalen deze
+  // toggles welke betaal-vormen koper mag kiezen:
+  // - allowPlatformPickup: koper betaalt vooraf via wallet (escrow), confirm
+  //   met code, commission wordt afgetrokken bij release. Veiliger voor beide.
+  // - allowExternalPickup: koper betaalt aan verkoper bij ophalen (Tikkie/
+  //   contant), geen escrow, geen commission, koper-confirm met 1 klik.
+  // Default beide true. Server-side validatie: minstens één moet aan staan
+  // voor PICKUP/BOTH listings. Niet relevant voor SHIP-only (altijd PLATFORM).
+  allowPlatformPickup Boolean @default(true)
+  allowExternalPickup Boolean @default(true)
+
   // Seller
   sellerId      String
   seller        User     @relation(fields: [sellerId], references: [id])
@@ -754,6 +765,12 @@ model ShippingBundle {
   // Payment mode (Fase 27). PLATFORM = escrow via wallet. EXTERNAL = off-platform
   // (Tikkie/contant bij ophalen) — geen wallet-impact, geen commission.
   paymentMode   String   @default("PLATFORM") // PLATFORM | EXTERNAL
+
+  // Delivery method snapshot (Fase 27.39). Bij SHIP gebruikt de bundle de
+  // shipping/dispute/tracking-flow; bij PICKUP de pickup-flow met code-confirm
+  // (PLATFORM) of 1-knops koper-confirm (EXTERNAL). Default SHIP voor backward
+  // compat — bestaande bundles waren altijd SHIP.
+  deliveryMethod String  @default("SHIP") // SHIP | PICKUP
 
   // Reservation-timeout voor EXTERNAL pickup-bundles (now + 14 dagen na seller-accept).
   // Cron `pickup-reservation-timeout` ruimt op zodat listings niet eeuwig vastzitten.

@@ -117,15 +117,13 @@ export function ListingActions({ listingId, status }: Props) {
 
   if (status !== "ACTIVE") return null;
 
+  // Fase 27.40: "Markeer als verkocht" verwijderd. Alle echte verkoop-flows
+  // zetten SOLD automatisch (Direct Kopen, proposals, bundle-offers,
+  // pickup-confirm). Handmatige flip zou cascade-rejection van pendings
+  // missen + seller-stats vervuilen zonder echte transactie. Voor "weghalen
+  // omdat ik 'm offline verkocht" → gebruik Verwijderen (zelfde resultaat).
   return (
     <div className="space-y-2">
-      <button
-        onClick={() => run(() => updateListingStatus(listingId, "SOLD"))}
-        disabled={loading}
-        className={`${baseBtn} bg-green-600 text-white hover:bg-green-700`}
-      >
-        {t("markSold")}
-      </button>
       <button
         onClick={() => run(() => pauseListing(listingId), "actions.confirmPause")}
         disabled={loading}

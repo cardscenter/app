@@ -918,6 +918,18 @@
         "hint": "Shows a 'Make offer' button. Disable if you stick to your asking price and don't want negotiations."
       }
     },
+    "pickupPayment": {
+      "title": "How do you want to be paid at pickup?",
+      "platform": {
+        "label": "Upfront via wallet (recommended)",
+        "hint": "Buyer pays via platform balance. We hold the money in escrow until you confirm pickup with a code. Safer for both. Commission applies."
+      },
+      "external": {
+        "label": "At pickup to you (Tikkie/cash)",
+        "hint": "No platform payment — buyer pays you at pickup. No commission, no escrow. No platform protection in case of dispute."
+      },
+      "atLeastOne": "Allow at least one payment method."
+    },
     "conditionRange": {
       "label": "Condition range (optional)",
       "hint": "Indicate the condition extremes for cards in this collection.",

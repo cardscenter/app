@@ -918,6 +918,18 @@
         "hint": "Toont een 'Bod doen'-knop. Zet uit als je vasthoudt aan je vraagprijs en geen onderhandelingen wilt."
       }
     },
+    "pickupPayment": {
+      "title": "Hoe wil je betaald worden bij ophalen?",
+      "platform": {
+        "label": "Vooraf via wallet (aanbevolen)",
+        "hint": "Koper betaalt via platform-saldo. Wij houden het geld in escrow tot jij de ophaal bevestigt met code. Veiliger voor beide. Commission wordt afgetrokken."
+      },
+      "external": {
+        "label": "Bij ophalen aan jou (Tikkie/contant)",
+        "hint": "Geen platform-betaling — koper betaalt aan jou ter plekke. Geen commission, geen escrow. Geen platform-bescherming bij geschil."
+      },
+      "atLeastOne": "Sta minstens één betaalwijze toe."
+    },
     "conditionRange": {
       "label": "Conditie-bereik (optioneel)",
       "hint": "Geef aan tussen welke conditie-extremen de kaarten in deze collectie vallen.",

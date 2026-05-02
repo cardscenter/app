@@ -130,6 +130,10 @@ export async function createListing(formData: FormData) {
       : null,
     allowDirectBuy: data.allowDirectBuy ?? true,
     acceptsOffers: data.acceptsOffers ?? true,
+    // Pickup-modi (Fase 27.39): alleen relevant voor PICKUP/BOTH; voor SHIP
+    // is altijd PLATFORM verplicht en EXTERNAL niet toegestaan.
+    allowPlatformPickup: data.allowPlatformPickup ?? true,
+    allowExternalPickup: data.allowExternalPickup ?? true,
     sellerId: userId,
   };
 
@@ -313,7 +317,21 @@ export async function createListing(formData: FormData) {
   return { success: true, listingId: listing.id };
 }
 
-export async function buyListing(listingId: string, shippingMethodId?: string, quantity: number = 1) {
+// Deliverychoice (Fase 27.39): hoe de koper het product wil ontvangen + betalen.
+// SHIP = verzenden via PLATFORM-escrow (huidige default).
+// PICKUP_PLATFORM = ophalen, vooraf betalen via wallet (escrow). Listing → SOLD,
+//   bundle PAID, escrow vrijgegeven bij confirmPickup-code.
+// PICKUP_EXTERNAL = ophalen, betalen aan seller bij ophaal (Tikkie/contant).
+//   Geen wallet-mutatie, listing → RESERVED, bundle PENDING+EXTERNAL met 14d
+//   reservation-timeout. Koper bevestigt ophaal met 1 klik (geen code nodig).
+export type DeliveryChoice = "SHIP" | "PICKUP_PLATFORM" | "PICKUP_EXTERNAL";
+
+export async function buyListing(
+  listingId: string,
+  shippingMethodId?: string,
+  quantity: number = 1,
+  deliveryChoice: DeliveryChoice = "SHIP"
+) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -331,6 +349,22 @@ export async function buyListing(listingId: string, shippingMethodId?: string, q
   if (listing.sellerId === session.user.id) return { error: "Je kunt je eigen advertentie niet kopen" };
   if (listing.pricingType !== "FIXED" || !listing.price) return { error: "Deze advertentie heeft geen vaste prijs" };
 
+  // Validatie deliveryChoice tegen listing-instellingen.
+  const wantsPickup = deliveryChoice === "PICKUP_PLATFORM" || deliveryChoice === "PICKUP_EXTERNAL";
+  const wantsShip = deliveryChoice === "SHIP";
+  if (wantsShip && listing.deliveryMethod === "PICKUP") {
+    return { error: "Deze advertentie is alleen op te halen — geen verzend-aankoop mogelijk." };
+  }
+  if (wantsPickup && listing.deliveryMethod === "SHIP") {
+    return { error: "Deze advertentie is alleen te verzenden — geen ophalen mogelijk." };
+  }
+  if (deliveryChoice === "PICKUP_PLATFORM" && !listing.allowPlatformPickup) {
+    return { error: "Verkoper accepteert geen wallet-betaling voor ophalen." };
+  }
+  if (deliveryChoice === "PICKUP_EXTERNAL" && !listing.allowExternalPickup) {
+    return { error: "Verkoper accepteert geen Tikkie/contant-betaling — kies wallet-vooraf." };
+  }
+
   // Stock-based flow voor SEALED_PRODUCT en OTHER (Fase 27.23). Alleen wanneer
   // de listing daadwerkelijk gematerialiseerde rijen heeft — zo blijven legacy
   // listings zonder rijen werken via het direct-flip pad hieronder.
@@ -344,6 +378,7 @@ export async function buyListing(listingId: string, shippingMethodId?: string, q
       listing,
       quantity,
       shippingMethodId,
+      deliveryChoice,
     });
   }
 
@@ -356,17 +391,26 @@ export async function buyListing(listingId: string, shippingMethodId?: string, q
   const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!buyer) return { error: "Gebruiker niet gevonden" };
 
-  // Determine shipping cost
-  let shippingCost = listing.shippingCost;
+  // === PICKUP_EXTERNAL: reserveer listing zonder wallet-mutatie ===
+  if (deliveryChoice === "PICKUP_EXTERNAL") {
+    return reserveListingForExternalPickup({
+      buyerId: session.user.id,
+      listing,
+    });
+  }
+
+  // === SHIP en PICKUP_PLATFORM: PLATFORM-flow met escrow ===
+  // Determine shipping cost — voor PICKUP_PLATFORM altijd 0 (geen verzending).
+  let shippingCost = wantsShip ? listing.shippingCost : 0;
   let selectedMethodId: string | null = null;
-  if (shippingMethodId && listing.shippingMethods.length > 0) {
+  if (wantsShip && shippingMethodId && listing.shippingMethods.length > 0) {
     const method = listing.shippingMethods.find((m) => m.shippingMethodId === shippingMethodId);
     if (method) {
       shippingCost = method.price;
       selectedMethodId = method.shippingMethodId;
     }
   }
-  if (listing.freeShipping) shippingCost = 0;
+  if (wantsShip && listing.freeShipping) shippingCost = 0;
 
   const totalCost = listing.price + shippingCost;
 
@@ -379,13 +423,15 @@ export async function buyListing(listingId: string, shippingMethodId?: string, q
     return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalCost.toFixed(2)}` };
   }
 
-  // Check buyer has address
+  // Check buyer has address — voor SHIP verplicht (verzendadres). Voor
+  // PICKUP_PLATFORM is een verzendadres niet strict nodig maar handig voor
+  // facturatie; we vereisen het toch zodat bundle-snapshots consistent blijven.
   if (!buyer.street || !buyer.postalCode || !buyer.city) {
     return { error: "Vul eerst je adres in via Dashboard → Verzending" };
   }
 
-  // Shipping enforcement
-  if (selectedMethodId) {
+  // Shipping enforcement — alleen voor SHIP-aankopen (PICKUP heeft geen carrier).
+  if (wantsShip && selectedMethodId) {
     const seller = await prisma.user.findUnique({
       where: { id: listing.sellerId },
       select: { country: true },
@@ -439,7 +485,9 @@ export async function buyListing(listingId: string, shippingMethodId?: string, q
     throw e;
   }
 
-  // Create ShippingBundle
+  // Create ShippingBundle. Voor PICKUP_PLATFORM: deliveryMethod=PICKUP,
+  // paymentMode=PLATFORM, geen shippingMethodId. Bundle status PAID — escrow
+  // wordt vrijgegeven bij confirmPickup met code (zoals bestaande PLATFORM-flow).
   await prisma.shippingBundle.create({
     data: {
       orderNumber: generateOrderNumber(),
@@ -449,8 +497,10 @@ export async function buyListing(listingId: string, shippingMethodId?: string, q
       totalItemCost: listing.price,
       totalCost,
       status: "PAID",
+      paymentMode: "PLATFORM",
+      deliveryMethod: wantsShip ? "SHIP" : "PICKUP",
       listingId,
-      shippingMethodId: selectedMethodId,
+      shippingMethodId: wantsShip ? selectedMethodId : null,
       buyerStreet: buyer.street,
       buyerHouseNumber: buyer.houseNumber,
       buyerPostalCode: buyer.postalCode,
@@ -492,10 +542,12 @@ async function buyListingStocked(args: {
   };
   quantity: number;
   shippingMethodId?: string;
+  deliveryChoice: DeliveryChoice;
 }) {
-  const { session, listing } = args;
+  const { session, listing, deliveryChoice } = args;
   const userId = session.user!.id!;
   const qty = Math.max(1, Math.floor(args.quantity));
+  const wantsShip = deliveryChoice === "SHIP";
 
   if (listing.status !== "ACTIVE" && listing.status !== "PARTIALLY_SOLD") {
     return { error: "Advertentie niet meer beschikbaar" };
@@ -510,17 +562,27 @@ async function buyListingStocked(args: {
     return { error: "Vul eerst je adres in via Dashboard → Verzending" };
   }
 
-  // Shipping
-  let shippingCost = listing.shippingCost;
+  // PICKUP_EXTERNAL → reserveer N rijen zonder wallet-mutatie
+  if (deliveryChoice === "PICKUP_EXTERNAL") {
+    return reserveStockedListingForExternalPickup({
+      buyer,
+      listing,
+      quantity: qty,
+    });
+  }
+
+  // SHIP en PICKUP_PLATFORM → wallet/escrow flow
+  // Shipping cost: voor PICKUP_PLATFORM altijd 0 (geen verzending).
+  let shippingCost = wantsShip ? listing.shippingCost : 0;
   let selectedMethodId: string | null = null;
-  if (args.shippingMethodId && listing.shippingMethods.length > 0) {
+  if (wantsShip && args.shippingMethodId && listing.shippingMethods.length > 0) {
     const method = listing.shippingMethods.find((m) => m.shippingMethodId === args.shippingMethodId);
     if (method) {
       shippingCost = method.price;
       selectedMethodId = method.shippingMethodId;
     }
   }
-  if (listing.freeShipping) shippingCost = 0;
+  if (wantsShip && listing.freeShipping) shippingCost = 0;
 
   const itemSubtotal = (listing.price ?? 0) * qty;
   const totalCost = itemSubtotal + shippingCost;
@@ -533,8 +595,8 @@ async function buyListingStocked(args: {
     return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalCost.toFixed(2)}` };
   }
 
-  // Shipping enforcement (op TOTAAL, want het is één pakket)
-  if (selectedMethodId) {
+  // Shipping enforcement (op TOTAAL, want het is één pakket) — alleen SHIP
+  if (wantsShip && selectedMethodId) {
     const seller = await prisma.user.findUnique({ where: { id: listing.sellerId }, select: { country: true } });
     const isInternational = seller?.country !== buyer.country;
     const shippingMethod = await prisma.sellerShippingMethod.findUnique({
@@ -578,10 +640,12 @@ async function buyListingStocked(args: {
         totalItemCost: itemSubtotal,
         totalCost,
         status: "PAID",
+        paymentMode: "PLATFORM",
+        deliveryMethod: wantsShip ? "SHIP" : "PICKUP",
         // listingId blijft null — `listingId @unique` blokkeert anders
         // meerdere onafhankelijke koop-bundles op dezelfde listing.
         listingId: null,
-        shippingMethodId: selectedMethodId,
+        shippingMethodId: wantsShip ? selectedMethodId : null,
         buyerStreet: buyer.street,
         buyerHouseNumber: buyer.houseNumber,
         buyerPostalCode: buyer.postalCode,
@@ -641,32 +705,172 @@ async function buyListingStocked(args: {
   return { success: true };
 }
 
-export async function updateListingStatus(listingId: string, status: "SOLD" | "DELETED") {
+// Fase 27.39: reserveer een non-stocked listing voor EXTERNAL pickup. Geen
+// wallet-mutatie, listing → RESERVED, bundle PENDING+EXTERNAL met 14d
+// reservation-timeout. Cron `pickup-reservation-timeout` ruimt op als koper
+// niet komt opdagen of moment niet wordt afgesproken.
+async function reserveListingForExternalPickup(args: {
+  buyerId: string;
+  listing: {
+    id: string;
+    title: string;
+    price: number | null;
+    sellerId: string;
+    status: string;
+  };
+}) {
+  const { buyerId, listing } = args;
+  const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
+  if (!buyer) return { error: "Gebruiker niet gevonden" };
+
+  const claimed = await prisma.listing.updateMany({
+    where: { id: listing.id, status: "ACTIVE" },
+    data: { status: "RESERVED", buyerId },
+  });
+  if (claimed.count === 0) {
+    return { error: "Advertentie is net door iemand anders gereserveerd of gekocht" };
+  }
+
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+  await prisma.shippingBundle.create({
+    data: {
+      orderNumber: generateOrderNumber(),
+      buyerId,
+      sellerId: listing.sellerId,
+      shippingCost: 0,
+      totalItemCost: listing.price ?? 0,
+      totalCost: listing.price ?? 0,
+      status: "PENDING",
+      paymentMode: "EXTERNAL",
+      deliveryMethod: "PICKUP",
+      pickupReservationExpiresAt: expiresAt,
+      listingId: listing.id,
+      buyerStreet: buyer.street,
+      buyerHouseNumber: buyer.houseNumber,
+      buyerPostalCode: buyer.postalCode,
+      buyerCity: buyer.city,
+      buyerCountry: buyer.country,
+    },
+  });
+
+  await createNotification(
+    listing.sellerId,
+    "ORDER_PAID",
+    "Ophaal-reservering",
+    `"${listing.title}" is gereserveerd voor ophalen — koper betaalt aan jou bij ophalen.`,
+    "/dashboard/verkopen"
+  );
+
+  return { success: true };
+}
+
+// Fase 27.39: idem voor stocked listings (SEALED/OTHER met cardItemRows).
+// Flipt N rijen AVAILABLE → RESERVED en koppelt ze aan een EXTERNAL bundle.
+async function reserveStockedListingForExternalPickup(args: {
+  buyer: { id: string; street: string | null; houseNumber: string | null; postalCode: string | null; city: string | null; country: string | null };
+  listing: {
+    id: string;
+    title: string;
+    price: number | null;
+    sellerId: string;
+    cardItemRows: Array<{ id: string }>;
+  };
+  quantity: number;
+}) {
+  const { buyer, listing, quantity } = args;
+  const targetIds = listing.cardItemRows.slice(0, quantity).map((r) => r.id);
+  const itemSubtotal = (listing.price ?? 0) * quantity;
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+  const bundle = await prisma.$transaction(async (tx) => {
+    const flipped = await tx.listingCardItem.updateMany({
+      where: { id: { in: targetIds }, status: "AVAILABLE" },
+      data: { status: "RESERVED", buyerId: buyer.id },
+    });
+    if (flipped.count !== quantity) {
+      throw new Error("Eén of meer items zijn net door iemand anders gereserveerd");
+    }
+
+    const created = await tx.shippingBundle.create({
+      data: {
+        orderNumber: generateOrderNumber(),
+        buyerId: buyer.id,
+        sellerId: listing.sellerId,
+        shippingCost: 0,
+        totalItemCost: itemSubtotal,
+        totalCost: itemSubtotal,
+        status: "PENDING",
+        paymentMode: "EXTERNAL",
+        deliveryMethod: "PICKUP",
+        pickupReservationExpiresAt: expiresAt,
+        listingId: null,
+        buyerStreet: buyer.street,
+        buyerHouseNumber: buyer.houseNumber,
+        buyerPostalCode: buyer.postalCode,
+        buyerCity: buyer.city,
+        buyerCountry: buyer.country,
+      },
+    });
+
+    await tx.listingCardItem.updateMany({
+      where: { id: { in: targetIds } },
+      data: { shippingBundleId: created.id },
+    });
+
+    // Listing-status: PARTIALLY_SOLD als er nog AVAILABLE rijen zijn na deze
+    // reservering, anders blijft hij ACTIVE — RESERVED zou misleidend zijn
+    // want andere kopers kunnen nog wel andere stuks kopen.
+    const remainingAvailable = await tx.listingCardItem.count({
+      where: { listingId: listing.id, status: "AVAILABLE" },
+    });
+    if (remainingAvailable === 0) {
+      await tx.listing.updateMany({
+        where: { id: listing.id, status: "ACTIVE" },
+        data: { status: "PARTIALLY_SOLD" },
+      });
+    }
+
+    return created;
+  });
+
+  await createNotification(
+    listing.sellerId,
+    "ORDER_PAID",
+    quantity > 1 ? `${quantity}× gereserveerd voor ophaal` : "Ophaal-reservering",
+    `${quantity}× "${listing.title}" gereserveerd — koper betaalt aan jou bij ophalen.`,
+    "/dashboard/verkopen"
+  );
+
+  return { success: true, bundleId: bundle.id };
+}
+
+// Fase 27.40: alleen DELETED-flow blijft. "Markeer als verkocht" knop is
+// teruggetrokken — alle echte verkoop-flows zetten SOLD automatisch (Direct
+// Kopen, proposal-accept, bundle-accept, pickup-confirm). Een handmatige
+// SOLD-flip zou cascade-rejection van pendings missen en seller-stats
+// verstoren zonder echte transactie.
+export async function updateListingStatus(listingId: string, status: "DELETED") {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
   const listing = await prisma.listing.findUnique({ where: { id: listingId } });
   if (!listing) return { error: "Advertentie niet gevonden" };
   if (listing.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
-  if (listing.status !== "ACTIVE") return { error: "Advertentie is niet actief" };
+  if (listing.status === "SOLD" || listing.status === "DELETED") {
+    return { error: "Deze advertentie kan niet meer worden gewijzigd" };
+  }
 
   await prisma.listing.update({
     where: { id: listingId },
     data: { status },
   });
 
-  // D4: when the seller deletes the listing, auto-reject any PENDING proposals
-  // on it. We use REJECTED (not WITHDRAWN) because the proposer didn't pull
-  // their offer — the listing they were negotiating on is gone. Each proposal
-  // gets a system message in the chat and the proposer gets a notification.
-  if (status === "DELETED") {
-    await cascadeRejectProposalsAndBundleOffers({
-      listingId,
-      listingTitle: listing.title,
-      systemMessageReason: "verwijderd door de verkoper",
-      sellerId: session.user.id,
-    });
-  }
+  await cascadeRejectProposalsAndBundleOffers({
+    listingId,
+    listingTitle: listing.title,
+    systemMessageReason: "verwijderd door de verkoper",
+    sellerId: session.user.id,
+  });
 
   return { success: true };
 }
@@ -826,6 +1030,8 @@ export async function saveDraft(formData: FormData) {
       : null,
     allowDirectBuy: data.allowDirectBuy ?? true,
     acceptsOffers: data.acceptsOffers ?? true,
+    allowPlatformPickup: data.allowPlatformPickup ?? true,
+    allowExternalPickup: data.allowExternalPickup ?? true,
     cardName: data.cardName || null,
     cardSetId: data.cardSetId || null,
     tcgdexId: data.tcgdexId || null,

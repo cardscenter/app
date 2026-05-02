@@ -59,8 +59,27 @@ export const createListingSchema = z.object({
   suggestedPrice: z.coerce.number().min(0.01).optional(),
   allowDirectBuy: z.coerce.boolean().default(true),
   acceptsOffers: z.coerce.boolean().default(true),
-}).superRefine(() => {
+
+  // Pickup-betaal-modi (Fase 27.39): seller bepaalt of koper via wallet
+  // (PLATFORM, escrow) en/of bij ophalen (EXTERNAL, Tikkie/contant) mag
+  // betalen. Default beide aan. Validatie: voor PICKUP/BOTH listings moet
+  // minstens één true zijn.
+  allowPlatformPickup: z.coerce.boolean().default(true),
+  allowExternalPickup: z.coerce.boolean().default(true),
+}).superRefine((data, ctx) => {
   // Pickup-locatie wordt server-side uit User.city gevuld — geen form-input meer.
+
+  // Pickup-modi (Fase 27.39): voor PICKUP/BOTH listings moet minstens één
+  // betaal-modus toegestaan zijn anders kan niemand kopen.
+  if (data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH") {
+    if (!data.allowPlatformPickup && !data.allowExternalPickup) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Sta minstens één pickup-betaalwijze toe (vooraf via wallet of bij ophalen)",
+        path: ["allowPlatformPickup"],
+      });
+    }
+  }
 
   // Price required for FIXED pricing
   if (data.pricingType === "FIXED" && (!data.price || data.price <= 0)) {
@@ -180,4 +199,6 @@ export const draftListingSchema = z.object({
   suggestedPrice: z.coerce.number().min(0).optional(),
   allowDirectBuy: z.coerce.boolean().default(true),
   acceptsOffers: z.coerce.boolean().default(true),
+  allowPlatformPickup: z.coerce.boolean().default(true),
+  allowExternalPickup: z.coerce.boolean().default(true),
 });

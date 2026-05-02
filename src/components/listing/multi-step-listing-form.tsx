@@ -48,6 +48,8 @@ interface FormState {
   suggestedPrice: number | null;
   allowDirectBuy: boolean;
   acceptsOffers: boolean;
+  allowPlatformPickup: boolean;
+  allowExternalPickup: boolean;
   deliveryMethod: DeliveryMethod;
   freeShipping: boolean;
   shippingCost: number;
@@ -81,6 +83,8 @@ const INITIAL_STATE: FormState = {
   suggestedPrice: null,
   allowDirectBuy: true,
   acceptsOffers: true,
+  allowPlatformPickup: true,
+  allowExternalPickup: true,
   deliveryMethod: "SHIP",
   freeShipping: false,
   shippingCost: 0,
@@ -185,6 +189,8 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     }
     formData.set("allowDirectBuy", String(form.allowDirectBuy));
     formData.set("acceptsOffers", String(form.acceptsOffers));
+    formData.set("allowPlatformPickup", String(form.allowPlatformPickup));
+    formData.set("allowExternalPickup", String(form.allowExternalPickup));
     return formData;
   };
 
@@ -333,6 +339,41 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
               </div>
             )}
             <p className="mt-1 text-xs text-muted-foreground">{t("pickupLocation.privacyHint")}</p>
+          </div>
+        )}
+
+        {/* Pickup-betaal-modi (Fase 27.39) — seller bepaalt welke betaal-vormen
+            koper mag kiezen bij ophalen. Alleen voor PICKUP/BOTH listings. */}
+        {(form.deliveryMethod === "PICKUP" || form.deliveryMethod === "BOTH") && (
+          <div className="mb-4 space-y-2 rounded-xl border border-border bg-card p-4">
+            <h3 className="text-sm font-semibold text-foreground">{t("pickupPayment.title")}</h3>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.allowPlatformPickup}
+                onChange={(e) => updateField("allowPlatformPickup", e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <div className="flex-1">
+                <div className="text-sm font-medium text-foreground">{t("pickupPayment.platform.label")}</div>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("pickupPayment.platform.hint")}</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.allowExternalPickup}
+                onChange={(e) => updateField("allowExternalPickup", e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <div className="flex-1">
+                <div className="text-sm font-medium text-foreground">{t("pickupPayment.external.label")}</div>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("pickupPayment.external.hint")}</p>
+              </div>
+            </label>
+            {!form.allowPlatformPickup && !form.allowExternalPickup && (
+              <p className="text-xs text-red-500">{t("pickupPayment.atLeastOne")}</p>
+            )}
           </div>
         )}
 
