@@ -41,6 +41,14 @@ export default async function MyPurchasesPage() {
           listing: { select: { id: true, title: true, imageUrls: true } },
         },
       },
+      // ListingCardItem-rijen voor stocked-buy en partial-sale flows.
+      // Bundle.listingId is bij die flows null; items linken via
+      // shippingBundleId op cardItem-niveau (Fase 27.13 + 27.23).
+      cardItems: {
+        include: {
+          listing: { select: { id: true, title: true, imageUrls: true, price: true } },
+        },
+      },
       // Voor de "Lopende annuleringsverzoeken"-sectie: we hoeven alleen
       // de bundles te tonen waar daadwerkelijk een actief PENDING verzoek
       // op staat. Een lege array betekent geen actieve cancellation-flow.
@@ -68,31 +76,54 @@ export default async function MyPurchasesPage() {
     createdAt: b.createdAt.toISOString(),
     sourceType: b.auctionId
       ? "auction" as const
-      : (b.listingId || b.bundleListings.length > 0)
+      : (b.listingId || b.bundleListings.length > 0 || b.cardItems.length > 0)
         ? "listing" as const
         : "claimsale" as const,
+    // Titel: directe listing > auction > bundle-offer-titel >
+    // listing afgeleid uit eerste cardItem (stocked-buy/partial-sale).
     sourceTitle: b.auction?.title
       ?? b.listing?.title
-      ?? (b.bundleListings.length > 0 ? `Bundel: ${b.bundleListings.length} advertenties` : null),
+      ?? (b.bundleListings.length > 0 ? `Bundel: ${b.bundleListings.length} advertenties` : null)
+      ?? b.cardItems[0]?.listing?.title
+      ?? null,
     sourceImageUrl: (() => {
       const raw = b.auction?.imageUrls
         ?? b.listing?.imageUrls
         ?? b.bundleListings[0]?.listing?.imageUrls
+        ?? b.cardItems[0]?.listing?.imageUrls
         ?? null;
       if (!raw) return null;
       try { const urls = JSON.parse(raw); return urls[0] ?? null; } catch { return null; }
     })(),
-    items: b.items.map((i) => ({
-      id: i.id,
-      cardName: i.cardName,
-      condition: i.condition,
-      price: i.price,
-      imageUrl: (() => {
-        try { const urls = JSON.parse(i.imageUrls); return urls[0] ?? null; } catch { return null; }
-      })(),
-      reference: i.reference ?? null,
-      sellerNote: null, // Private: only visible to seller
-    })),
+    // Items: claimsale-items (legacy) + ListingCardItem-rijen (stocked-buy
+    // en partial-sale). Beide gemapped naar dezelfde BundleItem-shape zodat
+    // PurchasesContent ze uniform kan renderen.
+    items: [
+      ...b.items.map((i) => ({
+        id: i.id,
+        cardName: i.cardName,
+        condition: i.condition,
+        price: i.price,
+        imageUrl: (() => {
+          try { const urls = JSON.parse(i.imageUrls); return urls[0] ?? null; } catch { return null; }
+        })(),
+        reference: i.reference ?? null,
+        sellerNote: null, // Private: only visible to seller
+      })),
+      ...b.cardItems.map((ci) => ({
+        id: ci.id,
+        cardName: ci.cardName,
+        condition: ci.condition ?? "",
+        price: ci.listing?.price ?? 0,
+        imageUrl: (() => {
+          const raw = ci.listing?.imageUrls;
+          if (!raw) return null;
+          try { const urls = JSON.parse(raw); return urls[0] ?? null; } catch { return null; }
+        })(),
+        reference: null,
+        sellerNote: null,
+      })),
+    ],
   }));
 
   return (
