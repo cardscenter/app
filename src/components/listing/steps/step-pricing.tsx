@@ -7,11 +7,24 @@ import type { CardPricingSnapshot } from "@/components/ui/card-search-select";
 interface StepPricingProps {
   pricingType: string;
   price: number | null;
+  suggestedPrice: number | null;
+  allowDirectBuy: boolean;
+  acceptsOffers: boolean;
+  tradeable: boolean;
   pricing?: CardPricingSnapshot | null;
   onChange: (field: string, value: unknown) => void;
 }
 
-export function StepPricing({ pricingType, price, pricing, onChange }: StepPricingProps) {
+export function StepPricing({
+  pricingType,
+  price,
+  suggestedPrice,
+  allowDirectBuy,
+  acceptsOffers,
+  tradeable,
+  pricing,
+  onChange,
+}: StepPricingProps) {
   const t = useTranslations("listing");
 
   return (
@@ -65,6 +78,83 @@ export function StepPricing({ pricingType, price, pricing, onChange }: StepPrici
           </div>
         </div>
       )}
+
+      {/* Suggested price (only for NEGOTIABLE) — geeft koper een richtbedrag.
+          Niet bindend; biedingen mogen lager of hoger. */}
+      {pricingType === "NEGOTIABLE" && (
+        <div>
+          <label htmlFor="suggestedPrice" className="block text-sm font-medium text-foreground">
+            {t("suggestedPrice.label")}
+          </label>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-muted-foreground">&euro;</span>
+            <input
+              id="suggestedPrice"
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={suggestedPrice ?? ""}
+              onChange={(e) =>
+                onChange("suggestedPrice", e.target.value ? parseFloat(e.target.value) : null)
+              }
+              className="block w-48 glass-input px-3 py-2.5 text-foreground"
+              placeholder="Optioneel"
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("suggestedPrice.hint")}</p>
+        </div>
+      )}
+
+      {/* Koop-opties (Fase 27.31) — toggles voor wat een koper mag doen.
+          Bij FIXED kunnen sellers Direct Kopen uitzetten als ze alleen
+          biedingen willen. acceptsOffers controleert de Bod-knop. tradeable
+          opent de deur voor ruil-aanvragen. */}
+      <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+        <h3 className="text-sm font-semibold text-foreground">{t("buyOptions.title")}</h3>
+
+        {pricingType === "FIXED" && (
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allowDirectBuy}
+              onChange={(e) => onChange("allowDirectBuy", e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-foreground">{t("buyOptions.allowDirectBuy.label")}</div>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t("buyOptions.allowDirectBuy.hint")}</p>
+            </div>
+          </label>
+        )}
+
+        {pricingType === "FIXED" && (
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptsOffers}
+              onChange={(e) => onChange("acceptsOffers", e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-foreground">{t("buyOptions.acceptsOffers.label")}</div>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t("buyOptions.acceptsOffers.hint")}</p>
+            </div>
+          </label>
+        )}
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={tradeable}
+            onChange={(e) => onChange("tradeable", e.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-foreground">{t("buyOptions.tradeable.label")}</div>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("buyOptions.tradeable.hint")}</p>
+          </div>
+        </label>
+      </div>
     </div>
   );
 }

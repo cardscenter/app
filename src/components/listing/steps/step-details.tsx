@@ -26,6 +26,8 @@ interface StepDetailsProps {
   cardItems: CardItemEntry[];
   // COLLECTION
   estimatedCardCount: number | null;
+  conditionRangeFrom: string;
+  conditionRangeTo: string;
   // SEALED_PRODUCT
   productType: string;
   // OTHER
@@ -46,6 +48,8 @@ export function StepDetails({
   variant,
   cardItems,
   estimatedCardCount,
+  conditionRangeFrom,
+  conditionRangeTo,
   productType,
   itemCategory,
   stockQuantity,
@@ -295,16 +299,44 @@ export function StepDetails({
 
       {/* COLLECTION specific */}
       {listingType === "COLLECTION" && (
-        <div>
-          <label htmlFor="estimatedCardCount" className="block text-sm font-medium text-foreground">{t("estimatedCardCount")}</label>
-          <input
-            id="estimatedCardCount"
-            type="number"
-            min={1}
-            value={estimatedCardCount ?? ""}
-            onChange={(e) => onChange("estimatedCardCount", e.target.value ? parseInt(e.target.value) : null)}
-            className="mt-1 block w-48 glass-input px-3 py-2.5 text-foreground"
-          />
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="estimatedCardCount" className="block text-sm font-medium text-foreground">{t("estimatedCardCount")}</label>
+            <input
+              id="estimatedCardCount"
+              type="number"
+              min={1}
+              value={estimatedCardCount ?? ""}
+              onChange={(e) => onChange("estimatedCardCount", e.target.value ? parseInt(e.target.value) : null)}
+              className="mt-1 block w-48 glass-input px-3 py-2.5 text-foreground"
+            />
+          </div>
+
+          {/* Condition range (Fase 27.31) — twee selects van/tot. Optioneel
+              maar sterk aanbevolen zodat koper een kwaliteitsidee heeft. */}
+          <div>
+            <label className="block text-sm font-medium text-foreground">{t("conditionRange.label")}</label>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("conditionRange.hint")}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <select
+                value={conditionRangeFrom}
+                onChange={(e) => onChange("conditionRangeFrom", e.target.value)}
+                className="glass-input px-3 py-2 text-sm text-foreground"
+              >
+                <option value="">{t("conditionRange.from")}</option>
+                {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <span className="text-muted-foreground">–</span>
+              <select
+                value={conditionRangeTo}
+                onChange={(e) => onChange("conditionRangeTo", e.target.value)}
+                className="glass-input px-3 py-2 text-sm text-foreground"
+              >
+                <option value="">{t("conditionRange.to")}</option>
+                {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
         </div>
       )}
 

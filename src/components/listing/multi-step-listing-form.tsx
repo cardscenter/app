@@ -39,10 +39,16 @@ interface FormState {
   cardItems: CardItemEntry[];
   allowPartialSale: boolean;
   estimatedCardCount: number | null;
+  conditionRangeFrom: string;
+  conditionRangeTo: string;
   productType: string;
   itemCategory: string;
   pricingType: string;
   price: number | null;
+  suggestedPrice: number | null;
+  allowDirectBuy: boolean;
+  acceptsOffers: boolean;
+  tradeable: boolean;
   deliveryMethod: DeliveryMethod;
   freeShipping: boolean;
   shippingCost: number;
@@ -67,10 +73,16 @@ const INITIAL_STATE: FormState = {
   cardItems: [],
   allowPartialSale: false,
   estimatedCardCount: null,
+  conditionRangeFrom: "",
+  conditionRangeTo: "",
   productType: "",
   itemCategory: "",
   pricingType: "FIXED",
   price: null,
+  suggestedPrice: null,
+  allowDirectBuy: true,
+  acceptsOffers: true,
+  tradeable: false,
   deliveryMethod: "SHIP",
   freeShipping: false,
   shippingCost: 0,
@@ -155,6 +167,13 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
       formData.set("cardItems", JSON.stringify(items));
     }
     if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
+    // COLLECTION conditionRange (Fase 27.31): combineer van/tot tot één string.
+    if (form.listingType === "COLLECTION" && (form.conditionRangeFrom || form.conditionRangeTo)) {
+      const range = form.conditionRangeFrom === form.conditionRangeTo
+        ? form.conditionRangeFrom
+        : [form.conditionRangeFrom, form.conditionRangeTo].filter(Boolean).join(" – ");
+      if (range) formData.set("conditionRange", range);
+    }
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
     if (form.listingType === "MULTI_CARD") formData.set("allowPartialSale", String(form.allowPartialSale));
@@ -162,6 +181,13 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
       formData.set("stockQuantity", String(Math.max(1, form.stockQuantity)));
     }
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
+    // Koop-toggles + vraagprijs (Fase 27.31)
+    if (form.suggestedPrice !== null && form.pricingType === "NEGOTIABLE") {
+      formData.set("suggestedPrice", String(form.suggestedPrice));
+    }
+    formData.set("allowDirectBuy", String(form.allowDirectBuy));
+    formData.set("acceptsOffers", String(form.acceptsOffers));
+    formData.set("tradeable", String(form.tradeable));
     return formData;
   };
 
@@ -231,7 +257,8 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           variant={form.variant}
           cardItems={form.cardItems}
           estimatedCardCount={form.estimatedCardCount}
-
+          conditionRangeFrom={form.conditionRangeFrom}
+          conditionRangeTo={form.conditionRangeTo}
           productType={form.productType}
           itemCategory={form.itemCategory}
           stockQuantity={form.stockQuantity}
@@ -260,6 +287,10 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
         <StepPricing
           pricingType={form.pricingType}
           price={form.price}
+          suggestedPrice={form.suggestedPrice}
+          allowDirectBuy={form.allowDirectBuy}
+          acceptsOffers={form.acceptsOffers}
+          tradeable={form.tradeable}
           pricing={form.variant === "reverse" ? (form.tcgdex?.pricingReverse ?? null) : (form.tcgdex?.pricing ?? null)}
           onChange={updateField}
         />

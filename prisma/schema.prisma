@@ -612,6 +612,23 @@ model Listing {
   // Pricing
   pricingType   String   // FIXED | NEGOTIABLE
   price         Float?   // null if NEGOTIABLE
+  // Vraagprijs-indicatie voor NEGOTIABLE listings (Fase 27.31). Optioneel; geeft
+  // koper een richtbedrag mee zodat ie niet hoeft te raden wat seller verwacht.
+  // Niet bindend — biedingen mogen lager of hoger.
+  suggestedPrice Float?
+
+  // Koop-toggles (Fase 27.31)
+  // - allowDirectBuy: voor FIXED-listings — knop "Direct Kopen" voor het
+  //   gevraagde bedrag wel/niet zichtbaar. Default true. Voor NEGOTIABLE
+  //   irrelevant (er is geen vaste prijs).
+  // - acceptsOffers: voor FIXED-listings — knop "Bod doen" zichtbaar via chat.
+  //   Voor NEGOTIABLE altijd true (geen vaste prijs = altijd onderhandelen).
+  //   Voorkomt dat sellers boos worden om lage biedingen op een vaste prijs.
+  // - tradeable: koper mag voorstellen om te ruilen i.p.v. (of naast) geld.
+  //   Default false; toont badge en opent een ruil-conversation in chat.
+  allowDirectBuy Boolean @default(true)
+  acceptsOffers  Boolean @default(true)
+  tradeable      Boolean @default(false)
 
   // Shipping
   shippingCost    Float    @default(0)

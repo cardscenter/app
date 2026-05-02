@@ -121,6 +121,16 @@ export async function createListing(formData: FormData) {
     stockQuantity: (data.listingType === "SEALED_PRODUCT" || data.listingType === "OTHER")
       ? Math.max(1, data.stockQuantity ?? 1)
       : 1,
+    // Koop-toggles + vraagprijs (Fase 27.31). suggestedPrice alleen bij
+    // NEGOTIABLE; allowDirectBuy alleen bij FIXED nuttig (NEGOTIABLE heeft
+    // geen knop), maar we slaan beide op zodat een wissel later niet de
+    // toggle wist.
+    suggestedPrice: data.pricingType === "NEGOTIABLE" && data.suggestedPrice
+      ? data.suggestedPrice
+      : null,
+    allowDirectBuy: data.allowDirectBuy ?? true,
+    acceptsOffers: data.acceptsOffers ?? true,
+    tradeable: data.tradeable ?? false,
     sellerId: userId,
   };
 
@@ -812,6 +822,12 @@ export async function saveDraft(formData: FormData) {
     stockQuantity: (data.listingType === "SEALED_PRODUCT" || data.listingType === "OTHER")
       ? Math.max(1, data.stockQuantity ?? 1)
       : 1,
+    suggestedPrice: data.pricingType === "NEGOTIABLE" && data.suggestedPrice
+      ? data.suggestedPrice
+      : null,
+    allowDirectBuy: data.allowDirectBuy ?? true,
+    acceptsOffers: data.acceptsOffers ?? true,
+    tradeable: data.tradeable ?? false,
     cardName: data.cardName || null,
     cardSetId: data.cardSetId || null,
     tcgdexId: data.tcgdexId || null,
