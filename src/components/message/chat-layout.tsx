@@ -94,9 +94,10 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
     };
   }, []);
 
-  // Determine initial tab: if we have an active conversation, go to the tab it belongs to
+  // Default landt op "Lopend" — dat is waar de meeste gebruikers heen willen.
+  // Inbox blijft als aparte tab voor enkel ongelezen items, met badge-counter.
   const getInitialTab = (): ChatTab => {
-    if (!activeConversationId) return "inbox";
+    if (!activeConversationId) return "active";
     const conv = conversations.find((c) => c.id === activeConversationId);
     if (!conv) return "active";
     if (conv.participantStatus === "ARCHIVED") return "archived";
@@ -106,9 +107,11 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
   const [activeTab, setActiveTab] = useState<ChatTab>(getInitialTab);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Tab-volgorde matcht de prioriteit: Lopend (default + meest gebruikt) eerst,
+  // dan Inbox (ongelezen), dan Archief.
   const tabs: { key: ChatTab; label: string; icon: React.ElementType }[] = [
-    { key: "inbox", label: t("inbox"), icon: Inbox },
     { key: "active", label: t("ongoing"), icon: MessageSquare },
+    { key: "inbox", label: t("inbox"), icon: Inbox },
     { key: "archived", label: t("archived"), icon: Archive },
   ];
 
@@ -145,7 +148,8 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
       <div
         className={`${activeConversationId ? "hidden md:flex" : "flex"} w-full flex-shrink-0 flex-col border-r border-border bg-background md:w-80 lg:w-96`}
       >
-        {/* Tabs */}
+        {/* Tabs — vertical stack op mobile (icoon boven, label onder) zodat
+            de tekst leesbaar blijft op een smal scherm. Vanaf sm horizontaal. */}
         <div className="flex border-b border-border bg-muted/30">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -154,19 +158,23 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex flex-1 items-center justify-center gap-1.5 px-2 py-3 text-xs font-medium transition-colors ${
+                className={`flex flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-medium transition-colors sm:flex-row sm:gap-1.5 sm:px-2 sm:py-3 ${
                   activeTab === tab.key
                     ? "border-b-2 border-primary text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                {badge !== null && (
-                  <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
-                    {badge}
-                  </span>
-                )}
+                {/* Icon + badge in één rij zodat de badge op mobile boven de
+                    label blijft (en niet onder de label inschuift bij flex-col). */}
+                <div className="flex items-center gap-1">
+                  <Icon className="h-4 w-4" />
+                  {badge !== null && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+                      {badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] leading-tight sm:text-xs">{tab.label}</span>
               </button>
             );
           })}
