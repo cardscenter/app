@@ -12,7 +12,7 @@ export const BUNDLE_PAYMENT_DEADLINE_DAYS_SHIP = 5;
 // Reservation-timeout voor EXTERNAL pickup-bundles (geen escrow, off-platform
 // betaling). Cron `pickup-reservation-timeout` ruimt op zodat listings niet
 // eeuwig vastzitten.
-export const PICKUP_RESERVATION_DAYS = 14;
+export const PICKUP_RESERVATION_DAYS = 5;
 
 // Counter-bod-keten cap.
 export const MAX_COUNTER_DEPTH = 5;

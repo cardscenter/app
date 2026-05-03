@@ -205,11 +205,11 @@ export function BuyQuantityForm({
         disabled={pending || submitted || quantity < 1}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
       >
-        {isPickup ? <MapPin className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+        {isPickup ? <MapPin className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
         {pending || submitted
           ? "..."
           : isPickup
-            ? `${t("directBuy.pickupLabel")} €${total.toFixed(2)}`
+            ? `${t("directBuy.pickupShortLabel")} €${total.toFixed(2)}`
             : t("buyQuantity.buyNow")}
       </button>
 
@@ -244,12 +244,18 @@ export function BuyQuantityForm({
                   €{itemSubtotal.toFixed(2)}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span>{t("shippingCost")}{selectedMethod ? ` — ${selectedMethod.carrier} ${selectedMethod.serviceName}` : ""}</span>
-                <span className="tabular-nums">
-                  {freeShipping ? t("freeShipping") : `€${shippingCost.toFixed(2)}`}
-                </span>
-              </div>
+              {isPickup ? (
+                <div className="rounded-md bg-blue-50 p-2 text-xs text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+                  {t("directBuy.pickupModalHint")}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>{t("shippingCost")}{selectedMethod ? ` — ${selectedMethod.carrier} ${selectedMethod.serviceName}` : ""}</span>
+                  <span className="tabular-nums">
+                    {freeShipping ? t("freeShipping") : `€${shippingCost.toFixed(2)}`}
+                  </span>
+                </div>
+              )}
             </div>
           }
         />

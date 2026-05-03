@@ -10,6 +10,7 @@ import { generateOrderNumber } from "@/lib/order-number";
 import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
 import { checkAmountAllowed } from "@/lib/account-age";
+import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
 import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
@@ -699,9 +700,9 @@ async function buyListingStocked(args: {
 }
 
 // Fase 27.39: reserveer een non-stocked listing voor EXTERNAL pickup. Geen
-// wallet-mutatie, listing → RESERVED, bundle PENDING+EXTERNAL met 14d
-// reservation-timeout. Cron `pickup-reservation-timeout` ruimt op als koper
-// niet komt opdagen of moment niet wordt afgesproken.
+// wallet-mutatie, listing → RESERVED, bundle PENDING+EXTERNAL met
+// PICKUP_RESERVATION_DAYS-timeout. Cron `pickup-reservation-timeout` ruimt op
+// als koper niet komt opdagen of moment niet wordt afgesproken.
 async function reserveListingForExternalPickup(args: {
   buyerId: string;
   listing: {
@@ -724,7 +725,7 @@ async function reserveListingForExternalPickup(args: {
     return { error: "Advertentie is net door iemand anders gereserveerd of gekocht" };
   }
 
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + PICKUP_RESERVATION_DAYS * 24 * 60 * 60 * 1000);
   await prisma.shippingBundle.create({
     data: {
       orderNumber: generateOrderNumber(),
@@ -773,7 +774,7 @@ async function reserveStockedListingForExternalPickup(args: {
   const { buyer, listing, quantity } = args;
   const targetIds = listing.cardItemRows.slice(0, quantity).map((r) => r.id);
   const itemSubtotal = (listing.price ?? 0) * quantity;
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + PICKUP_RESERVATION_DAYS * 24 * 60 * 60 * 1000);
 
   const bundle = await prisma.$transaction(async (tx) => {
     const flipped = await tx.listingCardItem.updateMany({
