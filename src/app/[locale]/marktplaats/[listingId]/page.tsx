@@ -274,8 +274,9 @@ export default async function ListingDetailPage({
                   listing.allowPlatformPickup && (
                     <BuyRouteCard
                       variant="pickup_platform"
-                      title="Ophalen — nu betalen"
+                      title={listing.pickupCity ? `Ophalen in ${listing.pickupCity} — nu betalen` : "Ophalen — nu betalen"}
                       subtitle="Betaal nu via platform; haal op met code-bevestiging. Accepteren bij correcte overdracht."
+                      pickupCity={listing.pickupCity}
                     >
                       <BuyQuantityForm
                         listingId={listing.id}
@@ -297,8 +298,9 @@ export default async function ListingDetailPage({
                   listing.allowExternalPickup && (
                     <BuyRouteCard
                       variant="pickup_external"
-                      title="Ophalen — ter plekke betalen"
+                      title={listing.pickupCity ? `Ophalen in ${listing.pickupCity} — ter plekke betalen` : "Ophalen — ter plekke betalen"}
                       subtitle="Geen platform-betaling. Afhandeling op eigen risico."
+                      pickupCity={listing.pickupCity}
                     >
                       <PickupReserveButton
                         listingId={listing.id}
@@ -367,8 +369,9 @@ export default async function ListingDetailPage({
                   !isPartiallySold && (
                     <BuyRouteCard
                       variant="pickup_platform"
-                      title="Ophalen — nu betalen"
+                      title={listing.pickupCity ? `Ophalen in ${listing.pickupCity} — nu betalen` : "Ophalen — nu betalen"}
                       subtitle="Betaal nu via platform; haal op met code-bevestiging. Accepteren bij correcte overdracht."
+                      pickupCity={listing.pickupCity}
                     >
                       <BuyNowButton
                         listingId={listing.id}
@@ -390,8 +393,9 @@ export default async function ListingDetailPage({
                   !isPartiallySold && (
                     <BuyRouteCard
                       variant="pickup_external"
-                      title="Ophalen — ter plekke betalen"
+                      title={listing.pickupCity ? `Ophalen in ${listing.pickupCity} — ter plekke betalen` : "Ophalen — ter plekke betalen"}
                       subtitle="Geen platform-betaling. Afhandeling op eigen risico."
+                      pickupCity={listing.pickupCity}
                     >
                       <PickupReserveButton
                         listingId={listing.id}
