@@ -143,6 +143,21 @@ export function MessageThread({
     lastPickupSignature.current = signature;
   }, [pickupState, router]);
 
+  // Bij elke nieuwe message met proposalId of bundleProposalId: trigger
+  // router.refresh() zodat de proposal/bundle-status opnieuw wordt opgehaald
+  // (REJECT, ACCEPT, COUNTER, etc.). Zonder dit blijft de chat-bubble bij
+  // de andere partij in z'n oude status hangen tot een handmatige reload.
+  const lastProposalRefreshRef = useRef<string | null>(null);
+  useEffect(() => {
+    const proposalRelated = newMessages.filter((m) => m.proposalId || m.bundleProposalId);
+    if (proposalRelated.length === 0) return;
+    const signature = proposalRelated.map((m) => m.id).join("|");
+    if (signature !== lastProposalRefreshRef.current) {
+      lastProposalRefreshRef.current = signature;
+      router.refresh();
+    }
+  }, [newMessages, router]);
+
   // Combineer initial + nieuwe messages, dedupliceer op id (eigen sends
   // komen via router.refresh terug in de initial-set en óók via polling).
   const allMessages = useMemo(() => {
