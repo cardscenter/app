@@ -260,7 +260,7 @@ export function PickupActions({
                   maxLength={PICKUP_CODE_LENGTH}
                   value={code}
                   onChange={(e) => setCode(sanitizePickupInput(e.target.value))}
-                  placeholder="0000A"
+                  placeholder="N3L97"
                   className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-widest uppercase text-foreground"
                 />
                 <button

@@ -25,10 +25,11 @@ export const proposePickupSchema = z.object({
 
 export const confirmPickupSchema = z.object({
   shippingBundleId: z.string().min(1),
-  // Code-formaat: 4 cijfers gevolgd door 1 hoofdletter (zonder O/I). Input-veld
-  // upper-cased voor parsing zodat een buyer "4837k" mag intoetsen.
+  // Code-formaat (Fase 27.77): LCLCC = letter, cijfer, letter, cijfer, cijfer
+  // (zonder O/I). Voorbeeld: "N3L97". Input-veld upper-cased voor parsing
+  // zodat een buyer "n3l97" mag intoetsen.
   code: z
     .string()
     .transform((s) => s.trim().toUpperCase())
-    .pipe(z.string().regex(PICKUP_CODE_REGEX, "Code moet 4 cijfers + 1 hoofdletter zijn (bijv. 4837K)")),
+    .pipe(z.string().regex(PICKUP_CODE_REGEX, "Code moet patroon LCLCC hebben (bijv. N3L97)")),
 });

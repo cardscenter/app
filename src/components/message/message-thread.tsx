@@ -266,7 +266,7 @@ export function MessageThread({
   }
 
   // Pickup-code-anti-fraude (Fase 27.56): als de buyer/seller een pickup-
-  // code-patroon (4 cijfers + 1 hoofdletter) typt, vragen we expliciete
+  // code-patroon (LCLCC: letter-cijfer-letter-cijfer-cijfer) typt, vragen we expliciete
   // bevestiging vóór versturen. Klassieke fraude: oplichter zegt "stuur de
   // code zodat ik je kan helpen" — koper geeft 'm zonder ooit op te halen,
   // oplichter activeert ergens anders escrow-release.

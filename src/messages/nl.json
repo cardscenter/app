@@ -652,7 +652,7 @@
     "send": "Verstuur",
     "pickupCodeWarning": {
       "title": "Wacht — bevat dit een ophaalcode?",
-      "intro": "Je bericht lijkt op een ophaalcode (4 cijfers + 1 hoofdletter). Voordat je dit verstuurt:",
+      "intro": "Je bericht lijkt op een ophaalcode (patroon letter-cijfer-letter-cijfer-cijfer, zoals N3L97). Voordat je dit verstuurt:",
       "bullet1": "De ophaalcode is bedoeld om bij ophalen in persoon aan de verkoper te tonen — nooit eerder.",
       "bullet2": "Sommige fraudeurs vragen via chat om de code en activeren daarmee de uitbetaling zonder dat jij iets hebt ontvangen.",
       "bullet3": "Het platform release't escrow naar de verkoper zodra de code wordt ingevoerd.",

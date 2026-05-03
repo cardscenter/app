@@ -652,7 +652,7 @@
     "send": "Send",
     "pickupCodeWarning": {
       "title": "Wait — does this contain a pickup code?",
-      "intro": "Your message looks like a pickup code (4 digits + 1 uppercase letter). Before you send:",
+      "intro": "Your message looks like a pickup code (pattern letter-digit-letter-digit-digit, e.g. N3L97). Before you send:",
       "bullet1": "The pickup code is meant to show the seller in person at pickup — never before.",
       "bullet2": "Some scammers ask for the code via chat and use it to trigger the payout without you receiving anything.",
       "bullet3": "The platform releases escrow to the seller as soon as the code is entered.",

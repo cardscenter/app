@@ -1748,7 +1748,7 @@ model BundleListing {
 }
 
 // Ophaal-afspraak voor een PICKUP-bundle. Beide partijen kunnen voorstellen
-// (PROPOSED), tegenpartij accepteert/weigert. 4-cijfer code wordt gegenereerd
+// (PROPOSED), tegenpartij accepteert/weigert. LCLCC-code wordt gegenereerd
 // bij bundle-creatie en getoond aan buyer; seller voert hem in bij ophaal.
 model PickupSchedule {
   id String @id @default(cuid())
@@ -1765,7 +1765,7 @@ model PickupSchedule {
 
   status       String    @default("PROPOSED") // PROPOSED | ACCEPTED | REJECTED | RESCHEDULED | COMPLETED
 
-  pickupCode         String   // 4-cijfer code (server-generated)
+  pickupCode         String   // LCLCC-code (server-generated, bv. N3L97)
   pickupCodeAttempts Int      @default(0)
   pickupLockedUntil  DateTime? // Lockout 1u na 5e foute attempt
 

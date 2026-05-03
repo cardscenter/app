@@ -229,7 +229,7 @@ export async function respondToPickup(scheduleId: string, action: "ACCEPT" | "RE
   return { success: true };
 }
 
-// Seller voert de 4-cijfer code in om de ophaal te bevestigen.
+// Seller voert de LCLCC-code in om de ophaal te bevestigen.
 // Bij PLATFORM: escrow-release naar seller. Bij EXTERNAL: alleen state-flip,
 // geen geldverschuiving.
 export async function confirmPickup(input: { shippingBundleId: string; code: string }) {
