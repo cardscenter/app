@@ -3,16 +3,36 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { ProfileForm } from "@/components/dashboard/profile-form";
+import { AddressForm } from "@/components/dashboard/address-form";
+import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
+import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
+import { SellingCountriesToggle } from "@/components/dashboard/selling-countries-toggle";
 import { SessionProvider } from "next-auth/react";
 import { Link } from "@/i18n/navigation";
-import { ExternalLink, Shield, ShieldCheck, Calendar, Mail, CreditCard, Award } from "lucide-react";
-import { getLevel, SELLER_LEVELS } from "@/lib/seller-levels";
+import {
+  ExternalLink,
+  Shield,
+  ShieldCheck,
+  Calendar,
+  Mail,
+  CreditCard,
+  Award,
+  Building2,
+  Lock,
+  History,
+  Sparkles,
+  Truck,
+  Landmark,
+  MapPin,
+  User as UserIcon,
+  Settings,
+  KeyRound,
+} from "lucide-react";
+import { getLevel } from "@/lib/seller-levels";
 import { getSellerStats } from "@/actions/review";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
-import { BannerSelector } from "@/components/dashboard/banner-selector";
-import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
 import { IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
-import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
+import type { ReactNode } from "react";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -29,14 +49,10 @@ export default async function ProfilePage() {
       },
     },
   });
-
   if (!user) return null;
 
   const stats = await getSellerStats(user.id);
   const sellerLevel = stats ? getLevel(stats.xp) : null;
-  const currentLevelIndex = sellerLevel
-    ? SELLER_LEVELS.findIndex((l) => l.nameKey === sellerLevel.nameKey)
-    : 0;
 
   const memberSince = user.createdAt.toLocaleDateString("nl-NL", {
     day: "numeric",
@@ -51,12 +67,13 @@ export default async function ProfilePage() {
     ADMIN: "Admin",
   };
 
+  const isBusiness = user.accountKind === "BUSINESS";
+
   return (
     <div className="space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">
-          {t("profile")}
-        </h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("profile")}</h1>
         <Link
           href={`/verkoper/${user.id}`}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
@@ -66,92 +83,147 @@ export default async function ProfilePage() {
         </Link>
       </div>
 
-      {/* Account overview cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Member since */}
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="size-4" />
-            <span className="text-xs font-medium">{tp("memberSince")}</span>
-          </div>
-          <p className="mt-2 text-sm font-semibold text-foreground">{memberSince}</p>
-        </div>
-
-        {/* Account tier */}
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <CreditCard className="size-4" />
-            <span className="text-xs font-medium">{tp("accountTier")}</span>
-          </div>
-          <p className="mt-2 text-sm font-semibold text-foreground">
+      {/* Account overview — 4 KPI-cards */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <OverviewCard icon={<Calendar className="size-4" />} label={tp("memberSince")}>
+          <span className="text-sm font-semibold text-foreground">{memberSince}</span>
+        </OverviewCard>
+        <OverviewCard icon={<CreditCard className="size-4" />} label={tp("accountTier")}>
+          <span className="text-sm font-semibold text-foreground">
             {tierLabels[user.accountType] ?? user.accountType}
-          </p>
-        </div>
-
-        {/* Verification */}
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            {user.isVerified ? <ShieldCheck className="size-4 text-green-500" /> : <Shield className="size-4" />}
-            <span className="text-xs font-medium">{tp("verification")}</span>
-          </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            {user.isVerified ? (
-              <>
-                <span className="text-sm font-semibold text-green-600 dark:text-green-400">{tp("verified")}</span>
-                <VerifiedBadge size="sm" />
-              </>
+          </span>
+        </OverviewCard>
+        <OverviewCard
+          icon={
+            user.isVerified ? (
+              <ShieldCheck className="size-4 text-green-500" />
             ) : (
-              <Link
-                href="/dashboard/verificatie"
-                className="text-sm font-semibold text-primary hover:text-primary-hover transition-colors"
-              >
-                {tp("verifyNow")}
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* Seller level */}
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Award className="size-4" />
-            <span className="text-xs font-medium">{tp("sellerLevel")}</span>
-          </div>
-          <p className="mt-2 text-sm font-semibold text-foreground">
-            {sellerLevel?.name ?? "Tin"} ({stats?.xp ?? 0} XP)
-          </p>
-        </div>
+              <Shield className="size-4" />
+            )
+          }
+          label={tp("verification")}
+        >
+          {user.isVerified ? (
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-green-600 dark:text-green-400">
+              {tp("verified")} <VerifiedBadge size="sm" />
+            </span>
+          ) : (
+            <Link
+              href="/dashboard/verificatie"
+              className="text-sm font-semibold text-primary hover:text-primary-hover transition-colors"
+            >
+              {tp("verifyNow")}
+            </Link>
+          )}
+        </OverviewCard>
+        <OverviewCard icon={<Award className="size-4" />} label={tp("sellerLevel")}>
+          <span className="text-sm font-semibold text-foreground">
+            {sellerLevel?.name ?? "Tin"}{" "}
+            <span className="font-normal text-muted-foreground">
+              ({stats?.xp ?? 0} XP)
+            </span>
+          </span>
+        </OverviewCard>
       </div>
 
-      {/* Account info */}
-      <div className="glass rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-1">
-          <Mail className="size-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-foreground">{tp("email")}</span>
-        </div>
-        <p className="text-sm text-muted-foreground">{user.email}</p>
-      </div>
-
-      {/* Banner selector */}
-      <div className="glass rounded-xl p-6">
-        <BannerSelector
-          currentBanner={user.profileBanner}
-          currentLevelIndex={currentLevelIndex}
-        />
-      </div>
-
-      {/* Profile edit form */}
-      <div className="glass rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-6">{tp("editProfile")}</h2>
+      {/* SECTIE 1 — Profielinformatie: avatar + displayName + bio */}
+      <Section
+        icon={<UserIcon className="size-5" />}
+        title={tp("editProfile")}
+        description="Hoe andere gebruikers jou zien op het platform."
+      >
         <div className="max-w-lg">
           <SessionProvider>
             <ProfileForm user={user} />
           </SessionProvider>
         </div>
-      </div>
+      </Section>
 
-      {/* Bank details (Fase 5) */}
-      <div className="glass rounded-xl p-6">
+      {/* SECTIE 2 — Account & Login */}
+      <Section
+        icon={<KeyRound className="size-5" />}
+        title="Account & Login"
+        description="Inloggegevens en abonnement."
+      >
+        <div className="space-y-4">
+          <ReadOnlyRow icon={<Mail className="size-4" />} label={tp("email")} value={user.email} />
+          <ReadOnlyRow
+            icon={<CreditCard className="size-4" />}
+            label={tp("accountTier")}
+            value={tierLabels[user.accountType] ?? user.accountType}
+            action={
+              <Link
+                href="/dashboard/abonnement"
+                className="text-sm font-medium text-primary hover:text-primary-hover transition-colors"
+              >
+                Beheren →
+              </Link>
+            }
+          />
+          <ReadOnlyRow
+            icon={<Lock className="size-4" />}
+            label="Wachtwoord"
+            value="••••••••"
+            action={
+              <span className="text-xs text-muted-foreground italic">
+                Wijzigen via support
+              </span>
+            }
+          />
+        </div>
+      </Section>
+
+      {/* SECTIE 3 — Adresgegevens (synced met /verzending) */}
+      <Section
+        icon={<MapPin className="size-5" />}
+        title="Adresgegevens"
+        description="Je adres wordt gedeeld met verkopers na aankoop. Maximaal eens per 30 dagen wijzigbaar."
+      >
+        <AddressForm user={user} />
+      </Section>
+
+      {/* SECTIE 4 — Bedrijfsgegevens (alleen voor BUSINESS-accounts) */}
+      {isBusiness && (
+        <Section
+          icon={<Building2 className="size-5" />}
+          title="Bedrijfsgegevens"
+          description="Officiële gegevens van je onderneming. Wijzigen via support."
+        >
+          <div className="space-y-4">
+            <ReadOnlyRow
+              icon={<Building2 className="size-4" />}
+              label="Bedrijfsnaam"
+              value={user.companyName ?? "—"}
+            />
+            <ReadOnlyRow
+              icon={<Building2 className="size-4" />}
+              label="BTW-nummer"
+              value={user.vatNumber ?? "—"}
+            />
+            <ReadOnlyRow
+              icon={<Building2 className="size-4" />}
+              label="KVK-nummer"
+              value={user.cocNumber ?? "—"}
+            />
+          </div>
+        </Section>
+      )}
+
+      {/* SECTIE 5 — Verzendgebied */}
+      <Section
+        icon={<Truck className="size-5" />}
+        title="Verzendgebied"
+        description="Naar welke landen verzend je. Kopers buiten je verzendgebied zien je items niet."
+      >
+        <SellingCountriesToggle current={user.sellingCountries} />
+      </Section>
+
+      {/* SECTIE 6 — Bankgegevens */}
+      <Section
+        icon={<Landmark className="size-5" />}
+        title="Bankgegevens"
+        description="Voor uitbetalingen van je verkopen. Eerste keer gratis, daarna 30 dagen cooldown bij wijziging."
+      >
         <div className="max-w-lg">
           <BankDetailsForm
             iban={user.iban}
@@ -160,24 +232,49 @@ export default async function ProfilePage() {
             cooldownDays={IBAN_COOLDOWN_DAYS}
           />
         </div>
-      </div>
+      </Section>
 
-      {/* Runner-up settings (Cluster A backlog) */}
-      <div className="glass rounded-xl p-6">
+      {/* SECTIE 7 — Voorkeuren (runner-up) */}
+      <Section
+        icon={<Settings className="size-5" />}
+        title="Voorkeuren"
+        description="Instellingen voor automatische processen."
+      >
         <div className="max-w-lg">
           <RunnerUpSettings current={user.maxRunnerUpAttempts} />
         </div>
-      </div>
+      </Section>
 
-      {/* Username history */}
+      {/* SECTIE 8 — Personalisatie hint (banner is nu in /customization) */}
+      <Section
+        icon={<Sparkles className="size-5" />}
+        title="Personalisatie"
+        description="Banner, emblem en achtergrond voor je publieke profiel."
+      >
+        <Link
+          href="/customization"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          <Sparkles className="size-4 text-amber-500" />
+          Open personalisatie
+        </Link>
+      </Section>
+
+      {/* SECTIE 9 — Geschiedenis */}
       {user.usernameHistory.length > 0 && (
-        <div className="glass rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3">{tp("usernameHistory")}</h3>
+        <Section
+          icon={<History className="size-5" />}
+          title={tp("usernameHistory")}
+          description="Vorige usernames blijven 90 dagen zichtbaar in zoekresultaten en op je publieke profiel."
+        >
           <div className="space-y-2">
             {user.usernameHistory.map((h) => (
-              <div key={h.id} className="flex items-center justify-between text-sm">
+              <div
+                key={h.id}
+                className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm"
+              >
                 <span className="text-muted-foreground line-through">{h.oldName}</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {new Date(h.changedAt).toLocaleDateString("nl-NL", {
                     day: "numeric",
                     month: "short",
@@ -187,8 +284,80 @@ export default async function ProfilePage() {
               </div>
             ))}
           </div>
-        </div>
+        </Section>
       )}
+    </div>
+  );
+}
+
+function OverviewCard({
+  icon,
+  label,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {icon}
+        <span className="text-xs font-medium">{label}</span>
+      </div>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
+function Section({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+      <div className="border-b border-border bg-muted/30 px-5 py-4">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">{icon}</span>
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        </div>
+        {description && (
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        )}
+      </div>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+function ReadOnlyRow({
+  icon,
+  label,
+  value,
+  action,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="text-muted-foreground">{icon}</span>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="truncate text-sm font-medium text-foreground">{value}</p>
+        </div>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

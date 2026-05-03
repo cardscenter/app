@@ -77,6 +77,10 @@ model User {
   // Username change tracking
   lastUsernameChange DateTime?
 
+  // Address change tracking — 30-dagen cooldown na elke wijziging om
+  // anti-fraude redenen. Null = nog nooit gewijzigd, eerste keer is gratis.
+  lastAddressChange  DateTime?
+
   // Runner-up auction setting (max cascade hops when winners fail to pay)
   maxRunnerUpAttempts Int @default(5)
 
