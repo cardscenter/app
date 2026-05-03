@@ -711,7 +711,7 @@
       "done": "Klaar"
     },
     "requestInsured": {
-      "label": "Verzekerd verzonden gewenst",
+      "label": "Verzekerde verzending gewenst",
       "hint": "De verkoper kiest de exacte verzendmethode bij acceptatie, maar wordt verplicht een aangetekende methode te kiezen. Bedragen >€150 of internationale zendingen zijn sowieso verplicht aangetekend."
     },
     "acceptShipping": {
@@ -769,7 +769,7 @@
     "totalAmount": "Totaalbedrag (incl. verzending)",
     "amountHint": "Verzendkosten zijn inbegrepen — voer één totaalbedrag in.",
     "requestInsured": {
-      "label": "Verzekerd verzonden gewenst",
+      "label": "Verzekerde verzending gewenst",
       "hint": "De verkoper wordt bij accept verplicht een aangetekende methode te kiezen."
     },
     "submit": "Verstuur voorstel",
