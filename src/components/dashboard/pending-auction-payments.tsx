@@ -84,14 +84,15 @@ export function PendingAuctionPayments({
       <div className="space-y-3">
         {remaining.map((auction) => {
           const total = auction.finalPrice ?? 0;
-          // 40% van finalPrice zit al gereserveerd in reservedBalance.
-          // De effective balance voor deze betaling = balance - reserved + eigen-reserve
-          // (de eigen 40% wordt sowieso 'omgezet' naar deductie).
+          // 40% van finalPrice zit al gereserveerd in reservedBalance en komt
+          // automatisch vrij bij payment. De koper hoeft alleen het verschil
+          // (totaal - reservering) uit z'n vrije saldo aan te vullen.
           const ownReserve = Math.round(total * RESERVE_PERCENTAGE * 100) / 100;
-          const effectiveAvailable = availableBalance + ownReserve;
           const stillNeeded = Math.max(0, total - ownReserve);
-          const shortage = Math.max(0, total - effectiveAvailable);
-          const canPay = effectiveAvailable >= total;
+          // Tekort = wat de koper nog te kort komt om de stillNeeded te dekken
+          // uit z'n echte beschikbare saldo (reservering komt sowieso vrij).
+          const shortage = Math.max(0, stillNeeded - availableBalance);
+          const canPay = shortage === 0;
 
           const days = auction.paymentDeadline ? daysUntil(auction.paymentDeadline) : null;
           const isUrgent = days !== null && days <= 2;
@@ -137,10 +138,10 @@ export function PendingAuctionPayments({
                 </div>
                 <div className={`rounded-lg px-3 py-2 ${shortage > 0 ? "bg-red-50 dark:bg-red-950/30" : "bg-emerald-50 dark:bg-emerald-950/30"}`}>
                   <div className={`text-xs ${shortage > 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
-                    {shortage > 0 ? "Tekort" : "Beschikbaar"}
+                    {shortage > 0 ? "Tekort op je saldo" : "Beschikbaar saldo"}
                   </div>
                   <p className={`mt-0.5 font-semibold ${shortage > 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
-                    €{shortage > 0 ? shortage.toFixed(2) : effectiveAvailable.toFixed(2)}
+                    €{shortage > 0 ? shortage.toFixed(2) : availableBalance.toFixed(2)}
                   </p>
                   <p className={`text-[11px] ${shortage > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                     {shortage > 0 ? "Vul saldo aan" : "Klaar om te betalen"}
@@ -166,11 +167,16 @@ export function PendingAuctionPayments({
                 </button>
               </div>
 
-              {/* Payment-modal — hetzelfde patroon als cart-checkout / direct-buy */}
+              {/* Payment-modal — hetzelfde patroon als cart-checkout / direct-buy.
+                  availableBalance is het ECHTE vrije saldo (matcht /saldo).
+                  extraCredit telt de eigen 40%-reserve mee voor de kan-ik-betalen
+                  check, en wordt apart in de modal getoond zodat de koper begrijpt
+                  waar het vandaan komt. */}
               {openModalId === auction.id && (
                 <PaymentMethodModal
                   totalCost={total}
-                  availableBalance={effectiveAvailable}
+                  availableBalance={availableBalance}
+                  extraCredit={ownReserve}
                   loading={loadingId === auction.id}
                   onCancel={() => setOpenModalId(null)}
                   onConfirm={() => handlePay(auction.id)}

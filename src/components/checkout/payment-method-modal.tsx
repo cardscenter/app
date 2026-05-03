@@ -7,7 +7,14 @@ import type { ReactNode } from "react";
 
 interface PaymentMethodModalProps {
   totalCost: number;
+  /** Echte beschikbare saldo (= balance - reservedBalance). Dit is wat overal
+   *  als "Beschikbaar" getoond wordt. */
   availableBalance: number;
+  /** Extra krediet specifiek voor DEZE betaling — bv. de 40%-reservering die
+   *  al voor deze auction is vastgehouden en bij payment automatisch wordt
+   *  vrijgegeven. Telt mee voor de canPay-check, maar verschijnt apart in de
+   *  UI zodat de koper begrijpt waar het vandaan komt. Default 0. */
+  extraCredit?: number;
   onConfirm: () => void;
   onCancel: () => void;
   loading: boolean;
@@ -20,6 +27,7 @@ interface PaymentMethodModalProps {
 export function PaymentMethodModal({
   totalCost,
   availableBalance,
+  extraCredit = 0,
   onConfirm,
   onCancel,
   loading,
@@ -27,7 +35,9 @@ export function PaymentMethodModal({
 }: PaymentMethodModalProps) {
   const t = useTranslations("cart");
 
-  const hasEnoughBalance = availableBalance >= totalCost;
+  // Effectief beschikbaar = saldo + extraCredit (bv. eigen-reserve op deze auction)
+  const effectivelyAvailable = availableBalance + extraCredit;
+  const hasEnoughBalance = effectivelyAvailable >= totalCost;
 
   return (
     <div
@@ -66,6 +76,11 @@ export function PaymentMethodModal({
               <p className="text-sm text-muted-foreground">
                 {t("availableBalance", { amount: availableBalance.toFixed(2) })}
               </p>
+              {extraCredit > 0 && (
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                  + €{extraCredit.toFixed(2)} reeds gereserveerd voor deze betaling
+                </p>
+              )}
               {!hasEnoughBalance && (
                 <p className="text-xs text-red-500 mt-0.5">
                   {t("insufficientBalance")}
