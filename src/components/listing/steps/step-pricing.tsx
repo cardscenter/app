@@ -27,8 +27,6 @@ export function StepPricing({
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-foreground">{t("stepPricing")}</h2>
-
       {/* Pricing type */}
       <div>
         <label className="block text-sm font-medium text-foreground">{t("pricingType")}</label>

@@ -58,8 +58,6 @@ export function StepUpsells({ upsells, userBalance, accountType, onChange }: Ste
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-foreground">{t("stepUpsells")}</h2>
-
       {/* Upsell cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {UPSELL_TYPES.map((type) => {

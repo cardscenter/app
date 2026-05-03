@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap, AlertCircle } from "lucide-react";
 import { calculateUpsellCost } from "@/lib/upsell-config";
 import { CarrierLogo } from "@/components/ui/carrier-logo";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
@@ -43,6 +43,8 @@ interface ListingPreviewProps {
   accountType: string;
   selectedShippingMethods: string[];
   shippingMethods: SellerShippingMethod[];
+  /** Openstaande verplichte velden — als niet leeg, wordt publish geblokkeerd. */
+  missingRequirements?: { key: string; messageKey: string }[];
   onBack: () => void;
   onPublish: () => void;
   pending: boolean;
@@ -61,10 +63,11 @@ const UPSELL_KEYS: Record<UpsellType, string> = {
   URGENT_LABEL: "upsellUrgent",
 };
 
-export function ListingPreview({ form, accountType, selectedShippingMethods, shippingMethods, onBack, onPublish, pending, error }: ListingPreviewProps) {
+export function ListingPreview({ form, accountType, selectedShippingMethods, shippingMethods, missingRequirements = [], onBack, onPublish, pending, error }: ListingPreviewProps) {
   const t = useTranslations("listing");
   const [current, setCurrent] = useState(0);
   const [lightbox, setLightbox] = useState(false);
+  const hasMissing = missingRequirements.length > 0;
 
   const totalUpsellCost = form.upsells.reduce(
     (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, accountType),
@@ -101,6 +104,28 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
       {error && (
         <div className="mb-6 glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
           {error}
+        </div>
+      )}
+
+      {/* Validatie-summary — als preview wordt geopend met missende velden, toon
+          ze hier en blokkeer publish. Voorkomt dat de seller op publish klikt
+          en pas dan een server-error krijgt. */}
+      {hasMissing && (
+        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t("missingFields")}</p>
+              <ul className="mt-2 space-y-1 text-sm text-amber-700 dark:text-amber-300">
+                {missingRequirements.map((r) => (
+                  <li key={r.key} className="flex items-start gap-2">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400" />
+                    {t(r.messageKey)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       )}
 
@@ -373,8 +398,8 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
           <button
             type="button"
             onClick={onPublish}
-            disabled={pending}
-            className="rounded-xl bg-primary px-8 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
+            disabled={pending || hasMissing}
+            className="rounded-xl bg-primary px-8 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "..." : t("publishConfirm")}
           </button>

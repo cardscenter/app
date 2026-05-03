@@ -81,6 +81,30 @@ export const createListingSchema = z.object({
     }
   }
 
+  // Shipping-method (Fase 27.81): voor SHIP/BOTH listings moet minstens één
+  // SellerShippingMethod gekozen zijn. Anders kan een koper niet checkout-en.
+  if (data.deliveryMethod === "SHIP" || data.deliveryMethod === "BOTH") {
+    let methodIds: unknown = null;
+    if (data.shippingMethodIds) {
+      try {
+        methodIds = JSON.parse(data.shippingMethodIds);
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Ongeldige verzendmethode-gegevens",
+          path: ["shippingMethodIds"],
+        });
+      }
+    }
+    if (!Array.isArray(methodIds) || methodIds.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Kies minstens één verzendmethode",
+        path: ["shippingMethodIds"],
+      });
+    }
+  }
+
   // Koop-opties (Fase 27.76): voor FIXED listings moet minstens één van
   // Direct Kopen of Biedingen aan staan. Anders kan niemand iets — dood
   // product op de marktplaats. Voor NEGOTIABLE zijn deze toggles irrelevant

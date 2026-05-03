@@ -90,13 +90,22 @@ export function StepDetails({
     onChange("cardItems", updated);
   };
 
+  // Char-counters voor title (100) en description (2000). Description-tekst
+  // wordt zonder HTML-tags geteld, want de backend valideert ook op tekst-lengte.
+  const titleCharsLeft = 100 - title.length;
+  const descTextLength = description.replace(/<[^>]*>/g, "").trim().length;
+  const descCharsLeft = 2000 - descTextLength;
+
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-foreground">{t("stepDetails")}</h2>
-
       {/* Common: Title */}
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-foreground">{t("title")}</label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="title" className="block text-sm font-medium text-foreground">{t("title")}</label>
+          <span className={`text-xs ${titleCharsLeft < 10 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+            {titleCharsLeft}/100
+          </span>
+        </div>
         <input
           id="title"
           type="text"
@@ -109,7 +118,12 @@ export function StepDetails({
 
       {/* Common: Description with rich text */}
       <div>
-        <label className="block text-sm font-medium text-foreground">{t("description")}</label>
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-foreground">{t("description")}</label>
+          <span className={`text-xs ${descCharsLeft < 100 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+            {descTextLength}/2000
+          </span>
+        </div>
         <RichTextEditor
           value={description}
           onChange={(html) => onChange("description", html)}

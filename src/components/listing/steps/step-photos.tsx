@@ -32,12 +32,9 @@ export function StepPhotos({ listingType, images, onChange }: StepPhotosProps) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">{t("photos")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t("photoMinRequired")} {t("photoRecommend")}
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        {t("photoMinRequired")} {t("photoRecommend")}
+      </p>
 
       <div className="glass-subtle rounded-xl p-3 text-sm text-muted-foreground">
         {t(TIP_KEYS[listingType])}
