@@ -38,7 +38,7 @@ export async function proposePickup(input: {
 
   const bundle = await prisma.shippingBundle.findUnique({
     where: { id: data.shippingBundleId },
-    include: { pickupSchedule: true, bundleProposal: { select: { conversationId: true, deliveryMethod: true } }, listing: { select: { deliveryMethod: true } } },
+    include: { pickupSchedule: true, bundleProposal: { select: { conversationId: true } } },
   });
   if (!bundle) return { error: "Bestelling niet gevonden" };
 
@@ -46,9 +46,10 @@ export async function proposePickup(input: {
   const isSeller = bundle.sellerId === session.user.id;
   if (!isBuyer && !isSeller) return { error: "Niet geautoriseerd" };
 
-  // Pickup is alleen toegestaan voor bundles waarvan de delivery-method PICKUP is.
-  const deliveryMethod = bundle.bundleProposal?.deliveryMethod ?? bundle.listing?.deliveryMethod;
-  if (deliveryMethod !== "PICKUP" && deliveryMethod !== "BOTH") {
+  // Bundle.deliveryMethod is de snapshot van wat koper koos bij koop/accept.
+  // Werkt voor zowel single-listing (PICKUP_PLATFORM/EXTERNAL via buyListing),
+  // stocked-pickup (geen listingId), als bundle-offer (deliveryChoice=PICKUP_*).
+  if (bundle.deliveryMethod !== "PICKUP") {
     return { error: "Deze bestelling is geen ophaal-bestelling" };
   }
 

@@ -51,6 +51,7 @@ type PurchaseBundle = {
   totalCost: number;
   shippingMethodCarrier: string | null;
   shippingMethodService: string | null;
+  deliveryMethod: string;
   trackingUrl: string | null;
   shippedAt: string | null;
   createdAt: string;
@@ -214,9 +215,11 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
     { day: "numeric", month: "long", year: "numeric" }
   );
 
-  const shippingLabel = bundle.shippingMethodCarrier
-    ? `${bundle.shippingMethodCarrier} — ${bundle.shippingMethodService}`
-    : t("noShippingMethod");
+  const shippingLabel = bundle.deliveryMethod === "PICKUP"
+    ? t("pickupLabel")
+    : bundle.shippingMethodCarrier
+      ? `${bundle.shippingMethodCarrier} — ${bundle.shippingMethodService}`
+      : t("noShippingMethod");
 
   async function handleCancel() {
     setCancelling(true);

@@ -160,6 +160,7 @@ export default async function MySalesPage() {
     shippingMethodCarrier: b.shippingMethod?.carrier ?? null,
     shippingMethodService: b.shippingMethod?.serviceName ?? null,
     shippingMethodIsTracked: b.shippingMethod?.isTracked ?? true,
+    deliveryMethod: b.deliveryMethod,
     trackingUrl: b.trackingUrl,
     shippedAt: b.shippedAt?.toISOString() ?? null,
     refundedAmount: b.refundedAmount ?? 0,

@@ -149,6 +149,7 @@ export default async function MyPurchasesPage() {
     totalCost: b.totalCost,
     shippingMethodCarrier: b.shippingMethod?.carrier ?? null,
     shippingMethodService: b.shippingMethod?.serviceName ?? null,
+    deliveryMethod: b.deliveryMethod,
     trackingUrl: b.trackingUrl,
     shippedAt: b.shippedAt?.toISOString() ?? null,
     createdAt: b.createdAt.toISOString(),

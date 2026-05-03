@@ -57,6 +57,7 @@ type SaleBundle = {
   shippingMethodCarrier: string | null;
   shippingMethodService: string | null;
   shippingMethodIsTracked: boolean;
+  deliveryMethod: string;
   trackingUrl: string | null;
   shippedAt: string | null;
   refundedAmount: number;
@@ -351,9 +352,11 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
     { day: "numeric", month: "long", year: "numeric" }
   );
 
-  const shippingLabel = bundle.shippingMethodCarrier
-    ? `${bundle.shippingMethodCarrier} — ${bundle.shippingMethodService}`
-    : t("noShippingMethod");
+  const shippingLabel = bundle.deliveryMethod === "PICKUP"
+    ? t("pickupLabel")
+    : bundle.shippingMethodCarrier
+      ? `${bundle.shippingMethodCarrier} — ${bundle.shippingMethodService}`
+      : t("noShippingMethod");
 
   const statusTab = bundle.status as Tab;
 
