@@ -120,7 +120,9 @@ export default async function MySalesPage() {
       paymentMode: b.paymentMode,
       scheduleStatus: b.pickupSchedule?.status ?? null,
       conversationId: b.bundleProposal?.conversationId ?? null,
-      listingId: b.listingId,
+      // Voor stocked-pickup is bundle.listingId null — fall back op de
+      // eerste cardItem.listingId voor de chat-routing.
+      listingId: b.listingId ?? b.cardItems[0]?.listingId ?? null,
       perspective: "seller" as const,
     }));
 

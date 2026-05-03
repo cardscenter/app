@@ -208,21 +208,25 @@ export default async function ConversationPage({
 
   // Fase 27.48: actieve single-listing pickup-bundle voor deze conversation —
   // niet via bundle-proposal maar via directe buyListing met PICKUP_PLATFORM
-  // of PICKUP_EXTERNAL. Tonen we als sticky widget bovenaan de chat-thread
-  // zodat beide partijen kunnen voorstellen/bevestigen zonder dat 'r een
-  // bericht-bubble voor bestaat. Filter: pickup-bundle voor deze listing
-  // tussen deze twee participants, niet COMPLETED/CANCELLED.
+  // of PICKUP_EXTERNAL. Tonen we als sticky widget bovenaan de chat-thread.
+  // Voor stocked-pickup is bundle.listingId null (stocked-buys gebruiken
+  // cardItems-relatie); we matchen dan via cardItems[*].listingId.
   const conversationListingId = conversation.listing?.id ?? null;
   const activePickupBundle = conversationListingId && otherUserId
     ? await prisma.shippingBundle.findFirst({
         where: {
-          listingId: conversationListingId,
           deliveryMethod: "PICKUP",
           status: { notIn: ["COMPLETED", "CANCELLED"] },
           OR: [
             { buyerId: session.user.id!, sellerId: otherUserId },
             { buyerId: otherUserId, sellerId: session.user.id! },
           ],
+          AND: {
+            OR: [
+              { listingId: conversationListingId },
+              { cardItems: { some: { listingId: conversationListingId } } },
+            ],
+          },
         },
         include: { pickupSchedule: true },
         orderBy: { createdAt: "desc" },

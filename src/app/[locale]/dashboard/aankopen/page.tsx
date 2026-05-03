@@ -130,7 +130,10 @@ export default async function MyPurchasesPage() {
       paymentMode: b.paymentMode,
       scheduleStatus: b.pickupSchedule?.status ?? null,
       conversationId: b.bundleProposal?.conversationId ?? null,
-      listingId: b.listingId,
+      // Voor stocked-pickup is bundle.listingId null — fall back op de
+      // eerste cardItem.listingId zodat OpenPickupChatButton de juiste
+      // listing-conversation kan openen.
+      listingId: b.listingId ?? b.cardItems[0]?.listingId ?? null,
       perspective: "buyer" as const,
     }));
 
