@@ -238,8 +238,8 @@ export default async function ListingDetailPage({
                 {(listing.deliveryMethod === "SHIP" || listing.deliveryMethod === "BOTH") && (
                   <BuyRouteCard
                     variant="ship"
-                    title="Verzenden — vooraf via wallet"
-                    subtitle="Koper betaalt nu via platform-saldo. Escrow tot ontvangst."
+                    title="Verzenden — nu betalen"
+                    subtitle="Betaal nu via platform. Accepteren bij ontvangst."
                   >
                     <BuyQuantityForm
                       listingId={listing.id}
@@ -265,8 +265,8 @@ export default async function ListingDetailPage({
                   listing.allowPlatformPickup && (
                     <BuyRouteCard
                       variant="pickup_platform"
-                      title="Ophalen — vooraf via wallet"
-                      subtitle="Betaal nu via platform; haal op met code-bevestiging. Escrow + bescherming."
+                      title="Ophalen — nu betalen"
+                      subtitle="Betaal nu via platform; haal op met code-bevestiging. Accepteren bij correcte overdracht."
                     >
                       <BuyQuantityForm
                         listingId={listing.id}
@@ -286,8 +286,8 @@ export default async function ListingDetailPage({
                   listing.allowExternalPickup && (
                     <BuyRouteCard
                       variant="pickup_external"
-                      title="Ophalen — bij ophalen aan verkoper betalen"
-                      subtitle="Geen platform-betaling; betaal de verkoper ter plekke. Geen escrow."
+                      title="Ophalen — ter plekke betalen"
+                      subtitle="Geen platform-betaling. Afhandeling op eigen risico."
                     >
                       <PickupReserveButton
                         listingId={listing.id}
@@ -340,8 +340,8 @@ export default async function ListingDetailPage({
                   !isPartiallySold && (
                     <BuyRouteCard
                       variant="pickup_platform"
-                      title="Ophalen — vooraf via wallet"
-                      subtitle="Betaal nu via platform; haal op met code-bevestiging. Escrow + bescherming."
+                      title="Ophalen — nu betalen"
+                      subtitle="Betaal nu via platform; haal op met code-bevestiging. Accepteren bij correcte overdracht."
                     >
                       <BuyNowButton
                         listingId={listing.id}
@@ -363,8 +363,8 @@ export default async function ListingDetailPage({
                   !isPartiallySold && (
                     <BuyRouteCard
                       variant="pickup_external"
-                      title="Ophalen — bij ophalen aan verkoper betalen"
-                      subtitle="Geen platform-betaling; betaal de verkoper ter plekke. Geen escrow."
+                      title="Ophalen — ter plekke betalen"
+                      subtitle="Geen platform-betaling. Afhandeling op eigen risico."
                     >
                       <PickupReserveButton
                         listingId={listing.id}

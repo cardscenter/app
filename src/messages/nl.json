@@ -972,7 +972,9 @@
     "directBuy": {
       "label": "Direct Kopen voor",
       "pickupLabel": "Ophalen — vooraf betalen",
+      "pickupShortLabel": "Ophalen",
       "pickupHint": "Geen verzendkosten — koper haalt zelf op bij verkoper",
+      "pickupModalHint": "Ophalen met ophaal-code. Gegarandeerd veilige transactie.",
       "confirm": "Bevestig aankoop",
       "errorPickupOnly": "Deze advertentie is alleen op te halen — geen verzend-aankoop mogelijk.",
       "directBuyDisabledByseller": "De verkoper accepteert alleen biedingen via chat."

@@ -972,7 +972,9 @@
     "directBuy": {
       "label": "Buy Now for",
       "pickupLabel": "Pickup — pay upfront",
+      "pickupShortLabel": "Pickup",
       "pickupHint": "No shipping cost — buyer collects from seller",
+      "pickupModalHint": "Pickup with code-confirm. Guaranteed safe transaction.",
       "confirm": "Confirm purchase",
       "errorPickupOnly": "This listing is pickup-only — no shipping purchase available.",
       "directBuyDisabledByseller": "The seller only accepts offers via chat."

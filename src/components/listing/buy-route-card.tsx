@@ -20,7 +20,7 @@ export function BuyRouteCard({ variant, title, subtitle, children }: Props) {
       border: "border-emerald-200 dark:border-emerald-900",
       headerBg: "bg-emerald-50 dark:bg-emerald-950/30",
       headerText: "text-emerald-900 dark:text-emerald-200",
-      icon: <Truck className="h-4 w-4" />,
+      icon: <Truck className="h-6 w-6" />,
     },
     pickup_platform: {
       border: "border-blue-200 dark:border-blue-900",
@@ -28,8 +28,8 @@ export function BuyRouteCard({ variant, title, subtitle, children }: Props) {
       headerText: "text-blue-900 dark:text-blue-200",
       icon: (
         <span className="flex items-center gap-1">
-          <MapPin className="h-3.5 w-3.5" />
-          <Wallet className="h-3.5 w-3.5" />
+          <MapPin className="h-5 w-5" />
+          <Wallet className="h-5 w-5" />
         </span>
       ),
     },
@@ -39,8 +39,8 @@ export function BuyRouteCard({ variant, title, subtitle, children }: Props) {
       headerText: "text-amber-900 dark:text-amber-200",
       icon: (
         <span className="flex items-center gap-1">
-          <MapPin className="h-3.5 w-3.5" />
-          <HandCoins className="h-3.5 w-3.5" />
+          <MapPin className="h-5 w-5" />
+          <HandCoins className="h-5 w-5" />
         </span>
       ),
     },
@@ -48,11 +48,11 @@ export function BuyRouteCard({ variant, title, subtitle, children }: Props) {
 
   return (
     <div className={`overflow-hidden rounded-xl border ${styles.border}`}>
-      <div className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold ${styles.headerBg} ${styles.headerText}`}>
-        {styles.icon}
+      <div className={`flex items-center gap-3 px-3 py-3 text-sm font-semibold ${styles.headerBg} ${styles.headerText}`}>
+        <span className="flex-shrink-0">{styles.icon}</span>
         <div className="flex-1">
           <div>{title}</div>
-          <div className="font-normal opacity-80">{subtitle}</div>
+          <div className="text-xs font-normal opacity-80">{subtitle}</div>
         </div>
       </div>
       <div className="bg-card p-3">{children}</div>
