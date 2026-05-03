@@ -11,17 +11,25 @@ export function AutoBidForm({
   currentBid,
   startingBid,
   existingAutoBid,
+  deliveryMethod = "SHIP",
+  pickupCity = null,
 }: {
   auctionId: string;
   currentBid: number | null;
   startingBid: number;
   existingAutoBid: { maxAmount: number; isActive: boolean } | null;
+  /** Fase 27.95: voor BOTH-veilingen kiest autobidder zijn voorkeur. */
+  deliveryMethod?: "SHIP" | "PICKUP" | "BOTH";
+  pickupCity?: string | null;
 }) {
   const t = useTranslations("auction");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [deliveryChoice, setDeliveryChoice] = useState<"SHIP" | "PICKUP">(
+    deliveryMethod === "PICKUP" ? "PICKUP" : "SHIP"
+  );
 
   const base = currentBid ?? 0;
   const minimumBid = base === 0 ? startingBid : getMinimumNextBid(base);
@@ -35,7 +43,7 @@ export function AutoBidForm({
       setLoading(false);
       return;
     }
-    const result = await setAutoBid(auctionId, maxAmount);
+    const result = await setAutoBid(auctionId, maxAmount, deliveryChoice);
     if ("error" in result) {
       setError(result.error);
     } else {
@@ -99,6 +107,37 @@ export function AutoBidForm({
         </button>
       </div>
       <p className="text-xs text-muted-foreground">{t("autoBidExplain")}</p>
+
+      {/* Delivery-keuze voor BOTH-veilingen (Fase 27.95) */}
+      {deliveryMethod === "BOTH" && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-foreground">Bezorgvoorkeur</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setDeliveryChoice("SHIP")}
+              className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-all ${
+                deliveryChoice === "SHIP"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              Verzenden
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeliveryChoice("PICKUP")}
+              className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-all ${
+                deliveryChoice === "PICKUP"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              Ophalen{pickupCity ? ` (${pickupCity})` : ""}
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl bg-red-50/50 p-2 text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400">

@@ -81,9 +81,16 @@ export async function resolveAutoBids(
     return { finalBid: currentBidAmount, finalBidderId: currentBidderId };
   }
 
-  // Create the bid record (no balance deduction — only reserves)
+  // Create the bid record (no balance deduction — only reserves).
+  // Fase 27.95: erf de delivery-keuze van de AutoBid zodat finalize de
+  // winner's voorkeur kan gebruiken ook bij autobid-wins.
   await prisma.auctionBid.create({
-    data: { auctionId, bidderId: winner.userId, amount: autobidAmount },
+    data: {
+      auctionId,
+      bidderId: winner.userId,
+      amount: autobidAmount,
+      deliveryChoice: winner.deliveryChoice,
+    },
   });
 
   // Sync reserved balances for both users

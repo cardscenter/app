@@ -43,6 +43,8 @@ interface FormState {
   hasBuyNow: boolean;
   buyNowPrice: number | null;
   runnerUpEnabled: boolean;
+  // Fase 27.95: SHIP / PICKUP / BOTH
+  deliveryMethod: "SHIP" | "PICKUP" | "BOTH";
   selectedShippingMethods: string[];
   upsells: UpsellEntry[];
 }
@@ -67,6 +69,7 @@ const INITIAL_STATE: FormState = {
   hasBuyNow: false,
   buyNowPrice: null,
   runnerUpEnabled: true,
+  deliveryMethod: "SHIP",
   selectedShippingMethods: [],
   upsells: [],
 };
@@ -75,9 +78,10 @@ interface MultiStepAuctionFormProps {
   shippingMethods: SellerShippingMethod[];
   userBalance: number;
   accountType: string;
+  userCity?: string | null;
 }
 
-export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType }: MultiStepAuctionFormProps) {
+export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType, userCity = null }: MultiStepAuctionFormProps) {
   const t = useTranslations("auction");
   const ts = useTranslations("shipping");
   const router = useRouter();
@@ -129,11 +133,23 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     if (form.hasReserve && form.reservePrice !== null) formData.set("reservePrice", String(form.reservePrice));
     if (form.hasBuyNow && form.buyNowPrice !== null) formData.set("buyNowPrice", String(form.buyNowPrice));
     formData.set("runnerUpEnabled", form.runnerUpEnabled ? "1" : "0");
-    if (form.selectedShippingMethods.length === 0) {
+    formData.set("deliveryMethod", form.deliveryMethod);
+
+    // Shipping-methods alleen vereist voor SHIP/BOTH (PICKUP-only veiling
+    // heeft geen verzendoptie nodig). Voor BOTH/SHIP: minimaal 1.
+    const needsShipping = form.deliveryMethod === "SHIP" || form.deliveryMethod === "BOTH";
+    if (needsShipping && form.selectedShippingMethods.length === 0) {
       toast.error(ts("selectAtLeastOneMethod"));
       return;
     }
-    formData.set("shippingMethodIds", JSON.stringify(form.selectedShippingMethods));
+    if (needsShipping) {
+      formData.set("shippingMethodIds", JSON.stringify(form.selectedShippingMethods));
+    }
+    // Voor PICKUP/BOTH: stad moet bekend zijn
+    if ((form.deliveryMethod === "PICKUP" || form.deliveryMethod === "BOTH") && !userCity) {
+      toast.error("Vul eerst je woonplaats in op je profiel");
+      return;
+    }
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
 
     startTransition(() => {
@@ -206,17 +222,63 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
         />
       </section>
 
-      {/* Section 5: Shipping Methods */}
+      {/* Section 5a: Bezorging (Fase 27.95) */}
       <section className="glass rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-1">{ts("selectShippingMethods")}</h2>
-        <p className="text-sm text-muted-foreground mb-4">{ts("selectShippingMethodsHint")}</p>
-        <ShippingMethodSelector
-          methods={shippingMethods.filter((m) => m.shippingType !== "LETTER")}
-          selected={form.selectedShippingMethods}
-          onChange={(v) => updateField("selectedShippingMethods", v)}
-          context="auction"
-        />
+        <h2 className="text-lg font-semibold text-foreground mb-1">Bezorging</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Kies hoe de winnaar zijn aankoop ontvangt. Bij &quot;Beide&quot; geeft elke
+          bieder zijn voorkeur op (verzenden of ophalen) bij het bieden.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {(["SHIP", "PICKUP", "BOTH"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => updateField("deliveryMethod", m)}
+              className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
+                form.deliveryMethod === m
+                  ? "border-primary bg-primary text-white"
+                  : "glass-subtle text-foreground hover:bg-muted"
+              }`}
+            >
+              {m === "SHIP" ? "Alleen verzenden" : m === "PICKUP" ? "Alleen ophalen" : "Beide"}
+            </button>
+          ))}
+        </div>
+
+        {/* Pickup-locatie display + warning */}
+        {(form.deliveryMethod === "PICKUP" || form.deliveryMethod === "BOTH") && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-foreground mb-1">Ophaal-locatie</label>
+            {userCity ? (
+              <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground">
+                {userCity}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                Geen woonplaats ingevuld. Vul deze in via je profiel voor je een ophaal-veiling kan plaatsen.
+              </div>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Alleen je plaats is publiek zichtbaar. De exacte locatie wordt pas na koop in chat gedeeld.
+            </p>
+          </div>
+        )}
       </section>
+
+      {/* Section 5b: Shipping Methods — alleen voor SHIP/BOTH */}
+      {(form.deliveryMethod === "SHIP" || form.deliveryMethod === "BOTH") && (
+        <section className="glass rounded-2xl p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-1">{ts("selectShippingMethods")}</h2>
+          <p className="text-sm text-muted-foreground mb-4">{ts("selectShippingMethodsHint")}</p>
+          <ShippingMethodSelector
+            methods={shippingMethods.filter((m) => m.shippingType !== "LETTER")}
+            selected={form.selectedShippingMethods}
+            onChange={(v) => updateField("selectedShippingMethods", v)}
+            context="auction"
+          />
+        </section>
+      )}
 
       {/* Section 6: Upsells */}
       <section className="glass rounded-2xl p-6">

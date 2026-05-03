@@ -16,6 +16,8 @@ interface CreatePendingBundleInput {
   shippingCost: number;
   auctionId?: string | null;
   listingId?: string | null;
+  /** Snapshot van delivery-keuze (SHIP/PICKUP). Default SHIP voor backwards-compat. */
+  deliveryMethod?: "SHIP" | "PICKUP";
   address?: BuyerAddress;
 }
 
@@ -42,6 +44,7 @@ export async function createPendingBundle(input: CreatePendingBundleInput) {
       status: "PENDING",
       auctionId: input.auctionId ?? null,
       listingId: input.listingId ?? null,
+      deliveryMethod: input.deliveryMethod ?? "SHIP",
       buyerStreet: input.address?.street ?? null,
       buyerHouseNumber: input.address?.houseNumber ?? null,
       buyerPostalCode: input.address?.postalCode ?? null,

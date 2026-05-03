@@ -43,6 +43,9 @@ interface LiveAuctionContentProps {
   availableBalance: number;
   totalBalance: number;
   reservedBalance: number;
+  /** Fase 27.95 */
+  deliveryMethod?: "SHIP" | "PICKUP" | "BOTH";
+  pickupCity?: string | null;
   children?: React.ReactNode;
 }
 
@@ -63,6 +66,8 @@ export function LiveAuctionContent({
   availableBalance,
   totalBalance,
   reservedBalance,
+  deliveryMethod = "SHIP",
+  pickupCity = null,
   children,
 }: LiveAuctionContentProps) {
   const t = useTranslations("auction");
@@ -266,12 +271,16 @@ export function LiveAuctionContent({
                 availableBalance={availableBalance}
                 totalBalance={totalBalance}
                 reservedBalance={reservedBalance}
+                deliveryMethod={deliveryMethod}
+                pickupCity={pickupCity}
               />
               <AutoBidForm
                 auctionId={auctionId}
                 currentBid={bidData.currentBid}
                 startingBid={bidData.startingBid}
                 existingAutoBid={existingAutoBid}
+                deliveryMethod={deliveryMethod}
+                pickupCity={pickupCity}
               />
             </div>
           )}

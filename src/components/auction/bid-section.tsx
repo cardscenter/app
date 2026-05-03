@@ -17,6 +17,8 @@ export function BidSection({
   totalBalance,
   reservedBalance,
   isHighestBidder,
+  deliveryMethod = "SHIP",
+  pickupCity = null,
 }: {
   auctionId: string;
   currentBid: number | null;
@@ -26,6 +28,9 @@ export function BidSection({
   totalBalance?: number;
   reservedBalance?: number;
   isHighestBidder?: boolean;
+  /** Fase 27.95: SHIP/PICKUP/BOTH. Bij BOTH moet bidder per bod kiezen. */
+  deliveryMethod?: "SHIP" | "PICKUP" | "BOTH";
+  pickupCity?: string | null;
 }) {
   const t = useTranslations("auction");
   const router = useRouter();
@@ -34,6 +39,10 @@ export function BidSection({
   const [loading, setLoading] = useState(false);
   const [showBuyNowConfirm, setShowBuyNowConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Voor BOTH: koper kiest. Voor SHIP/PICKUP: vast op die mode.
+  const [deliveryChoice, setDeliveryChoice] = useState<"SHIP" | "PICKUP">(
+    deliveryMethod === "PICKUP" ? "PICKUP" : "SHIP"
+  );
 
   const minimumBid = currentBid === null ? startingBid : getMinimumNextBid(currentBid);
   // Maximum bid: 2.5x available balance (since only 40% is reserved)
@@ -44,7 +53,9 @@ export function BidSection({
     setLoading(true);
     setError(null);
     const amount = parseFloat(formData.get("bidAmount") as string);
-    const result = await placeBid(auctionId, amount);
+    // Voor BOTH: stuur deliveryChoice mee. Voor SHIP/PICKUP-only: backend
+    // negeert de waarde en gebruikt auction.deliveryMethod.
+    const result = await placeBid(auctionId, amount, deliveryChoice);
     if (result?.error) {
       setError(result.error);
     } else {
@@ -63,7 +74,7 @@ export function BidSection({
     setLoading(true);
     setError(null);
     setShowBuyNowConfirm(false);
-    const result = await buyNow(auctionId);
+    const result = await buyNow(auctionId, deliveryChoice);
     if (result?.error) {
       setError(result.error);
     } else {
@@ -77,6 +88,38 @@ export function BidSection({
       {error && (
         <div className="glass-subtle rounded-2xl bg-red-50/50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
           {error}
+        </div>
+      )}
+
+      {/* Delivery-keuze (Fase 27.95) — alleen voor BOTH-veilingen waarbij
+          de bidder een voorkeur op moet geven vóór bieden. */}
+      {deliveryMethod === "BOTH" && !isHighestBidder && (
+        <div className="rounded-xl border border-border bg-muted/30 p-3">
+          <p className="mb-2 text-xs font-medium text-foreground">Hoe wil je je aankoop ontvangen?</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setDeliveryChoice("SHIP")}
+              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+                deliveryChoice === "SHIP"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              Verzenden
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeliveryChoice("PICKUP")}
+              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+                deliveryChoice === "PICKUP"
+                  ? "border-primary bg-primary text-white"
+                  : "border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              Ophalen{pickupCity ? ` (${pickupCity})` : ""}
+            </button>
+          </div>
         </div>
       )}
 

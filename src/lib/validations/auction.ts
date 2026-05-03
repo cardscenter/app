@@ -28,6 +28,8 @@ export const createAuctionSchema = z
       .union([z.literal("0"), z.literal("1")])
       .optional()
       .transform((v) => v === undefined ? true : v === "1"),
+    // Delivery (Fase 27.95)
+    deliveryMethod: z.enum(["SHIP", "PICKUP", "BOTH"]).default("SHIP"),
     // Upsells
     upsells: z.string().optional(), // JSON array: [{type, days}]
   })

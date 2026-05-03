@@ -141,6 +141,21 @@ export default async function AuctionDetailPage({
             </div>
           )}
 
+          {/* Delivery-info (Fase 27.95) — bezorging + ophaal-locatie */}
+          <div className="glass-subtle rounded-2xl p-4">
+            <p className="text-xs text-muted-foreground">Bezorging</p>
+            <p className="mt-1 font-medium text-foreground">
+              {auction.deliveryMethod === "SHIP" && "Alleen verzenden"}
+              {auction.deliveryMethod === "PICKUP" && "Alleen ophalen"}
+              {auction.deliveryMethod === "BOTH" && "Verzenden of ophalen — koper kiest"}
+            </p>
+            {(auction.deliveryMethod === "PICKUP" || auction.deliveryMethod === "BOTH") && auction.pickupCity && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Ophalen in <span className="font-medium text-foreground">{auction.pickupCity}</span>
+              </p>
+            )}
+          </div>
+
           {/* Marktwaarde */}
           {pricing && (
             <PricingInfoBlock pricing={pricing} variant="full" label="Marktwaarde" />
@@ -185,6 +200,8 @@ export default async function AuctionDetailPage({
             availableBalance={userAvailableBalance}
             totalBalance={currentUser?.balance ?? 0}
             reservedBalance={currentUser?.reservedBalance ?? 0}
+            deliveryMethod={auction.deliveryMethod as "SHIP" | "PICKUP" | "BOTH"}
+            pickupCity={auction.pickupCity}
           >
             {sellerInfo && <SellerInfoBlock seller={sellerInfo} />}
             {!isOwner && session?.user && (

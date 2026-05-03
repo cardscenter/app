@@ -48,6 +48,7 @@ export async function createAuction(formData: FormData) {
     buyNowPrice: formData.get("buyNowPrice") || undefined,
     duration: formData.get("duration"),
     runnerUpEnabled: formData.get("runnerUpEnabled") || undefined,
+    deliveryMethod: formData.get("deliveryMethod") || "SHIP",
     upsells: formData.get("upsells") || undefined,
   };
 
@@ -89,6 +90,21 @@ export async function createAuction(formData: FormData) {
   // Auto-link cardSetId via TCGdex set mapping when present
   const autoCardSetId = data.tcgdexId ? await resolveLocalCardSetId(data.tcgdexId) : null;
 
+  // Pickup-city auto-fill (Fase 27.95): voor PICKUP/BOTH veilingen vereisen we
+  // een ingevulde User.city — anders heeft koper geen idee waar op te halen.
+  const isPickupMode = data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH";
+  let pickupCity: string | null = null;
+  if (isPickupMode) {
+    const seller = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { city: true },
+    });
+    if (!seller?.city) {
+      return { error: "Vul eerst je woonplaats in via Dashboard → Profiel voordat je een ophaal-veiling aanmaakt" };
+    }
+    pickupCity = seller.city;
+  }
+
   const auction = await prisma.auction.create({
     data: {
       title: data.title,
@@ -109,6 +125,8 @@ export async function createAuction(formData: FormData) {
       buyNowPrice: data.buyNowPrice || null,
       duration: data.duration,
       runnerUpEnabled: data.runnerUpEnabled,
+      deliveryMethod: data.deliveryMethod,
+      pickupCity,
       endTime,
     },
   });
@@ -181,7 +199,7 @@ export async function createAuction(formData: FormData) {
   return { success: true, auctionId: auction.id };
 }
 
-export async function placeBid(auctionId: string, amount: number) {
+export async function placeBid(auctionId: string, amount: number, deliveryChoice?: "SHIP" | "PICKUP") {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -193,6 +211,21 @@ export async function placeBid(auctionId: string, amount: number) {
   if (auction.status !== "ACTIVE") return { error: "Veiling is niet meer actief" };
   if (auction.sellerId === session.user.id) return { error: "Je kunt niet bieden op je eigen veiling" };
   if (new Date() > auction.endTime) return { error: "Veiling is afgelopen" };
+
+  // Delivery-keuze (Fase 27.95): voor BOTH-veilingen moet de bidder kiezen
+  // tussen verzenden of ophalen. Wordt opgeslagen op de bid zodat finalize
+  // de winner's keuze kan gebruiken voor bundle.deliveryMethod.
+  let bidDeliveryChoice: string | null = null;
+  if (auction.deliveryMethod === "BOTH") {
+    if (!deliveryChoice || (deliveryChoice !== "SHIP" && deliveryChoice !== "PICKUP")) {
+      return { error: "Kies of je wilt verzenden of ophalen voordat je biedt" };
+    }
+    bidDeliveryChoice = deliveryChoice;
+  } else if (auction.deliveryMethod === "PICKUP") {
+    bidDeliveryChoice = "PICKUP";
+  } else {
+    bidDeliveryChoice = "SHIP";
+  }
 
   // Check minimum bid
   const currentBid = auction.currentBid ?? 0;
@@ -225,7 +258,7 @@ export async function placeBid(auctionId: string, amount: number) {
 
   // Create bid record (no balance deduction — only reserves)
   await prisma.auctionBid.create({
-    data: { auctionId, bidderId: session.user.id, amount },
+    data: { auctionId, bidderId: session.user.id, amount, deliveryChoice: bidDeliveryChoice },
   });
 
   // Sync reserved balance for new bidder
@@ -289,7 +322,7 @@ export async function placeBid(auctionId: string, amount: number) {
   return { success: true };
 }
 
-export async function buyNow(auctionId: string) {
+export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKUP") {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -302,8 +335,27 @@ export async function buyNow(auctionId: string) {
   if (!auction.buyNowPrice) return { error: "Direct kopen is niet beschikbaar" };
   if (auction.sellerId === session.user.id) return { error: "Je kunt niet je eigen veiling kopen" };
 
+  // Delivery-keuze (Fase 27.95): voor BOTH moet koper kiezen, voor SHIP/PICKUP
+  // wordt de auction-deliveryMethod gebruikt.
+  let chosenDelivery: "SHIP" | "PICKUP";
+  if (auction.deliveryMethod === "BOTH") {
+    if (!deliveryChoice || (deliveryChoice !== "SHIP" && deliveryChoice !== "PICKUP")) {
+      return { error: "Kies of je wilt verzenden of ophalen" };
+    }
+    chosenDelivery = deliveryChoice;
+  } else if (auction.deliveryMethod === "PICKUP") {
+    chosenDelivery = "PICKUP";
+  } else {
+    chosenDelivery = "SHIP";
+  }
+
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) return { error: "Gebruiker niet gevonden" };
+
+  // Voor SHIP-aankoop: address vereist. Voor PICKUP: niet relevant.
+  if (chosenDelivery === "SHIP" && (!user.street || !user.postalCode || !user.city)) {
+    return { error: "Vul eerst je adres in via Dashboard → Verzending" };
+  }
 
   const available = getAvailableBalance(user);
   const reserveNeeded = calculateReserveAmount(auction.buyNowPrice);
@@ -325,9 +377,6 @@ export async function buyNow(auctionId: string) {
     await deductBalance(session.user.id, auction.buyNowPrice, "PURCHASE", `Direct gekocht: ${auction.title}`, auctionId);
     await escrowCredit(auction.sellerId, auction.buyNowPrice, `Verkocht (direct kopen): ${auction.title}`);
 
-    // Check buyer has address for shipping bundle
-    const hasAddress = user.street && user.postalCode && user.city;
-
     await prisma.auction.update({
       where: { id: auctionId },
       data: {
@@ -338,33 +387,35 @@ export async function buyNow(auctionId: string) {
       },
     });
 
-    // Create ShippingBundle if address available
-    if (hasAddress) {
-      await prisma.shippingBundle.create({
-        data: {
-          orderNumber: generateOrderNumber(),
-          buyerId: session.user.id,
-          sellerId: auction.sellerId,
-          shippingCost: 0,
-          totalItemCost: auction.buyNowPrice,
-          totalCost: auction.buyNowPrice,
-          status: "PAID",
-          auctionId,
-          buyerStreet: user.street!,
-          buyerHouseNumber: user.houseNumber,
-          buyerPostalCode: user.postalCode!,
-          buyerCity: user.city!,
-          buyerCountry: user.country,
-        },
-      });
-    }
+    // ShippingBundle. Voor SHIP: address verplicht (gegarandeerd door check
+    // hierboven). Voor PICKUP: address mag null, deliveryMethod=PICKUP zodat
+    // de pickup-flow (PickupSchedule, code-confirm) bekend werkt.
+    await prisma.shippingBundle.create({
+      data: {
+        orderNumber: generateOrderNumber(),
+        buyerId: session.user.id,
+        sellerId: auction.sellerId,
+        shippingCost: 0,
+        totalItemCost: auction.buyNowPrice,
+        totalCost: auction.buyNowPrice,
+        status: "PAID",
+        auctionId,
+        deliveryMethod: chosenDelivery,
+        paymentMode: "PLATFORM",
+        buyerStreet: chosenDelivery === "SHIP" ? user.street! : null,
+        buyerHouseNumber: chosenDelivery === "SHIP" ? user.houseNumber : null,
+        buyerPostalCode: chosenDelivery === "SHIP" ? user.postalCode! : null,
+        buyerCity: chosenDelivery === "SHIP" ? user.city! : null,
+        buyerCountry: chosenDelivery === "SHIP" ? user.country : null,
+      },
+    });
 
     // Notify seller about buy-now sale
     await createNotification(
       auction.sellerId,
       "ORDER_PAID",
-      "Veiling direct gekocht!",
-      `"${auction.title}" is direct gekocht voor €${auction.buyNowPrice.toFixed(2)}. Bekijk je verkopen om te verzenden.`,
+      chosenDelivery === "PICKUP" ? "Veiling direct gekocht — ophalen" : "Veiling direct gekocht!",
+      `"${auction.title}" is direct gekocht voor €${auction.buyNowPrice.toFixed(2)}. ${chosenDelivery === "PICKUP" ? "Stem de ophaal-afspraak af in chat." : "Bekijk je verkopen om te verzenden."}`,
       "/dashboard/verkopen"
     );
   } else {
@@ -394,19 +445,23 @@ export async function buyNow(auctionId: string) {
     // koper de aankoop kan terugvinden via de Pending-Auctions sectie op
     // /dashboard/aankopen. completeAuctionPayment promoot deze rij naar PAID
     // i.p.v. een nieuwe aan te maken (auctionId @unique).
+    // deliveryMethod: snapshot van koper-keuze (Fase 27.95).
     await createPendingBundle({
       buyerId: session.user.id,
       sellerId: auction.sellerId,
       totalItemCost: auction.buyNowPrice,
       shippingCost: 0,
       auctionId,
-      address: {
-        street: user.street,
-        houseNumber: user.houseNumber,
-        postalCode: user.postalCode,
-        city: user.city,
-        country: user.country,
-      },
+      deliveryMethod: chosenDelivery,
+      address: chosenDelivery === "SHIP"
+        ? {
+            street: user.street,
+            houseNumber: user.houseNumber,
+            postalCode: user.postalCode,
+            city: user.city,
+            country: user.country,
+          }
+        : undefined,
     });
 
     await createNotification(
@@ -473,6 +528,18 @@ export async function finalizeAuction(auctionId: string) {
 
   const highestBid = auction.bids[0];
 
+  // Delivery-resolutie (Fase 27.95): bij BOTH gebruikt finalize de keuze van
+  // de winning bidder. Bij SHIP/PICKUP is de auction-deliveryMethod leidend
+  // (bid.deliveryChoice was bij placeBid al daarop ingesteld, dus consistent).
+  const winnerDelivery: "SHIP" | "PICKUP" =
+    auction.deliveryMethod === "PICKUP"
+      ? "PICKUP"
+      : auction.deliveryMethod === "SHIP"
+        ? "SHIP"
+        : (highestBid.deliveryChoice as "SHIP" | "PICKUP" | null) === "PICKUP"
+          ? "PICKUP"
+          : "SHIP"; // Fallback voor BOTH zonder bid-keuze
+
   if (auction.reservePrice && highestBid.amount < auction.reservePrice) {
     // Reserve not met — no payment needed (40% reserve model, no actual deduction was made)
     await prisma.auction.update({
@@ -509,8 +576,13 @@ export async function finalizeAuction(auctionId: string) {
       `Veiling verkocht (escrow): ${auction.title}`
     );
 
-    // Create ShippingBundle if winner has address
-    if (winner.street && winner.postalCode && winner.city) {
+    // Create ShippingBundle. Voor SHIP: address vereist; als winner geen
+    // adres heeft slaan we de bundle-creatie over en moet de winner via
+    // /dashboard/verzending zijn adres invullen vóór seller kan verzenden.
+    // Voor PICKUP: address null is OK, deliveryMethod=PICKUP zodat de
+    // pickup-flow (PickupSchedule + code-confirm) werkt.
+    const canCreateBundle = winnerDelivery === "PICKUP" || (winner.street && winner.postalCode && winner.city);
+    if (canCreateBundle) {
       await prisma.shippingBundle.create({
         data: {
           orderNumber: generateOrderNumber(),
@@ -521,11 +593,13 @@ export async function finalizeAuction(auctionId: string) {
           totalCost,
           status: "PAID",
           auctionId,
-          buyerStreet: winner.street,
-          buyerHouseNumber: winner.houseNumber,
-          buyerPostalCode: winner.postalCode,
-          buyerCity: winner.city,
-          buyerCountry: winner.country,
+          deliveryMethod: winnerDelivery,
+          paymentMode: "PLATFORM",
+          buyerStreet: winnerDelivery === "SHIP" ? winner.street : null,
+          buyerHouseNumber: winnerDelivery === "SHIP" ? winner.houseNumber : null,
+          buyerPostalCode: winnerDelivery === "SHIP" ? winner.postalCode : null,
+          buyerCity: winnerDelivery === "SHIP" ? winner.city : null,
+          buyerCountry: winnerDelivery === "SHIP" ? winner.country : null,
         },
       });
     }
@@ -577,7 +651,8 @@ export async function finalizeAuction(auctionId: string) {
         totalItemCost: totalCost,
         shippingCost: 0,
         auctionId,
-        address: winner
+        deliveryMethod: winnerDelivery,
+        address: winner && winnerDelivery === "SHIP"
           ? {
               street: winner.street,
               houseNumber: winner.houseNumber,
@@ -613,7 +688,7 @@ export async function finalizeAuction(auctionId: string) {
 // AUTOBID
 // ============================================================
 
-export async function setAutoBid(auctionId: string, maxAmount: number) {
+export async function setAutoBid(auctionId: string, maxAmount: number, deliveryChoice?: "SHIP" | "PICKUP") {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -625,6 +700,19 @@ export async function setAutoBid(auctionId: string, maxAmount: number) {
   if (auction.status !== "ACTIVE") return { error: "Veiling is niet meer actief" };
   if (auction.sellerId === session.user.id) return { error: "Je kunt niet bieden op je eigen veiling" };
   if (new Date() > auction.endTime) return { error: "Veiling is afgelopen" };
+
+  // Delivery-keuze (Fase 27.95) — zelfde regels als placeBid.
+  let abDeliveryChoice: string | null = null;
+  if (auction.deliveryMethod === "BOTH") {
+    if (!deliveryChoice || (deliveryChoice !== "SHIP" && deliveryChoice !== "PICKUP")) {
+      return { error: "Kies of je wilt verzenden of ophalen voordat je een autobied instelt" };
+    }
+    abDeliveryChoice = deliveryChoice;
+  } else if (auction.deliveryMethod === "PICKUP") {
+    abDeliveryChoice = "PICKUP";
+  } else {
+    abDeliveryChoice = "SHIP";
+  }
 
   const currentBid = auction.currentBid ?? 0;
   const minimumBid = currentBid === 0 ? auction.startingBid : getMinimumNextBid(currentBid);
@@ -640,8 +728,8 @@ export async function setAutoBid(auctionId: string, maxAmount: number) {
 
   await prisma.autoBid.upsert({
     where: { userId_auctionId: { userId: session.user.id, auctionId } },
-    create: { userId: session.user.id, auctionId, maxAmount, isActive: true },
-    update: { maxAmount, isActive: true },
+    create: { userId: session.user.id, auctionId, maxAmount, isActive: true, deliveryChoice: abDeliveryChoice },
+    update: { maxAmount, isActive: true, deliveryChoice: abDeliveryChoice },
   });
 
   // If there's no current bid yet, or current highest bidder is someone else,
@@ -718,8 +806,12 @@ export async function completeAuctionPayment(auctionId: string) {
     return { error: `Onvoldoende saldo. Benodigd: €${totalCost.toFixed(2)}, beschikbaar: €${availableBalance.toFixed(2)}` };
   }
 
-  // Check buyer has address
-  if (!buyer.street || !buyer.postalCode || !buyer.city) {
+  // Bestaande PENDING bundle bevat de delivery-keuze die bij finalize/buyNow
+  // is vastgelegd. Voor SHIP eisen we adres; voor PICKUP niet.
+  const existing = await prisma.shippingBundle.findUnique({ where: { auctionId } });
+  const bundleDelivery = (existing?.deliveryMethod ?? "SHIP") as "SHIP" | "PICKUP";
+
+  if (bundleDelivery === "SHIP" && (!buyer.street || !buyer.postalCode || !buyer.city)) {
     return { error: "Vul eerst je adres in via Dashboard → Verzending" };
   }
 
@@ -730,20 +822,18 @@ export async function completeAuctionPayment(auctionId: string) {
   await escrowCredit(auction.sellerId, totalCost, `Veiling verkocht (escrow): ${auction.title}`);
 
   // Promote the PENDING bundle (created by finalizeAuction) to PAID, filling
-  // in any address fields that were unknown at AWAITING_PAYMENT time.
-  // Defensive: if no PENDING row exists (older data, manual cleanup, etc.),
-  // create one directly.
-  const existing = await prisma.shippingBundle.findUnique({ where: { auctionId } });
+  // in any address fields that were unknown at AWAITING_PAYMENT time. Voor
+  // PICKUP-bundles vullen we geen adres in — koper haalt op.
   if (existing) {
     await prisma.shippingBundle.update({
       where: { id: existing.id },
       data: {
         status: "PAID",
-        buyerStreet: buyer.street,
-        buyerHouseNumber: buyer.houseNumber,
-        buyerPostalCode: buyer.postalCode,
-        buyerCity: buyer.city,
-        buyerCountry: buyer.country,
+        buyerStreet: bundleDelivery === "SHIP" ? buyer.street : null,
+        buyerHouseNumber: bundleDelivery === "SHIP" ? buyer.houseNumber : null,
+        buyerPostalCode: bundleDelivery === "SHIP" ? buyer.postalCode : null,
+        buyerCity: bundleDelivery === "SHIP" ? buyer.city : null,
+        buyerCountry: bundleDelivery === "SHIP" ? buyer.country : null,
       },
     });
   } else {
@@ -757,11 +847,13 @@ export async function completeAuctionPayment(auctionId: string) {
         totalCost,
         status: "PAID",
         auctionId,
-        buyerStreet: buyer.street,
-        buyerHouseNumber: buyer.houseNumber,
-        buyerPostalCode: buyer.postalCode,
-        buyerCity: buyer.city,
-        buyerCountry: buyer.country,
+        deliveryMethod: bundleDelivery,
+        paymentMode: "PLATFORM",
+        buyerStreet: bundleDelivery === "SHIP" ? buyer.street : null,
+        buyerHouseNumber: bundleDelivery === "SHIP" ? buyer.houseNumber : null,
+        buyerPostalCode: bundleDelivery === "SHIP" ? buyer.postalCode : null,
+        buyerCity: bundleDelivery === "SHIP" ? buyer.city : null,
+        buyerCountry: bundleDelivery === "SHIP" ? buyer.country : null,
       },
     });
   }

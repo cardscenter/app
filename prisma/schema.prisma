@@ -413,6 +413,13 @@ model Auction {
   failedBidderIds  String  @default("[]") // JSON array of bidder userIds that already passed on payment
   runnerUpAttempts Int     @default(0)
 
+  // Delivery (Fase 27.95): SHIP / PICKUP / BOTH. Voor PICKUP/BOTH wordt
+  // pickupCity gevuld vanuit User.city bij createAuction. Voor BOTH moet
+  // de bidder bij placeBid/setAutoBid een deliveryChoice opgeven; bij
+  // finalize wordt de keuze van de winning bid gebruikt voor bundle.deliveryMethod.
+  deliveryMethod String  @default("SHIP")
+  pickupCity     String?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -470,6 +477,12 @@ model AuctionBid {
 
   bidderId   String
   bidder     User     @relation(fields: [bidderId], references: [id])
+
+  // Fase 27.95: voor BOTH-auctions geeft elke bidder zijn voorkeur op (SHIP/PICKUP).
+  // Wordt gebruikt bij finalizeAuction om bundle.deliveryMethod te bepalen.
+  // Bij SHIP-only of PICKUP-only auctions blijft dit null (de auction-deliveryMethod
+  // bepaalt dan).
+  deliveryChoice String?
 
   @@index([auctionId, amount])
   @@index([bidderId])
@@ -1114,6 +1127,10 @@ model AutoBid {
 
   maxAmount Float
   isActive  Boolean  @default(true)
+
+  // Fase 27.95: voor BOTH-auctions geeft de autobidder zijn voorkeur op.
+  // Elke bid-stap die door autobid wordt geplaatst neemt deze waarde over.
+  deliveryChoice String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
