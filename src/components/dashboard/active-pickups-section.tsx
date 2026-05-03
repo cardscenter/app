@@ -79,7 +79,7 @@ export async function ActivePickupsSection({ pickups }: Props) {
                     {isBuyer && isExternal ? (
                       <ExternalPickupConfirmButton shippingBundleId={p.id} />
                     ) : isBuyer && p.pickupCode ? (
-                      <div className="flex flex-col items-end gap-1">
+                      <div className="flex flex-col items-end gap-1 max-w-xs">
                         <div className="flex items-center gap-1.5 text-xs font-medium text-blue-800 dark:text-blue-200">
                           <Key className="h-3.5 w-3.5" />
                           {t("codeForBuyer")}
@@ -87,6 +87,9 @@ export async function ActivePickupsSection({ pickups }: Props) {
                         <div className="font-mono text-2xl font-bold tracking-widest text-blue-900 dark:text-blue-100">
                           {p.pickupCode}
                         </div>
+                        <p className="text-right text-[11px] leading-tight text-red-700 dark:text-red-300">
+                          ⚠ {t("codeWarning")}
+                        </p>
                       </div>
                     ) : null}
                     <OpenPickupChatButton

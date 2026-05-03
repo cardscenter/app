@@ -12,6 +12,7 @@ import { BundleOfferMessage, type BundleProposalData } from "@/components/messag
 import { BundleOfferForm } from "@/components/message/bundle-offer-form";
 import { PartialSaleForm } from "@/components/message/partial-sale-form";
 import { useChatPolling, type PolledPickupState } from "@/hooks/use-chat-polling";
+import { containsPickupCodeShape } from "@/lib/pickup-config";
 
 type Message = {
   id: string;
@@ -212,11 +213,19 @@ export function MessageThread({
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  async function handleSend(formData: FormData) {
-    const body = formData.get("body") as string;
-    if (!body.trim() && !uploadedImageUrl) return;
+  // Pickup-code-anti-fraude (Fase 27.56): als de buyer/seller een pickup-
+  // code-patroon (4 cijfers + 1 hoofdletter) typt, vragen we expliciete
+  // bevestiging vóór versturen. Klassieke fraude: oplichter zegt "stuur de
+  // code zodat ik je kan helpen" — koper geeft 'm zonder ooit op te halen,
+  // oplichter activeert ergens anders escrow-release.
+  const [pickupCodeWarning, setPickupCodeWarning] = useState<{
+    body: string;
+    imageUrl: string | null;
+  } | null>(null);
+
+  async function performSend(body: string, imageUrl: string | null) {
     setLoading(true);
-    await sendMessage(conversationId, body, uploadedImageUrl || undefined);
+    await sendMessage(conversationId, body, imageUrl || undefined);
     clearImage();
     formRef.current?.reset();
     if (textareaRef.current) {
@@ -224,6 +233,19 @@ export function MessageThread({
     }
     router.refresh();
     setLoading(false);
+  }
+
+  async function handleSend(formData: FormData) {
+    const body = (formData.get("body") as string) ?? "";
+    if (!body.trim() && !uploadedImageUrl) return;
+
+    // Detecteer pickup-code-patroon → toon waarschuwingsmodal i.p.v. direct sturen
+    if (containsPickupCodeShape(body)) {
+      setPickupCodeWarning({ body, imageUrl: uploadedImageUrl });
+      return;
+    }
+
+    await performSend(body, uploadedImageUrl);
   }
 
   function handleTextareaInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -442,6 +464,48 @@ export function MessageThread({
           </form>
         </div>
       </div>
+
+      {/* Pickup-code-anti-fraude modal (Fase 27.56) */}
+      {pickupCodeWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-background p-6 shadow-2xl border border-red-300 dark:border-red-900">
+            <h3 className="flex items-center gap-2 text-lg font-bold text-red-700 dark:text-red-300">
+              ⚠ {t("pickupCodeWarning.title")}
+            </h3>
+            <div className="mt-3 space-y-2 text-sm text-foreground">
+              <p>{t("pickupCodeWarning.intro")}</p>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                <li>{t("pickupCodeWarning.bullet1")}</li>
+                <li>{t("pickupCodeWarning.bullet2")}</li>
+                <li>{t("pickupCodeWarning.bullet3")}</li>
+              </ul>
+              <p className="mt-3 font-medium text-foreground">
+                {t("pickupCodeWarning.confirmQuestion")}
+              </p>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPickupCodeWarning(null)}
+                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                {t("pickupCodeWarning.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const w = pickupCodeWarning;
+                  setPickupCodeWarning(null);
+                  await performSend(w.body, w.imageUrl);
+                }}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700"
+              >
+                {t("pickupCodeWarning.sendAnyway")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

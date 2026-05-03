@@ -9,6 +9,16 @@ export const PICKUP_CODE_LENGTH = PICKUP_CODE_DIGITS + 1;
 // Regex voor validatie en UI-input — exact 4 cijfers gevolgd door 1 toegestane hoofdletter.
 export const PICKUP_CODE_REGEX = /^\d{4}[ABCDEFGHJKLMNPQRSTUVWXYZ]$/;
 
+// Detectie van pickup-code-patroon in vrije tekst (bv. chat-bericht). Word-
+// grens-anchored zodat "abc4837Kx" niet matcht maar "code: 4837K" wel.
+// Hoofdletter-only zodat we niet per ongeluk een gewone tekst als "1234a" als
+// code zien — codes worden altijd in upper-case getoond.
+export const PICKUP_CODE_DETECT_REGEX = /\b\d{4}[ABCDEFGHJKLMNPQRSTUVWXYZ]\b/;
+
+export function containsPickupCodeShape(text: string): boolean {
+  return PICKUP_CODE_DETECT_REGEX.test(text);
+}
+
 export const PICKUP_CODE_MAX_ATTEMPTS = 5;
 export const PICKUP_LOCKOUT_HOURS = 1;
 export const PICKUP_REMINDER_HOURS = 24;

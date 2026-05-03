@@ -217,6 +217,9 @@ export function PickupActions({
           <div className="mt-1 font-mono text-2xl font-bold tracking-widest text-blue-900 dark:text-blue-100">
             {schedule.pickupCode}
           </div>
+          <p className="mt-2 text-[11px] leading-tight text-red-700 dark:text-red-300">
+            ⚠ {t("codeWarning")}
+          </p>
         </div>
       )}
 
