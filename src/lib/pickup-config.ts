@@ -9,11 +9,21 @@ export const PICKUP_CODE_LENGTH = PICKUP_CODE_DIGITS + 1;
 // Regex voor validatie en UI-input — exact 4 cijfers gevolgd door 1 toegestane hoofdletter.
 export const PICKUP_CODE_REGEX = /^\d{4}[ABCDEFGHJKLMNPQRSTUVWXYZ]$/;
 
-// Detectie van pickup-code-patroon in vrije tekst (bv. chat-bericht). Word-
-// grens-anchored zodat "abc4837Kx" niet matcht maar "code: 4837K" wel.
-// Hoofdletter-only zodat we niet per ongeluk een gewone tekst als "1234a" als
-// code zien — codes worden altijd in upper-case getoond.
-export const PICKUP_CODE_DETECT_REGEX = /\b\d{4}[ABCDEFGHJKLMNPQRSTUVWXYZ]\b/;
+// Detectie van pickup-code-patroon in vrije tekst (bv. chat-bericht).
+// Lenient — vangt deze varianten:
+//   "4976T", "4976t", "4976 T", "4976-T", "4976.T", "4 9 7 6 T",
+//   "code: 4976t", "Hier 4976 t alstublieft"
+// Maar NIET:
+//   "abc4976text" (cijfer-letter-blok in een woord)
+//   "0123456789" (geen letter)
+//   "1234A" als deel van een UUID/code (lookbehind blokkeert dat)
+//
+// Lookarounds: voor het pattern mag geen [A-Z0-9] staan, na de letter ook niet.
+// Tussen cijfers + voor de letter mag 0-2 separator-chars (spatie/streep/punt).
+// Case-insensitive (we normaliseren niet, om geen false positives te krijgen
+// op willekeurige cijfer-reeksen — alleen het 4+1 patroon wordt geraakt).
+export const PICKUP_CODE_DETECT_REGEX =
+  /(?<![A-Z0-9])\d[\s\-.,]{0,2}\d[\s\-.,]{0,2}\d[\s\-.,]{0,2}\d[\s\-.,]{0,2}[A-HJ-NP-Z](?![A-Z0-9])/i;
 
 export function containsPickupCodeShape(text: string): boolean {
   return PICKUP_CODE_DETECT_REGEX.test(text);

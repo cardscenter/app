@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Inbox, MessageSquare, Archive } from "lucide-react";
 import { ConversationList } from "./conversation-list";
@@ -25,8 +25,74 @@ interface ChatLayoutProps {
   children: React.ReactNode; // The active conversation content
 }
 
-export function ChatLayout({ conversations, activeConversationId, children }: ChatLayoutProps) {
+// Compacte handtekening voor change-detection — verandert wanneer er een
+// nieuwe conversation is, ongelezen-status flipt, of laatste-bericht wijzigt.
+function buildSignature(convs: ConversationPreview[]): string {
+  return convs.map((c) => `${c.id}:${c.lastMessage ?? ""}:${c.hasUnread}:${c.participantStatus}`).join("|");
+}
+
+export function ChatLayout({ conversations: initialConversations, activeConversationId, children }: ChatLayoutProps) {
   const t = useTranslations("chat");
+
+  // Live conversation-list (Fase 27.57): polling refresht de lijst zodat
+  // nieuwe gesprekken + ongelezen-status binnenkomen zonder page-reload.
+  // Zelfde cadence-pattern als chat-message polling (5s/15s + visibility).
+  const [conversations, setConversations] = useState(initialConversations);
+  const visibleRef = useRef(typeof document !== "undefined" ? !document.hidden : true);
+  const fetchingRef = useRef(false);
+  const emptyPollsRef = useRef(0);
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSignatureRef = useRef<string>(buildSignature(initialConversations));
+
+  useEffect(() => {
+    function schedule() {
+      if (intervalRef.current) clearTimeout(intervalRef.current);
+      const delay = emptyPollsRef.current >= 3 ? 15000 : 5000;
+      intervalRef.current = setTimeout(tick, delay);
+    }
+    async function tick() {
+      if (!visibleRef.current || fetchingRef.current) {
+        schedule();
+        return;
+      }
+      fetchingRef.current = true;
+      try {
+        const res = await fetch("/api/conversations");
+        if (!res.ok) {
+          schedule();
+          return;
+        }
+        const data: { conversations: ConversationPreview[] } = await res.json();
+        const sig = buildSignature(data.conversations);
+        if (sig !== lastSignatureRef.current) {
+          lastSignatureRef.current = sig;
+          setConversations(data.conversations);
+          emptyPollsRef.current = 0;
+        } else {
+          emptyPollsRef.current += 1;
+        }
+      } catch {
+        // Silent — volgende tick probeert opnieuw
+      } finally {
+        fetchingRef.current = false;
+        schedule();
+      }
+    }
+    function onVisibility() {
+      visibleRef.current = !document.hidden;
+      if (visibleRef.current) {
+        emptyPollsRef.current = 0;
+        if (intervalRef.current) clearTimeout(intervalRef.current);
+        tick();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    schedule();
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (intervalRef.current) clearTimeout(intervalRef.current);
+    };
+  }, []);
 
   // Determine initial tab: if we have an active conversation, go to the tab it belongs to
   const getInitialTab = (): ChatTab => {
