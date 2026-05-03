@@ -15,6 +15,7 @@ import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
+import { finalizeAuction } from "@/actions/auction";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -34,6 +35,7 @@ export const CRON_JOB_NAMES = [
   "check-subscriptions",
   "expire-claims",
   "sync-pokewallet",
+  "auction-finalize",
   "auction-payment-deadline",
   "proposal-payment-deadline",
   "cancellation-expiry",
@@ -75,6 +77,12 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     description:
       "Verloopt CLAIMED claimsale-items die >15 minuten in iemands cart staan zonder checkout. Items komen weer beschikbaar.",
     schedule: "Elke minuut",
+    allowManualRun: true,
+  },
+  "auction-finalize": {
+    description:
+      "Sluit alle ACTIVE veilingen waarvan endTime is verstreken (status flip naar ENDED_SOLD/RESERVE_NOT_MET/NO_BIDS, escrow + bundle creation, notificaties). Safety-net naast de page-view en client-side countdown triggers — vangt veilingen op die anders zouden blijven hangen. Idempotent — meermaals draaien is veilig.",
+    schedule: "Elke 5 minuten",
     allowManualRun: true,
   },
   "sync-pokewallet": {
@@ -189,6 +197,27 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       },
     };
   },
+  "auction-finalize": async () => {
+    const now = new Date();
+    const expired = await prisma.auction.findMany({
+      where: { status: "ACTIVE", endTime: { lt: now } },
+      select: { id: true },
+      take: 200, // Safety-cap voor het geval een lange downtime een backlog opbouwt
+    });
+
+    let processed = 0;
+    let errors = 0;
+    for (const a of expired) {
+      try {
+        await finalizeAuction(a.id);
+        processed++;
+      } catch {
+        errors++;
+      }
+    }
+
+    return { itemsProcessed: processed, result: { processed, errors, total: expired.length } };
+  },
   "auction-payment-deadline": async () => {
     const now = new Date();
     const expiredAuctions = await prisma.auction.findMany({
@@ -211,13 +240,15 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       const previousWinnerTitle = auction.title;
       const previousWinnerPrice = auction.finalPrice;
 
-      let runnerUpBid: { bidderId: string; amount: number } | null = null;
+      // Fase 27.96: deliveryChoice meenemen zodat de nieuwe bundle de juiste
+      // bezorg-mode krijgt (vooral relevant bij BOTH-veilingen).
+      let runnerUpBid: { bidderId: string; amount: number; deliveryChoice: string | null } | null = null;
       if (auction.runnerUpEnabled && auction.runnerUpAttempts < maxAttempts) {
         const excludedIds = new Set<string>([...failedBidderIds, previousWinnerId]);
         const candidates = await prisma.auctionBid.findMany({
           where: { auctionId: auction.id },
           orderBy: { amount: "desc" },
-          select: { bidderId: true, amount: true },
+          select: { bidderId: true, amount: true, deliveryChoice: true },
         });
         for (const c of candidates) {
           if (!excludedIds.has(c.bidderId)) { runnerUpBid = c; break; }
@@ -252,13 +283,24 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
           where: { id: runnerUpBid.bidderId },
           select: { street: true, houseNumber: true, postalCode: true, city: true, country: true },
         });
+        // Fase 27.96: bepaal delivery uit auction.deliveryMethod (SHIP/PICKUP)
+        // of uit runner-up's bid.deliveryChoice (BOTH). Address alleen voor SHIP.
+        const runnerUpDelivery: "SHIP" | "PICKUP" =
+          auction.deliveryMethod === "PICKUP"
+            ? "PICKUP"
+            : auction.deliveryMethod === "SHIP"
+              ? "SHIP"
+              : (runnerUpBid.deliveryChoice as "SHIP" | "PICKUP" | null) === "PICKUP"
+                ? "PICKUP"
+                : "SHIP";
         await createPendingBundle({
           buyerId: runnerUpBid.bidderId,
           sellerId: auction.sellerId,
           totalItemCost: runnerUpBid.amount,
           shippingCost: 0,
           auctionId: auction.id,
-          address: newWinner ?? undefined,
+          deliveryMethod: runnerUpDelivery,
+          address: runnerUpDelivery === "SHIP" ? (newWinner ?? undefined) : undefined,
         });
 
         await createNotification(runnerUpBid.bidderId, "AUCTION_WON", "Je bent de nieuwe winnaar",

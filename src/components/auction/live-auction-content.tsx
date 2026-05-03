@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BidSection } from "./bid-section";
 import { AutoBidForm } from "./autobid-form";
@@ -71,6 +72,7 @@ export function LiveAuctionContent({
   children,
 }: LiveAuctionContentProps) {
   const t = useTranslations("auction");
+  const router = useRouter();
   const [bidPage, setBidPage] = useState(0);
   const BIDS_PER_PAGE = 5;
 
@@ -148,6 +150,37 @@ export function LiveAuctionContent({
 
     return () => clearTimeout(timeoutId);
   }, [bidData.status, bidData.endTime, fetchBids]);
+
+  // Fase 27.97: zodra de countdown 0 bereikt en de auction nog ACTIVE is,
+  // POST naar de finalize-endpoint zodat de status meteen flipt naar
+  // ENDED_SOLD/ENDED_RESERVE_NOT_MET/ENDED_NO_BIDS. Idempotent — meerdere
+  // viewers kunnen tegelijk triggeren maar finalizeAuction's status-check
+  // zorgt dat alleen de eerste echt werk doet. De useEffect re-runt als
+  // endTime verandert (anti-snipe extension).
+  useEffect(() => {
+    if (bidData.status !== "ACTIVE") return;
+
+    const fireFinalize = async () => {
+      try {
+        await fetch(`/api/auctions/${auctionId}/finalize`, { method: "POST" });
+        router.refresh();
+      } catch {
+        // Silent — page-view fallback en cron pakken het anders alsnog op
+      }
+    };
+
+    const msUntilEnd = new Date(bidData.endTime).getTime() - Date.now();
+    if (msUntilEnd <= 0) {
+      // End-time is al voorbij (bv. page geopend ná einde) — direct trigger
+      fireFinalize();
+      return;
+    }
+
+    // +500ms buffer voor anti-snipe race-window (een laat-bod kan endTime
+    // verschuiven; setTimeout re-runt dan via dependency-change).
+    const t = setTimeout(fireFinalize, msUntilEnd + 500);
+    return () => clearTimeout(t);
+  }, [auctionId, bidData.status, bidData.endTime, router]);
 
   // Determine if user has been outbid (was highest bidder, now isn't)
   const showOutbidWarning =
