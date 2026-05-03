@@ -780,6 +780,12 @@ export async function completeAuctionPayment(auctionId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
+  // Fase 27.96: suspension-check ontbrak hier — een geschorste user kon
+  // alsnog een veiling afbetalen. Inconsistent met placeBid/buyNow/setAutoBid
+  // en zou suspension effectief omzeilen voor financiële commitments.
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
   const auction = await prisma.auction.findUnique({
     where: { id: auctionId },
     include: { shippingMethods: true },

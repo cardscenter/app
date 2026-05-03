@@ -64,17 +64,20 @@ async function processExpiredPaymentDeadlines() {
     const previousWinnerPrice = auction.finalPrice;
 
     // Try runner-up rotation first
-    let runnerUpBid: { bidderId: string; amount: number } | null = null;
+    let runnerUpBid: { bidderId: string; amount: number; deliveryChoice: string | null } | null = null;
 
     if (auction.runnerUpEnabled && auction.runnerUpAttempts < maxAttempts) {
       const excludedIds = new Set<string>([...failedBidderIds, previousWinnerId]);
       // Highest distinct-bidder bid that is not the current winner and not yet
       // marked failed. We can't use distinct() with comparison on amount, so
       // we order by amount desc and pick the first qualifying bidder.
+      // Fase 27.96: deliveryChoice meenemen zodat de nieuwe bundle de juiste
+      // bezorg-mode krijgt (BOTH-veiling kan SHIP-bidder roteren naar PICKUP-
+      // bidder of andersom).
       const candidates = await prisma.auctionBid.findMany({
         where: { auctionId: auction.id },
         orderBy: { amount: "desc" },
-        select: { bidderId: true, amount: true },
+        select: { bidderId: true, amount: true, deliveryChoice: true },
       });
 
       for (const c of candidates) {
@@ -123,13 +126,25 @@ async function processExpiredPaymentDeadlines() {
         where: { id: runnerUpBid.bidderId },
         select: { street: true, houseNumber: true, postalCode: true, city: true, country: true },
       });
+      // Fase 27.96: bepaal delivery uit auction.deliveryMethod (SHIP/PICKUP)
+      // of uit runner-up's bid.deliveryChoice (BOTH). Address alleen voor SHIP.
+      const runnerUpDelivery: "SHIP" | "PICKUP" =
+        auction.deliveryMethod === "PICKUP"
+          ? "PICKUP"
+          : auction.deliveryMethod === "SHIP"
+            ? "SHIP"
+            : (runnerUpBid.deliveryChoice as "SHIP" | "PICKUP" | null) === "PICKUP"
+              ? "PICKUP"
+              : "SHIP";
+
       await createPendingBundle({
         buyerId: runnerUpBid.bidderId,
         sellerId: auction.sellerId,
         totalItemCost: runnerUpBid.amount,
         shippingCost: 0,
         auctionId: auction.id,
-        address: newWinner ?? undefined,
+        deliveryMethod: runnerUpDelivery,
+        address: runnerUpDelivery === "SHIP" ? (newWinner ?? undefined) : undefined,
       });
 
       // Notify the new winner — phrase honestly so they know they're a runner-up.
