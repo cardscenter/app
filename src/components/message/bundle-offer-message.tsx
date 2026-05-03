@@ -8,6 +8,7 @@ import {
   respondToBundleOffer,
   withdrawBundleOffer,
   completeBundleOfferPayment,
+  counterBundleOffer,
 } from "@/actions/bundle-offer";
 import { PickupActions, type PickupScheduleData } from "@/components/message/pickup-actions";
 
@@ -65,6 +66,8 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
   const [error, setError] = useState<string | null>(null);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [selectedShippingId, setSelectedShippingId] = useState<string>("");
+  const [showCounterModal, setShowCounterModal] = useState(false);
+  const [counterAmount, setCounterAmount] = useState<string>("");
 
   const isBuyer = bp.buyerId === currentUserId;
   const isSeller = bp.sellerId === currentUserId;
@@ -72,6 +75,10 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
   const canBuyerWithdraw = isBuyer && bp.status === "PENDING";
   const canBuyerCompletePayment =
     isBuyer && bp.status === "ACCEPTED" && bp.paymentStatus === "AWAITING_PAYMENT";
+  // Tegenbod doen (Fase 27.70): de NIET-proposer kan een ander bedrag voorstellen.
+  // Tegenpartij = wie het bericht NIET heeft gestuurd. We bepalen dat via isOwn:
+  // als het voorstel van mij is (isOwn) mag ik niet zelf counter-bidden.
+  const canCounter = !isOwn && bp.status === "PENDING";
 
   async function run(fn: () => Promise<{ error?: string; success?: boolean }>) {
     setLoading(true);
@@ -164,24 +171,89 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
         {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
 
         {canSellerRespond && (
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => {
-                if (bp.deliveryMethod === "SHIP") setShowAcceptModal(true);
-                else run(() => respondToBundleOffer(bp.id, "ACCEPT"));
-              }}
-              disabled={loading}
-              className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
-              {t("accept")}
-            </button>
-            <button
-              onClick={() => run(() => respondToBundleOffer(bp.id, "REJECT"))}
-              disabled={loading}
-              className="flex-1 rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
-            >
-              {t("reject")}
-            </button>
+          <div className="mt-3 flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (bp.deliveryMethod === "SHIP") setShowAcceptModal(true);
+                  else run(() => respondToBundleOffer(bp.id, "ACCEPT"));
+                }}
+                disabled={loading}
+                className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                {t("accept")}
+              </button>
+              <button
+                onClick={() => run(() => respondToBundleOffer(bp.id, "REJECT"))}
+                disabled={loading}
+                className="flex-1 rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                {t("reject")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tegenbod-knop — voor de NIET-proposer bij PENDING. Werkt zowel
+            voor buyer (counter op seller's eerdere counter) als seller
+            (counter op buyer's origineel). */}
+        {canCounter && (
+          <button
+            onClick={() => {
+              setCounterAmount(bp.totalAmount.toFixed(2));
+              setShowCounterModal(true);
+            }}
+            disabled={loading}
+            className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+          >
+            {t("counter")}
+          </button>
+        )}
+
+        {/* Counter-modal */}
+        {showCounterModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCounterModal(false)}>
+            <div className="w-full max-w-sm rounded-2xl bg-background p-5 shadow-xl border border-border" onClick={(e) => e.stopPropagation()}>
+              <h3 className="mb-3 text-base font-semibold text-foreground">{t("counterTitle")}</h3>
+              <p className="mb-3 text-xs text-muted-foreground">
+                {t("counterHint", { current: bp.totalAmount.toFixed(2) })}
+              </p>
+              <div className="relative mb-4">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                <input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={counterAmount}
+                  onChange={(e) => setCounterAmount(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCounterModal(false)}
+                  className="flex-1 rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  {t("cancel")}
+                </button>
+                <button
+                  onClick={() => {
+                    const amount = parseFloat(counterAmount);
+                    if (!amount || amount <= 0) {
+                      setError(t("errors.invalidAmount"));
+                      return;
+                    }
+                    setShowCounterModal(false);
+                    run(() => counterBundleOffer({ parentProposalId: bp.id, totalAmount: amount }));
+                  }}
+                  disabled={loading}
+                  className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+                >
+                  {t("submitCounter")}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

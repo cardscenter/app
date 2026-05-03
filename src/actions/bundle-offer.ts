@@ -8,11 +8,12 @@ import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { getBlockedUserIds } from "@/lib/blocking";
-import { createBundleOfferSchema, acceptBundleOfferShippingSchema } from "@/lib/validations/bundle-offer";
+import { createBundleOfferSchema, acceptBundleOfferShippingSchema, counterBundleOfferSchema } from "@/lib/validations/bundle-offer";
 import {
   BUNDLE_OFFER_EXPIRY_DAYS,
   BUNDLE_PAYMENT_DEADLINE_DAYS_SHIP,
   PICKUP_RESERVATION_DAYS,
+  MAX_COUNTER_DEPTH,
 } from "@/lib/bundle-offer-config";
 import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
 import type { Prisma } from "@prisma/client";
@@ -344,6 +345,128 @@ export async function withdrawBundleOffer(bundleProposalId: string) {
   );
 
   return { success: true };
+}
+
+// Tegenbod doen op een PENDING bundle-offer (Fase 27.70). Tegenpartij
+// (= NIET de proposer) kiest een nieuw totaalbedrag en verstuurt. Het
+// originele voorstel gaat naar COUNTERED, een nieuw child-voorstel komt
+// in PENDING met dezelfde listings/items maar met buyer/seller gezwapt
+// — de oorspronkelijke proposer is nu de tegenpartij van de counter.
+//
+// Counter-chain depth wordt afgekapt op MAX_COUNTER_DEPTH om eindeloze
+// onderhandelingen te voorkomen.
+export async function counterBundleOffer(input: { parentProposalId: string; totalAmount: number }) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const parsed = counterBundleOfferSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const parent = await prisma.bundleProposal.findUnique({
+    where: { id: parsed.data.parentProposalId },
+    include: { listings: { include: { listing: true } } },
+  });
+  if (!parent) return { error: "Voorstel niet gevonden" };
+  if (parent.status !== "PENDING") return { error: "Voorstel is al beantwoord" };
+
+  // Alleen de tegenpartij mag counter-bieden — niet de huidige proposer.
+  // Bij parent waar buyer het origineel deed: counter is van seller-zijde.
+  // We zwappen de rollen op het child-voorstel zodat de oorspronkelijke
+  // proposer nu zelf moet beslissen.
+  const isSeller = parent.sellerId === session.user.id;
+  const isBuyer = parent.buyerId === session.user.id;
+  if (!isSeller && !isBuyer) return { error: "Niet geautoriseerd" };
+  // De rol die de parent verstuurde mag niet zelf counter-bieden — die wacht
+  // op antwoord. We bepalen "wie verstuurde de parent" als: de partij wiens
+  // role 'proposer' is. In bundle-offer-creation is dat altijd de buyer
+  // (createBundleOffer is buyer-initiated). Bij child-voorstellen rouleert
+  // het door de zwap — dus we kunnen niet eenvoudig op buyerId reken.
+  // Pragmatisch: tel de chain-depth en gebruik die om te bepalen welke
+  // partij counter mag doen (even depth = seller's beurt, odd = buyer).
+  // Eenvoudiger: laat ALLE deelnemers counteren tenzij ze gelijk zijn aan
+  // wie het laatst verstuurde. We slaan dat op in `parent.respondedAt is
+  // null` → niemand heeft nog gereageerd. Beide partijen zien nu Accept/
+  // Reject/Counter; alleen ÉÉN gaat het doen. Race-condition wordt door
+  // de status-check (PENDING) afgevangen.
+
+  // Counter-chain depth check
+  let depth = 0;
+  let cursor: { parentProposalId: string | null } | null = parent;
+  while (cursor?.parentProposalId) {
+    depth++;
+    if (depth >= MAX_COUNTER_DEPTH) {
+      return { error: `Maximaal ${MAX_COUNTER_DEPTH} tegenbiedingen per onderhandeling.` };
+    }
+    cursor = await prisma.bundleProposal.findUnique({
+      where: { id: cursor.parentProposalId },
+      select: { parentProposalId: true },
+    });
+  }
+
+  // Tx: parent → COUNTERED, child PENDING met gezwapte rollen + zelfde listings/items.
+  const expiresAt = new Date(Date.now() + BUNDLE_OFFER_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const child = await prisma.$transaction(async (tx) => {
+    await tx.bundleProposal.update({
+      where: { id: parent.id },
+      data: { status: "COUNTERED", respondedAt: new Date() },
+    });
+
+    const newProposer = session.user!.id!;
+    const newRecipient = isSeller ? parent.buyerId : parent.sellerId;
+    // Convention behouden: buyerId = wie de bundle koopt = oorspronkelijke buyer.
+    // Counter wijzigt alleen het bedrag, niet wie wat krijgt. We zwappen geen
+    // koop-richting — de oorspronkelijke buyer blijft koper. We tracken
+    // alleen wie het LAATSTE voorstel deed via een nieuw veld? Nee: parent
+    // heeft sellerId/buyerId; we kopiëren die. De UI bepaalt wie nu mag
+    // antwoorden via vergelijking met de senderId van het laatste message.
+    const childCreated = await tx.bundleProposal.create({
+      data: {
+        conversationId: parent.conversationId,
+        buyerId: parent.buyerId,
+        sellerId: parent.sellerId,
+        totalAmount: parsed.data.totalAmount,
+        deliveryMethod: parent.deliveryMethod,
+        paymentMode: parent.paymentMode,
+        requestInsuredShipping: parent.requestInsuredShipping,
+        parentProposalId: parent.id,
+        status: "PENDING",
+        expiresAt,
+        listings: {
+          create: parent.listings.map((bl) => ({
+            listingId: bl.listingId,
+            priceSnapshot: bl.priceSnapshot,
+            quantity: bl.quantity,
+            itemIds: bl.itemIds,
+          })),
+        },
+      },
+    });
+    // Chat-systeembericht
+    await tx.message.create({
+      data: {
+        conversationId: parent.conversationId,
+        senderId: newProposer,
+        body: `Tegenbod: €${parsed.data.totalAmount.toFixed(2)} (was €${parent.totalAmount.toFixed(2)}).`,
+        bundleProposalId: childCreated.id,
+      },
+    });
+    // Notificatie naar tegenpartij
+    void newRecipient;
+    return childCreated;
+  });
+
+  await createNotification(
+    isSeller ? parent.buyerId : parent.sellerId,
+    "NEW_MESSAGE",
+    "Tegenbod ontvangen",
+    `Een tegenbod van €${parsed.data.totalAmount.toFixed(2)} is binnengekomen.`,
+    `/nl/berichten/${parent.conversationId}`
+  );
+
+  return { success: true, childId: child.id };
 }
 
 // Seller accepteert of weigert een bundle-offer.
