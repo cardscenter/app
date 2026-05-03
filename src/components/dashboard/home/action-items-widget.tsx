@@ -56,7 +56,7 @@ export function ActionItemsWidget({ counts }: Props) {
     {
       key: "awaitingPaymentAuctions",
       count: counts.awaitingPaymentAuctions,
-      href: "/dashboard/biedingen",
+      href: "/dashboard/aankopen",
       icon: CreditCard,
       iconColor: "text-orange-600 dark:text-orange-400",
       bgColor: "bg-orange-500/10",

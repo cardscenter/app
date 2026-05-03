@@ -19,11 +19,13 @@ import {
   ExternalLink,
   MessageCircle,
   Star,
+  CreditCard,
 } from "lucide-react";
 import Image from "next/image";
 import { OpenDisputeForm } from "./open-dispute-form";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
 import { OrderDetailModal } from "./order-detail-modal";
+import { PendingAuctionPayments } from "./pending-auction-payments";
 
 type BundleItem = {
   id: string;
@@ -61,10 +63,13 @@ type PurchaseBundle = {
   items: BundleItem[];
 };
 
-const TABS = ["PAID", "SHIPPED", "COMPLETED", "CANCELLED", "DISPUTED"] as const;
+// PENDING is een virtuele tab — toont auction-pending-payments i.p.v.
+// bundle-statussen. Alleen zichtbaar als er openstaande betalingen zijn.
+const TABS = ["PENDING", "PAID", "SHIPPED", "COMPLETED", "CANCELLED", "DISPUTED"] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_ICONS: Record<Tab, typeof Package> = {
+  PENDING: CreditCard,
   PAID: Package,
   SHIPPED: Truck,
   COMPLETED: CheckCircle2,
@@ -73,6 +78,7 @@ const TAB_ICONS: Record<Tab, typeof Package> = {
 };
 
 const TAB_COLORS: Record<Tab, string> = {
+  PENDING: "text-orange-600 dark:text-orange-400",
   PAID: "text-blue-600 dark:text-blue-400",
   SHIPPED: "text-purple-600 dark:text-purple-400",
   COMPLETED: "text-green-600 dark:text-green-400",
@@ -81,6 +87,7 @@ const TAB_COLORS: Record<Tab, string> = {
 };
 
 const STATUS_BADGE: Record<Tab, string> = {
+  PENDING: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400",
   PAID: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
   SHIPPED: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400",
   COMPLETED: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
@@ -91,7 +98,19 @@ const STATUS_BADGE: Record<Tab, string> = {
 const CANCEL_DAYS = 7;
 const AUTO_CONFIRM_DAYS = 30;
 
-export function PurchasesContent({ bundles }: { bundles: PurchaseBundle[] }) {
+type PendingAuctionPayment = {
+  id: string;
+  title: string;
+  finalPrice: number | null;
+  paymentDeadline: Date | string | null;
+};
+
+interface PurchasesContentProps {
+  bundles: PurchaseBundle[];
+  pendingAuctionPayments?: PendingAuctionPayment[];
+}
+
+export function PurchasesContent({ bundles, pendingAuctionPayments = [] }: PurchasesContentProps) {
   const t = useTranslations("purchases");
   const locale = useLocale();
   const [search, setSearch] = useState("");
@@ -106,6 +125,7 @@ export function PurchasesContent({ bundles }: { bundles: PurchaseBundle[] }) {
     : bundles;
 
   const counts: Record<Tab, number> = {
+    PENDING: pendingAuctionPayments.length,
     PAID: searchedBundles.filter((b) => b.status === "PAID").length,
     SHIPPED: searchedBundles.filter((b) => b.status === "SHIPPED").length,
     COMPLETED: searchedBundles.filter((b) => b.status === "COMPLETED").length,
@@ -113,12 +133,19 @@ export function PurchasesContent({ bundles }: { bundles: PurchaseBundle[] }) {
     DISPUTED: searchedBundles.filter((b) => b.status === "DISPUTED").length,
   };
 
-  // Hide tabs with 0 items (except always-visible ones)
+  // Hide tabs with 0 items (except always-visible ones). PENDING is alleen
+  // zichtbaar als er daadwerkelijk auction-pending-payments zijn.
   const visibleTabs = TABS.filter(
-    (tab) => counts[tab] > 0 || tab === "PAID" || tab === "SHIPPED" || tab === "COMPLETED" || tab === "CANCELLED"
+    (tab) =>
+      counts[tab] > 0 ||
+      tab === "PAID" || tab === "SHIPPED" || tab === "COMPLETED" || tab === "CANCELLED"
   );
 
-  const defaultTab = TABS.find((tab) => counts[tab] > 0) ?? "PAID";
+  // Default-tab: PENDING heeft voorrang (urgentste actie), anders eerste tab
+  // met items, anders PAID als fallback.
+  const defaultTab = counts.PENDING > 0
+    ? "PENDING" as Tab
+    : (TABS.find((tab) => tab !== "PENDING" && counts[tab] > 0) ?? "PAID");
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
 
   const filtered = searchedBundles.filter((b) => b.status === activeTab);
@@ -142,7 +169,7 @@ export function PurchasesContent({ bundles }: { bundles: PurchaseBundle[] }) {
           const Icon = TAB_ICONS[tab];
           const isActive = activeTab === tab;
           const tabKey = `tab${tab.charAt(0) + tab.slice(1).toLowerCase()}` as
-            | "tabPaid" | "tabShipped" | "tabCompleted" | "tabCancelled" | "tabDisputed";
+            | "tabPending" | "tabPaid" | "tabShipped" | "tabCompleted" | "tabCancelled" | "tabDisputed";
           return (
             <button
               key={tab}
@@ -169,8 +196,24 @@ export function PurchasesContent({ bundles }: { bundles: PurchaseBundle[] }) {
         })}
       </div>
 
-      {/* Bundle list */}
-      {filtered.length === 0 ? (
+      {/* Tab body — PENDING toont auction-pending-payments component, andere
+          tabs tonen de filtered bundle-list. */}
+      {activeTab === "PENDING" ? (
+        pendingAuctionPayments.length === 0 ? (
+          <div className="rounded-xl glass-subtle p-8 text-center">
+            <p className="text-sm text-muted-foreground">{t("noPurchases")}</p>
+          </div>
+        ) : (
+          <PendingAuctionPayments
+            auctions={pendingAuctionPayments.map((a) => ({
+              id: a.id,
+              title: a.title,
+              finalPrice: a.finalPrice,
+              paymentDeadline: a.paymentDeadline ? new Date(a.paymentDeadline) : null,
+            }))}
+          />
+        )
+      ) : filtered.length === 0 ? (
         <div className="rounded-xl glass-subtle p-8 text-center">
           <p className="text-sm text-muted-foreground">{t("noPurchases")}</p>
         </div>

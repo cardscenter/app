@@ -1680,6 +1680,7 @@
   "purchases": {
     "title": "My Purchases",
     "noPurchases": "No purchases yet.",
+    "tabPending": "Pending",
     "tabPaid": "Paid",
     "tabShipped": "Shipped",
     "tabCompleted": "Completed",

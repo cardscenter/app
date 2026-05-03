@@ -4,7 +4,6 @@ import { getTranslations } from "next-intl/server";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
 import { CancellationsSection } from "@/components/dashboard/cancellations-section";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
-import { PendingAuctionPayments } from "@/components/dashboard/pending-auction-payments";
 
 // Groepeer items met dezelfde cardName + conditie tot één rij met aantal +
 // subtotaal. Voor stocked-buy ("5× Destined Rivals booster pack") en voor
@@ -268,25 +267,11 @@ export default async function MyPurchasesPage() {
         {t("title")}
       </h1>
 
-      {/* Pending veiling-betalingen bovenaan (Fase 27.93). Hetzelfde component
-          dat ook op /dashboard/saldo staat — koper kan beide pagina's
-          gebruiken om de restbetaling af te ronden. */}
-      {pendingAuctions.length > 0 && (
-        <PendingAuctionPayments
-          auctions={pendingAuctions.map((a) => ({
-            id: a.id,
-            title: a.title,
-            finalPrice: a.finalPrice,
-            paymentDeadline: a.paymentDeadline,
-          }))}
-        />
-      )}
-
       {serialized.length === 0 && pendingAuctions.length === 0 ? (
         <p className="mt-8 text-sm text-muted-foreground">
           {t("noPurchases")}
         </p>
-      ) : serialized.length === 0 ? null : (
+      ) : (
         <>
           <ActivePickupsSection pickups={activePickups} />
           <CancellationsSection
@@ -304,7 +289,17 @@ export default async function MyPurchasesPage() {
                 counterpartyName: b.sellerName,
               }))}
           />
-          <PurchasesContent bundles={serialized} />
+          {/* Pending-payments verschijnen als eigen tab in PurchasesContent
+              (Fase 27.94). Default-tab springt naar PENDING als die items heeft. */}
+          <PurchasesContent
+            bundles={serialized}
+            pendingAuctionPayments={pendingAuctions.map((a) => ({
+              id: a.id,
+              title: a.title,
+              finalPrice: a.finalPrice,
+              paymentDeadline: a.paymentDeadline,
+            }))}
+          />
         </>
       )}
     </div>

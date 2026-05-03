@@ -1680,6 +1680,7 @@
   "purchases": {
     "title": "Mijn Aankopen",
     "noPurchases": "Nog geen aankopen.",
+    "tabPending": "Openstaand",
     "tabPaid": "Betaald",
     "tabShipped": "Verzonden",
     "tabCompleted": "Afgerond",
