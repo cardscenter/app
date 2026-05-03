@@ -297,6 +297,10 @@ export default async function ListingDetailPage({
                       />
                     </BuyRouteCard>
                   )}
+
+                {/* Contact-knop ook voor stocked listings — voor vragen
+                    over voorraad, conditie, etc. */}
+                <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
               </div>
             )}
 
@@ -375,12 +379,11 @@ export default async function ListingDetailPage({
                     </BuyRouteCard>
                   )}
 
-                {/* Bod-doen / chat-knop. Voor NEGOTIABLE altijd; voor FIXED
-                    alleen als acceptsOffers aan staat. */}
-                {(listing.pricingType === "NEGOTIABLE" ||
-                  (listing.pricingType === "FIXED" && listing.acceptsOffers)) && (
-                  <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
-                )}
+                {/* Universele Contact-knop — altijd zichtbaar voor algemene
+                    vragen of bod doen via chat. Voor FIXED zonder Direct
+                    Kopen + zonder acceptsOffers blijft dit het enige
+                    contact-pad. */}
+                <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
 
                 {/* Hint als Direct Kopen uitstaat én biedingen niet welkom zijn */}
                 {listing.pricingType === "FIXED" && !listing.allowDirectBuy && !listing.acceptsOffers && (
