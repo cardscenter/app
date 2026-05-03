@@ -745,6 +745,8 @@
     "reject": "Afwijzen",
     "scheduledOn": "Ophaal gepland: {date} tussen {start} en {end}",
     "scheduledAtExact": "Ophaal gepland: {date} om {time}",
+    "rescheduleMoment": "Ophaalmoment wijzigen",
+    "editProposal": "Wijzig je voorstel",
     "timeMode": {
       "label": "Tijd-keuze",
       "window": "Tijdspan",

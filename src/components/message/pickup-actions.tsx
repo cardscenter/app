@@ -160,7 +160,11 @@ export function PickupActions({
         </div>
       )}
 
-      {/* Propose-knop voor PROPOSE/RESCHEDULE */}
+      {/* Propose-knop voor PROPOSE/RESCHEDULE. Tekst-variatie:
+          - 'Stel ophaalmoment voor' bij geen schedule
+          - 'Wijzig je voorstel' wanneer JIJ al een PROPOSED voorstel hebt
+          - 'Ophaalmoment wijzigen' wanneer er een ACCEPTED schedule is
+          (bij PROPOSED van tegenpartij toont alleen Accept/Reject — geen knop) */}
       {canPropose && (!schedule || schedule.status !== "PROPOSED" || schedule.proposedById === currentUserId) && (
         <button
           type="button"
@@ -169,7 +173,11 @@ export function PickupActions({
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
         >
           <CalendarClock className="h-4 w-4" />
-          {t("proposeMoment")}
+          {schedule?.status === "ACCEPTED"
+            ? t("rescheduleMoment")
+            : schedule?.status === "PROPOSED"
+              ? t("editProposal")
+              : t("proposeMoment")}
         </button>
       )}
 
