@@ -276,7 +276,6 @@ export default async function ListingDetailPage({
                       variant="pickup_platform"
                       title={listing.pickupCity ? `Ophalen in ${listing.pickupCity} — nu betalen` : "Ophalen — nu betalen"}
                       subtitle="Betaal nu via platform; haal op met code-bevestiging. Accepteren bij correcte overdracht."
-                      pickupCity={listing.pickupCity}
                     >
                       <BuyQuantityForm
                         listingId={listing.id}
@@ -300,7 +299,6 @@ export default async function ListingDetailPage({
                       variant="pickup_external"
                       title={listing.pickupCity ? `Ophalen in ${listing.pickupCity} — ter plekke betalen` : "Ophalen — ter plekke betalen"}
                       subtitle="Geen platform-betaling. Afhandeling op eigen risico."
-                      pickupCity={listing.pickupCity}
                     >
                       <PickupReserveButton
                         listingId={listing.id}
@@ -371,7 +369,6 @@ export default async function ListingDetailPage({
                       variant="pickup_platform"
                       title={listing.pickupCity ? `Ophalen in ${listing.pickupCity} — nu betalen` : "Ophalen — nu betalen"}
                       subtitle="Betaal nu via platform; haal op met code-bevestiging. Accepteren bij correcte overdracht."
-                      pickupCity={listing.pickupCity}
                     >
                       <BuyNowButton
                         listingId={listing.id}
@@ -395,7 +392,6 @@ export default async function ListingDetailPage({
                       variant="pickup_external"
                       title={listing.pickupCity ? `Ophalen in ${listing.pickupCity} — ter plekke betalen` : "Ophalen — ter plekke betalen"}
                       subtitle="Geen platform-betaling. Afhandeling op eigen risico."
-                      pickupCity={listing.pickupCity}
                     >
                       <PickupReserveButton
                         listingId={listing.id}
@@ -437,8 +433,14 @@ export default async function ListingDetailPage({
             )}
           </div>
 
-          {/* Seller Info Block */}
-          {sellerInfo && <SellerInfoBlock seller={sellerInfo} />}
+          {/* Seller Info Block — toon Maps-link bij PICKUP/BOTH listings zodat
+              koper de ophaal-locatie meteen op kaart kan checken (Fase 27.92). */}
+          {sellerInfo && (
+            <SellerInfoBlock
+              seller={sellerInfo}
+              showMapsLink={listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH"}
+            />
+          )}
 
           {/* Social share */}
           <div className="glass-subtle rounded-2xl p-4">
