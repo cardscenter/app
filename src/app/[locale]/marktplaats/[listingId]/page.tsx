@@ -287,7 +287,7 @@ export default async function ListingDetailPage({
                     <BuyRouteCard
                       variant="pickup_external"
                       title="Ophalen — bij ophalen aan verkoper betalen"
-                      subtitle="Geen platform-betaling; betaal Tikkie of contant ter plekke. Geen escrow."
+                      subtitle="Geen platform-betaling; betaal de verkoper ter plekke. Geen escrow."
                     >
                       <PickupReserveButton
                         listingId={listing.id}
@@ -364,7 +364,7 @@ export default async function ListingDetailPage({
                     <BuyRouteCard
                       variant="pickup_external"
                       title="Ophalen — bij ophalen aan verkoper betalen"
-                      subtitle="Geen platform-betaling; betaal Tikkie of contant ter plekke. Geen escrow."
+                      subtitle="Geen platform-betaling; betaal de verkoper ter plekke. Geen escrow."
                     >
                       <PickupReserveButton
                         listingId={listing.id}

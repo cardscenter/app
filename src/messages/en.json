@@ -675,7 +675,7 @@
     "shippingOption": "Shipping",
     "pickupOption": "Pickup",
     "pickupPlatformOption": "Pickup + wallet",
-    "pickupExternalOption": "Pickup + Tikkie/cash",
+    "pickupExternalOption": "Pickup + pay seller",
     "noDeliveryAvailable": "No delivery option possible for this combination of listings.",
     "pickupHint": "Not all selected listings support pickup — only shipping is available.",
     "requestInsured": {
@@ -781,7 +781,7 @@
     "scheduleInChat": "Arrange in chat",
     "noConversationSeller": "Open the chat via Messages — buyer starts the conversation.",
     "paymentModePlatform": "Already paid via wallet — pickup only",
-    "paymentModeExternal": "Pay seller at pickup (Tikkie/cash)",
+    "paymentModeExternal": "Pay seller at pickup",
     "confirmExternalButton": "Confirm pickup",
     "confirmExternalDialog": "Did you collect the product and pay the seller? This closes the order.",
     "errors": {
@@ -958,7 +958,7 @@
         "hint": "Buyer pays via platform balance. We hold the money in escrow until you confirm pickup with a code. Safer for both. Commission applies."
       },
       "external": {
-        "label": "At pickup to you (Tikkie/cash)",
+        "label": "Pay you at pickup",
         "hint": "No platform payment — buyer pays you at pickup. No commission, no escrow. No platform protection in case of dispute."
       },
       "atLeastOne": "Allow at least one payment method."
@@ -979,7 +979,7 @@
     },
     "pickupReserve": {
       "headline": "Reserve for pickup — €{price}",
-      "hint": "Pay seller directly at pickup (Tikkie/cash). No platform protection.",
+      "hint": "Pay seller directly at pickup. No platform protection.",
       "payAtPickup": "pay seller at pickup",
       "button": "Reserve for pickup",
       "confirmDialog": "Reserve \"{title}\" for pickup? Listing held for you for 14 days. Pay seller at pickup.",

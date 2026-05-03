@@ -675,7 +675,7 @@
     "shippingOption": "Verzenden",
     "pickupOption": "Ophalen",
     "pickupPlatformOption": "Ophalen + wallet",
-    "pickupExternalOption": "Ophalen + Tikkie/contant",
+    "pickupExternalOption": "Ophalen + betalen aan verkoper",
     "noDeliveryAvailable": "Geen bezorgkeuze mogelijk voor deze combinatie van advertenties.",
     "pickupHint": "Niet alle gekozen advertenties ondersteunen ophalen — alleen verzenden mogelijk.",
     "requestInsured": {
@@ -781,7 +781,7 @@
     "scheduleInChat": "Spreek af in chat",
     "noConversationSeller": "Open de chat via Berichten — koper start de conversatie.",
     "paymentModePlatform": "Al betaald via wallet — alleen ophalen",
-    "paymentModeExternal": "Betaal aan verkoper bij ophalen (Tikkie/contant)",
+    "paymentModeExternal": "Betaal aan verkoper bij ophalen",
     "confirmExternalButton": "Bevestig ophaal",
     "confirmExternalDialog": "Heb je het product opgehaald en de verkoper betaald? Dit sluit de bestelling af.",
     "errors": {
@@ -958,7 +958,7 @@
         "hint": "Koper betaalt via platform-saldo. Wij houden het geld in escrow tot jij de ophaal bevestigt met code. Veiliger voor beide. Commission wordt afgetrokken."
       },
       "external": {
-        "label": "Bij ophalen aan jou (Tikkie/contant)",
+        "label": "Bij ophalen aan jou betalen",
         "hint": "Geen platform-betaling — koper betaalt aan jou ter plekke. Geen commission, geen escrow. Geen platform-bescherming bij geschil."
       },
       "atLeastOne": "Sta minstens één betaalwijze toe."
@@ -979,7 +979,7 @@
     },
     "pickupReserve": {
       "headline": "Reserveer voor ophalen — €{price}",
-      "hint": "Je betaalt direct aan de verkoper bij ophalen (Tikkie/contant). Geen platform-bescherming.",
+      "hint": "Je betaalt direct aan de verkoper bij ophalen. Geen platform-bescherming.",
       "payAtPickup": "betalen aan verkoper bij ophalen",
       "button": "Reserveer voor ophalen",
       "confirmDialog": "Reserveer \"{title}\" voor ophalen? Listing wordt 14 dagen voor jou vastgehouden. Je betaalt aan verkoper bij ophalen.",

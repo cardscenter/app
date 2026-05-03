@@ -355,7 +355,7 @@ export async function buyListing(
     return { error: "Verkoper accepteert geen wallet-betaling voor ophalen." };
   }
   if (deliveryChoice === "PICKUP_EXTERNAL" && !listing.allowExternalPickup) {
-    return { error: "Verkoper accepteert geen Tikkie/contant-betaling — kies wallet-vooraf." };
+    return { error: "Verkoper accepteert geen ophaal-betaling — kies wallet-vooraf." };
   }
 
   // Stock-based flow voor SEALED_PRODUCT en OTHER (Fase 27.23). Alleen wanneer

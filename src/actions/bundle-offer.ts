@@ -87,7 +87,7 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
       return { error: `"${l.title}" accepteert geen wallet-betaling voor ophalen` };
     }
     if (wantsExternalPickup && !l.allowExternalPickup) {
-      return { error: `"${l.title}" accepteert geen Tikkie/contant — kies wallet-vooraf` };
+      return { error: `"${l.title}" accepteert geen ophaal-betaling — kies wallet-vooraf` };
     }
   }
   // Geen shippingMethodId-validatie meer bij offer-creation. Seller kiest die
