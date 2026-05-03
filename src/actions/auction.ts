@@ -896,6 +896,14 @@ export async function completeAuctionPayment(auctionId: string) {
     data: { paymentStatus: "PAID" },
   });
 
+  // Fase 27.102: post-payment sync. Auction.paymentStatus is nu PAID dus
+  // recalculateTotalReserved telt deze auction niet meer (filter op
+  // AWAITING_PAYMENT). Zonder sync blijft de oude 40%-reserve in
+  // User.reservedBalance hangen, terwijl het commitment is afgerond.
+  // Symptoom: 27 buyer betaalde Buy-Now van €714.42, balance correct -€714.42,
+  // maar reservedBalance bleef €285.77 staan in plaats van €0.
+  await syncReservedBalance(session.user.id);
+
   // Notify seller about completed payment
   await createNotification(
     auction.sellerId,
