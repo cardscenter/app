@@ -26,7 +26,7 @@ export function ListingViewToggle() {
 
   return (
     <div
-      className="inline-flex rounded-lg border border-border bg-card p-0.5"
+      className="hidden lg:inline-flex rounded-lg border border-border bg-card p-0.5"
       role="group"
       aria-label="Weergave kiezen"
     >
