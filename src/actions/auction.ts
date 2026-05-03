@@ -389,12 +389,41 @@ export async function buyNow(auctionId: string) {
     });
     await syncReservedBalance(session.user.id);
 
+    // Pre-create PENDING ShippingBundle (Fase 27.93). Consistent met
+    // finalizeAuction zodat seller een 'wacht-op-betaling' sale ziet en de
+    // koper de aankoop kan terugvinden via de Pending-Auctions sectie op
+    // /dashboard/aankopen. completeAuctionPayment promoot deze rij naar PAID
+    // i.p.v. een nieuwe aan te maken (auctionId @unique).
+    await createPendingBundle({
+      buyerId: session.user.id,
+      sellerId: auction.sellerId,
+      totalItemCost: auction.buyNowPrice,
+      shippingCost: 0,
+      auctionId,
+      address: {
+        street: user.street,
+        houseNumber: user.houseNumber,
+        postalCode: user.postalCode,
+        city: user.city,
+        country: user.country,
+      },
+    });
+
     await createNotification(
       session.user.id,
       "AUCTION_WIN",
       "Direct gekocht — betaling vereist",
       `Je hebt "${auction.title}" direct gekocht voor €${auction.buyNowPrice.toFixed(2)}. Rond de betaling af binnen 5 dagen.`,
-      `/nl/dashboard/biedingen`
+      `/nl/dashboard/aankopen`
+    );
+
+    // Notify seller — pending sale, payment not in yet
+    await createNotification(
+      auction.sellerId,
+      "ITEM_SOLD",
+      "Veiling direct gekocht — wachten op betaling",
+      `"${auction.title}" is direct gekocht voor €${auction.buyNowPrice.toFixed(2)} maar de koper moet nog betalen. Verzend pas zodra de betaling binnen is (5 dagen deadline).`,
+      `/nl/veilingen/${auctionId}`
     );
   }
 

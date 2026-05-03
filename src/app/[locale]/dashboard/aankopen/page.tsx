@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
 import { CancellationsSection } from "@/components/dashboard/cancellations-section";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
+import { PendingAuctionPayments } from "@/components/dashboard/pending-auction-payments";
 
 // Groepeer items met dezelfde cardName + conditie tot één rij met aantal +
 // subtotaal. Voor stocked-buy ("5× Destined Rivals booster pack") en voor
@@ -37,6 +38,15 @@ export default async function MyPurchasesPage() {
   const session = await auth();
   const t = await getTranslations("purchases");
   const userId = session!.user!.id!;
+
+  // Veilingen die wachten op restbetaling (Fase 27.93). Treedt op bij Nu-Kopen
+  // of Auction-Win met partial-balance (40-99%): de winner heeft een 5d
+  // payment-deadline. Voorheen alleen zichtbaar op /dashboard/saldo, wat
+  // verwarrend was — koper verwacht 'm bij /aankopen.
+  const pendingAuctions = await prisma.auction.findMany({
+    where: { winnerId: userId, paymentStatus: "AWAITING_PAYMENT" },
+    select: { id: true, title: true, finalPrice: true, paymentDeadline: true },
+  });
 
   const bundles = await prisma.shippingBundle.findMany({
     where: {
@@ -257,11 +267,26 @@ export default async function MyPurchasesPage() {
       <h1 className="text-2xl font-bold text-foreground">
         {t("title")}
       </h1>
-      {serialized.length === 0 ? (
+
+      {/* Pending veiling-betalingen bovenaan (Fase 27.93). Hetzelfde component
+          dat ook op /dashboard/saldo staat — koper kan beide pagina's
+          gebruiken om de restbetaling af te ronden. */}
+      {pendingAuctions.length > 0 && (
+        <PendingAuctionPayments
+          auctions={pendingAuctions.map((a) => ({
+            id: a.id,
+            title: a.title,
+            finalPrice: a.finalPrice,
+            paymentDeadline: a.paymentDeadline,
+          }))}
+        />
+      )}
+
+      {serialized.length === 0 && pendingAuctions.length === 0 ? (
         <p className="mt-8 text-sm text-muted-foreground">
           {t("noPurchases")}
         </p>
-      ) : (
+      ) : serialized.length === 0 ? null : (
         <>
           <ActivePickupsSection pickups={activePickups} />
           <CancellationsSection
