@@ -754,3 +754,48 @@ export async function completeAuctionPayment(auctionId: string) {
 
   return { success: true };
 }
+
+// Fase 27.88: veiling annuleren door eigenaar wanneer er nog geen biedingen
+// zijn binnengekomen. Alleen mogelijk in ACTIVE-status zonder bids — zodra er
+// een bod is, kan de seller niet meer annuleren (anders zou hij bieders kunnen
+// frustreren door bewust hoog/laag te annuleren). Race-safe: updateMany met
+// status- én bids-count-gate via een transactie.
+export async function cancelAuction(auctionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const auction = await prisma.auction.findUnique({
+    where: { id: auctionId },
+    select: { sellerId: true, status: true, title: true, _count: { select: { bids: true } } },
+  });
+  if (!auction) return { error: "Veiling niet gevonden" };
+  if (auction.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (auction.status !== "ACTIVE") return { error: "Alleen actieve veilingen kunnen worden geannuleerd" };
+  if (auction._count.bids > 0) return { error: "Er is al een bod uitgebracht — annuleren niet meer mogelijk" };
+
+  // Race-safe flip: ACTIVE → CANCELLED. Als er tussen het lezen en schrijven
+  // toch een bod binnenkomt, willen we het annuleren tegenhouden. Daarom een
+  // transactie met re-check op bids-count.
+  const result = await prisma.$transaction(async (tx) => {
+    const fresh = await tx.auction.findUnique({
+      where: { id: auctionId },
+      select: { _count: { select: { bids: true } } },
+    });
+    if (!fresh || fresh._count.bids > 0) {
+      return { error: "Er is intussen een bod gedaan — annuleren niet meer mogelijk" } as const;
+    }
+    const flipped = await tx.auction.updateMany({
+      where: { id: auctionId, status: "ACTIVE" },
+      data: { status: "CANCELLED" },
+    });
+    if (flipped.count === 0) {
+      return { error: "Veiling kon niet geannuleerd worden — status is gewijzigd" } as const;
+    }
+    return { success: true } as const;
+  });
+
+  return result;
+}

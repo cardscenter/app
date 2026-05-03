@@ -9,17 +9,20 @@ interface SearchResultCardProps {
   result: SearchResult;
 }
 
+// Kleuren matchen de categorie-CTA's op de overzichtspagina's:
+// Veilingen=blauw (primary), Marktplaats=groen (emerald), Claimsales=geel (amber).
+// Zie CLAUDE.md "Page color theming".
 const TYPE_STYLES = {
   auction: {
-    bg: "bg-purple-500/90",
+    bg: "bg-primary/90",
     icon: Gavel,
   },
   claimsale: {
-    bg: "bg-blue-500/90",
+    bg: "bg-amber-600/90",
     icon: Tag,
   },
   listing: {
-    bg: "bg-emerald-500/90",
+    bg: "bg-emerald-600/90",
     icon: Store,
   },
 } as const;

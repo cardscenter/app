@@ -14,6 +14,7 @@ import { SocialShare } from "@/components/ui/social-share";
 import { ItemCarousel } from "@/components/ui/item-carousel";
 import { getSellerOtherItems, getSimilarItems } from "@/lib/recommendations";
 import { LiveAuctionContent } from "@/components/auction/live-auction-content";
+import { AuctionOwnerActions } from "@/components/auction/auction-owner-actions";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
 import { SellerInfoBlock } from "@/components/ui/seller-info-block";
 import { getSellerInfo } from "@/lib/seller-info";
@@ -149,6 +150,18 @@ export default async function AuctionDetailPage({
             <div>
               <h2 className="text-lg font-semibold text-foreground">{t("description")}</h2>
               <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{auction.description}</p>
+            </div>
+          )}
+
+          {/* Owner-acties (Fase 27.88): annuleren zolang er geen biedingen zijn. */}
+          {isOwner && (
+            <div className="glass-subtle rounded-2xl p-4">
+              <AuctionOwnerActions
+                auctionId={auction.id}
+                bidCount={auction.bids.length}
+                status={auction.status}
+                variant="panel"
+              />
             </div>
           )}
         </div>

@@ -2,14 +2,23 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
+import { AuctionOwnerActions } from "@/components/auction/auction-owner-actions";
 
-export default async function MyAuctionsPage() {
+export default async function MyAuctionsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
+  if (!session?.user?.id) redirect(`/${locale}/login`);
+
   const t = await getTranslations("dashboard");
   const ta = await getTranslations("auction");
 
   const auctions = await prisma.auction.findMany({
-    where: { sellerId: session!.user!.id },
+    where: { sellerId: session.user.id },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { bids: true } } },
   });
@@ -35,31 +44,40 @@ export default async function MyAuctionsPage() {
       ) : (
         <div className="mt-6 space-y-4">
           {auctions.map((auction) => (
-            <Link
+            <div
               key={auction.id}
-              href={`/veilingen/${auction.id}`}
-              className="block rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
+              className="flex items-center gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
             >
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-foreground">
-                  {auction.title}
-                </h3>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  auction.status === "ACTIVE"
-                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                    : auction.status === "ENDED_SOLD" || auction.status === "BOUGHT_NOW"
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                    : "bg-muted text-muted-foreground"
-                }`}>
-                  {auction.status}
-                </span>
-              </div>
-              <div className="mt-2 flex gap-4 text-sm text-muted-foreground">
-                <span>{ta("currentBid")}: €{(auction.currentBid ?? auction.startingBid).toFixed(2)}</span>
-                <span>{auction._count.bids} biedingen</span>
-                <span>{new Date(auction.endTime).toLocaleDateString("nl-NL")}</span>
-              </div>
-            </Link>
+              <Link href={`/veilingen/${auction.id}`} className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="truncate font-medium text-foreground">
+                    {auction.title}
+                  </h3>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    auction.status === "ACTIVE"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                      : auction.status === "ENDED_SOLD" || auction.status === "BOUGHT_NOW"
+                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {auction.status}
+                  </span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  <span>{ta("currentBid")}: €{(auction.currentBid ?? auction.startingBid).toFixed(2)}</span>
+                  <span>{auction._count.bids} biedingen</span>
+                  <span>{new Date(auction.endTime).toLocaleDateString("nl-NL")}</span>
+                </div>
+              </Link>
+              {/* Owner-actie (Fase 27.88): annuleer-knop alleen voor ACTIVE
+                  veilingen zonder biedingen. Component rendert null anders. */}
+              <AuctionOwnerActions
+                auctionId={auction.id}
+                bidCount={auction._count.bids}
+                status={auction.status}
+                variant="card"
+              />
+            </div>
           ))}
         </div>
       )}
