@@ -418,13 +418,19 @@ export async function counterBundleOffer(input: { parentProposalId: string; tota
     });
   }
 
-  // Tx: parent → COUNTERED, child PENDING met gezwapte rollen + zelfde listings/items.
+  // Tx: parent → COUNTERED, child PENDING met zelfde listings/items.
+  // Atomic flip via updateMany met status-filter (Fase 27.80) — voorkomt
+  // dat twee parallelle counter-bids elk een PENDING child aanmaken.
+  // Tweede tx krijgt count=0 en aborteert.
   const expiresAt = new Date(Date.now() + BUNDLE_OFFER_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
   const child = await prisma.$transaction(async (tx) => {
-    await tx.bundleProposal.update({
-      where: { id: parent.id },
+    const flipped = await tx.bundleProposal.updateMany({
+      where: { id: parent.id, status: "PENDING" },
       data: { status: "COUNTERED", respondedAt: new Date() },
     });
+    if (flipped.count === 0) {
+      throw new Error("Voorstel is al beantwoord — herlaad de pagina.");
+    }
 
     const newProposer = session.user!.id!;
     const newRecipient = isSeller ? parent.buyerId : parent.sellerId;
@@ -449,7 +455,11 @@ export async function counterBundleOffer(input: { parentProposalId: string; tota
         listings: {
           create: parent.listings.map((bl) => ({
             listingId: bl.listingId,
-            priceSnapshot: bl.priceSnapshot,
+            // priceSnapshot fresh van listing (Fase 27.80) — als seller
+            // tussen parent en counter de prijs verlaagde, neemt counter
+            // de actuele waarde over. priceSnapshot is informatief in
+            // dashboards; totalAmount blijft leidend voor wallet.
+            priceSnapshot: bl.listing.price ?? bl.priceSnapshot,
             quantity: bl.quantity,
             itemIds: bl.itemIds,
           })),

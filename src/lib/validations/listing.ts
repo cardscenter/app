@@ -93,6 +93,17 @@ export const createListingSchema = z.object({
     });
   }
 
+  // allowPartialSale alleen relevant voor MULTI_CARD (Fase 27.80). Voor
+  // andere types werd het silently false gezet — nu expliciete error zodat
+  // de UI/API geen verwarrende state stuurt.
+  if (data.allowPartialSale && data.listingType !== "MULTI_CARD") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Gedeeltelijke verkoop is alleen mogelijk voor 'Meerdere losse kaarten'",
+      path: ["allowPartialSale"],
+    });
+  }
+
   // Price required for FIXED pricing
   if (data.pricingType === "FIXED" && (!data.price || data.price <= 0)) {
     ctx.addIssue({
