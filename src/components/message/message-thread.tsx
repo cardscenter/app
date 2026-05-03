@@ -147,6 +147,8 @@ export function MessageThread({
   // router.refresh() zodat de proposal/bundle-status opnieuw wordt opgehaald
   // (REJECT, ACCEPT, COUNTER, etc.). Zonder dit blijft de chat-bubble bij
   // de andere partij in z'n oude status hangen tot een handmatige reload.
+  // Plus: forceer scroll-to-bottom NA de rerender want bundle-bubbles zijn
+  // groot en passen niet binnen de standaard auto-scroll-drempel.
   const lastProposalRefreshRef = useRef<string | null>(null);
   useEffect(() => {
     const proposalRelated = newMessages.filter((m) => m.proposalId || m.bundleProposalId);
@@ -155,6 +157,15 @@ export function MessageThread({
     if (signature !== lastProposalRefreshRef.current) {
       lastProposalRefreshRef.current = signature;
       router.refresh();
+      // Wacht 2 frames + 200ms tot de re-rendered bundle-bubble in de DOM zit,
+      // dan scroll forced naar bottom. Zonder timeout zou scrollHeight nog
+      // de oude waarde kunnen zijn en zou de scroll niet onderaan komen.
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const el = scrollContainerRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        }, 250);
+      });
     }
   }, [newMessages, router]);
 
@@ -200,10 +211,9 @@ export function MessageThread({
   }, [conversationId]);
 
   // Nieuwe messages: meescrollen wanneer (a) jij zelf het laatste bericht
-  // gestuurd hebt, (b) je binnen 600px van bottom zit, of (c) er meerdere
-  // messages tegelijk binnenkomen (refresh-batch). 600px-drempel is ruim
-  // genoeg voor grote bundle-bubbles + proposal-cards die makkelijk
-  // 400-500px hoog zijn.
+  // gestuurd hebt, (b) je binnen 800px van bottom zit, (c) er meerdere
+  // messages tegelijk binnenkomen, of (d) het bericht een proposal/bundle is
+  // (die zijn primary actie van het moment, dus altijd zichtbaar maken).
   useEffect(() => {
     if (allMessages.length === lastMessageCountRef.current) return;
     const newCount = allMessages.length;
@@ -213,9 +223,14 @@ export function MessageThread({
     if (!el) return;
     const lastMessage = allMessages[allMessages.length - 1];
     const isOwnLastMessage = lastMessage?.senderId === currentUserId;
+    const isProposalMessage = !!(lastMessage?.proposalId || lastMessage?.bundleProposalId);
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (isOwnLastMessage || distanceFromBottom < 600 || newCount > prevCount + 1) {
+    if (isOwnLastMessage || isProposalMessage || distanceFromBottom < 800 || newCount > prevCount + 1) {
       el.scrollTop = el.scrollHeight;
+      // Tweede scroll na DOM-update voor grote bubbles met images
+      requestAnimationFrame(() => {
+        if (el) el.scrollTop = el.scrollHeight;
+      });
     }
   }, [allMessages, currentUserId]);
 

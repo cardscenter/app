@@ -143,6 +143,15 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
           {bp.deliveryMethod === "PICKUP" ? t("pickupOption") : t("shippingOption")}
         </div>
 
+        {/* Verzekerd-verzonden badge — alleen bij SHIP-bundles waar
+            buyer dit heeft aangevinkt (Fase 27.71) */}
+        {bp.deliveryMethod === "SHIP" && bp.requestInsuredShipping && (
+          <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+            <ShieldCheck className="h-3 w-3" />
+            {t("requestInsured.label")}
+          </div>
+        )}
+
         <div className={`flex items-center gap-1.5 text-sm font-medium mb-2 ${statusColor}`}>
           {statusIcon}
           {t(`status.${bp.status.toLowerCase()}`)}
