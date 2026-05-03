@@ -275,6 +275,10 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
 
         await syncReservedBalance(previousWinnerId);
 
+        // Fase 27.98: nieuwe winner krijgt sync zodat AWAITING_PAYMENT-tak in
+        // recalculateTotalReserved 40% van finalPrice voor 'm reserveert.
+        await syncReservedBalance(runnerUpBid.bidderId);
+
         const oldBundle = await prisma.shippingBundle.findUnique({ where: { auctionId: auction.id } });
         if (oldBundle && oldBundle.status === "PENDING") {
           await prisma.shippingBundle.delete({ where: { id: oldBundle.id } });

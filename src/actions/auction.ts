@@ -418,6 +418,13 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
       `"${auction.title}" is direct gekocht voor €${auction.buyNowPrice.toFixed(2)}. ${chosenDelivery === "PICKUP" ? "Stem de ophaal-afspraak af in chat." : "Bekijk je verkopen om te verzenden."}`,
       "/dashboard/verkopen"
     );
+
+    // Fase 27.98: sync buyer's reservedBalance. Een eerdere bid op deze
+    // auction (eerste bod, daarna buyNow) blijft als bid-record bestaan, maar
+    // status is nu BOUGHT_NOW. Zonder sync zou recalculateTotalReserved bij
+    // een latere balance-actie het correct opruimen, maar het is netter om
+    // het hier expliciet te doen zodat de UI direct juiste cijfers toont.
+    await syncReservedBalance(session.user.id);
   } else {
     // Partial payment — reserve 40%, give 5-day deadline
     const paymentDeadline = new Date();
@@ -614,6 +621,12 @@ export async function finalizeAuction(auctionId: string) {
       },
     });
 
+    // Fase 27.98: post-flip sync. Status is nu ENDED_SOLD/PAID, dus winner-bid
+    // telt niet meer als ACTIVE. Winner heeft volledig betaald → reserve = 0.
+    // Sync zet reservedBalance correct, anders blijft de stale waarde van vóór
+    // de status-flip hangen (loop on regel 510-512 was vóór de flip).
+    await syncReservedBalance(highestBid.bidderId);
+
     // Notify seller about auction sale
     await createNotification(
       auction.sellerId,
@@ -637,6 +650,11 @@ export async function finalizeAuction(auctionId: string) {
         paymentDeadline,
       },
     });
+
+    // Fase 27.98: post-flip sync. Winner-bid is niet meer ACTIVE; in plaats
+    // daarvan pakt recalculateTotalReserved nu de AWAITING_PAYMENT-tak op.
+    // Effect: 40% van finalPrice blijft gereserveerd tot completeAuctionPayment.
+    await syncReservedBalance(highestBid.bidderId);
 
     // Pre-create a PENDING ShippingBundle so the buyer sees a "wacht op
     // betaling" order and the seller sees a pending sale. Address fields
@@ -805,11 +823,19 @@ export async function completeAuctionPayment(auctionId: string) {
   const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!buyer) return { error: "Gebruiker niet gevonden" };
 
+  // Fase 27.98: sync vóór de availableBalance-check zodat we niet op stale
+  // reservedBalance werken (kan ontstaan na status-flips of fout-historiek).
+  // Het 40%-commitment voor deze AWAITING_PAYMENT auction zit IN reservedBalance,
+  // dus we vergelijken totalCost tegen (balance - reserved + die 40%).
+  const syncedReserved = await syncReservedBalance(session.user.id);
   const totalCost = auction.finalPrice ?? 0;
-  const availableBalance = buyer.balance - buyer.reservedBalance;
+  const ownReserveOnThisAuction = calculateReserveAmount(totalCost);
+  // Available exclusief de eigen reserve op deze auction (die wordt zo
+  // sowieso 'omgezet' naar de echte deductie).
+  const availableExcludingOwnReserve = buyer.balance - syncedReserved + ownReserveOnThisAuction;
 
-  if (availableBalance < totalCost) {
-    return { error: `Onvoldoende saldo. Benodigd: €${totalCost.toFixed(2)}, beschikbaar: €${availableBalance.toFixed(2)}` };
+  if (availableExcludingOwnReserve < totalCost) {
+    return { error: `Onvoldoende saldo. Benodigd: €${totalCost.toFixed(2)}, beschikbaar: €${availableExcludingOwnReserve.toFixed(2)}` };
   }
 
   // Bestaande PENDING bundle bevat de delivery-keuze die bij finalize/buyNow

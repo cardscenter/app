@@ -112,6 +112,10 @@ async function processExpiredPaymentDeadlines() {
       // sum automatically — but we still call sync to be explicit.
       await syncReservedBalance(previousWinnerId);
 
+      // Fase 27.98: nieuwe winner krijgt sync zodat AWAITING_PAYMENT-tak in
+      // recalculateTotalReserved 40% van finalPrice voor 'm reserveert.
+      await syncReservedBalance(runnerUpBid.bidderId);
+
       // D1: re-target the PENDING shipping bundle to the new winner. Delete
       // the old PENDING row (auctionId is @unique) and create a fresh one
       // with the new buyer's data. We do nothing with PAID bundles — those

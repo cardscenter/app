@@ -18,71 +18,144 @@ export function calculateReserveAmount(bidAmount: number): number {
 
 /**
  * Get the current reserved amount for a specific user on a specific auction.
- * This is 40% of whichever is higher: their highest manual bid or their autobid maxAmount.
+ * Mirrort de logica van recalculateTotalReserved voor één auction:
+ * - ACTIVE + user is hoogste bieder: 40% × max(userBid, autobidMax)
+ * - ACTIVE + user is overboden maar heeft active autobid: 40% × autobidMax
+ * - AWAITING_PAYMENT + user is winner: 40% × finalPrice
+ * - Anders: 0
  */
 export async function getReservedForAuction(userId: string, auctionId: string): Promise<number> {
-  // Get user's highest bid on this auction
+  const auction = await prisma.auction.findUnique({
+    where: { id: auctionId },
+    select: {
+      status: true,
+      paymentStatus: true,
+      winnerId: true,
+      finalPrice: true,
+      bids: { orderBy: { amount: "desc" }, take: 1, select: { bidderId: true } },
+    },
+  });
+  if (!auction) return 0;
+
+  // AWAITING_PAYMENT-pad
+  if (auction.paymentStatus === "AWAITING_PAYMENT" && auction.winnerId === userId) {
+    return calculateReserveAmount(auction.finalPrice ?? 0);
+  }
+  if (auction.status !== "ACTIVE") return 0;
+
+  // User's highest bid + autobid op deze auction
   const highestBid = await prisma.auctionBid.findFirst({
     where: { auctionId, bidderId: userId },
     orderBy: { amount: "desc" },
     select: { amount: true },
   });
-
-  // Get user's active autobid on this auction
   const autoBid = await prisma.autoBid.findUnique({
     where: { userId_auctionId: { userId, auctionId } },
     select: { maxAmount: true, isActive: true },
   });
 
-  const highestBidAmount = highestBid?.amount ?? 0;
+  const userBidAmount = highestBid?.amount ?? 0;
   const autobidMax = autoBid?.isActive ? autoBid.maxAmount : 0;
+  const isHighestBidder = auction.bids[0]?.bidderId === userId;
 
-  // Reserve 40% of whichever is higher
-  const effectiveAmount = Math.max(highestBidAmount, autobidMax);
-  return calculateReserveAmount(effectiveAmount);
+  if (isHighestBidder) {
+    return calculateReserveAmount(Math.max(userBidAmount, autobidMax));
+  }
+  if (autobidMax > 0) {
+    return calculateReserveAmount(autobidMax);
+  }
+  return 0;
 }
 
 /**
  * Recalculate total reserved balance from scratch for a user.
- * Sums up 40% of max(highestBid, autobidMax) per active auction.
+ *
+ * Wat reserveert:
+ * 1. ACTIVE auctions waar user de **huidige hoogste bieder** is — 40% van
+ *    max(user's highest bid, user's autobid max).
+ * 2. ACTIVE auctions waar user is overboden maar een **actieve autobid** heeft —
+ *    40% van autobid max (kan elk moment getriggerd worden door een nieuwe
+ *    bid, dus commitment moet vastgehouden worden).
+ * 3. AWAITING_PAYMENT auctions waar user de **winner** is — 40% van finalPrice
+ *    (commitment tot completeAuctionPayment of cron-driven PAYMENT_FAILED).
+ *
+ * Wat NIET reserveert (bug-fix Fase 27.98):
+ * - Overboden bids zonder autobid — geld is vrij. Voorheen werden deze
+ *   ten onrechte als reserve gerekend, waardoor users geld bevroren zagen
+ *   na een outbid (bv. 27 buyer met €103.21 stale reserve).
+ * - PAID auctions of CANCELLED/PAYMENT_FAILED — afgehandeld of geen
+ *   commitment meer.
  */
 export async function recalculateTotalReserved(userId: string): Promise<number> {
-  // Find all active auctions where this user has bids
-  const activeBids = await prisma.auctionBid.findMany({
+  // Eligible auctions: ACTIVE waar user heeft geboden, of AWAITING_PAYMENT
+  // waar user de winner is. Pak top-bid mee om "is hoogste bieder?"-check
+  // te doen zonder extra round-trip.
+  const eligible = await prisma.auction.findMany({
     where: {
-      bidderId: userId,
-      auction: { status: "ACTIVE" },
+      OR: [
+        { status: "ACTIVE", bids: { some: { bidderId: userId } } },
+        { paymentStatus: "AWAITING_PAYMENT", winnerId: userId },
+      ],
     },
-    select: { auctionId: true, amount: true },
-    orderBy: { amount: "desc" },
+    select: {
+      id: true,
+      status: true,
+      paymentStatus: true,
+      winnerId: true,
+      finalPrice: true,
+      bids: {
+        orderBy: { amount: "desc" },
+        take: 1,
+        select: { bidderId: true },
+      },
+    },
   });
 
-  // Group by auction, keep highest bid per auction
-  const highestPerAuction = new Map<string, number>();
-  for (const bid of activeBids) {
-    if (!highestPerAuction.has(bid.auctionId)) {
-      highestPerAuction.set(bid.auctionId, bid.amount);
+  if (eligible.length === 0) return 0;
+
+  const auctionIds = eligible.map((a) => a.id);
+
+  // User's eigen highest bid per auction (voor reserve-berekening)
+  const userBids = await prisma.auctionBid.findMany({
+    where: { bidderId: userId, auctionId: { in: auctionIds } },
+    orderBy: { amount: "desc" },
+    select: { auctionId: true, amount: true },
+  });
+  const userHighestBidByAuction = new Map<string, number>();
+  for (const b of userBids) {
+    if (!userHighestBidByAuction.has(b.auctionId)) {
+      userHighestBidByAuction.set(b.auctionId, b.amount);
     }
   }
 
-  // Get active autobids
+  // User's actieve autobids op deze auctions
   const activeAutoBids = await prisma.autoBid.findMany({
-    where: {
-      userId,
-      isActive: true,
-      auction: { status: "ACTIVE" },
-    },
+    where: { userId, isActive: true, auctionId: { in: auctionIds } },
     select: { auctionId: true, maxAmount: true },
   });
+  const autoMaxByAuction = new Map<string, number>();
+  for (const ab of activeAutoBids) autoMaxByAuction.set(ab.auctionId, ab.maxAmount);
 
-  // Merge: for each auction, take max of highest bid and autobid max
-  const auctionIds = new Set([...highestPerAuction.keys(), ...activeAutoBids.map(ab => ab.auctionId)]);
   let totalReserved = 0;
+  for (const a of eligible) {
+    // AWAITING_PAYMENT-pad: winner reserveert 40% van finalPrice
+    if (a.paymentStatus === "AWAITING_PAYMENT" && a.winnerId === userId) {
+      totalReserved += calculateReserveAmount(a.finalPrice ?? 0);
+      continue;
+    }
 
-  for (const auctionId of auctionIds) {
-    const highestBid = highestPerAuction.get(auctionId) ?? 0;
-    const autobidMax = activeAutoBids.find(ab => ab.auctionId === auctionId)?.maxAmount ?? 0;
-    totalReserved += calculateReserveAmount(Math.max(highestBid, autobidMax));
+    // ACTIVE-pad: alleen als user huidige hoogste bieder is, OF autobid actief
+    const isHighestBidder = a.bids[0]?.bidderId === userId;
+    const userBid = userHighestBidByAuction.get(a.id) ?? 0;
+    const autoMax = autoMaxByAuction.get(a.id) ?? 0;
+
+    if (isHighestBidder) {
+      totalReserved += calculateReserveAmount(Math.max(userBid, autoMax));
+    } else if (autoMax > 0) {
+      // Overboden maar autobid kan triggeren → reserve max-amount
+      totalReserved += calculateReserveAmount(autoMax);
+    }
+    // Anders: niets — overboden zonder autobid = geld vrij
   }
 
   return Math.round(totalReserved * 100) / 100;
