@@ -1,15 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { ListingCard } from "@/components/listing/listing-card";
+import { ListingListRow } from "@/components/listing/listing-list-row";
 import { SponsoredRow } from "@/components/listing/sponsored-row";
 import { Pagination } from "@/components/ui/pagination";
 import { Link } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
 import { ListingSortBar } from "@/components/listing/listing-sort-bar";
+import { ListingViewToggle } from "@/components/listing/listing-view-toggle";
+import { MarktplaatsFilterSidebar } from "@/components/listing/marktplaats-filter-sidebar";
+import { MarktplaatsMobileFilters } from "@/components/listing/marktplaats-mobile-filters";
 import { getBuyerLocation, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { auth } from "@/lib/auth";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 import { PageContainer } from "@/components/layout/page-container";
+import { parseListingFilters, buildListingFilterWhere } from "@/lib/listing-filters";
+import { distanceKm } from "@/lib/distance";
 
 const PAGE_SIZE = 40;
 
@@ -18,101 +24,184 @@ export default async function MarktplaatsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ page?: string; sort?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale } = await params;
   const sp = await searchParams;
   const t = await getTranslations("listing");
 
-  const currentPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const pageRaw = typeof sp.page === "string" ? sp.page : undefined;
+  const sortRaw = typeof sp.sort === "string" ? sp.sort : undefined;
+  const currentPage = Math.max(1, parseInt(pageRaw ?? "1", 10) || 1);
   type SortOption = "newest" | "price_asc" | "price_desc";
-  const sort = (["newest", "price_asc", "price_desc"].includes(sp.sort ?? "")
-    ? sp.sort
+  const sort = (["newest", "price_asc", "price_desc"].includes(sortRaw ?? "")
+    ? sortRaw
     : "newest") as SortOption;
 
   function getListingOrderBy(s: SortOption) {
     switch (s) {
-      case "price_asc": return { price: "asc" as const };
-      case "price_desc": return { price: "desc" as const };
-      default: return { createdAt: "desc" as const };
+      case "price_asc":
+        return { price: "asc" as const };
+      case "price_desc":
+        return { price: "desc" as const };
+      default:
+        return { createdAt: "desc" as const };
     }
   }
   const orderBy = getListingOrderBy(sort);
   const now = new Date();
 
-  // Filter by buyer's country (non-NL buyers don't see NL_ONLY sellers).
-  // buyerLocation is ook input voor de distance-display per listing-card.
+  // Buyer location → distance + country-filter.
   const buyerLocation = await getBuyerLocation();
   const buyerCountry = buyerLocation?.country ?? null;
   const countryFilter = getSellerCountryFilter(buyerCountry);
 
-  // Fase 7: hide listings from sellers I've blocked + sellers who blocked me.
+  // Hide listings from sellers I've blocked + sellers who blocked me.
   const session = await auth();
   const blockedIds = await getBlockedUserIds(session?.user?.id);
   const sellerFilter = sellerNotInBlockedFilter(blockedIds);
   const blockingFilter = sellerFilter ? { sellerId: sellerFilter } : {};
 
-  // Fetch sponsored listings (active CATEGORY_HIGHLIGHT upsell)
+  // Filter-state uit de URL parsen + Prisma-where bouwen.
+  const filters = parseListingFilters(sp);
+  const filterWhere = buildListingFilterWhere(filters);
+
+  // Sponsored listings — niet aan filters onderworpen, blijven altijd zichtbaar
+  // (anders heeft een bedrijf geen ROI op de slot).
   const sponsoredListings = await prisma.listing.findMany({
     where: {
       status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
       ...countryFilter,
       ...blockingFilter,
       upsells: {
-        some: {
-          type: "CATEGORY_HIGHLIGHT",
-          expiresAt: { gt: now },
-        },
+        some: { type: "CATEGORY_HIGHLIGHT", expiresAt: { gt: now } },
       },
     },
     orderBy: { createdAt: "desc" },
     take: 8,
     include: {
-      seller: { select: { displayName: true, isVerified: true, city: true, postalCode: true, country: true } },
-      upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
-    },
-  });
-
-  const sponsoredIds = sponsoredListings.map((l) => l.id);
-
-  // Count total non-sponsored active listings
-  const totalCount = await prisma.listing.count({
-    where: {
-      status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
-      ...countryFilter,
-      ...blockingFilter,
-      ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
-    },
-  });
-
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
-
-  // Fetch paginated main listings (excluding sponsored)
-  const listings = await prisma.listing.findMany({
-    where: {
-      status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
-      ...countryFilter,
-      ...blockingFilter,
-      ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
-    },
-    orderBy,
-    skip: (safePage - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
-    include: {
-      seller: { select: { displayName: true, isVerified: true, city: true, postalCode: true, country: true } },
-      upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
-      // Fase 27.36: stock-count voor SEALED_PRODUCT/OTHER badge ("3× op voorraad").
-      // Voor andere listing-types is dit altijd 1 of 0 en triggert de badge niet.
-      _count: {
-        select: { cardItemRows: { where: { status: "AVAILABLE" } } },
+      seller: {
+        select: {
+          displayName: true,
+          isVerified: true,
+          city: true,
+          postalCode: true,
+          country: true,
+        },
+      },
+      upsells: {
+        where: { expiresAt: { gt: now } },
+        select: { type: true, expiresAt: true },
       },
     },
   });
+  const sponsoredIds = sponsoredListings.map((l) => l.id);
 
-  // Verrijk listings met availableStock zodat ListingCard de badge kan tonen.
-  // Alleen relevant voor SEALED_PRODUCT en OTHER — voor andere types laten we
-  // het undefined zodat geen badge verschijnt.
+  // Combineer alle filters voor de hoofdlijst.
+  const baseWhere = {
+    status: { in: ["ACTIVE", "PARTIALLY_SOLD"] as string[] },
+    ...countryFilter,
+    ...blockingFilter,
+    ...filterWhere,
+    ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
+  };
+
+  // Radius-filter: SQLite kan geen haversine, dus we doen post-filter in JS.
+  // Alleen mogelijk als buyer een postcode heeft. We fetchen een redelijke
+  // bovengrens en filteren dan; pageination werkt nog op het gefilterde resultaat.
+  // Voor nu: als radius gezet is, fetchen we tot 500 listings, filteren, en
+  // pagineren in JS. Voor productie met >500 listings binnen radius kan dit
+  // weer naar een spatial-index toe.
+  const useRadiusPostFilter =
+    filters.radius !== null && buyerLocation?.postalCode && buyerCountry;
+
+  let totalCount: number;
+  let listings: Awaited<ReturnType<typeof prisma.listing.findMany>>;
+
+  if (useRadiusPostFilter) {
+    const candidates = await prisma.listing.findMany({
+      where: baseWhere,
+      orderBy,
+      take: 500,
+      include: {
+        seller: {
+          select: {
+            displayName: true,
+            isVerified: true,
+            city: true,
+            postalCode: true,
+            country: true,
+          },
+        },
+        upsells: {
+          where: { expiresAt: { gt: now } },
+          select: { type: true, expiresAt: true },
+        },
+        _count: {
+          select: { cardItemRows: { where: { status: "AVAILABLE" } } },
+        },
+      },
+    });
+    const filtered = candidates.filter((l) => {
+      const km = distanceKm({
+        buyerCountry,
+        buyerPostalCode: buyerLocation!.postalCode,
+        sellerCountry: l.seller.country,
+        sellerPostalCode: l.seller.postalCode,
+      });
+      if (km === null) return false;
+      return km <= filters.radius!;
+    });
+    totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    listings = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  } else {
+    totalCount = await prisma.listing.count({ where: baseWhere });
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    listings = await prisma.listing.findMany({
+      where: baseWhere,
+      orderBy,
+      skip: (safePage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: {
+        seller: {
+          select: {
+            displayName: true,
+            isVerified: true,
+            city: true,
+            postalCode: true,
+            country: true,
+          },
+        },
+        upsells: {
+          where: { expiresAt: { gt: now } },
+          select: { type: true, expiresAt: true },
+        },
+        _count: {
+          select: { cardItemRows: { where: { status: "AVAILABLE" } } },
+        },
+      },
+    });
+  }
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  // Watchlist-IDs voor de huidige user — batch-load voor de hartjes-knop.
+  let watchlistIds = new Set<string>();
+  if (session?.user?.id && listings.length > 0) {
+    const watched = await prisma.watchlist.findMany({
+      where: {
+        userId: session.user.id,
+        listingId: { in: listings.map((l) => l.id) },
+      },
+      select: { listingId: true },
+    });
+    watchlistIds = new Set(watched.map((w) => w.listingId).filter(Boolean) as string[]);
+  }
+
+  // Verrijk met availableStock voor SEALED/OTHER stock-badge.
   const enrichedListings = listings.map((l) => ({
     ...l,
     availableStock:
@@ -121,14 +210,22 @@ export default async function MarktplaatsPage({
         : undefined,
   }));
 
+  const buyerHasPostcode = !!buyerLocation?.postalCode;
+
+  // Bouw extraParams voor pagination — alle filter-params behouden bij navigatie.
+  const extraParams: Record<string, string> = {};
+  Object.entries(sp).forEach(([k, v]) => {
+    if (k === "page") return;
+    const value = Array.isArray(v) ? v[0] : v;
+    if (value) extraParams[k] = value;
+  });
+
   return (
     <PageContainer width="wide" className="py-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {t("browseTitle")}
-          </h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("browseTitle")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t("activeCount", { count: totalCount })}
           </p>
@@ -142,42 +239,79 @@ export default async function MarktplaatsPage({
         </Link>
       </div>
 
-      {/* Sort bar */}
-      <div className="mt-6">
-        <ListingSortBar currentSort={sort} />
-      </div>
+      {/* Two-column layout: filter-sidebar + main content */}
+      <div className="mt-6 flex gap-6">
+        <MarktplaatsFilterSidebar buyerHasPostcode={buyerHasPostcode} />
 
-      <div className="mt-8">
-      {/* Sponsored row */}
-      <SponsoredRow
-        listings={sponsoredListings}
-        locale={locale}
-        title={t("sponsored")}
-        tooltip={t("sponsoredTooltip")}
-        buyer={buyerLocation}
-      />
-
-      {listings.length === 0 && sponsoredListings.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center">
-          <p className="text-muted-foreground">{t("noListings")}</p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
-            {enrichedListings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} locale={locale} buyer={buyerLocation} />
-            ))}
+        <div className="min-w-0 flex-1">
+          {/* Toolbar: mobile-filter + view-toggle + sort */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <MarktplaatsMobileFilters buyerHasPostcode={buyerHasPostcode} />
+            <ListingViewToggle />
+            <div className="ml-auto">
+              <ListingSortBar currentSort={sort} />
+            </div>
           </div>
 
-          <Pagination
-            currentPage={safePage}
-            totalPages={totalPages}
-            baseUrl="/marktplaats"
-            locale={locale}
-            extraParams={sort !== "newest" ? { sort } : {}}
-          />
-        </>
-      )}
+          {/* Sponsored row — alleen op pagina 1 zonder actieve filters */}
+          {safePage === 1 && (
+            <SponsoredRow
+              listings={sponsoredListings}
+              locale={locale}
+              title={t("sponsored")}
+              tooltip={t("sponsoredTooltip")}
+              buyer={buyerLocation}
+            />
+          )}
+
+          {listings.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-12 text-center">
+              <p className="text-muted-foreground">{t("noListings")}</p>
+            </div>
+          ) : filters.view === "grid" ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [@media(min-width:1600px)]:grid-cols-5">
+                {enrichedListings.map((listing) => (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    locale={locale}
+                    buyer={buyerLocation}
+                  />
+                ))}
+              </div>
+              <Pagination
+                currentPage={safePage}
+                totalPages={totalPages}
+                baseUrl="/marktplaats"
+                locale={locale}
+                extraParams={extraParams}
+              />
+            </>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {enrichedListings.map((listing) => (
+                  <ListingListRow
+                    key={listing.id}
+                    listing={listing}
+                    locale={locale}
+                    buyer={buyerLocation}
+                    initialWatched={watchlistIds.has(listing.id)}
+                    showWatchlist={!!session?.user?.id}
+                  />
+                ))}
+              </div>
+              <Pagination
+                currentPage={safePage}
+                totalPages={totalPages}
+                baseUrl="/marktplaats"
+                locale={locale}
+                extraParams={extraParams}
+              />
+            </>
+          )}
+        </div>
       </div>
     </PageContainer>
   );
