@@ -293,6 +293,7 @@ export default async function ListingDetailPage({
                         listingId={listing.id}
                         listingTitle={listing.title}
                         price={listing.price ?? 0}
+                        available={availableItems}
                       />
                     </BuyRouteCard>
                   )}
@@ -311,8 +312,8 @@ export default async function ListingDetailPage({
                   !isPartiallySold && (
                     <BuyRouteCard
                       variant="ship"
-                      title="Verzenden — vooraf via wallet"
-                      subtitle="Koper betaalt nu via platform-saldo. Escrow tot ontvangst."
+                      title="Verzenden — nu betalen"
+                      subtitle="Betaal nu via platform. Accepteren bij ontvangst."
                     >
                       <BuyNowButton
                         listingId={listing.id}
