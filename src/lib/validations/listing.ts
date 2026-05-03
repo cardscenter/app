@@ -81,6 +81,18 @@ export const createListingSchema = z.object({
     }
   }
 
+  // Koop-opties (Fase 27.76): voor FIXED listings moet minstens één van
+  // Direct Kopen of Biedingen aan staan. Anders kan niemand iets — dood
+  // product op de marktplaats. Voor NEGOTIABLE zijn deze toggles irrelevant
+  // (geen vaste prijs = altijd onderhandelen).
+  if (data.pricingType === "FIXED" && !data.allowDirectBuy && !data.acceptsOffers) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Bij vaste prijs: sta minstens Direct Kopen of biedingen toe",
+      path: ["allowDirectBuy"],
+    });
+  }
+
   // Price required for FIXED pricing
   if (data.pricingType === "FIXED" && (!data.price || data.price <= 0)) {
     ctx.addIssue({

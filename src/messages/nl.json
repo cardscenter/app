@@ -985,7 +985,8 @@
       "acceptsOffers": {
         "label": "Biedingen accepteren",
         "hint": "Toont een 'Bod doen'-knop. Zet uit als je vasthoudt aan je vraagprijs en geen onderhandelingen wilt."
-      }
+      },
+      "atLeastOne": "Sta minstens Direct Kopen of biedingen toe — anders kan niemand de advertentie kopen."
     },
     "pickupPayment": {
       "title": "Hoe wil je betaald worden bij ophalen?",

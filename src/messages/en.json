@@ -985,7 +985,8 @@
       "acceptsOffers": {
         "label": "Accept offers",
         "hint": "Shows a 'Make offer' button. Disable if you stick to your asking price and don't want negotiations."
-      }
+      },
+      "atLeastOne": "Allow at least Buy Now or offers — otherwise no one can buy the listing."
     },
     "pickupPayment": {
       "title": "How do you want to be paid at pickup?",

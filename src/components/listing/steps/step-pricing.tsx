@@ -136,6 +136,10 @@ export function StepPricing({
               <p className="mt-0.5 text-xs text-muted-foreground">{t("buyOptions.acceptsOffers.hint")}</p>
             </div>
           </label>
+
+          {!allowDirectBuy && !acceptsOffers && (
+            <p className="text-xs text-red-500">{t("buyOptions.atLeastOne")}</p>
+          )}
         </div>
       )}
     </div>
