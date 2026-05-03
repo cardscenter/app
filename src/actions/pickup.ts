@@ -145,6 +145,9 @@ export async function respondToPickup(scheduleId: string, action: "ACCEPT" | "RE
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
   const schedule = await prisma.pickupSchedule.findUnique({
     where: { id: scheduleId },
     include: { shippingBundle: { include: { bundleProposal: { select: { conversationId: true } } } } },
@@ -235,6 +238,9 @@ export async function respondToPickup(scheduleId: string, action: "ACCEPT" | "RE
 export async function confirmPickup(input: { shippingBundleId: string; code: string }) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   const parsed = confirmPickupSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -339,6 +345,9 @@ export async function confirmExternalPickup(shippingBundleId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
   const bundle = await prisma.shippingBundle.findUnique({
     where: { id: shippingBundleId },
     include: {
@@ -435,6 +444,9 @@ export async function confirmExternalPickup(shippingBundleId: string) {
 export async function cancelExternalReservation(shippingBundleId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
 
   const bundle = await prisma.shippingBundle.findUnique({
     where: { id: shippingBundleId },

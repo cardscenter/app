@@ -737,26 +737,37 @@ async function reserveListingForExternalPickup(args: {
   }
 
   const expiresAt = new Date(Date.now() + PICKUP_RESERVATION_DAYS * 24 * 60 * 60 * 1000);
-  await prisma.shippingBundle.create({
-    data: {
-      orderNumber: generateOrderNumber(),
-      buyerId,
-      sellerId: listing.sellerId,
-      shippingCost: 0,
-      totalItemCost: listing.price ?? 0,
-      totalCost: listing.price ?? 0,
-      status: "PENDING",
-      paymentMode: "EXTERNAL",
-      deliveryMethod: "PICKUP",
-      pickupReservationExpiresAt: expiresAt,
-      listingId: listing.id,
-      buyerStreet: buyer.street,
-      buyerHouseNumber: buyer.houseNumber,
-      buyerPostalCode: buyer.postalCode,
-      buyerCity: buyer.city,
-      buyerCountry: buyer.country,
-    },
-  });
+  // Try-catch rollback (Fase 27.79) — als bundle.create faalt (DB-error,
+  // constraint), zou de listing eeuwig in RESERVED hangen zonder bundle.
+  // Geen cron pikt dat op want pickup-reservation-timeout filtert op bundle.
+  try {
+    await prisma.shippingBundle.create({
+      data: {
+        orderNumber: generateOrderNumber(),
+        buyerId,
+        sellerId: listing.sellerId,
+        shippingCost: 0,
+        totalItemCost: listing.price ?? 0,
+        totalCost: listing.price ?? 0,
+        status: "PENDING",
+        paymentMode: "EXTERNAL",
+        deliveryMethod: "PICKUP",
+        pickupReservationExpiresAt: expiresAt,
+        listingId: listing.id,
+        buyerStreet: buyer.street,
+        buyerHouseNumber: buyer.houseNumber,
+        buyerPostalCode: buyer.postalCode,
+        buyerCity: buyer.city,
+        buyerCountry: buyer.country,
+      },
+    });
+  } catch (e) {
+    await prisma.listing.updateMany({
+      where: { id: listing.id, status: "RESERVED", buyerId },
+      data: { status: "ACTIVE", buyerId: null },
+    });
+    throw e;
+  }
 
   await createNotification(
     listing.sellerId,
@@ -824,13 +835,15 @@ async function reserveStockedListingForExternalPickup(args: {
 
     // Listing-status: PARTIALLY_SOLD als er nog AVAILABLE rijen zijn na deze
     // reservering, anders blijft hij ACTIVE — RESERVED zou misleidend zijn
-    // want andere kopers kunnen nog wel andere stuks kopen.
+    // want andere kopers kunnen nog wel andere stuks kopen. Status-filter
+    // include PARTIALLY_SOLD zodat de update slaagt als listing al partial
+    // was van een eerdere koop (Fase 27.79 fix).
     const remainingAvailable = await tx.listingCardItem.count({
       where: { listingId: listing.id, status: "AVAILABLE" },
     });
     if (remainingAvailable === 0) {
       await tx.listing.updateMany({
-        where: { id: listing.id, status: "ACTIVE" },
+        where: { id: listing.id, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
         data: { status: "PARTIALLY_SOLD" },
       });
     }

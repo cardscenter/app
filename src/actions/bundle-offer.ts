@@ -793,26 +793,30 @@ export async function completeBundleOfferPayment(bundleProposalId: string) {
   const listingIds = bp.listings.map((bl) => bl.listingId);
 
   // Atomic: items + listings RESERVED → SOLD + bundle PENDING → PAID.
-  // Voor partial-flow (stocked / MULTI_CARD-partial): items via shippingBundleId.
-  // Voor non-partial: hele listing flip via listingId.
+  // Race-protectie (Fase 27.79): cron `bundle-offer-payment-deadline` kan
+  // tussen onze checks en deze tx gelopen hebben en alles teruggezet hebben
+  // naar ACTIVE. Telt items + listings die we daadwerkelijk geflipt hebben;
+  // als beide nul zijn én er waren entries, gooit een error en aborteert
+  // de tx → geen wallet-mutatie achteraf.
   await prisma.$transaction(async (tx) => {
-    // Items van RESERVED → SOLD voor partial-flow entries
-    await tx.listingCardItem.updateMany({
+    const itemsFlipped = await tx.listingCardItem.updateMany({
       where: { shippingBundleId: bp.shippingBundle!.id, status: "RESERVED" },
       data: { status: "SOLD", soldAt: new Date() },
     });
-
-    // Non-partial listings: hele listing flip RESERVED → SOLD
-    await tx.listing.updateMany({
+    const listingsFlipped = await tx.listing.updateMany({
       where: { id: { in: listingIds }, status: "RESERVED" },
       data: { status: "SOLD", buyerId: bp.buyerId },
     });
-
-    await tx.shippingBundle.updateMany({
+    if (itemsFlipped.count === 0 && listingsFlipped.count === 0) {
+      throw new Error("Reservering is verlopen — vraag de verkoper een nieuw voorstel te accepteren.");
+    }
+    const bundleFlipped = await tx.shippingBundle.updateMany({
       where: { id: bp.shippingBundle!.id, status: "PENDING" },
       data: { status: "PAID" },
     });
-
+    if (bundleFlipped.count === 0) {
+      throw new Error("Bestelling is intussen geannuleerd of betaald.");
+    }
     await tx.bundleProposal.update({
       where: { id: bp.id },
       data: { paymentStatus: "PAID" },
