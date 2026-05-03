@@ -1,7 +1,7 @@
 "use client";
 
 import { sendMessage } from "@/actions/message";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Send, ImagePlus, X, Package, ShoppingBasket } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -11,6 +11,7 @@ import { ProposalMessage } from "@/components/message/proposal-message";
 import { BundleOfferMessage, type BundleProposalData } from "@/components/message/bundle-offer-message";
 import { BundleOfferForm } from "@/components/message/bundle-offer-form";
 import { PartialSaleForm } from "@/components/message/partial-sale-form";
+import { useChatPolling, type PolledPickupState } from "@/hooks/use-chat-polling";
 
 type Message = {
   id: string;
@@ -22,6 +23,13 @@ type Message = {
   proposalId?: string | null;
   bundleProposalId?: string | null;
 };
+
+// Compacte handtekening van pickup-state om te detecteren of er iets is
+// veranderd dat een page-refresh waard is. Identifies only meaningful flips
+// (status, schedule status, proposer, time) — niet bv. pickupCodeAttempts.
+function pickupSignature(s: PolledPickupState): string {
+  return [s.bundleStatus, s.scheduleStatus ?? "_", s.proposedById ?? "_", s.proposedFor ?? "_", s.windowStart ?? "_", s.windowEnd ?? "_"].join("|");
+}
 
 type ProposalData = {
   id: string;
@@ -103,6 +111,76 @@ export function MessageThread({
   const [showBundleForm, setShowBundleForm] = useState(false);
   const [showPartialSaleForm, setShowPartialSaleForm] = useState(false);
 
+  // Live-chat polling (Fase 27.55) — append nieuwe messages aan de
+  // initial-load-set. Server-rendered messages blijven onveranderd; nieuwe
+  // berichten worden lokaal toegevoegd via state.
+  const initialSince = messages.length > 0
+    ? messages[messages.length - 1].createdAt
+    : new Date(0).toISOString();
+  const { newMessages, pickupState } = useChatPolling({
+    conversationId,
+    initialSince,
+  });
+
+  // Bij pickup-state wijziging (bv. tegenpartij accepteert/wijzigt): refresh
+  // de hele page zodat de sticky widget + bundle-statusses opnieuw worden
+  // opgehaald met de nieuwste data. Gebeurt zelden — alleen bij echte
+  // status-flips, niet elke poll.
+  const lastPickupSignature = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pickupState) {
+      if (lastPickupSignature.current !== null) {
+        lastPickupSignature.current = null;
+        router.refresh();
+      }
+      return;
+    }
+    const signature = pickupSignature(pickupState);
+    if (lastPickupSignature.current !== null && lastPickupSignature.current !== signature) {
+      router.refresh();
+    }
+    lastPickupSignature.current = signature;
+  }, [pickupState, router]);
+
+  // Combineer initial + nieuwe messages, dedupliceer op id (eigen sends
+  // komen via router.refresh terug in de initial-set en óók via polling).
+  const allMessages = useMemo(() => {
+    const seen = new Set(messages.map((m) => m.id));
+    const combined: Message[] = [...messages];
+    for (const nm of newMessages) {
+      if (!seen.has(nm.id)) {
+        combined.push({
+          id: nm.id,
+          body: nm.body,
+          imageUrl: nm.imageUrl,
+          senderName: nm.senderName,
+          senderId: nm.senderId,
+          createdAt: nm.createdAt,
+          proposalId: nm.proposalId,
+          bundleProposalId: nm.bundleProposalId,
+        });
+        seen.add(nm.id);
+      }
+    }
+    return combined;
+  }, [messages, newMessages]);
+
+  // Auto-scroll naar bottom als gebruiker al onderaan zat (anders:
+  // niet onderbreken — gebruiker is bezig oudere berichten te lezen).
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastMessageCountRef = useRef(allMessages.length);
+  useEffect(() => {
+    if (allMessages.length === lastMessageCountRef.current) return;
+    lastMessageCountRef.current = allMessages.length;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < 200) {
+      // Was al onderaan (binnen 200px) → scroll mee. Anders: laat staan.
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [allMessages.length]);
+
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -166,12 +244,12 @@ export function MessageThread({
   return (
     <div className="flex h-full flex-col">
       {/* Messages — scrollable area */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-4">
         <div className="space-y-4">
-          {messages.length === 0 ? (
+          {allMessages.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noMessages")}</p>
           ) : (
-            messages.map((msg) => {
+            allMessages.map((msg) => {
               const isOwn = msg.senderId === currentUserId;
 
               // Render proposal message
