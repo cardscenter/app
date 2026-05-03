@@ -749,6 +749,13 @@
     "confirmPickup": "Confirm pickup",
     "wrongCode": "Wrong code",
     "tooManyAttempts": "Too many wrong codes — locked for 1 hour.",
+    "scheduledAtExact": "Pickup scheduled: {date} at {time}",
+    "timeMode": {
+      "label": "Time choice",
+      "window": "Time window",
+      "exact": "Exact time"
+    },
+    "exactTime": "Time",
     "completed": "Pickup confirmed",
     "cancelReservation": "Cancel reservation",
     "confirmCancelReservation": "Cancel this reservation? The listings will become available again.",

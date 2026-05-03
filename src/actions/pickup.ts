@@ -107,15 +107,20 @@ export async function proposePickup(input: {
     });
   }
 
-  // Chat-bericht in de gekoppelde conversation, als die er is
+  // Chat-bericht in de gekoppelde conversation, als die er is. Toon "om X"
+  // voor exact moment (windowStart === windowEnd) en "tussen X en Y" voor span.
   const conversationId = bundle.bundleProposal?.conversationId;
   if (conversationId) {
     const dateStr = new Date(data.proposedFor).toLocaleDateString("nl-NL");
+    const isExact = data.windowStart === data.windowEnd;
+    const timeStr = isExact
+      ? `om ${data.windowStart}`
+      : `tussen ${data.windowStart} en ${data.windowEnd}`;
     await prisma.message.create({
       data: {
         conversationId,
         senderId: session.user.id,
-        body: `Ophaalmoment voorgesteld: ${dateStr} tussen ${data.windowStart} en ${data.windowEnd}.`,
+        body: `Ophaalmoment voorgesteld: ${dateStr} ${timeStr}.`,
         pickupScheduleId: scheduleId,
       },
     });

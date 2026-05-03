@@ -64,7 +64,9 @@ export async function ActivePickupsSection({ pickups }: Props) {
                     </p>
                     {dateStr && (
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {dateStr} • {p.windowStart}–{p.windowEnd}
+                        {dateStr} • {p.windowStart === p.windowEnd
+                          ? `om ${p.windowStart}`
+                          : `${p.windowStart}–${p.windowEnd}`}
                       </p>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground">

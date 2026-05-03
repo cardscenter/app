@@ -744,6 +744,13 @@
     "accept": "Accepteren",
     "reject": "Afwijzen",
     "scheduledOn": "Ophaal gepland: {date} tussen {start} en {end}",
+    "scheduledAtExact": "Ophaal gepland: {date} om {time}",
+    "timeMode": {
+      "label": "Tijd-keuze",
+      "window": "Tijdspan",
+      "exact": "Exact moment"
+    },
+    "exactTime": "Tijd",
     "codeForBuyer": "Ophaalcode (laat zien aan verkoper bij ophalen)",
     "enterCode": "Voer ophaalcode in",
     "confirmPickup": "Ophaal bevestigen",

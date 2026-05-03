@@ -11,10 +11,13 @@ export const proposePickupSchema = z.object({
   windowStart: z.string().regex(TIME_HHMM, "Tijdformaat moet HH:MM zijn"),
   windowEnd: z.string().regex(TIME_HHMM, "Tijdformaat moet HH:MM zijn"),
 }).superRefine((data, ctx) => {
-  if (data.windowStart >= data.windowEnd) {
+  // windowStart > windowEnd is fout (eind voor begin). windowStart === windowEnd
+  // is OK — dat representeert een exact moment ("om 14:30") in plaats van een
+  // tijdspan ("tussen 14:00 en 16:00"). De UI toont dan een enkel tijd-veld.
+  if (data.windowStart > data.windowEnd) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Eindtijd moet later zijn dan starttijd",
+      message: "Eindtijd moet later zijn dan of gelijk aan starttijd",
       path: ["windowEnd"],
     });
   }

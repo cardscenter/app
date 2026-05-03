@@ -66,6 +66,11 @@ export function PickupActions({
   const [pickupDate, setPickupDate] = useState("");
   const [windowStart, setWindowStart] = useState("10:00");
   const [windowEnd, setWindowEnd] = useState("12:00");
+  // Fase 27.50: keuze tussen tijdspan ("tussen 10:00 en 12:00") of exact
+  // moment ("om 14:30"). Bij exact: één tijd-veld, server slaat windowStart
+  // === windowEnd op zodat we een uniforme datatype houden.
+  const [timeMode, setTimeMode] = useState<"window" | "exact">("window");
+  const [exactTime, setExactTime] = useState("14:00");
 
   const isBuyer = currentUserId === buyerId;
   const isSeller = currentUserId === sellerId;
@@ -108,12 +113,16 @@ export function PickupActions({
       return;
     }
     setShowProposeForm(false);
+    // Bij exact-moment: windowStart === windowEnd. Backend accepteert beide
+    // en de display kiest per modus de juiste rendering.
+    const startStr = timeMode === "exact" ? exactTime : windowStart;
+    const endStr = timeMode === "exact" ? exactTime : windowEnd;
     run(() =>
       proposePickup({
         shippingBundleId,
         proposedFor: pickupDate,
-        windowStart,
-        windowEnd,
+        windowStart: startStr,
+        windowEnd: endStr,
       })
     );
   }
@@ -130,16 +139,22 @@ export function PickupActions({
     <div className="mt-3 space-y-2 border-t border-border pt-3">
       {error && <p className="text-xs text-red-500">{error}</p>}
 
-      {/* Schedule informatie */}
+      {/* Schedule informatie — toont 'om X' voor exact moment, 'tussen X en Y'
+          voor tijdspan. Backend slaat windowStart === windowEnd voor exact. */}
       {schedule && (schedule.status === "ACCEPTED" || schedule.status === "PROPOSED") && (
         <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-2 text-xs text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
           <CalendarClock className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
           <span>
-            {t("scheduledOn", {
-              date: new Date(schedule.proposedFor).toLocaleDateString("nl-NL"),
-              start: schedule.windowStart,
-              end: schedule.windowEnd,
-            })}
+            {schedule.windowStart === schedule.windowEnd
+              ? t("scheduledAtExact", {
+                  date: new Date(schedule.proposedFor).toLocaleDateString("nl-NL"),
+                  time: schedule.windowStart,
+                })
+              : t("scheduledOn", {
+                  date: new Date(schedule.proposedFor).toLocaleDateString("nl-NL"),
+                  start: schedule.windowStart,
+                  end: schedule.windowEnd,
+                })}
             {schedule.status === "PROPOSED" && " (in afwachting)"}
           </span>
         </div>
@@ -290,26 +305,67 @@ export function PickupActions({
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">{t("windowStart")}</label>
-                  <input
-                    type="time"
-                    value={windowStart}
-                    onChange={(e) => setWindowStart(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-foreground">{t("windowEnd")}</label>
-                  <input
-                    type="time"
-                    value={windowEnd}
-                    onChange={(e) => setWindowEnd(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-                  />
+              {/* Mode-toggle: tijdspan vs exact moment */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-foreground">{t("timeMode.label")}</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTimeMode("window")}
+                    className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      timeMode === "window"
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {t("timeMode.window")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimeMode("exact")}
+                    className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      timeMode === "exact"
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {t("timeMode.exact")}
+                  </button>
                 </div>
               </div>
+
+              {timeMode === "window" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-foreground">{t("windowStart")}</label>
+                    <input
+                      type="time"
+                      value={windowStart}
+                      onChange={(e) => setWindowStart(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-foreground">{t("windowEnd")}</label>
+                    <input
+                      type="time"
+                      value={windowEnd}
+                      onChange={(e) => setWindowEnd(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-foreground">{t("exactTime")}</label>
+                  <input
+                    type="time"
+                    value={exactTime}
+                    onChange={(e) => setExactTime(e.target.value)}
+                    className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  />
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
