@@ -181,18 +181,37 @@ export function MessageThread({
     return combined;
   }, [messages, newMessages]);
 
-  // Auto-scroll naar bottom als gebruiker al onderaan zat (anders:
-  // niet onderbreken — gebruiker is bezig oudere berichten te lezen).
+  // Auto-scroll: bij mount/conversation-switch altijd naar bottom (zoals
+  // WhatsApp). Bij nieuwe messages alleen meescrollen als gebruiker al
+  // onderaan zat — anders niet onderbreken (oudere berichten lezen).
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const lastMessageCountRef = useRef(allMessages.length);
+  const lastMessageCountRef = useRef(0);
+
+  // Mount + conversation-switch: scroll altijd naar bottom (geen check).
+  // useLayoutEffect zou flicker schelen maar useEffect is genoeg voor MVP.
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    lastMessageCountRef.current = allMessages.length;
+    // Disable lint: bewust geen allMessages.length-dep — dit is mount-only
+    // per conversation. Updates worden door de andere useEffect afgehandeld.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
+
+  // Nieuwe messages: alleen meescrollen als binnen 200px van bottom.
   useEffect(() => {
     if (allMessages.length === lastMessageCountRef.current) return;
-    lastMessageCountRef.current = allMessages.length;
+    const newCount = allMessages.length;
+    const prevCount = lastMessageCountRef.current;
+    lastMessageCountRef.current = newCount;
     const el = scrollContainerRef.current;
     if (!el) return;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (distanceFromBottom < 200) {
-      // Was al onderaan (binnen 200px) → scroll mee. Anders: laat staan.
+    // Bij eigen send (count groeit, jij was waarschijnlijk al onderaan) of
+    // bij polled message met user binnen 200px van bottom: scroll mee.
+    // Anders laten staan (gebruiker leest oudere berichten).
+    if (distanceFromBottom < 200 || newCount > prevCount + 1) {
       el.scrollTop = el.scrollHeight;
     }
   }, [allMessages.length]);
