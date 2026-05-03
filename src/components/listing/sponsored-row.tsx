@@ -12,7 +12,15 @@ interface SponsoredListing {
   price: number | null;
   shippingCost: number;
   freeShipping?: boolean;
-  seller: { displayName: string; isVerified?: boolean };
+  deliveryMethod?: string | null;
+  pickupCity?: string | null;
+  seller: {
+    displayName: string;
+    isVerified?: boolean;
+    city?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+  };
   upsells?: { type: string; expiresAt: Date }[];
 }
 
@@ -21,9 +29,10 @@ interface SponsoredRowProps {
   locale: string;
   title: string;
   tooltip: string;
+  buyer?: { country: string | null; postalCode: string | null } | null;
 }
 
-export function SponsoredRow({ listings, locale, title, tooltip }: SponsoredRowProps) {
+export function SponsoredRow({ listings, locale, title, tooltip, buyer }: SponsoredRowProps) {
   if (listings.length === 0) return null;
 
   return (
@@ -52,7 +61,7 @@ export function SponsoredRow({ listings, locale, title, tooltip }: SponsoredRowP
             "hidden [@media(min-width:1600px)]:block";
           return (
             <div key={listing.id} className={visibility}>
-              <ListingCard listing={listing} locale={locale} />
+              <ListingCard listing={listing} locale={locale} buyer={buyer} />
             </div>
           );
         })}

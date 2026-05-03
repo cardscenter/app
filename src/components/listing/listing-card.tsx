@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import { parseImageUrls } from "@/lib/upload";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { distanceKm, formatDistance, countryFlag } from "@/lib/distance";
 
 interface ListingUpsellInfo {
   type: string;
@@ -21,7 +23,15 @@ interface ListingCardProps {
     shippingCost: number;
     freeShipping?: boolean;
     status?: string;
-    seller: { displayName: string; isVerified?: boolean };
+    deliveryMethod?: string | null;
+    pickupCity?: string | null;
+    seller: {
+      displayName: string;
+      isVerified?: boolean;
+      city?: string | null;
+      postalCode?: string | null;
+      country?: string | null;
+    };
     upsells?: ListingUpsellInfo[];
     // Voor stocked SEALED_PRODUCT/OTHER (Fase 27.36): aantal AVAILABLE rijen.
     // Toont "X stuks beschikbaar"-badge wanneer > 1. Optioneel — caller kan
@@ -29,11 +39,32 @@ interface ListingCardProps {
     availableStock?: number;
   };
   locale: string;
+  /** Buyer's land + postcode voor distance-display. Null als niet ingelogd of
+   *  profiel onvolledig — dan toont de card alleen de plaats zonder afstand. */
+  buyer?: { country: string | null; postalCode: string | null } | null;
 }
 
-export function ListingCard({ listing, locale }: ListingCardProps) {
+export function ListingCard({ listing, locale, buyer }: ListingCardProps) {
   const images = parseImageUrls(listing.imageUrls);
   const firstImage = images[0];
+
+  // Locatie-resolutie: pickup-city wint als label (PICKUP/BOTH), anders seller's
+  // algemene plaats. PostalCode komt altijd van seller — Listing heeft geen eigen
+  // postcode-veld; pickupCity wordt auto-fill uit User.city dus seller.postalCode
+  // dekt de pickup-locatie altijd.
+  const allowsPickup =
+    listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH";
+  const displayCity = (allowsPickup && listing.pickupCity) || listing.seller.city || null;
+  const sellerCountry = listing.seller.country ?? null;
+  const flag = countryFlag(sellerCountry, buyer?.country ?? null);
+  const km = buyer
+    ? distanceKm({
+        buyerCountry: buyer.country,
+        buyerPostalCode: buyer.postalCode,
+        sellerCountry,
+        sellerPostalCode: listing.seller.postalCode ?? null,
+      })
+    : null;
 
   const activeUpsells = (listing.upsells ?? []).filter(
     (u) => new Date(u.expiresAt) > new Date()
@@ -120,6 +151,19 @@ export function ListingCard({ listing, locale }: ListingCardProps) {
             {listing.seller.displayName}
             {listing.seller.isVerified && <VerifiedBadge size="sm" />}
           </p>
+
+          {displayCity && (
+            <div className="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1 truncate">
+                <MapPin className="size-3 shrink-0" />
+                <span className="truncate">{displayCity}</span>
+                {flag && <span className="ml-0.5">{flag}</span>}
+              </span>
+              {km !== null && (
+                <span className="shrink-0 tabular-nums">{formatDistance(km)}</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Link>

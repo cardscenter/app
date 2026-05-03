@@ -6,7 +6,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Link } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
 import { ListingSortBar } from "@/components/listing/listing-sort-bar";
-import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
+import { getBuyerLocation, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { auth } from "@/lib/auth";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 import { PageContainer } from "@/components/layout/page-container";
@@ -40,8 +40,10 @@ export default async function MarktplaatsPage({
   const orderBy = getListingOrderBy(sort);
   const now = new Date();
 
-  // Filter by buyer's country (non-NL buyers don't see NL_ONLY sellers)
-  const buyerCountry = await getBuyerCountry();
+  // Filter by buyer's country (non-NL buyers don't see NL_ONLY sellers).
+  // buyerLocation is ook input voor de distance-display per listing-card.
+  const buyerLocation = await getBuyerLocation();
+  const buyerCountry = buyerLocation?.country ?? null;
   const countryFilter = getSellerCountryFilter(buyerCountry);
 
   // Fase 7: hide listings from sellers I've blocked + sellers who blocked me.
@@ -66,7 +68,7 @@ export default async function MarktplaatsPage({
     orderBy: { createdAt: "desc" },
     take: 8,
     include: {
-      seller: { select: { displayName: true, isVerified: true } },
+      seller: { select: { displayName: true, isVerified: true, city: true, postalCode: true, country: true } },
       upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
     },
   });
@@ -98,7 +100,7 @@ export default async function MarktplaatsPage({
     skip: (safePage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: {
-      seller: { select: { displayName: true, isVerified: true } },
+      seller: { select: { displayName: true, isVerified: true, city: true, postalCode: true, country: true } },
       upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
       // Fase 27.36: stock-count voor SEALED_PRODUCT/OTHER badge ("3× op voorraad").
       // Voor andere listing-types is dit altijd 1 of 0 en triggert de badge niet.
@@ -152,6 +154,7 @@ export default async function MarktplaatsPage({
         locale={locale}
         title={t("sponsored")}
         tooltip={t("sponsoredTooltip")}
+        buyer={buyerLocation}
       />
 
       {listings.length === 0 && sponsoredListings.length === 0 ? (
@@ -162,7 +165,7 @@ export default async function MarktplaatsPage({
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
             {enrichedListings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} locale={locale} />
+              <ListingCard key={listing.id} listing={listing} locale={locale} buyer={buyerLocation} />
             ))}
           </div>
 
