@@ -69,11 +69,12 @@ export const LISTING_TYPES = [
 ] as const;
 export type ListingType = (typeof LISTING_TYPES)[number];
 
-// Fase 27: DRAFT (concept, niet gepubliceerd), PAUSED (tijdelijk verborgen),
-// RESERVED (gekoppeld aan accepted bundle-offer of partial-balance proposal).
-// PARTIALLY_SOLD (Fase 27.13): MULTI_CARD listing waar één of meer items SOLD
-// zijn maar er nog AVAILABLE items zijn — blijft publiek zichtbaar.
-export const LISTING_STATUSES = ["DRAFT", "ACTIVE", "PAUSED", "RESERVED", "PARTIALLY_SOLD", "SOLD", "DELETED"] as const;
+// Fase 27: PAUSED (tijdelijk verborgen), RESERVED (gekoppeld aan accepted
+// bundle-offer of partial-balance proposal). PARTIALLY_SOLD (Fase 27.13):
+// MULTI_CARD listing waar één of meer items SOLD zijn maar er nog AVAILABLE
+// items zijn — blijft publiek zichtbaar.
+// Fase 27.83: DRAFT verwijderd — concept-flow gaf onvoldoende waarde.
+export const LISTING_STATUSES = ["ACTIVE", "PAUSED", "RESERVED", "PARTIALLY_SOLD", "SOLD", "DELETED"] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
 export const PUBLIC_LISTING_STATUSES = ["ACTIVE", "PARTIALLY_SOLD"] as const;

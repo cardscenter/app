@@ -48,7 +48,6 @@ function statusLabel(status: string, type: "auction" | "claimsale" | "listing"):
     CLOSED: "Gesloten",
     ENDED: "Afgelopen",
     DELETED: "Verwijderd",
-    DRAFT: "Concept",
   };
   return labels[status] ?? status;
 }

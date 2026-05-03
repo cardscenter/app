@@ -215,37 +215,3 @@ export const createListingSchema = z.object({
   }
 });
 
-// Fase 27 — DRAFT-schema. Veel toleranter dan publish: alleen titel + listingType
-// zijn vereist zodat de gebruiker werk kan opslaan zonder volledige content.
-// Bij `publishDraft` wordt het geheel alsnog door createListingSchema gehaald.
-export const draftListingSchema = z.object({
-  listingType: z.enum(LISTING_TYPES),
-  imageUrls: z.string().optional(),
-  title: z.string().min(1, "Titel mag niet leeg zijn").max(100),
-  description: z.string().max(2000).optional(),
-  cardName: z.string().optional(),
-  cardSetId: z.string().optional(),
-  tcgdexId: z.string().optional(),
-  cardItems: z.string().optional(),
-  estimatedCardCount: z.coerce.number().int().min(1).optional(),
-  conditionRange: z.string().optional(),
-  productType: z.enum(SEALED_PRODUCT_TYPES).optional(),
-  itemCategory: z.string().optional(),
-  condition: z.string().optional(),
-  pricingType: z.enum(["FIXED", "NEGOTIABLE"]).optional(),
-  price: z.coerce.number().min(0).optional(),
-  deliveryMethod: z.enum(DELIVERY_METHODS).optional(),
-  freeShipping: z.coerce.boolean().default(false),
-  shippingCost: z.coerce.number().min(0).default(0),
-  carriers: z.string().optional(),
-  packageSize: z.enum(PACKAGE_SIZES).optional(),
-  packageCount: z.coerce.number().int().min(1).max(10).default(1),
-  shippingMethodIds: z.string().optional(),
-  allowPartialSale: z.coerce.boolean().default(false),
-  stockQuantity: z.coerce.number().int().min(1).max(999).default(1),
-  suggestedPrice: z.coerce.number().min(0).optional(),
-  allowDirectBuy: z.coerce.boolean().default(true),
-  acceptsOffers: z.coerce.boolean().default(true),
-  allowPlatformPickup: z.coerce.boolean().default(true),
-  allowExternalPickup: z.coerce.boolean().default(true),
-});

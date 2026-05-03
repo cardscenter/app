@@ -1,10 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useState, useRef, useEffect, useTransition, useMemo } from "react";
-import { createListing, saveDraft } from "@/actions/listing";
+import { useActionState, useState, useRef, useEffect, useMemo } from "react";
+import { createListing } from "@/actions/listing";
 import { Link, useRouter } from "@/i18n/navigation";
-import { Eye, FileText, Check, AlertCircle, Sparkles } from "lucide-react";
+import { Eye, Check, AlertCircle, Sparkles } from "lucide-react";
 import type { Series, CardSet } from "@prisma/client";
 import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType, CardItemEntry } from "@/types";
 
@@ -339,20 +339,6 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
 
   const handleSubmit = () => formAction(buildFormData());
 
-  const [draftPending, startDraftTransition] = useTransition();
-  const [draftError, setDraftError] = useState<string | null>(null);
-
-  const handleSaveDraft = () => {
-    setDraftError(null);
-    const formData = buildFormData();
-    if (!form.title.trim()) formData.set("title", "Concept");
-    startDraftTransition(async () => {
-      const result = await saveDraft(formData);
-      if (result?.error) setDraftError(result.error);
-      else router.push("/dashboard/marktplaats");
-    });
-  };
-
   // Preview modal
   if (showPreview) {
     return (
@@ -570,15 +556,12 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
         />
       </section>
 
-      {/* Submit bar — toont eerstvolgende verplichte stap + voortgangsteller.
-          Preview-knop is uit zolang er nog iets ontbreekt (preview = ready-to-publish
-          gate). Save-draft is altijd beschikbaar zodat tussentijds opslaan kan. */}
+      {/* Submit bar — toont eerstvolgende verplichte stap. Preview-knop is uit
+          zolang er nog iets ontbreekt (preview = ready-to-publish gate). */}
       <div className="sticky bottom-4 z-10">
         <div className="glass rounded-2xl p-4 flex flex-col gap-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 flex-1 text-sm">
-            {draftError ? (
-              <span className="text-red-600 dark:text-red-400">{draftError}</span>
-            ) : isReadyToPublish ? (
+            {isReadyToPublish ? (
               <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
                 <Check className="h-4 w-4" />
                 {t("allFieldsComplete")}
@@ -590,26 +573,15 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={draftPending}
-              className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-muted disabled:opacity-50"
-            >
-              <FileText className="h-4 w-4" />
-              {t("actions.saveDraft")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPreview(true)}
-              disabled={!isReadyToPublish}
-              className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Eye className="h-4 w-4" />
-              {t("preview")}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            disabled={!isReadyToPublish}
+            className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            <Eye className="h-4 w-4" />
+            {t("preview")}
+          </button>
         </div>
       </div>
     </div>

@@ -886,15 +886,14 @@
     "markSold": "Markeer als verkocht",
     "deleteListing": "Advertentie verwijderen",
     "status": {
-      "draft": "Concept",
       "active": "Actief",
       "paused": "Gepauzeerd",
       "reserved": "Gereserveerd",
+      "partiallySold": "Gedeeltelijk verkocht",
       "sold": "Verkocht",
       "deleted": "Verwijderd"
     },
     "sections": {
-      "drafts": "Concepten",
       "active": "Actief",
       "partiallySold": "Gedeeltelijk verkocht",
       "paused": "Gepauzeerd",
@@ -902,15 +901,12 @@
       "sold": "Verkocht"
     },
     "actions": {
-      "saveDraft": "Opslaan als concept",
       "publish": "Publiceren",
       "pause": "Pauzeren",
       "resume": "Hervatten",
-      "deleteDraft": "Concept verwijderen",
       "reservedHint": "Deze advertentie is gekoppeld aan een lopende deal. Acties zijn beschikbaar zodra de koper betaalt of de reservering verloopt.",
       "confirmPause": "Weet je zeker dat je deze advertentie wilt pauzeren? Lopende voorstellen worden afgewezen.",
       "confirmDelete": "Weet je zeker dat je deze advertentie wilt verwijderen?",
-      "confirmDeleteDraft": "Concept definitief verwijderen?",
       "closeRest": "Advertentie afsluiten",
       "confirmCloseRest": "Weet je zeker dat je deze advertentie wilt afsluiten? De overige items worden niet meer als beschikbaar getoond. Lopende voorstellen worden afgewezen.",
       "editDescription": "Beschrijving aanpassen",

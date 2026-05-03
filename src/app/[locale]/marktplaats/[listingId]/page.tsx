@@ -407,7 +407,7 @@ export default async function ListingDetailPage({
             )}
 
             {/* Owner actions — status-aware (Fase 27) */}
-            {isOwner && (listing.status === "ACTIVE" || listing.status === "PAUSED" || listing.status === "DRAFT" || listing.status === "RESERVED" || listing.status === "PARTIALLY_SOLD") && (
+            {isOwner && (listing.status === "ACTIVE" || listing.status === "PAUSED" || listing.status === "RESERVED" || listing.status === "PARTIALLY_SOLD") && (
               <div className="mt-6">
                 <ListingActions listingId={listing.id} status={listing.status as never} />
               </div>
