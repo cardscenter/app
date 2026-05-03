@@ -701,6 +701,15 @@
       "description": "Beschrijving",
       "close": "Sluiten"
     },
+    "buyQuantityShort": "Aantal:",
+    "multiPartial": {
+      "allItems": "Alle items ({count})",
+      "selectedItems": "{selected} van {total} items",
+      "choose": "Wijzig",
+      "pickHint": "Kies welke items je in de bundel wilt. Onaangevinkt = alle items.",
+      "clearSelection": "Wis selectie",
+      "done": "Klaar"
+    },
     "requestInsured": {
       "label": "Verzekerd verzonden gewenst",
       "hint": "De verkoper kiest de exacte verzendmethode bij acceptatie, maar wordt verplicht een aangetekende methode te kiezen. Bedragen >€150 of internationale zendingen zijn sowieso verplicht aangetekend."

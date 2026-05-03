@@ -1712,6 +1712,18 @@ model BundleProposalListing {
 
   priceSnapshot    Float?
 
+  // Partial-quantity (Fase 27.66): per listing kan koper aangeven hoeveel
+  // exemplaren hij in de bundel wil.
+  // - Voor stocked SEALED/OTHER: gebruik `quantity` — bij accept worden
+  //   N items uit cardItemRows aan de bundle gekoppeld (PARTIALLY_SOLD
+  //   als er nog over is).
+  // - Voor MULTI_CARD met allowPartialSale: gebruik `itemIds` (JSON array
+  //   van ListingCardItem.id's) — exacte items worden gekoppeld.
+  // - Voor non-stocked single-flip listings (SINGLE_CARD, COLLECTION,
+  //   MULTI_CARD zonder allowPartialSale): beide null/1, hele listing flip.
+  quantity         Int      @default(1)
+  itemIds          String?  // JSON array van ListingCardItem.id (MULTI_CARD partial)
+
   @@unique([bundleProposalId, listingId])
   @@index([listingId])
 }

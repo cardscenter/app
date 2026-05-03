@@ -15,12 +15,116 @@ import {
   PICKUP_RESERVATION_DAYS,
 } from "@/lib/bundle-offer-config";
 import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
+import type { Prisma } from "@prisma/client";
 
+// Helper-shape voor bp.listings na include
+type BundleListingEntry = {
+  listingId: string;
+  quantity: number;
+  itemIds: string | null;
+  priceSnapshot: number | null;
+  listing: { id: string; title: string; price: number | null; listingType: string; allowPartialSale: boolean };
+};
+
+// Per BundleProposalListing-entry de juiste items flip naar targetStatus.
+// Drie paden:
+// - Hele listing single-flip (SINGLE_CARD / COLLECTION / MULTI_CARD zonder
+//   allowPartialSale / stocked zonder quantity > 1): listing.status flip
+//   ACTIVE → targetStatus, buyerId zetten op listing.
+// - Stocked partial (SEALED/OTHER met quantity > 1): pak eerste N AVAILABLE
+//   cardItemRows, flip naar targetStatus + buyerId, koppel aan bundle.
+//   Listing-status wordt PARTIALLY_SOLD als nog AVAILABLE items, anders SOLD.
+// - MULTI_CARD partial (allowPartialSale + itemIds): flip die specifieke
+//   items, zelfde listing-status logica.
+//
+// Throw bij mismatch (race-condition: items zijn intussen weggekocht).
+async function flipBundleListingItems(
+  tx: Prisma.TransactionClient,
+  entries: BundleListingEntry[],
+  targetStatus: "SOLD" | "RESERVED",
+  buyerId: string,
+  shippingBundleId: string | null
+): Promise<void> {
+  for (const entry of entries) {
+    const isMultiPartial = entry.listing.listingType === "MULTI_CARD" && entry.listing.allowPartialSale;
+    const isStocked = entry.listing.listingType === "SEALED_PRODUCT" || entry.listing.listingType === "OTHER";
+
+    let itemIds: string[] | null = null;
+    if (entry.itemIds) {
+      try {
+        const parsed = JSON.parse(entry.itemIds);
+        if (Array.isArray(parsed)) itemIds = parsed;
+      } catch {
+        // ignore
+      }
+    }
+
+    const isPartialFlow = (isMultiPartial && itemIds) || (isStocked && entry.quantity > 1);
+
+    if (isPartialFlow) {
+      // Stocked OF MULTI_CARD partial — items per stuk flippen
+      let targetIds: string[];
+      if (itemIds) {
+        // MULTI_CARD partial: exacte items
+        targetIds = itemIds;
+      } else {
+        // Stocked: pak eerste N AVAILABLE
+        const available = await tx.listingCardItem.findMany({
+          where: { listingId: entry.listingId, status: "AVAILABLE" },
+          select: { id: true },
+          take: entry.quantity,
+        });
+        if (available.length !== entry.quantity) {
+          throw new Error(`"${entry.listing.title}" — slechts ${available.length} stuks beschikbaar`);
+        }
+        targetIds = available.map((r) => r.id);
+      }
+
+      const flipped = await tx.listingCardItem.updateMany({
+        where: { id: { in: targetIds }, status: "AVAILABLE" },
+        data: {
+          status: targetStatus,
+          buyerId,
+          ...(targetStatus === "SOLD" ? { soldAt: new Date(), shippingBundleId } : { shippingBundleId }),
+        },
+      });
+      if (flipped.count !== targetIds.length) {
+        throw new Error(`"${entry.listing.title}" — items zijn niet meer beschikbaar`);
+      }
+
+      // Listing-status: PARTIALLY_SOLD als nog AVAILABLE, anders SOLD.
+      const remainingAvailable = await tx.listingCardItem.count({
+        where: { listingId: entry.listingId, status: "AVAILABLE" },
+      });
+      const remainingSold = await tx.listingCardItem.count({
+        where: { listingId: entry.listingId, status: "SOLD" },
+      });
+      const newListingStatus = remainingAvailable === 0
+        ? (remainingSold > 0 ? "SOLD" : "PARTIALLY_SOLD")
+        : "PARTIALLY_SOLD";
+      await tx.listing.updateMany({
+        where: { id: entry.listingId, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
+        data: { status: newListingStatus },
+      });
+    } else {
+      // Hele listing flip ACTIVE → targetStatus
+      const flipped = await tx.listing.updateMany({
+        where: { id: entry.listingId, status: "ACTIVE" },
+        data: { status: targetStatus, buyerId },
+      });
+      if (flipped.count === 0) {
+        throw new Error(`"${entry.listing.title}" is niet meer beschikbaar`);
+      }
+    }
+  }
+}
+
+// Fase 27.66: per listing optioneel quantity (stocked) of itemIds (MULTI_CARD
+// partial-sale). Default 1, geen itemIds = hele listing flip.
 interface CreateBundleOfferInput {
   conversationId: string;
-  listingIds: string[];
+  listings: Array<{ listingId: string; quantity?: number; itemIds?: string[] }>;
   totalAmount: number;
-  // Fase 27.43: 3-way keuze (SHIP / PICKUP_PLATFORM / PICKUP_EXTERNAL).
   deliveryChoice: "SHIP" | "PICKUP_PLATFORM" | "PICKUP_EXTERNAL";
   requestInsuredShipping?: boolean;
 }
@@ -57,9 +161,11 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
   const blocked = await getBlockedUserIds(buyerId);
   if (blocked.has(sellerId)) return { error: "Niet beschikbaar" };
 
-  // Listings ophalen + valideren
+  // Listings ophalen + valideren — incl. cardItemRows voor stocked-quantity
+  // en MULTI_CARD partial-sale-validatie.
+  const listingIds = data.listings.map((l) => l.listingId);
   const listings = await prisma.listing.findMany({
-    where: { id: { in: data.listingIds } },
+    where: { id: { in: listingIds } },
     select: {
       id: true,
       sellerId: true,
@@ -67,17 +173,23 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
       title: true,
       price: true,
       deliveryMethod: true,
+      listingType: true,
+      allowPartialSale: true,
       allowPlatformPickup: true,
       allowExternalPickup: true,
+      cardItemRows: { where: { status: "AVAILABLE" }, select: { id: true } },
     },
   });
-  if (listings.length !== data.listingIds.length) {
+  if (listings.length !== listingIds.length) {
     return { error: "Eén of meer advertenties niet gevonden" };
   }
   const wantsPickup = data.deliveryChoice !== "SHIP";
   const wantsPlatformPickup = data.deliveryChoice === "PICKUP_PLATFORM";
   const wantsExternalPickup = data.deliveryChoice === "PICKUP_EXTERNAL";
-  for (const l of listings) {
+  const listingMap = new Map(listings.map((l) => [l.id, l]));
+  for (const entry of data.listings) {
+    const l = listingMap.get(entry.listingId);
+    if (!l) return { error: "Eén of meer advertenties niet gevonden" };
     if (l.sellerId !== sellerId) return { error: "Alle advertenties moeten van dezelfde verkoper zijn" };
     if (l.status !== "ACTIVE") return { error: `"${l.title}" is niet meer beschikbaar` };
     if (wantsPickup && l.deliveryMethod !== "PICKUP" && l.deliveryMethod !== "BOTH") {
@@ -88,6 +200,28 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
     }
     if (wantsExternalPickup && !l.allowExternalPickup) {
       return { error: `"${l.title}" accepteert geen ophaal-betaling — kies wallet-vooraf` };
+    }
+    // Per-listing quantity / itemIds validatie
+    const isStocked = (l.listingType === "SEALED_PRODUCT" || l.listingType === "OTHER") && l.cardItemRows.length > 0;
+    const isMultiPartial = l.listingType === "MULTI_CARD" && l.allowPartialSale && l.cardItemRows.length > 0;
+    const qty = entry.quantity ?? 1;
+    if (entry.itemIds && entry.itemIds.length > 0) {
+      // MULTI_CARD partial-sale: itemIds moeten bestaan + AVAILABLE zijn
+      if (!isMultiPartial) {
+        return { error: `"${l.title}" ondersteunt geen item-selectie` };
+      }
+      const availableSet = new Set(l.cardItemRows.map((r) => r.id));
+      for (const id of entry.itemIds) {
+        if (!availableSet.has(id)) return { error: `"${l.title}": een gekozen item is niet meer beschikbaar` };
+      }
+    } else if (qty > 1) {
+      // Stocked listing met quantity > 1: check voorraad
+      if (!isStocked) {
+        return { error: `"${l.title}" ondersteunt geen aantal-keuze` };
+      }
+      if (qty > l.cardItemRows.length) {
+        return { error: `"${l.title}": slechts ${l.cardItemRows.length} stuks beschikbaar` };
+      }
     }
   }
   // Geen shippingMethodId-validatie meer bij offer-creation. Seller kiest die
@@ -138,7 +272,15 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
         status: "PENDING",
         expiresAt,
         listings: {
-          create: listings.map((l) => ({ listingId: l.id, priceSnapshot: l.price ?? null })),
+          create: data.listings.map((entry) => {
+            const l = listingMap.get(entry.listingId)!;
+            return {
+              listingId: l.id,
+              priceSnapshot: l.price ?? null,
+              quantity: entry.quantity ?? 1,
+              itemIds: entry.itemIds && entry.itemIds.length > 0 ? JSON.stringify(entry.itemIds) : null,
+            };
+          }),
         },
       },
     });
@@ -300,22 +442,15 @@ export async function respondToBundleOffer(
     const isFullPayment = availableBalance >= totalAmount;
 
     if (isFullPayment) {
-      // Full payment — atomic flip + escrow + bundle PAID
+      // Full payment — atomic flip + escrow + bundle PAID. Voor stocked +
+      // MULTI_CARD partial: items per stuk via flipBundleListingItems.
       const result = await prisma.$transaction(async (tx) => {
-        const flipped = await tx.listing.updateMany({
-          where: { id: { in: listingIds }, status: "ACTIVE" },
-          data: { status: "SOLD", buyerId: bp.buyerId },
-        });
-        if (flipped.count !== listingIds.length) {
-          throw new Error("Eén of meer advertenties zijn niet meer beschikbaar");
-        }
-
         const bundle = await tx.shippingBundle.create({
           data: {
             orderNumber: generateOrderNumber(),
             buyerId: bp.buyerId,
             sellerId: bp.sellerId,
-            shippingCost: 0, // bundle gebruikt totalAmount; aparte shipping-split is informatief
+            shippingCost: 0,
             totalItemCost: totalAmount,
             totalCost: totalAmount,
             status: "PAID",
@@ -337,6 +472,8 @@ export async function respondToBundleOffer(
           },
         });
 
+        await flipBundleListingItems(tx, bp.listings as BundleListingEntry[], "SOLD", bp.buyerId, bundle.id);
+
         await tx.bundleProposal.update({
           where: { id: bp.id },
           data: { status: "ACCEPTED", paymentStatus: "PAID", respondedAt: new Date() },
@@ -345,15 +482,20 @@ export async function respondToBundleOffer(
         return bundle;
       });
 
-      // Wallet-mutaties buiten de tx (deductBalance/escrowCredit zijn zelf
-      // transacties); mismatch zou enkel optreden als saldo intussen wegtrekt.
+      // Wallet-mutaties buiten de tx — best-effort rollback bij faal.
       try {
         await deductBalance(bp.buyerId, totalAmount, "PURCHASE", `Bundel-aankoop (${listingIds.length} advertenties)`, undefined, undefined, undefined);
         await escrowCredit(bp.sellerId, totalAmount, `Bundel-verkoop (escrow, ${listingIds.length} advertenties)`, result.id);
       } catch (e) {
-        // Rollback: listings terug ACTIVE, bundle CANCELLED, offer REJECTED
+        // Rollback: items + listings terug ACTIVE, bundle CANCELLED, offer REJECTED.
+        // Voor partial-flow gebruiken we updateMany op shippingBundleId om
+        // items terug te zetten; non-stocked single-flip via listing.updateMany.
+        await prisma.listingCardItem.updateMany({
+          where: { shippingBundleId: result.id },
+          data: { status: "AVAILABLE", buyerId: null, soldAt: null, shippingBundleId: null },
+        });
         await prisma.listing.updateMany({
-          where: { id: { in: listingIds }, status: "SOLD", buyerId: bp.buyerId },
+          where: { id: { in: listingIds }, buyerId: bp.buyerId, status: "SOLD" },
           data: { status: "ACTIVE", buyerId: null },
         });
         await prisma.shippingBundle.update({ where: { id: result.id }, data: { status: "CANCELLED" } });
@@ -365,15 +507,7 @@ export async function respondToBundleOffer(
       const paymentDeadline = new Date(Date.now() + BUNDLE_PAYMENT_DEADLINE_DAYS_SHIP * 24 * 60 * 60 * 1000);
 
       await prisma.$transaction(async (tx) => {
-        const flipped = await tx.listing.updateMany({
-          where: { id: { in: listingIds }, status: "ACTIVE" },
-          data: { status: "RESERVED" },
-        });
-        if (flipped.count !== listingIds.length) {
-          throw new Error("Eén of meer advertenties zijn niet meer beschikbaar");
-        }
-
-        await tx.shippingBundle.create({
+        const bundle = await tx.shippingBundle.create({
           data: {
             orderNumber: generateOrderNumber(),
             buyerId: bp.buyerId,
@@ -400,6 +534,8 @@ export async function respondToBundleOffer(
           },
         });
 
+        await flipBundleListingItems(tx, bp.listings as BundleListingEntry[], "RESERVED", bp.buyerId, bundle.id);
+
         await tx.bundleProposal.update({
           where: { id: bp.id },
           data: {
@@ -416,15 +552,7 @@ export async function respondToBundleOffer(
     const reservationExpiresAt = new Date(Date.now() + PICKUP_RESERVATION_DAYS * 24 * 60 * 60 * 1000);
 
     await prisma.$transaction(async (tx) => {
-      const flipped = await tx.listing.updateMany({
-        where: { id: { in: listingIds }, status: "ACTIVE" },
-        data: { status: "RESERVED" },
-      });
-      if (flipped.count !== listingIds.length) {
-        throw new Error("Eén of meer advertenties zijn niet meer beschikbaar");
-      }
-
-      await tx.shippingBundle.create({
+      const bundle = await tx.shippingBundle.create({
         data: {
           orderNumber: generateOrderNumber(),
           buyerId: bp.buyerId,
@@ -445,6 +573,8 @@ export async function respondToBundleOffer(
           },
         },
       });
+
+      await flipBundleListingItems(tx, bp.listings as BundleListingEntry[], "RESERVED", bp.buyerId, bundle.id);
 
       await tx.bundleProposal.update({
         where: { id: bp.id },
@@ -515,15 +645,21 @@ export async function completeBundleOfferPayment(bundleProposalId: string) {
 
   const listingIds = bp.listings.map((bl) => bl.listingId);
 
-  // Atomic: listings RESERVED → SOLD + bundle PENDING → PAID + offer paymentStatus PAID
+  // Atomic: items + listings RESERVED → SOLD + bundle PENDING → PAID.
+  // Voor partial-flow (stocked / MULTI_CARD-partial): items via shippingBundleId.
+  // Voor non-partial: hele listing flip via listingId.
   await prisma.$transaction(async (tx) => {
-    const flipped = await tx.listing.updateMany({
+    // Items van RESERVED → SOLD voor partial-flow entries
+    await tx.listingCardItem.updateMany({
+      where: { shippingBundleId: bp.shippingBundle!.id, status: "RESERVED" },
+      data: { status: "SOLD", soldAt: new Date() },
+    });
+
+    // Non-partial listings: hele listing flip RESERVED → SOLD
+    await tx.listing.updateMany({
       where: { id: { in: listingIds }, status: "RESERVED" },
       data: { status: "SOLD", buyerId: bp.buyerId },
     });
-    if (flipped.count !== listingIds.length) {
-      throw new Error("Reservering is verlopen of gewijzigd");
-    }
 
     await tx.shippingBundle.updateMany({
       where: { id: bp.shippingBundle!.id, status: "PENDING" },
@@ -541,6 +677,10 @@ export async function completeBundleOfferPayment(bundleProposalId: string) {
     await escrowCredit(bp.sellerId, bp.totalAmount, `Bundel-verkoop (escrow, ${listingIds.length} advertenties)`, bp.shippingBundle!.id);
   } catch (e) {
     // Rollback
+    await prisma.listingCardItem.updateMany({
+      where: { shippingBundleId: bp.shippingBundle!.id, status: "SOLD" },
+      data: { status: "RESERVED", soldAt: null },
+    });
     await prisma.listing.updateMany({
       where: { id: { in: listingIds }, status: "SOLD", buyerId: bp.buyerId },
       data: { status: "RESERVED", buyerId: null },
@@ -587,6 +727,13 @@ export async function getRecentSellerListingsForBuyer(sellerId: string) {
       condition: true,
       cardName: true,
       description: true,
+      // Voor stocked-quantity stepper + MULTI_CARD partial items-picker (Fase 27.66)
+      allowPartialSale: true,
+      cardItemRows: {
+        where: { status: "AVAILABLE" },
+        select: { id: true, cardName: true, condition: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 200,

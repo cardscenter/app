@@ -701,6 +701,15 @@
       "description": "Description",
       "close": "Close"
     },
+    "buyQuantityShort": "Qty:",
+    "multiPartial": {
+      "allItems": "All items ({count})",
+      "selectedItems": "{selected} of {total} items",
+      "choose": "Change",
+      "pickHint": "Choose which items go in the bundle. Empty selection = all items.",
+      "clearSelection": "Clear selection",
+      "done": "Done"
+    },
     "requestInsured": {
       "label": "Request insured shipping",
       "hint": "The seller picks the exact shipping method on accept but is required to choose a signed-for method. Amounts >€150 or international shipments require signed shipping anyway."

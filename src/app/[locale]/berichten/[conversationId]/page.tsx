@@ -172,11 +172,22 @@ export default async function ConversationPage({
       expiresAt: bp.expiresAt?.toISOString() ?? null,
       listings: bp.listings.map((bpl) => {
         const imgs = parseImageUrls(bpl.listing.imageUrls);
+        let itemCount = 0;
+        if (bpl.itemIds) {
+          try {
+            const arr = JSON.parse(bpl.itemIds);
+            if (Array.isArray(arr)) itemCount = arr.length;
+          } catch {
+            // ignore
+          }
+        }
         return {
           listingId: bpl.listingId,
           title: bpl.listing.title,
           imageUrl: imgs[0] ?? null,
           priceSnapshot: bpl.priceSnapshot,
+          quantity: bpl.quantity,
+          itemCount,
         };
       }),
       shippingBundleId: bp.shippingBundle?.id ?? null,

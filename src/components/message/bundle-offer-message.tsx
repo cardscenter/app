@@ -25,6 +25,9 @@ interface BundleListingThumb {
   title: string;
   imageUrl: string | null;
   priceSnapshot: number | null;
+  // Fase 27.66: aantal stuks (stocked) of geselecteerde items (multi-partial).
+  quantity?: number;
+  itemCount?: number; // afgeleid uit itemIds.length voor MULTI_CARD partial
 }
 
 export interface BundleProposalData {
@@ -106,17 +109,24 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
           </span>
         </div>
 
-        {/* Listings preview */}
+        {/* Listings preview — toont aantal voor stocked of items voor partial */}
         <ul className="mb-3 space-y-1.5">
-          {bp.listings.map((l) => (
-            <li key={l.listingId} className="flex items-center gap-2 text-sm text-foreground">
-              <span className="inline-block size-2 rounded-full bg-muted-foreground/40" />
-              <span className="truncate">{l.title}</span>
-              {l.priceSnapshot !== null && (
-                <span className="ml-auto text-xs text-muted-foreground">€{l.priceSnapshot.toFixed(2)}</span>
-              )}
-            </li>
-          ))}
+          {bp.listings.map((l) => {
+            const qtyLabel = l.itemCount && l.itemCount > 0
+              ? ` (${l.itemCount} items)`
+              : l.quantity && l.quantity > 1
+                ? ` (${l.quantity}×)`
+                : "";
+            return (
+              <li key={l.listingId} className="flex items-center gap-2 text-sm text-foreground">
+                <span className="inline-block size-2 rounded-full bg-muted-foreground/40" />
+                <span className="truncate">{l.title}{qtyLabel}</span>
+                {l.priceSnapshot !== null && (
+                  <span className="ml-auto text-xs text-muted-foreground">€{l.priceSnapshot.toFixed(2)}</span>
+                )}
+              </li>
+            );
+          })}
         </ul>
 
         <div className="text-2xl font-bold text-foreground mb-1">

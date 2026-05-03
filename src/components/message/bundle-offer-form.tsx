@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { X, Package, Truck, MapPin, ShieldCheck, Info, Search } from "lucide-react";
+import { X, Package, Truck, MapPin, ShieldCheck, Info, Search, Plus, Minus, ListChecks } from "lucide-react";
 import {
   createBundleOffer,
   getRecentSellerListingsForBuyer,
@@ -22,6 +22,12 @@ function parseImageUrls(json: string | null | undefined): string[] {
   }
 }
 
+interface CardItemRow {
+  id: string;
+  cardName: string;
+  condition: string | null;
+}
+
 interface SellerListing {
   id: string;
   title: string;
@@ -35,6 +41,20 @@ interface SellerListing {
   condition: string | null;
   cardName: string | null;
   description: string;
+  allowPartialSale: boolean;
+  cardItemRows: CardItemRow[];
+}
+
+interface EntryConfig {
+  quantity: number;
+  itemIds: string[]; // alleen voor MULTI_CARD partial
+}
+
+function isStocked(l: SellerListing): boolean {
+  return (l.listingType === "SEALED_PRODUCT" || l.listingType === "OTHER") && l.cardItemRows.length > 0;
+}
+function isMultiPartial(l: SellerListing): boolean {
+  return l.listingType === "MULTI_CARD" && l.allowPartialSale && l.cardItemRows.length > 0;
 }
 
 type DeliveryChoice = "SHIP" | "PICKUP_PLATFORM" | "PICKUP_EXTERNAL";
@@ -55,12 +75,14 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
   const [listings, setListings] = useState<SellerListing[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [entryConfigs, setEntryConfigs] = useState<Record<string, EntryConfig>>({});
   const [deliveryChoice, setDeliveryChoice] = useState<DeliveryChoice>("SHIP");
   const [requestInsured, setRequestInsured] = useState(false);
   const [totalAmount, setTotalAmount] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [detailListing, setDetailListing] = useState<SellerListing | null>(null);
+  const [itemPickerListing, setItemPickerListing] = useState<SellerListing | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -136,10 +158,24 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
       return;
     }
 
+    // Bouw listings-array met per entry quantity en/of itemIds.
+    const listingEntries = Array.from(selectedIds).map((id) => {
+      const cfg = entryConfigs[id];
+      const l = listings.find((x) => x.id === id);
+      const entry: { listingId: string; quantity?: number; itemIds?: string[] } = { listingId: id };
+      if (l && isMultiPartial(l) && cfg?.itemIds && cfg.itemIds.length > 0) {
+        entry.itemIds = cfg.itemIds;
+        entry.quantity = cfg.itemIds.length;
+      } else if (l && isStocked(l) && cfg?.quantity && cfg.quantity > 1) {
+        entry.quantity = cfg.quantity;
+      }
+      return entry;
+    });
+
     startTransition(async () => {
       const result = await createBundleOffer({
         conversationId,
-        listingIds: Array.from(selectedIds),
+        listings: listingEntries,
         totalAmount: amount,
         deliveryChoice,
         requestInsuredShipping: deliveryChoice === "SHIP" ? requestInsured : false,
@@ -149,6 +185,26 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
         onClose();
         router.refresh();
       }
+    });
+  }
+
+  // Stepper helper voor stocked listings
+  function setQuantity(listingId: string, qty: number, max: number) {
+    const clamped = Math.max(1, Math.min(qty, max));
+    setEntryConfigs((prev) => ({
+      ...prev,
+      [listingId]: { ...prev[listingId], quantity: clamped, itemIds: prev[listingId]?.itemIds ?? [] },
+    }));
+  }
+
+  // Item-picker helper voor MULTI_CARD partial
+  function toggleItemId(listingId: string, itemId: string) {
+    setEntryConfigs((prev) => {
+      const cfg = prev[listingId] ?? { quantity: 1, itemIds: [] };
+      const set = new Set(cfg.itemIds);
+      if (set.has(itemId)) set.delete(itemId);
+      else set.add(itemId);
+      return { ...prev, [listingId]: { ...cfg, itemIds: Array.from(set) } };
     });
   }
 
@@ -236,37 +292,97 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
                 {filteredListings.map((l) => {
                   const checked = selectedIds.has(l.id);
                   const thumb = parseImageUrls(l.imageUrls)[0];
+                  const stocked = isStocked(l);
+                  const multiPartial = isMultiPartial(l);
+                  const cfg = entryConfigs[l.id] ?? { quantity: 1, itemIds: [] };
+                  const stockMax = l.cardItemRows.length;
                   return (
                     <div
                       key={l.id}
-                      className={`flex items-center gap-2 rounded-lg border bg-card p-2 transition-colors ${
+                      className={`rounded-lg border bg-card p-2 transition-colors ${
                         checked ? "border-primary bg-primary/5" : "border-border"
                       }`}
                     >
-                      <button
-                        type="button"
-                        onClick={() => toggleListing(l.id)}
-                        className="flex flex-1 items-center gap-2 text-left min-w-0"
-                      >
-                        <input type="checkbox" checked={checked} readOnly className="h-4 w-4 flex-shrink-0" />
-                        {thumb && (
-                          <img src={thumb} alt="" className="h-10 w-10 flex-shrink-0 rounded object-cover" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground">{l.title}</p>
-                          {l.price !== null && (
-                            <p className="text-xs text-muted-foreground">€{l.price.toFixed(2)}</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleListing(l.id)}
+                          className="flex flex-1 items-center gap-2 text-left min-w-0"
+                        >
+                          <input type="checkbox" checked={checked} readOnly className="h-4 w-4 flex-shrink-0" />
+                          {thumb && (
+                            <img src={thumb} alt="" className="h-10 w-10 flex-shrink-0 rounded object-cover" />
                           )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">{l.title}</p>
+                            {l.price !== null && (
+                              <p className="text-xs text-muted-foreground">€{l.price.toFixed(2)}</p>
+                            )}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDetailListing(l)}
+                          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                          aria-label={t("viewDetails")}
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </div>
+                      {/* Stocked stepper (Fase 27.66) — alleen wanneer
+                          aangevinkt en > 1 op voorraad */}
+                      {checked && stocked && stockMax > 1 && (
+                        <div className="mt-2 flex items-center gap-2 border-t border-border pt-2">
+                          <span className="text-xs text-muted-foreground">{t("buyQuantityShort")}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setQuantity(l.id, cfg.quantity - 1, stockMax); }}
+                            disabled={cfg.quantity <= 1}
+                            className="flex h-7 w-7 items-center justify-center rounded border border-border hover:bg-muted disabled:opacity-40"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            max={stockMax}
+                            value={cfg.quantity}
+                            onChange={(e) => setQuantity(l.id, parseInt(e.target.value) || 1, stockMax)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-7 w-12 rounded border border-border bg-background text-center text-xs font-medium text-foreground tabular-nums"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setQuantity(l.id, cfg.quantity + 1, stockMax); }}
+                            disabled={cfg.quantity >= stockMax}
+                            className="flex h-7 w-7 items-center justify-center rounded border border-border hover:bg-muted disabled:opacity-40"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                          <span className="text-xs text-muted-foreground">/ {stockMax}</span>
                         </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDetailListing(l)}
-                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                        aria-label={t("viewDetails")}
-                      >
-                        <Info className="h-4 w-4" />
-                      </button>
+                      )}
+                      {/* MULTI_CARD partial — items-picker knop (Fase 27.66) */}
+                      {checked && multiPartial && (
+                        <div className="mt-2 border-t border-border pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setItemPickerListing(l)}
+                            className="flex w-full items-center justify-between rounded border border-border px-2 py-1.5 text-xs text-foreground hover:bg-muted"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <ListChecks className="h-3.5 w-3.5" />
+                              {cfg.itemIds.length === 0
+                                ? t("multiPartial.allItems", { count: stockMax })
+                                : t("multiPartial.selectedItems", {
+                                    selected: cfg.itemIds.length,
+                                    total: stockMax,
+                                  })}
+                            </span>
+                            <span className="text-muted-foreground">{t("multiPartial.choose")}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -463,6 +579,78 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
             >
               {t("details.close")}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* MULTI_CARD partial-sale items-picker (Fase 27.66) */}
+      {itemPickerListing && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setItemPickerListing(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl bg-background p-5 shadow-2xl border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">{itemPickerListing.title}</h3>
+                <p className="text-xs text-muted-foreground">{t("multiPartial.pickHint")}</p>
+              </div>
+              <button
+                onClick={() => setItemPickerListing(null)}
+                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-1">
+              {itemPickerListing.cardItemRows.map((item) => {
+                const cfg = entryConfigs[itemPickerListing.id] ?? { quantity: 1, itemIds: [] };
+                const checked = cfg.itemIds.includes(item.id);
+                return (
+                  <label
+                    key={item.id}
+                    className="flex items-center gap-2 rounded-md border border-border bg-card p-2 text-sm cursor-pointer hover:bg-muted"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleItemId(itemPickerListing.id, item.id)}
+                      className="h-4 w-4"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-foreground">{item.cardName}</p>
+                      {item.condition && (
+                        <p className="text-xs text-muted-foreground">{item.condition}</p>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setEntryConfigs((prev) => ({
+                    ...prev,
+                    [itemPickerListing.id]: { quantity: 1, itemIds: [] },
+                  }))
+                }
+                className="flex-1 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+              >
+                {t("multiPartial.clearSelection")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setItemPickerListing(null)}
+                className="flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-hover"
+              >
+                {t("multiPartial.done")}
+              </button>
+            </div>
           </div>
         </div>
       )}
