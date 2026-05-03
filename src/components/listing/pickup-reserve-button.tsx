@@ -118,7 +118,7 @@ export function PickupReserveButton({ listingId, listingTitle, price, available 
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-amber-700 disabled:opacity-50"
       >
         <MapPin className="h-5 w-5" />
-        {pending || confirmed ? "..." : `${t("pickupReserve.button")} €${total.toFixed(2)}`}
+        {pending || confirmed ? "..." : t("pickupReserve.button")}
       </button>
     </div>
   );

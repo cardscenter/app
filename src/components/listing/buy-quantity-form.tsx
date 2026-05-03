@@ -209,7 +209,7 @@ export function BuyQuantityForm({
         {pending || submitted
           ? "..."
           : isPickup
-            ? `${t("directBuy.pickupShortLabel")} €${total.toFixed(2)}`
+            ? t("directBuy.pickupShortLabel")
             : t("buyQuantity.buyNow")}
       </button>
 

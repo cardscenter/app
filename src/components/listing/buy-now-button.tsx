@@ -157,7 +157,7 @@ export function BuyNowButton({
         {pending || submitted
           ? "..."
           : isPickup
-            ? `${t("directBuy.pickupShortLabel")} €${total.toFixed(2)}`
+            ? t("directBuy.pickupShortLabel")
             : `${t("directBuy.label")} €${price.toFixed(2)}`}
       </button>
 
