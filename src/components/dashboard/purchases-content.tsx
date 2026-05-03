@@ -108,9 +108,17 @@ type PendingAuctionPayment = {
 interface PurchasesContentProps {
   bundles: PurchaseBundle[];
   pendingAuctionPayments?: PendingAuctionPayment[];
+  /** Voor PendingAuctionPayments component — laat de breakdown 'beschikbaar/tekort' zien. */
+  availableBalance?: number;
+  reservedBalance?: number;
 }
 
-export function PurchasesContent({ bundles, pendingAuctionPayments = [] }: PurchasesContentProps) {
+export function PurchasesContent({
+  bundles,
+  pendingAuctionPayments = [],
+  availableBalance = 0,
+  reservedBalance = 0,
+}: PurchasesContentProps) {
   const t = useTranslations("purchases");
   const locale = useLocale();
   const [search, setSearch] = useState("");
@@ -211,6 +219,8 @@ export function PurchasesContent({ bundles, pendingAuctionPayments = [] }: Purch
               finalPrice: a.finalPrice,
               paymentDeadline: a.paymentDeadline ? new Date(a.paymentDeadline) : null,
             }))}
+            availableBalance={availableBalance}
+            reservedBalance={reservedBalance}
           />
         )
       ) : filtered.length === 0 ? (

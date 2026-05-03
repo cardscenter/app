@@ -68,6 +68,8 @@ export default async function BalancePage() {
               finalPrice: a.finalPrice,
               paymentDeadline: a.paymentDeadline,
             }))}
+            availableBalance={Math.max(0, user.balance - user.reservedBalance)}
+            reservedBalance={user.reservedBalance}
           />
         </div>
       )}

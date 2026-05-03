@@ -47,6 +47,14 @@ export default async function MyPurchasesPage() {
     select: { id: true, title: true, finalPrice: true, paymentDeadline: true },
   });
 
+  // Balance voor de payment-modal breakdown (Fase 27.99).
+  const userBal = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { balance: true, reservedBalance: true },
+  });
+  const availableBalance = Math.max(0, (userBal?.balance ?? 0) - (userBal?.reservedBalance ?? 0));
+  const reservedBalance = userBal?.reservedBalance ?? 0;
+
   const bundles = await prisma.shippingBundle.findMany({
     where: {
       buyerId: userId,
@@ -299,6 +307,8 @@ export default async function MyPurchasesPage() {
               finalPrice: a.finalPrice,
               paymentDeadline: a.paymentDeadline,
             }))}
+            availableBalance={availableBalance}
+            reservedBalance={reservedBalance}
           />
         </>
       )}
