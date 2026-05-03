@@ -319,7 +319,18 @@ export async function withdrawBundleOffer(bundleProposalId: string) {
     select: { id: true, buyerId: true, sellerId: true, status: true, conversationId: true, totalAmount: true },
   });
   if (!bp) return { error: "Voorstel niet gevonden" };
-  if (bp.buyerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (bp.buyerId !== session.user.id && bp.sellerId !== session.user.id) {
+    return { error: "Niet geautoriseerd" };
+  }
+  // Alleen de proposer mag withdrawn — check via eerste chat-message.
+  const proposerMessage = await prisma.message.findFirst({
+    where: { bundleProposalId: bp.id },
+    orderBy: { createdAt: "asc" },
+    select: { senderId: true },
+  });
+  if (proposerMessage && proposerMessage.senderId !== session.user.id) {
+    return { error: "Alleen de aanvrager kan dit voorstel intrekken" };
+  }
   if (bp.status !== "PENDING") return { error: "Voorstel is al beantwoord" };
 
   await prisma.bundleProposal.updateMany({
@@ -373,24 +384,18 @@ export async function counterBundleOffer(input: { parentProposalId: string; tota
   if (parent.status !== "PENDING") return { error: "Voorstel is al beantwoord" };
 
   // Alleen de tegenpartij mag counter-bieden — niet de huidige proposer.
-  // Bij parent waar buyer het origineel deed: counter is van seller-zijde.
-  // We zwappen de rollen op het child-voorstel zodat de oorspronkelijke
-  // proposer nu zelf moet beslissen.
+  // Proposer = wie het bundle-message stuurde (via senderId van eerste message).
   const isSeller = parent.sellerId === session.user.id;
   const isBuyer = parent.buyerId === session.user.id;
   if (!isSeller && !isBuyer) return { error: "Niet geautoriseerd" };
-  // De rol die de parent verstuurde mag niet zelf counter-bieden — die wacht
-  // op antwoord. We bepalen "wie verstuurde de parent" als: de partij wiens
-  // role 'proposer' is. In bundle-offer-creation is dat altijd de buyer
-  // (createBundleOffer is buyer-initiated). Bij child-voorstellen rouleert
-  // het door de zwap — dus we kunnen niet eenvoudig op buyerId reken.
-  // Pragmatisch: tel de chain-depth en gebruik die om te bepalen welke
-  // partij counter mag doen (even depth = seller's beurt, odd = buyer).
-  // Eenvoudiger: laat ALLE deelnemers counteren tenzij ze gelijk zijn aan
-  // wie het laatst verstuurde. We slaan dat op in `parent.respondedAt is
-  // null` → niemand heeft nog gereageerd. Beide partijen zien nu Accept/
-  // Reject/Counter; alleen ÉÉN gaat het doen. Race-condition wordt door
-  // de status-check (PENDING) afgevangen.
+  const parentProposer = await prisma.message.findFirst({
+    where: { bundleProposalId: parent.id },
+    orderBy: { createdAt: "asc" },
+    select: { senderId: true },
+  });
+  if (parentProposer?.senderId === session.user.id) {
+    return { error: "Je kunt geen tegenbod doen op je eigen voorstel" };
+  }
 
   // Counter-chain depth check
   let depth = 0;
@@ -491,7 +496,19 @@ export async function respondToBundleOffer(
     include: { listings: { include: { listing: true } } },
   });
   if (!bp) return { error: "Voorstel niet gevonden" };
-  if (bp.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  // Both buyer en seller mogen reageren — maar NIET de proposer zelf.
+  // Proposer = wie het bundle-message stuurde (via senderId van eerste message).
+  if (bp.buyerId !== session.user.id && bp.sellerId !== session.user.id) {
+    return { error: "Niet geautoriseerd" };
+  }
+  const proposerMessage = await prisma.message.findFirst({
+    where: { bundleProposalId: bp.id },
+    orderBy: { createdAt: "asc" },
+    select: { senderId: true },
+  });
+  if (proposerMessage?.senderId === session.user.id) {
+    return { error: "Je kunt niet je eigen voorstel accepteren of afwijzen" };
+  }
   if (bp.status !== "PENDING") return { error: "Voorstel is al beantwoord" };
 
   if (action === "REJECT") {

@@ -70,15 +70,14 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
   const [counterAmount, setCounterAmount] = useState<string>("");
 
   const isBuyer = bp.buyerId === currentUserId;
-  const isSeller = bp.sellerId === currentUserId;
-  const canSellerRespond = isSeller && bp.status === "PENDING";
-  const canBuyerWithdraw = isBuyer && bp.status === "PENDING";
+  // Wie de proposer was bepalen we via isOwn (senderId van het chat-bericht).
+  // Voor counter-flow geldt dezelfde regel: alleen de NIET-proposer mag
+  // accepteren/afwijzen/counteren. De proposer mag intrekken (withdraw).
+  const canRespond = !isOwn && bp.status === "PENDING";
+  const canWithdraw = isOwn && bp.status === "PENDING";
+  const canCounter = !isOwn && bp.status === "PENDING";
   const canBuyerCompletePayment =
     isBuyer && bp.status === "ACCEPTED" && bp.paymentStatus === "AWAITING_PAYMENT";
-  // Tegenbod doen (Fase 27.70): de NIET-proposer kan een ander bedrag voorstellen.
-  // Tegenpartij = wie het bericht NIET heeft gestuurd. We bepalen dat via isOwn:
-  // als het voorstel van mij is (isOwn) mag ik niet zelf counter-bidden.
-  const canCounter = !isOwn && bp.status === "PENDING";
 
   async function run(fn: () => Promise<{ error?: string; success?: boolean }>) {
     setLoading(true);
@@ -179,7 +178,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
 
         {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
 
-        {canSellerRespond && (
+        {canRespond && (
           <div className="mt-3 flex flex-col gap-2">
             <div className="flex gap-2">
               <button
@@ -350,7 +349,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
           );
         })()}
 
-        {canBuyerWithdraw && (
+        {canWithdraw && (
           <button
             onClick={() => run(() => withdrawBundleOffer(bp.id))}
             disabled={loading}
