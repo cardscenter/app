@@ -160,28 +160,8 @@ export function PickupActions({
         </div>
       )}
 
-      {/* Propose-knop voor PROPOSE/RESCHEDULE. Tekst-variatie:
-          - 'Stel ophaalmoment voor' bij geen schedule
-          - 'Wijzig je voorstel' wanneer JIJ al een PROPOSED voorstel hebt
-          - 'Ophaalmoment wijzigen' wanneer er een ACCEPTED schedule is
-          (bij PROPOSED van tegenpartij toont alleen Accept/Reject — geen knop) */}
-      {canPropose && (!schedule || schedule.status !== "PROPOSED" || schedule.proposedById === currentUserId) && (
-        <button
-          type="button"
-          onClick={() => setShowProposeForm(true)}
-          disabled={pending}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
-        >
-          <CalendarClock className="h-4 w-4" />
-          {schedule?.status === "ACCEPTED"
-            ? t("rescheduleMoment")
-            : schedule?.status === "PROPOSED"
-              ? t("editProposal")
-              : t("proposeMoment")}
-        </button>
-      )}
-
-      {/* Accept/Reject voor andere partij bij PROPOSED */}
+      {/* Accept/Reject voor tegenpartij bij PROPOSED — eerst, want het is
+          de primary actie. Ze zien deze knoppen en kunnen direct beslissen. */}
       {canRespondToProposal && schedule && (
         <div className="flex gap-2">
           <button
@@ -201,6 +181,30 @@ export function PickupActions({
             {t("reject")}
           </button>
         </div>
+      )}
+
+      {/* Propose/wijzig-knop. Tekst varieert per rol én status:
+          - Geen schedule: 'Stel ophaalmoment voor'
+          - Eigen PROPOSED: 'Wijzig dit voorstel'
+          - Tegenpartij PROPOSED: 'Stel ander moment voor' (tegenvoorstel,
+            naast accept/reject)
+          - ACCEPTED: 'Ophaalmoment wijzigen' */}
+      {canPropose && (
+        <button
+          type="button"
+          onClick={() => setShowProposeForm(true)}
+          disabled={pending}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+        >
+          <CalendarClock className="h-4 w-4" />
+          {schedule?.status === "ACCEPTED"
+            ? t("rescheduleMoment")
+            : schedule?.status === "PROPOSED" && schedule.proposedById === currentUserId
+              ? t("editProposal")
+              : schedule?.status === "PROPOSED"
+                ? t("counterProposeMoment")
+                : t("proposeMoment")}
+        </button>
       )}
 
       {/* Buyer-code-display (alleen PLATFORM) */}

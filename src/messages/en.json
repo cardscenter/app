@@ -751,7 +751,8 @@
     "tooManyAttempts": "Too many wrong codes — locked for 1 hour.",
     "scheduledAtExact": "Pickup scheduled: {date} at {time}",
     "rescheduleMoment": "Reschedule pickup",
-    "editProposal": "Edit your proposal",
+    "editProposal": "Edit this proposal",
+    "counterProposeMoment": "Suggest another time",
     "timeMode": {
       "label": "Time choice",
       "window": "Time window",
