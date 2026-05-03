@@ -4,6 +4,19 @@ import { Clock, Gavel } from "lucide-react";
 import Image from "next/image";
 import { parseImageUrls } from "@/lib/upload";
 
+// Drempel waarboven een veiling als "hot" gemarkeerd wordt met een 🔥-emoji
+// in de bid-counter. Empirisch bepaald op de seed-data — mediaan ligt op 1-3,
+// dus 5+ biedingen onderscheidt zich duidelijk.
+const HOT_BIDS_THRESHOLD = 5;
+
+const TYPE_KEYS: Record<string, string> = {
+  SINGLE_CARD: "singleCard",
+  MULTI_CARD: "multiCard",
+  COLLECTION: "collection",
+  SEALED_PRODUCT: "sealedProduct",
+  OTHER: "other",
+};
+
 export interface AuctionCardData {
   id: string;
   title: string;
@@ -22,6 +35,9 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
 
   const images = auction.imageUrls ? parseImageUrls(auction.imageUrls) : [];
   const firstImage = images[0];
+  const bidCount = auction._count?.bids ?? 0;
+  const isHot = bidCount >= HOT_BIDS_THRESHOLD;
+  const typeLabel = t(TYPE_KEYS[auction.auctionType] || "other");
 
   return (
     <Link
@@ -30,7 +46,9 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
         sponsored ? "glass-sponsored" : ""
       }`}
     >
-      {/* Card image — mobile: fixed size, desktop: aspect-square with fill */}
+      {/* Card image — mobile: fixed size, desktop: aspect-square with fill.
+          Type-badge staat NIET meer over de image (Fase 27.90) — die viel
+          over de countdown. Nu in de body als pill naast de seller-naam. */}
       <div className="shrink-0 sm:relative sm:w-full sm:aspect-square bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
         {firstImage ? (
           <>
@@ -40,21 +58,9 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
         ) : (
           <Gavel className="h-10 w-10 text-slate-600" />
         )}
-        {/* Countdown badge */}
+        {/* Countdown badge — heeft nu de volle breedte zonder type-conflict */}
         <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
           <CountdownPill endTime={auction.endTime} />
-        </div>
-        {/* Type badge */}
-        <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
-          <span className="rounded-md bg-primary px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs font-medium text-white">
-            {t(({
-              SINGLE_CARD: "singleCard",
-              MULTI_CARD: "multiCard",
-              COLLECTION: "collection",
-              SEALED_PRODUCT: "sealedProduct",
-              OTHER: "other",
-            } as Record<string, string>)[auction.auctionType] || "other")}
-          </span>
         </div>
       </div>
 
@@ -64,15 +70,22 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
           <h3 className="font-semibold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors line-clamp-2">
             {auction.title}
           </h3>
-          <div className="mt-1 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
+          {/* Seller + type-pill + sponsored — type-pill is muted zodat hij
+              niet concurreert met andere accent-kleuren in de card. */}
+          <div className="mt-1 flex items-center gap-1.5 justify-between">
+            <p className="truncate text-xs text-muted-foreground">
               {auction.seller.displayName}
             </p>
-            {sponsored && (
-              <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
-                {t("sponsored")}
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {typeLabel}
               </span>
-            )}
+              {sponsored && (
+                <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
+                  {t("sponsored")}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -86,9 +99,10 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
           </div>
           <div className="text-right">
             {auction._count && (
-              <p className="text-xs text-muted-foreground">
-                {auction._count.bids}{" "}
-                {auction._count.bids === 1 ? "bod" : "biedingen"}
+              <p className={`text-xs ${isHot ? "font-medium text-orange-600 dark:text-orange-400" : "text-muted-foreground"}`}>
+                {isHot && <span className="mr-0.5">🔥</span>}
+                {bidCount}{" "}
+                {bidCount === 1 ? "bod" : "biedingen"}
               </p>
             )}
             {auction.buyNowPrice && (
