@@ -167,7 +167,7 @@ export function ListingListRow({
       ? `€${listing.price.toFixed(2)}`
       : listing.suggestedPrice !== undefined && listing.suggestedPrice !== null
         ? `€${listing.suggestedPrice.toFixed(2)}`
-        : "Voorstel";
+        : "n.o.t.k.";
   const priceSubtitle =
     isFixed && listing.price !== null
       ? null

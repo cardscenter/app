@@ -119,7 +119,7 @@ export function ListingCard({ listing, locale, buyer }: ListingCardProps) {
             <span className="text-lg font-bold text-foreground">
               {listing.pricingType === "FIXED"
                 ? `€${listing.price?.toFixed(2)}`
-                : "Voorstel"
+                : "n.o.t.k."
               }
             </span>
             {listing.freeShipping ? (
