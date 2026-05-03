@@ -197,8 +197,10 @@ async function createListing(opts: {
       pricingType: "FIXED",
       price: opts.price,
       shippingCost: opts.shippingCost ?? 4.45,
-      deliveryMethod: opts.deliveryMethod ?? "SHIP",
-      pickupCity: opts.pickupCity ?? null,
+      deliveryMethod: opts.deliveryMethod ?? "BOTH",
+      // Voor BOTH/PICKUP listings: pickup-locatie auto uit User.city.
+      // (Default BOTH: alle test-listings zijn nu zowel verzenden als ophalen).
+      pickupCity: (opts.deliveryMethod ?? "BOTH") !== "SHIP" ? "Amersfoort" : null,
       freeShipping: false,
       packageCount: 1,
       cardName: opts.cardName ?? null,

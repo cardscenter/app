@@ -96,6 +96,24 @@ export default async function MySalesPage() {
     },
   });
 
+  // Bestaande listing-conversations voor pickup-bundles zoeken zodat seller
+  // direct naar de chat met de buyer kan navigeren (anders zou de knop
+  // "noConversationSeller" tonen — seller kan zelf geen nieuwe chat maken).
+  const sellerPickupListingIds = bundles
+    .filter((b) => b.deliveryMethod === "PICKUP")
+    .map((b) => b.listingId ?? b.cardItems[0]?.listingId ?? null)
+    .filter((id): id is string => id !== null);
+  const sellerPickupConversations = sellerPickupListingIds.length > 0
+    ? await prisma.conversation.findMany({
+        where: {
+          listingId: { in: sellerPickupListingIds },
+          participants: { some: { userId } },
+        },
+        select: { id: true, listingId: true },
+      })
+    : [];
+  const sellerConvByListing = new Map(sellerPickupConversations.map((c) => [c.listingId!, c.id]));
+
   // Pickup-bundles voor seller-perspectief — zelfde sectie als bij aankopen.
   // Seller ziet ophaal-afspraken die nog openstaan en kan via chat-knop snel
   // naar het gesprek navigeren. Code-confirm voor PLATFORM gebeurt in chat-bubble.
@@ -119,9 +137,9 @@ export default async function MySalesPage() {
       windowEnd: b.pickupSchedule?.windowEnd ?? null,
       paymentMode: b.paymentMode,
       scheduleStatus: b.pickupSchedule?.status ?? null,
-      conversationId: b.bundleProposal?.conversationId ?? null,
-      // Voor stocked-pickup is bundle.listingId null — fall back op de
-      // eerste cardItem.listingId voor de chat-routing.
+      conversationId: b.bundleProposal?.conversationId
+        ?? sellerConvByListing.get(b.listingId ?? b.cardItems[0]?.listingId ?? "")
+        ?? null,
       listingId: b.listingId ?? b.cardItems[0]?.listingId ?? null,
       perspective: "seller" as const,
     }));

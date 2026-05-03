@@ -102,6 +102,24 @@ export default async function MyPurchasesPage() {
     },
   });
 
+  // Voor pickup-bundles zonder bundle-proposal-conversation: zoek bestaande
+  // listing-conversation tussen (buyer, seller, listing) zodat de chat-knop
+  // direct naar de juiste chat navigeert. Niet voor multi-listing bundles.
+  const pickupListingIds = bundles
+    .filter((b) => b.deliveryMethod === "PICKUP")
+    .map((b) => b.listingId ?? b.cardItems[0]?.listingId ?? null)
+    .filter((id): id is string => id !== null);
+  const pickupConversations = pickupListingIds.length > 0
+    ? await prisma.conversation.findMany({
+        where: {
+          listingId: { in: pickupListingIds },
+          participants: { some: { userId } },
+        },
+        select: { id: true, listingId: true },
+      })
+    : [];
+  const conversationByListing = new Map(pickupConversations.map((c) => [c.listingId!, c.id]));
+
   // Pickup-bundles voor de prominente sectie. Twee soorten:
   // - SCHEDULED + ACCEPTED schedule → afspraak vast, ofwel code-toon (PLATFORM)
   //   ofwel confirm-knop (EXTERNAL)
@@ -129,10 +147,9 @@ export default async function MyPurchasesPage() {
       windowEnd: b.pickupSchedule?.windowEnd ?? null,
       paymentMode: b.paymentMode,
       scheduleStatus: b.pickupSchedule?.status ?? null,
-      conversationId: b.bundleProposal?.conversationId ?? null,
-      // Voor stocked-pickup is bundle.listingId null — fall back op de
-      // eerste cardItem.listingId zodat OpenPickupChatButton de juiste
-      // listing-conversation kan openen.
+      conversationId: b.bundleProposal?.conversationId
+        ?? conversationByListing.get(b.listingId ?? b.cardItems[0]?.listingId ?? "")
+        ?? null,
       listingId: b.listingId ?? b.cardItems[0]?.listingId ?? null,
       perspective: "buyer" as const,
     }));
