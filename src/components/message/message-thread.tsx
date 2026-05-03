@@ -199,7 +199,11 @@ export function MessageThread({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
-  // Nieuwe messages: alleen meescrollen als binnen 200px van bottom.
+  // Nieuwe messages: meescrollen wanneer (a) jij zelf het laatste bericht
+  // gestuurd hebt, (b) je binnen 600px van bottom zit, of (c) er meerdere
+  // messages tegelijk binnenkomen (refresh-batch). 600px-drempel is ruim
+  // genoeg voor grote bundle-bubbles + proposal-cards die makkelijk
+  // 400-500px hoog zijn.
   useEffect(() => {
     if (allMessages.length === lastMessageCountRef.current) return;
     const newCount = allMessages.length;
@@ -207,14 +211,13 @@ export function MessageThread({
     lastMessageCountRef.current = newCount;
     const el = scrollContainerRef.current;
     if (!el) return;
+    const lastMessage = allMessages[allMessages.length - 1];
+    const isOwnLastMessage = lastMessage?.senderId === currentUserId;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    // Bij eigen send (count groeit, jij was waarschijnlijk al onderaan) of
-    // bij polled message met user binnen 200px van bottom: scroll mee.
-    // Anders laten staan (gebruiker leest oudere berichten).
-    if (distanceFromBottom < 200 || newCount > prevCount + 1) {
+    if (isOwnLastMessage || distanceFromBottom < 600 || newCount > prevCount + 1) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [allMessages.length]);
+  }, [allMessages, currentUserId]);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
