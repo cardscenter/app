@@ -582,9 +582,14 @@ export async function getRecentSellerListingsForBuyer(sellerId: string) {
       allowPlatformPickup: true,
       allowExternalPickup: true,
       shippingMethods: { select: { shippingMethodId: true, price: true } },
+      // Voor de details-mini-popup in bundle-offer-form (Fase 27.65)
+      listingType: true,
+      condition: true,
+      cardName: true,
+      description: true,
     },
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: 200,
   });
 
   return { success: true, listings };

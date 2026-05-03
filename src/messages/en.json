@@ -678,6 +678,29 @@
     "pickupExternalOption": "Pickup + pay seller",
     "noDeliveryAvailable": "No delivery option possible for this combination of listings.",
     "pickupHint": "Not all selected listings support pickup — only shipping is available.",
+    "deliveryLabels": {
+      "ship": "Shipping",
+      "pickup": "Pickup"
+    },
+    "paymentLabels": {
+      "now": "Pay now",
+      "atPickup": "Pay at pickup"
+    },
+    "searchListings": "Search listing...",
+    "noSearchResults": "No listings match this search.",
+    "viewDetails": "View details",
+    "details": {
+      "cardName": "Card name",
+      "condition": "Condition",
+      "price": "Price",
+      "negotiable": "Negotiable",
+      "delivery": "Delivery",
+      "deliveryShip": "Shipping only",
+      "deliveryPickup": "Pickup only",
+      "deliveryBoth": "Shipping or pickup",
+      "description": "Description",
+      "close": "Close"
+    },
     "requestInsured": {
       "label": "Request insured shipping",
       "hint": "The seller picks the exact shipping method on accept but is required to choose a signed-for method. Amounts >€150 or international shipments require signed shipping anyway."

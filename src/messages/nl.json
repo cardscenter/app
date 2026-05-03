@@ -678,6 +678,29 @@
     "pickupExternalOption": "Ophalen + betalen aan verkoper",
     "noDeliveryAvailable": "Geen bezorgkeuze mogelijk voor deze combinatie van advertenties.",
     "pickupHint": "Niet alle gekozen advertenties ondersteunen ophalen — alleen verzenden mogelijk.",
+    "deliveryLabels": {
+      "ship": "Verzenden",
+      "pickup": "Ophalen"
+    },
+    "paymentLabels": {
+      "now": "Nu betalen",
+      "atPickup": "Betalen ter plekke"
+    },
+    "searchListings": "Zoek advertentie...",
+    "noSearchResults": "Geen advertenties gevonden voor deze zoekterm.",
+    "viewDetails": "Details bekijken",
+    "details": {
+      "cardName": "Kaartnaam",
+      "condition": "Conditie",
+      "price": "Prijs",
+      "negotiable": "Onderhandelbaar",
+      "delivery": "Bezorging",
+      "deliveryShip": "Alleen verzenden",
+      "deliveryPickup": "Alleen ophalen",
+      "deliveryBoth": "Verzenden of ophalen",
+      "description": "Beschrijving",
+      "close": "Sluiten"
+    },
     "requestInsured": {
       "label": "Verzekerd verzonden gewenst",
       "hint": "De verkoper kiest de exacte verzendmethode bij acceptatie, maar wordt verplicht een aangetekende methode te kiezen. Bedragen >€150 of internationale zendingen zijn sowieso verplicht aangetekend."
