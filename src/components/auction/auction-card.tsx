@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { Clock, Gavel } from "lucide-react";
 import Image from "next/image";
 import { parseImageUrls } from "@/lib/upload";
+import { SellerLocationLine } from "@/components/ui/seller-location-line";
 
 // Drempel waarboven een veiling als "hot" gemarkeerd wordt met een 🔥-emoji
 // in de bid-counter. Empirisch bepaald op de seed-data — mediaan ligt op 1-3,
@@ -26,11 +27,24 @@ export interface AuctionCardData {
   buyNowPrice: number | null;
   endTime: Date | string;
   imageUrls?: string | null;
-  seller: { displayName: string };
+  deliveryMethod?: string | null;
+  pickupCity?: string | null;
+  seller: {
+    displayName: string;
+    city?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+  };
   _count?: { bids: number };
 }
 
-export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; sponsored?: boolean }) {
+interface AuctionCardProps {
+  auction: AuctionCardData;
+  sponsored?: boolean;
+  buyer?: { country: string | null; postalCode: string | null } | null;
+}
+
+export function AuctionCard({ auction, sponsored, buyer }: AuctionCardProps) {
   const t = useTranslations("auction");
 
   const images = auction.imageUrls ? parseImageUrls(auction.imageUrls) : [];
@@ -87,6 +101,12 @@ export function AuctionCard({ auction, sponsored }: { auction: AuctionCardData; 
               )}
             </div>
           </div>
+          <SellerLocationLine
+            pickupCity={auction.pickupCity}
+            deliveryMethod={auction.deliveryMethod}
+            seller={auction.seller}
+            buyer={buyer}
+          />
         </div>
 
         {/* Price + bids */}

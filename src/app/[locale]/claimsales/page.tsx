@@ -4,7 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { ShoppingBag, Plus } from "lucide-react";
 import { ClaimsaleCard } from "@/components/claimsale/claimsale-card";
 import { Pagination } from "@/components/ui/pagination";
-import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
+import { getBuyerLocation, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { auth } from "@/lib/auth";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 import { PageContainer } from "@/components/layout/page-container";
@@ -25,8 +25,9 @@ export default async function ClaimsalesPage({
 
   const currentPage = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
 
-  // Filter by buyer's country
-  const buyerCountry = await getBuyerCountry();
+  // Filter by buyer's country + buyer-location voor distance-display per card.
+  const buyerLocation = await getBuyerLocation();
+  const buyerCountry = buyerLocation?.country ?? null;
   const countryFilter = getSellerCountryFilter(buyerCountry);
 
   // Fase 7: hide claimsales from sellers I've blocked + sellers who blocked me.
@@ -48,7 +49,7 @@ export default async function ClaimsalesPage({
     skip: (safePage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: {
-      seller: { select: { displayName: true } },
+      seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
       _count: { select: { items: true } },
       items: { where: { status: "AVAILABLE" }, select: { id: true, price: true } },
     },
@@ -92,7 +93,7 @@ export default async function ClaimsalesPage({
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
             {claimsales.map((cs) => (
-              <ClaimsaleCard key={cs.id} claimsale={cs} />
+              <ClaimsaleCard key={cs.id} claimsale={cs} buyer={buyerLocation} />
             ))}
           </div>
 

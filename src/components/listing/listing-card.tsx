@@ -1,9 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
 import { parseImageUrls } from "@/lib/upload";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
-import { distanceKm, formatDistance, countryFlag } from "@/lib/distance";
+import { SellerLocationLine } from "@/components/ui/seller-location-line";
 
 interface ListingUpsellInfo {
   type: string;
@@ -48,23 +47,6 @@ export function ListingCard({ listing, locale, buyer }: ListingCardProps) {
   const images = parseImageUrls(listing.imageUrls);
   const firstImage = images[0];
 
-  // Locatie-resolutie: pickup-city wint als label (PICKUP/BOTH), anders seller's
-  // algemene plaats. PostalCode komt altijd van seller — Listing heeft geen eigen
-  // postcode-veld; pickupCity wordt auto-fill uit User.city dus seller.postalCode
-  // dekt de pickup-locatie altijd.
-  const allowsPickup =
-    listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH";
-  const displayCity = (allowsPickup && listing.pickupCity) || listing.seller.city || null;
-  const sellerCountry = listing.seller.country ?? null;
-  const flag = countryFlag(sellerCountry, buyer?.country ?? null);
-  const km = buyer
-    ? distanceKm({
-        buyerCountry: buyer.country,
-        buyerPostalCode: buyer.postalCode,
-        sellerCountry,
-        sellerPostalCode: listing.seller.postalCode ?? null,
-      })
-    : null;
 
   const activeUpsells = (listing.upsells ?? []).filter(
     (u) => new Date(u.expiresAt) > new Date()
@@ -152,18 +134,12 @@ export function ListingCard({ listing, locale, buyer }: ListingCardProps) {
             {listing.seller.isVerified && <VerifiedBadge size="sm" />}
           </p>
 
-          {displayCity && (
-            <div className="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1 truncate">
-                <MapPin className="size-3 shrink-0" />
-                <span className="truncate">{displayCity}</span>
-                {flag && <span className="ml-0.5">{flag}</span>}
-              </span>
-              {km !== null && (
-                <span className="shrink-0 tabular-nums">{formatDistance(km)}</span>
-              )}
-            </div>
-          )}
+          <SellerLocationLine
+            pickupCity={listing.pickupCity}
+            deliveryMethod={listing.deliveryMethod}
+            seller={listing.seller}
+            buyer={buyer}
+          />
         </div>
       </div>
     </Link>

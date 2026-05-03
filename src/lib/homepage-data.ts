@@ -61,7 +61,7 @@ export async function getHomepageData() {
       orderBy: { createdAt: "desc" },
       take: 8,
       include: {
-        seller: { select: { displayName: true } },
+        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
         _count: { select: { bids: true } },
       },
     }),
@@ -70,7 +70,7 @@ export async function getHomepageData() {
       orderBy: { publishedAt: "desc" },
       take: 8,
       include: {
-        seller: { select: { displayName: true } },
+        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
         items: { where: { status: "AVAILABLE" }, select: { id: true, price: true } },
         _count: { select: { items: true } },
       },
@@ -80,7 +80,7 @@ export async function getHomepageData() {
       orderBy: { createdAt: "desc" },
       take: 8,
       include: {
-        seller: { select: { displayName: true, isVerified: true } },
+        seller: { select: { displayName: true, isVerified: true, city: true, postalCode: true, country: true } },
         upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
       },
     }),
@@ -94,7 +94,7 @@ export async function getHomepageData() {
       orderBy: { endTime: "asc" },
       take: 8,
       include: {
-        seller: { select: { displayName: true } },
+        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
         _count: { select: { bids: true } },
       },
     }),
@@ -105,7 +105,7 @@ export async function getHomepageData() {
       orderBy: { bids: { _count: "desc" } },
       take: 12,
       include: {
-        seller: { select: { displayName: true } },
+        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
         _count: { select: { bids: true } },
       },
     }),
@@ -118,7 +118,7 @@ export async function getHomepageData() {
       },
       take: 4,
       include: {
-        seller: { select: { displayName: true } },
+        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
         _count: { select: { bids: true } },
       },
     }),
@@ -131,7 +131,7 @@ export async function getHomepageData() {
       },
       take: 4,
       include: {
-        seller: { select: { displayName: true, isVerified: true } },
+        seller: { select: { displayName: true, isVerified: true, city: true, postalCode: true, country: true } },
         upsells: { where: { expiresAt: { gt: now } }, select: { type: true, expiresAt: true } },
       },
     }),

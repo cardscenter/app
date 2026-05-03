@@ -1,6 +1,7 @@
 import { setRequestLocale } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getHomepageData } from "@/lib/homepage-data";
+import { getBuyerLocation } from "@/lib/shipping/filter";
 import { Gavel, Tag, Store, Clock, TrendingUp } from "lucide-react";
 
 import { MarketingHero } from "@/components/home/marketing-hero";
@@ -40,7 +41,10 @@ async function HomePageContent({
   setRequestLocale(locale);
 
   const session = await auth();
-  const data = await getHomepageData();
+  const [data, buyerLocation] = await Promise.all([
+    getHomepageData(),
+    getBuyerLocation(),
+  ]);
 
   const isLoggedIn = !!session?.user;
 
@@ -64,6 +68,7 @@ async function HomePageContent({
         auctions={data.sponsoredAuctions}
         listings={data.sponsoredListings}
         locale={locale}
+        buyer={buyerLocation}
       />
 
       {/* Ending Soon */}
@@ -80,7 +85,7 @@ async function HomePageContent({
           <HomeCarousel>
             {data.endingSoonAuctions.map((auction) => (
               <CarouselSlide key={auction.id}>
-                <AuctionCard auction={auction} />
+                <AuctionCard auction={auction} buyer={buyerLocation} />
               </CarouselSlide>
             ))}
           </HomeCarousel>
@@ -101,7 +106,7 @@ async function HomePageContent({
           <HomeCarousel>
             {data.trendingAuctions.map((auction) => (
               <CarouselSlide key={auction.id}>
-                <AuctionCard auction={auction} />
+                <AuctionCard auction={auction} buyer={buyerLocation} />
               </CarouselSlide>
             ))}
           </HomeCarousel>
@@ -123,7 +128,7 @@ async function HomePageContent({
           <HomeCarousel>
             {data.recentAuctions.map((auction) => (
               <CarouselSlide key={auction.id}>
-                <AuctionCard auction={auction} />
+                <AuctionCard auction={auction} buyer={buyerLocation} />
               </CarouselSlide>
             ))}
           </HomeCarousel>
@@ -143,7 +148,7 @@ async function HomePageContent({
           <HomeCarousel>
             {data.recentClaimsales.map((claimsale) => (
               <CarouselSlide key={claimsale.id}>
-                <ClaimsaleCard claimsale={claimsale} />
+                <ClaimsaleCard claimsale={claimsale} buyer={buyerLocation} />
               </CarouselSlide>
             ))}
           </HomeCarousel>
@@ -163,7 +168,7 @@ async function HomePageContent({
           <HomeCarousel>
             {data.recentListings.map((listing) => (
               <CarouselSlide key={listing.id}>
-                <ListingCard listing={listing} locale={locale} />
+                <ListingCard listing={listing} locale={locale} buyer={buyerLocation} />
               </CarouselSlide>
             ))}
           </HomeCarousel>

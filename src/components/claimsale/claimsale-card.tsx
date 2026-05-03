@@ -2,18 +2,29 @@ import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Tag } from "lucide-react";
 import Image from "next/image";
+import { SellerLocationLine } from "@/components/ui/seller-location-line";
 
 export interface ClaimsaleCardData {
   id: string;
   title: string;
   coverImage: string | null;
   shippingCost: number;
-  seller: { displayName: string };
+  seller: {
+    displayName: string;
+    city?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+  };
   _count: { items: number };
   items: { id: string; price: number }[];
 }
 
-export function ClaimsaleCard({ claimsale }: { claimsale: ClaimsaleCardData }) {
+interface ClaimsaleCardProps {
+  claimsale: ClaimsaleCardData;
+  buyer?: { country: string | null; postalCode: string | null } | null;
+}
+
+export function ClaimsaleCard({ claimsale, buyer }: ClaimsaleCardProps) {
   const t = useTranslations("claimsale");
 
   const availableCount = claimsale.items.length;
@@ -74,6 +85,7 @@ export function ClaimsaleCard({ claimsale }: { claimsale: ClaimsaleCardData }) {
           <p className="mt-1 text-xs text-muted-foreground">
             {claimsale.seller.displayName}
           </p>
+          <SellerLocationLine seller={claimsale.seller} buyer={buyer} />
           {/* Mobile-only badges */}
           <div className="mt-1.5 flex items-center gap-2 sm:hidden">
             <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-medium text-white">

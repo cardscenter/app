@@ -6,9 +6,10 @@ interface SponsoredAuctionRowProps {
   auctions: AuctionCardData[];
   title: string;
   tooltip: string;
+  buyer?: { country: string | null; postalCode: string | null } | null;
 }
 
-export function SponsoredAuctionRow({ auctions, title, tooltip }: SponsoredAuctionRowProps) {
+export function SponsoredAuctionRow({ auctions, title, tooltip, buyer }: SponsoredAuctionRowProps) {
   if (auctions.length === 0) return null;
 
   return (
@@ -36,7 +37,7 @@ export function SponsoredAuctionRow({ auctions, title, tooltip }: SponsoredAucti
             "hidden [@media(min-width:1600px)]:block";
           return (
             <div key={auction.id} className={visibility}>
-              <AuctionCard auction={auction} sponsored />
+              <AuctionCard auction={auction} sponsored buyer={buyer} />
             </div>
           );
         })}

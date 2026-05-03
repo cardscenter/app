@@ -7,7 +7,7 @@ import { SponsoredAuctionRow } from "@/components/auction/sponsored-row";
 import { Pagination } from "@/components/ui/pagination";
 import { AuctionCreatedToast } from "@/components/auction/auction-created-toast";
 import { AuctionSortBar } from "@/components/auction/auction-sort-bar";
-import { getBuyerCountry, getSellerCountryFilter } from "@/lib/shipping/filter";
+import { getBuyerLocation, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { auth } from "@/lib/auth";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 import { PageContainer } from "@/components/layout/page-container";
@@ -63,8 +63,9 @@ export default async function AuctionsPage({
 
   const now = new Date();
 
-  // Filter by buyer's country
-  const buyerCountry = await getBuyerCountry();
+  // Filter by buyer's country + buyer-location voor distance-display per card.
+  const buyerLocation = await getBuyerLocation();
+  const buyerCountry = buyerLocation?.country ?? null;
   const countryFilter = getSellerCountryFilter(buyerCountry);
 
   // Fase 7: hide auctions from sellers I've blocked + sellers who blocked me.
@@ -87,7 +88,7 @@ export default async function AuctionsPage({
       },
     },
     include: {
-      seller: { select: { displayName: true } },
+      seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
       _count: { select: { bids: true } },
     },
   });
@@ -111,7 +112,7 @@ export default async function AuctionsPage({
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: {
-      seller: { select: { displayName: true } },
+      seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
       _count: { select: { bids: true } },
     },
   });
@@ -183,12 +184,13 @@ export default async function AuctionsPage({
             auctions={sponsoredTop}
             title={t("sponsored")}
             tooltip={t("sponsoredTooltip")}
+            buyer={buyerLocation}
           />
 
           {/* Main grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
             {auctions.map((auction) => (
-              <AuctionCard key={auction.id} auction={auction} />
+              <AuctionCard key={auction.id} auction={auction} buyer={buyerLocation} />
             ))}
           </div>
 

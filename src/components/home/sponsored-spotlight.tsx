@@ -14,7 +14,14 @@ interface SponsoredSpotlightProps {
     buyNowPrice: number | null;
     endTime: Date;
     imageUrls: string | null;
-    seller: { displayName: string };
+    deliveryMethod?: string | null;
+    pickupCity?: string | null;
+    seller: {
+      displayName: string;
+      city?: string | null;
+      postalCode?: string | null;
+      country?: string | null;
+    };
     _count: { bids: number };
   }>;
   listings: Array<{
@@ -28,13 +35,22 @@ interface SponsoredSpotlightProps {
     price: number | null;
     shippingCost: number;
     freeShipping: boolean;
-    seller: { displayName: string; isVerified: boolean };
+    deliveryMethod?: string | null;
+    pickupCity?: string | null;
+    seller: {
+      displayName: string;
+      isVerified: boolean;
+      city?: string | null;
+      postalCode?: string | null;
+      country?: string | null;
+    };
     upsells: Array<{ type: string; expiresAt: Date }>;
   }>;
   locale: string;
+  buyer?: { country: string | null; postalCode: string | null } | null;
 }
 
-export function SponsoredSpotlight({ auctions, listings, locale }: SponsoredSpotlightProps) {
+export function SponsoredSpotlight({ auctions, listings, locale, buyer }: SponsoredSpotlightProps) {
   const t = useTranslations("home");
 
   if (auctions.length === 0 && listings.length === 0) return null;
@@ -59,12 +75,12 @@ export function SponsoredSpotlight({ auctions, listings, locale }: SponsoredSpot
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {auctions.map((auction) => (
               <div key={auction.id} className="glass-sponsored-glow rounded-2xl">
-                <AuctionCard auction={auction} sponsored />
+                <AuctionCard auction={auction} sponsored buyer={buyer} />
               </div>
             ))}
             {listings.map((listing) => (
               <div key={listing.id} className="glass-sponsored-glow rounded-2xl">
-                <ListingCard listing={listing} locale={locale} />
+                <ListingCard listing={listing} locale={locale} buyer={buyer} />
               </div>
             ))}
           </div>
