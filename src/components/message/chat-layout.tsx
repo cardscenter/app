@@ -139,8 +139,12 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden border-t border-border">
-      {/* Left panel: conversation list */}
-      <div className="flex w-80 flex-shrink-0 flex-col border-r border-border bg-background lg:w-96">
+      {/* Left panel: conversation list. Op mobile: full-width als er geen actief
+          gesprek is, anders verborgen (de chat-thread neemt dan de hele
+          viewport). Op md+: altijd zichtbaar als sidebar. */}
+      <div
+        className={`${activeConversationId ? "hidden md:flex" : "flex"} w-full flex-shrink-0 flex-col border-r border-border bg-background md:w-80 lg:w-96`}
+      >
         {/* Tabs */}
         <div className="flex border-b border-border bg-muted/30">
           {tabs.map((tab) => {
@@ -203,8 +207,12 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
         </div>
       </div>
 
-      {/* Right panel: active conversation */}
-      <div className="flex flex-1 flex-col overflow-hidden bg-background">
+      {/* Right panel: active conversation. Op mobile alleen tonen als er een
+          actief gesprek is (anders zou de "Selecteer een gesprek"-empty state
+          de lijst overdekken). Op md+: altijd zichtbaar. */}
+      <div
+        className={`${activeConversationId ? "flex" : "hidden md:flex"} flex-1 flex-col overflow-hidden bg-background`}
+      >
         {activeConversationId ? (
           <div className="flex flex-1 flex-col overflow-hidden">
             {children}

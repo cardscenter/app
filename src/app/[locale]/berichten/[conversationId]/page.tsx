@@ -5,7 +5,8 @@ import { ChatLayout, type ConversationPreview } from "@/components/message/chat-
 import { MessageThread } from "@/components/message/message-thread";
 import { ChatActions } from "@/components/message/chat-actions";
 import { PickupActions } from "@/components/message/pickup-actions";
-import { MapPin } from "lucide-react";
+import { MapPin, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default async function ConversationPage({
   params,
@@ -273,15 +274,25 @@ export default async function ConversationPage({
   return (
     <ChatLayout conversations={previews} activeConversationId={conversationId}>
       <div className="flex h-full flex-col">
-        {/* Chat header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-3 bg-muted/20">
-          <div>
-            <h2 className="font-semibold text-foreground">
-              {otherUser?.user.displayName ?? "Gesprek"}
-            </h2>
-            {context && (
-              <p className="text-xs text-muted-foreground">Re: {context}</p>
-            )}
+        {/* Chat header — terug-knop alleen op mobile, op desktop blijft de
+            sidebar zichtbaar dus geen navigatie nodig. */}
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3 bg-muted/20 md:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href={`/${locale}/berichten`}
+              aria-label="Terug naar gesprekken"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="min-w-0">
+              <h2 className="truncate font-semibold text-foreground">
+                {otherUser?.user.displayName ?? "Gesprek"}
+              </h2>
+              {context && (
+                <p className="truncate text-xs text-muted-foreground">Re: {context}</p>
+              )}
+            </div>
           </div>
           <ChatActions
             conversationId={conversationId}
