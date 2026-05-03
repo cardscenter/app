@@ -358,6 +358,12 @@ export async function buyListing(
   if (deliveryChoice === "PICKUP_EXTERNAL" && !listing.allowExternalPickup) {
     return { error: "Verkoper accepteert geen ophaal-betaling — kies wallet-vooraf." };
   }
+  // allowDirectBuy enforcement (Fase 27.78) — seller-toggle moet ook op
+  // backend gerespecteerd worden, niet alleen UI. Voor PICKUP_EXTERNAL is
+  // de toggle niet relevant (reserveer-flow gaat altijd door).
+  if (deliveryChoice !== "PICKUP_EXTERNAL" && !listing.allowDirectBuy) {
+    return { error: "Verkoper accepteert geen Direct Kopen — neem contact op via chat." };
+  }
 
   // Stock-based flow voor SEALED_PRODUCT en OTHER (Fase 27.23). Alleen wanneer
   // de listing daadwerkelijk gematerialiseerde rijen heeft — zo blijven legacy
@@ -543,6 +549,11 @@ async function buyListingStocked(args: {
   const qty = Math.max(1, Math.floor(args.quantity));
   const wantsShip = deliveryChoice === "SHIP";
 
+  // Self-purchase blokkering (Fase 27.78) — buyListing heeft deze check al,
+  // maar de stocked-route had hem niet. Voorkomt fake sales / balance-juggling.
+  if (listing.sellerId === userId) {
+    return { error: "Je kunt je eigen advertentie niet kopen" };
+  }
   if (listing.status !== "ACTIVE" && listing.status !== "PARTIALLY_SOLD") {
     return { error: "Advertentie niet meer beschikbaar" };
   }

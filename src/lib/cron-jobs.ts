@@ -14,6 +14,7 @@ import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
 import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
+import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -124,7 +125,7 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   },
   "pickup-reservation-timeout": {
     description:
-      "EXTERNAL pickup-bundles waarvan de reservering >14 dagen geleden is gemaakt en niet bevestigd: bundle CANCELLED, listings RESERVED → ACTIVE, beide partijen genotificeerd. Voorkomt dat listings eeuwig vastzitten.",
+      "EXTERNAL pickup-bundles waarvan de reservering verlopen is (>5 dagen, configurable via PICKUP_RESERVATION_DAYS) en niet bevestigd: bundle CANCELLED, listings + items RESERVED → AVAILABLE/ACTIVE, beide partijen genotificeerd. Voorkomt dat listings eeuwig vastzitten.",
     schedule: "Dagelijks",
     allowManualRun: true,
   },
@@ -499,6 +500,7 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
           where: { id: bundle.id, paymentMode: "EXTERNAL", status: { in: ["PENDING", "SCHEDULED"] } },
           data: { status: "CANCELLED" },
         });
+        // Listing-rollback voor multi-listing bundles
         if (listingIds.length > 0) {
           await tx.listing.updateMany({
             where: { id: { in: listingIds }, status: "RESERVED" },
@@ -510,6 +512,33 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
             data: { status: "ACTIVE", buyerId: null },
           });
         }
+        // Stocked / MULTI_CARD partial: items RESERVED → AVAILABLE (Fase 27.78
+        // — was missing). Items zijn aan de bundle gekoppeld via shippingBundleId.
+        // Daarnaast listing-status hercomputeren per geraakte listing want
+        // PARTIALLY_SOLD kan terug naar ACTIVE als nul SOLD items overblijven.
+        const releasedItems = await tx.listingCardItem.findMany({
+          where: { shippingBundleId: bundle.id, status: "RESERVED" },
+          select: { listingId: true },
+        });
+        const affectedListingIds = Array.from(new Set(releasedItems.map((i) => i.listingId)));
+        if (releasedItems.length > 0) {
+          await tx.listingCardItem.updateMany({
+            where: { shippingBundleId: bundle.id, status: "RESERVED" },
+            data: { status: "AVAILABLE", buyerId: null, shippingBundleId: null },
+          });
+        }
+        for (const lid of affectedListingIds) {
+          const remainingSold = await tx.listingCardItem.count({
+            where: { listingId: lid, status: "SOLD" },
+          });
+          // Als geen SOLD-items meer: terug naar ACTIVE; anders blijft PARTIALLY_SOLD.
+          if (remainingSold === 0) {
+            await tx.listing.updateMany({
+              where: { id: lid, status: "PARTIALLY_SOLD" },
+              data: { status: "ACTIVE" },
+            });
+          }
+        }
         if (bundle.bundleProposal) {
           await tx.bundleProposal.update({
             where: { id: bundle.bundleProposal.id },
@@ -519,7 +548,7 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       });
 
       await createNotification(bundle.buyerId, "NEW_MESSAGE", "Reservering verlopen",
-        `De ophaal-reservering voor bestelling ${bundle.orderNumber} is verlopen na 14 dagen zonder bevestiging.`,
+        `De ophaal-reservering voor bestelling ${bundle.orderNumber} is verlopen na ${PICKUP_RESERVATION_DAYS} dagen zonder bevestiging.`,
         bundle.bundleProposal?.conversationId
           ? `/nl/berichten/${bundle.bundleProposal.conversationId}`
           : "/dashboard/aankopen");

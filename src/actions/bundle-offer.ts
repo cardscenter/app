@@ -69,14 +69,16 @@ async function flipBundleListingItems(
         // MULTI_CARD partial: exacte items
         targetIds = itemIds;
       } else {
-        // Stocked: pak eerste N AVAILABLE
+        // Stocked: pak eerste N AVAILABLE. Race met andere parallel-accept:
+        // tweede flipt minder items want updateMany count<N → throw + tx
+        // rollback. Buyer ziet duidelijke foutmelding ipv stille fail.
         const available = await tx.listingCardItem.findMany({
           where: { listingId: entry.listingId, status: "AVAILABLE" },
           select: { id: true },
           take: entry.quantity,
         });
         if (available.length !== entry.quantity) {
-          throw new Error(`"${entry.listing.title}" — slechts ${available.length} stuks beschikbaar`);
+          throw new Error(`"${entry.listing.title}" — slechts ${available.length} stuks beschikbaar (was ${entry.quantity}). Pas je voorstel aan.`);
         }
         targetIds = available.map((r) => r.id);
       }
@@ -90,7 +92,7 @@ async function flipBundleListingItems(
         },
       });
       if (flipped.count !== targetIds.length) {
-        throw new Error(`"${entry.listing.title}" — items zijn niet meer beschikbaar`);
+        throw new Error(`"${entry.listing.title}" — items zijn intussen weggekocht door een andere koper. Probeer opnieuw met een lager aantal.`);
       }
 
       // Listing-status: PARTIALLY_SOLD als nog AVAILABLE, anders SOLD.
@@ -206,6 +208,11 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
     const isStocked = (l.listingType === "SEALED_PRODUCT" || l.listingType === "OTHER") && l.cardItemRows.length > 0;
     const isMultiPartial = l.listingType === "MULTI_CARD" && l.allowPartialSale && l.cardItemRows.length > 0;
     const qty = entry.quantity ?? 1;
+    // Quantity moet minstens 1 zijn (Fase 27.78). Zod-coerce kan undefined →
+    // default 1 doen, maar bij expliciet 0 of negatief moet hij hard falen.
+    if (qty < 1) {
+      return { error: `"${l.title}": aantal moet minstens 1 zijn` };
+    }
     if (entry.itemIds && entry.itemIds.length > 0) {
       // MULTI_CARD partial-sale: itemIds moeten bestaan + AVAILABLE zijn
       if (!isMultiPartial) {
