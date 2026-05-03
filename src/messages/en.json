@@ -1112,6 +1112,7 @@
     "missingFields": "Still to do before publishing",
     "sectionComplete": "Complete",
     "sectionIncomplete": "Incomplete",
+    "sectionOptional": "Optional",
     "charsRemaining": "{count} characters remaining",
     "preview": "Preview listing",
     "previewTitle": "Preview of your listing",

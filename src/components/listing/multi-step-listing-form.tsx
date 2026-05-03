@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useActionState, useState, useRef, useEffect, useTransition, useMemo } from "react";
 import { createListing, saveDraft } from "@/actions/listing";
 import { Link, useRouter } from "@/i18n/navigation";
-import { Eye, FileText, Check, AlertCircle } from "lucide-react";
+import { Eye, FileText, Check, AlertCircle, Sparkles } from "lucide-react";
 import type { Series, CardSet } from "@prisma/client";
 import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType, CardItemEntry } from "@/types";
 
@@ -189,28 +189,36 @@ interface MultiStepListingFormProps {
   shippingMethods?: SellerShippingMethod[];
 }
 
-// Sectie-status indicator: groen vinkje als er geen openstaande regel is voor
-// die sectie, anders amber waarschuwing.
+// Sectie-status indicator: groen vinkje voor afgeronde verplichte secties,
+// amber voor verplichte secties met openstaand werk, en blauwe "Optioneel"
+// pill voor secties die helemaal niet ingevuld hoeven te worden (zoals upsells).
 function SectionHeader({
   title,
   status,
 }: {
   title: string;
-  status: "complete" | "incomplete";
+  status: "complete" | "incomplete" | "optional";
 }) {
   const t = useTranslations("listing");
   return (
     <div className="mb-4 flex items-center justify-between gap-3">
       <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-      {status === "complete" ? (
+      {status === "complete" && (
         <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
           <Check className="h-3.5 w-3.5" />
           {t("sectionComplete")}
         </span>
-      ) : (
+      )}
+      {status === "incomplete" && (
         <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
           <AlertCircle className="h-3.5 w-3.5" />
           {t("sectionIncomplete")}
+        </span>
+      )}
+      {status === "optional" && (
+        <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+          <Sparkles className="h-3.5 w-3.5" />
+          {t("sectionOptional")}
         </span>
       )}
     </div>
@@ -551,9 +559,9 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
         </div>
       </section>
 
-      {/* Section 6: Upsells — altijd optioneel, geen incomplete-status */}
+      {/* Section 6: Upsells — altijd optioneel, krijgt blauwe pill */}
       <section className="glass rounded-2xl p-6">
-        <SectionHeader title={t("stepUpsells")} status="complete" />
+        <SectionHeader title={t("stepUpsells")} status="optional" />
         <StepUpsells
           upsells={form.upsells}
           userBalance={userBalance}
@@ -576,14 +584,9 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
                 {t("allFieldsComplete")}
               </span>
             ) : (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 font-medium text-amber-600 dark:text-amber-400">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{nextRequirement && t(nextRequirement.messageKey)}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("missingFields")}: {requirements.length}
-                </p>
+              <div className="flex items-center gap-1.5 font-medium text-amber-600 dark:text-amber-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span className="truncate">{nextRequirement && t(nextRequirement.messageKey)}</span>
               </div>
             )}
           </div>
