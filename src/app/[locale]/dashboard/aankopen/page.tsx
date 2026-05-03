@@ -41,7 +41,20 @@ export default async function MyPurchasesPage() {
   const bundles = await prisma.shippingBundle.findMany({
     where: {
       buyerId: userId,
-      status: { not: "PENDING" },
+      // PENDING bundles uitsluiten BEHALVE EXTERNAL pickup-reserveringen.
+      // Die staan in afspreek-fase en moeten zichtbaar zijn in de top-sectie
+      // (ActivePickupsSection). Andere PENDING bundles (auction awaiting
+      // payment, etc.) hebben hun eigen flows en worden hier overgeslagen.
+      OR: [
+        { status: { not: "PENDING" } },
+        {
+          AND: [
+            { status: "PENDING" },
+            { paymentMode: "EXTERNAL" },
+            { deliveryMethod: "PICKUP" },
+          ],
+        },
+      ],
     },
     orderBy: { createdAt: "desc" },
     include: {

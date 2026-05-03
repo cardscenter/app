@@ -41,7 +41,18 @@ export default async function MySalesPage() {
   const bundles = await prisma.shippingBundle.findMany({
     where: {
       sellerId: userId,
-      status: { not: "PENDING" },
+      // Idem als /aankopen: PENDING EXTERNAL pickup-reserveringen wel
+      // tonen voor de afspreek-flow in ActivePickupsSection.
+      OR: [
+        { status: { not: "PENDING" } },
+        {
+          AND: [
+            { status: "PENDING" },
+            { paymentMode: "EXTERNAL" },
+            { deliveryMethod: "PICKUP" },
+          ],
+        },
+      ],
     },
     orderBy: { createdAt: "desc" },
     include: {
