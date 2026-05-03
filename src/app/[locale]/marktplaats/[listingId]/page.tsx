@@ -232,36 +232,45 @@ export default async function ListingDetailPage({
             {/* Direct-buy-flows voor stocked SEALED_PRODUCT/OTHER (Fase 27.23 + 27.39).
                 Per deliveryMethod + seller-toggles tot 3 koop-routes met elk een
                 duidelijke header (BuyRouteCard) zodat koper niet verward raakt
-                tussen vooraf-vs-bij-ophalen-betalen. */}
+                tussen vooraf-vs-bij-ophalen-betalen.
+
+                Fase 27.89: alle direct-koop routes vereisen FIXED pricing +
+                allowDirectBuy — anders is er geen prijs en faalt de actie.
+                NEGOTIABLE stocked listings vallen door naar ContactSellerButton
+                zodat de prijs eerst via chat afgesproken kan worden. */}
             {isStockedListing && (isActive || isPartiallySold) && !isOwner && session?.user && availableItems > 0 && (
               <div className="mt-6 space-y-3">
-                {(listing.deliveryMethod === "SHIP" || listing.deliveryMethod === "BOTH") && (
-                  <BuyRouteCard
-                    variant="ship"
-                    title="Verzenden — nu betalen"
-                    subtitle="Betaal nu via platform. Accepteren bij ontvangst."
-                  >
-                    <BuyQuantityForm
-                      listingId={listing.id}
-                      listingTitle={listing.title}
-                      unitPrice={listing.price ?? 0}
-                      shippingCost={listing.shippingCost}
-                      freeShipping={listing.freeShipping}
-                      available={availableItems}
-                      availableBalance={buyerAvailableBalance}
-                      deliveryChoice="SHIP"
-                      shippingMethods={listing.shippingMethods.map((sm) => ({
-                        id: sm.shippingMethodId,
-                        carrier: sm.shippingMethod.carrier,
-                        serviceName: sm.shippingMethod.serviceName,
-                        price: sm.price,
-                        isSigned: sm.shippingMethod.isSigned,
-                      }))}
-                    />
-                  </BuyRouteCard>
-                )}
+                {listing.pricingType === "FIXED" &&
+                  listing.allowDirectBuy &&
+                  (listing.deliveryMethod === "SHIP" || listing.deliveryMethod === "BOTH") && (
+                    <BuyRouteCard
+                      variant="ship"
+                      title="Verzenden — nu betalen"
+                      subtitle="Betaal nu via platform. Accepteren bij ontvangst."
+                    >
+                      <BuyQuantityForm
+                        listingId={listing.id}
+                        listingTitle={listing.title}
+                        unitPrice={listing.price ?? 0}
+                        shippingCost={listing.shippingCost}
+                        freeShipping={listing.freeShipping}
+                        available={availableItems}
+                        availableBalance={buyerAvailableBalance}
+                        deliveryChoice="SHIP"
+                        shippingMethods={listing.shippingMethods.map((sm) => ({
+                          id: sm.shippingMethodId,
+                          carrier: sm.shippingMethod.carrier,
+                          serviceName: sm.shippingMethod.serviceName,
+                          price: sm.price,
+                          isSigned: sm.shippingMethod.isSigned,
+                        }))}
+                      />
+                    </BuyRouteCard>
+                  )}
 
-                {(listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
+                {listing.pricingType === "FIXED" &&
+                  listing.allowDirectBuy &&
+                  (listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
                   listing.allowPlatformPickup && (
                     <BuyRouteCard
                       variant="pickup_platform"
@@ -282,7 +291,9 @@ export default async function ListingDetailPage({
                     </BuyRouteCard>
                   )}
 
-                {(listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
+                {listing.pricingType === "FIXED" &&
+                  listing.allowDirectBuy &&
+                  (listing.deliveryMethod === "PICKUP" || listing.deliveryMethod === "BOTH") &&
                   listing.allowExternalPickup && (
                     <BuyRouteCard
                       variant="pickup_external"
@@ -298,11 +309,19 @@ export default async function ListingDetailPage({
                     </BuyRouteCard>
                   )}
 
-                {/* Contact-knop voor stocked listings — alleen wanneer
-                    seller acceptsOffers (of NEGOTIABLE, edge case). */}
+                {/* Contact-knop voor stocked listings: bij NEGOTIABLE altijd,
+                    bij FIXED alleen als acceptsOffers aan staat. */}
                 {(listing.pricingType === "NEGOTIABLE" ||
                   (listing.pricingType === "FIXED" && listing.acceptsOffers)) && (
                   <ContactSellerButton sellerId={listing.sellerId} listingId={listing.id} />
+                )}
+
+                {/* Hint als seller bewust geen koop-route accepteert (FIXED +
+                    direct-buy uit + offers uit). Anders ziet koper hier niets. */}
+                {listing.pricingType === "FIXED" && !listing.allowDirectBuy && !listing.acceptsOffers && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    {t("directBuy.directBuyDisabledByseller")}
+                  </p>
                 )}
               </div>
             )}
