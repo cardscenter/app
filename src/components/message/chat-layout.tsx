@@ -138,7 +138,7 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden border-t border-border">
+    <div className="flex h-full min-h-0 flex-1 overflow-hidden border-t border-border">
       {/* Left panel: conversation list */}
       <div className="flex w-80 flex-shrink-0 flex-col border-r border-border bg-background lg:w-96">
         {/* Tabs */}
