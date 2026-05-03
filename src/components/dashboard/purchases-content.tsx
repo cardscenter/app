@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations, useLocale } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cancelPurchase, confirmDelivery } from "@/actions/purchase";
 import { contactSeller } from "@/actions/message";
 import { toast } from "sonner";
@@ -156,6 +156,15 @@ export function PurchasesContent({
     : (TABS.find((tab) => tab !== "PENDING" && counts[tab] > 0) ?? "PAID");
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
 
+  // Safety-net: als de huidige activeTab niet meer in visibleTabs zit (bv. na
+  // payment verdwijnt PENDING uit visibleTabs), schakel automatisch naar de
+  // eerste zichtbare tab. Voorkomt een lege body met "geen tab actief".
+  useEffect(() => {
+    if (!visibleTabs.includes(activeTab)) {
+      setActiveTab(visibleTabs[0] ?? "PAID");
+    }
+  }, [visibleTabs, activeTab]);
+
   const filtered = searchedBundles.filter((b) => b.status === activeTab);
 
   return (
@@ -221,6 +230,7 @@ export function PurchasesContent({
             }))}
             availableBalance={availableBalance}
             reservedBalance={reservedBalance}
+            onPaymentComplete={() => setActiveTab("PAID")}
           />
         )
       ) : filtered.length === 0 ? (

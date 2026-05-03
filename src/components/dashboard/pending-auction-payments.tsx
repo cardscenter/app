@@ -21,6 +21,10 @@ interface PendingAuctionPaymentsProps {
   /** Totale reservedBalance — gebruikt om de eigen 40%-reserve op deze auction
    *  terug te rekenen voor de "echte" betaalcapaciteit. */
   reservedBalance: number;
+  /** Optionele callback die wordt aangeroepen na een succesvolle betaling.
+   *  PurchasesContent gebruikt dit om naar de Betaald-tab te schakelen zodat
+   *  de koper zijn nieuwe aankoop direct ziet. */
+  onPaymentComplete?: () => void;
 }
 
 const RESERVE_PERCENTAGE = 0.4;
@@ -34,6 +38,7 @@ export function PendingAuctionPayments({
   auctions,
   availableBalance,
   reservedBalance,
+  onPaymentComplete,
 }: PendingAuctionPaymentsProps) {
   const t = useTranslations("wallet");
   const router = useRouter();
@@ -53,6 +58,9 @@ export function PendingAuctionPayments({
     } else {
       setPaidIds((prev) => new Set([...prev, auctionId]));
       setOpenModalId(null);
+      // Schakel parent over naar de Betaald-tab vóór de refresh, anders blijft
+      // activeTab op een verborgen PENDING-tab hangen na server-data update.
+      onPaymentComplete?.();
       router.refresh();
     }
   };
