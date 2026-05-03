@@ -167,7 +167,7 @@ export function ListingListRow({
       ? `€${listing.price.toFixed(2)}`
       : listing.suggestedPrice !== undefined && listing.suggestedPrice !== null
         ? `€${listing.suggestedPrice.toFixed(2)}`
-        : "Bieden";
+        : "Voorstel";
   const priceSubtitle =
     isFixed && listing.price !== null
       ? null
@@ -278,7 +278,7 @@ export function ListingListRow({
               {showsOffer && (
                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-100 px-1 py-0.5 text-[9px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                   <Gavel className="size-2.5" />
-                  Bieden
+                  Voorstel
                 </span>
               )}
             </div>
@@ -333,7 +333,7 @@ export function ListingListRow({
       {/* DESKTOP RIGHT — pricing badges, prijs, watchlist + Bekijk */}
       <div className="hidden sm:flex w-44 shrink-0 flex-col items-end justify-between border-l border-border pl-5">
         <div className="flex w-full flex-col items-end gap-2">
-          <div className="flex items-center gap-1">
+          <div className="flex flex-col items-end gap-1">
             {showsDirectBuy && (
               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
                 <Tag className="size-3" />
@@ -343,7 +343,7 @@ export function ListingListRow({
             {showsOffer && (
               <span className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
                 <Gavel className="size-3" />
-                Bieden
+                Voorstel doen
               </span>
             )}
           </div>
