@@ -14,9 +14,13 @@ type BundleItem = {
   imageUrl: string | null;
   reference: string | null;
   sellerNote: string | null;
+  refundedAt: string | null;
+  quantity?: number;
+  subtotal?: number;
 };
 
 type OrderData = {
+  bundleId: string;
   orderNumber: string;
   status: string;
   sourceType: "claimsale" | "auction" | "listing";
@@ -27,9 +31,14 @@ type OrderData = {
   totalCost: number;
   shippingMethodCarrier: string | null;
   shippingMethodService: string | null;
+  deliveryMethod: string;
+  paymentMode: string;
   trackingUrl: string | null;
   createdAt: string;
   shippedAt: string | null;
+  deliveredAt: string | null;
+  refundedAmount: number;
+  pickupScheduleStatus: string | null;
   items: BundleItem[];
   buyerName?: string;
   buyerFirstName?: string | null;
@@ -68,11 +77,41 @@ export function OrderDetailModal({
 
   const isSeller = namespace === "sales";
 
-  const allItems: { name: string; condition: string; price: number; imageUrl: string | null; reference: string | null; sellerNote: string | null }[] =
+  const allItems: {
+    id: string;
+    name: string;
+    condition: string;
+    price: number;
+    imageUrl: string | null;
+    reference: string | null;
+    sellerNote: string | null;
+    refundedAt: string | null;
+    quantity: number;
+  }[] =
     order.items.length > 0
-      ? order.items.map((i) => ({ name: i.cardName, condition: i.condition, price: i.price, imageUrl: i.imageUrl, reference: i.reference, sellerNote: isSeller ? i.sellerNote : null }))
+      ? order.items.map((i) => ({
+          id: i.id,
+          name: i.cardName,
+          condition: i.condition,
+          price: i.price,
+          imageUrl: i.imageUrl,
+          reference: i.reference,
+          sellerNote: isSeller ? i.sellerNote : null,
+          refundedAt: i.refundedAt,
+          quantity: i.quantity ?? 1,
+        }))
       : order.sourceTitle
-        ? [{ name: order.sourceTitle, condition: "", price: order.totalItemCost, imageUrl: order.sourceImageUrl, reference: null, sellerNote: null }]
+        ? [{
+            id: "source",
+            name: order.sourceTitle,
+            condition: "",
+            price: order.totalItemCost,
+            imageUrl: order.sourceImageUrl,
+            reference: null,
+            sellerNote: null,
+            refundedAt: null,
+            quantity: 1,
+          }]
         : [];
 
   function handlePrint() {

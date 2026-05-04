@@ -190,9 +190,12 @@ export default async function MySalesPage() {
     shippingMethodService: b.shippingMethod?.serviceName ?? null,
     shippingMethodIsTracked: b.shippingMethod?.isTracked ?? true,
     deliveryMethod: b.deliveryMethod,
+    paymentMode: b.paymentMode,
     trackingUrl: b.trackingUrl,
     shippedAt: b.shippedAt?.toISOString() ?? null,
+    deliveredAt: b.deliveredAt?.toISOString() ?? null,
     refundedAmount: b.refundedAmount ?? 0,
+    pickupScheduleStatus: b.pickupSchedule?.status ?? null,
     createdAt: b.createdAt.toISOString(),
     sourceType: b.auctionId
       ? "auction" as const

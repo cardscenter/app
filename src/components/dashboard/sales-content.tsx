@@ -58,9 +58,12 @@ type SaleBundle = {
   shippingMethodService: string | null;
   shippingMethodIsTracked: boolean;
   deliveryMethod: string;
+  paymentMode: string;
   trackingUrl: string | null;
   shippedAt: string | null;
+  deliveredAt: string | null;
   refundedAmount: number;
+  pickupScheduleStatus: string | null;
   createdAt: string;
   sourceType: "claimsale" | "auction" | "listing";
   sourceTitle: string | null;
@@ -435,6 +438,7 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
         <OrderDetailModal
           namespace="sales"
           order={{
+            bundleId: bundle.id,
             orderNumber: bundle.orderNumber,
             status: bundle.status,
             sourceType: bundle.sourceType,
@@ -445,9 +449,14 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
             totalCost: bundle.totalCost,
             shippingMethodCarrier: bundle.shippingMethodCarrier,
             shippingMethodService: bundle.shippingMethodService,
+            deliveryMethod: bundle.deliveryMethod,
+            paymentMode: bundle.paymentMode,
             trackingUrl: bundle.trackingUrl,
             createdAt: bundle.createdAt,
             shippedAt: bundle.shippedAt,
+            deliveredAt: bundle.deliveredAt,
+            refundedAmount: bundle.refundedAmount,
+            pickupScheduleStatus: bundle.pickupScheduleStatus,
             items: bundle.items,
             buyerName: bundle.buyerName,
             buyerFirstName: bundle.buyerFirstName,

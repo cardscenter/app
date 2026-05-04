@@ -17,11 +17,14 @@ type RawItem = {
   imageUrl: string | null;
   reference: string | null;
   sellerNote: string | null;
+  refundedAt: string | null;
 };
 function groupBundleItems(items: RawItem[]) {
   const groups = new Map<string, RawItem & { quantity: number; subtotal: number }>();
   for (const it of items) {
-    const key = `${it.cardName}|${it.condition}`;
+    // Refunded items niet meegroeperen met niet-refunded "zelfde" items —
+    // anders zien koper/verkoper niet dat 2 van de 5 boosters al refund zijn.
+    const key = `${it.cardName}|${it.condition}|${it.refundedAt ? "R" : "A"}`;
     const existing = groups.get(key);
     if (existing) {
       existing.quantity += 1;
@@ -87,6 +90,7 @@ export default async function MyPurchasesPage() {
           imageUrls: true,
           reference: true,
           sellerNote: true,
+          refundedAt: true,
         },
       },
       auction: {
@@ -197,8 +201,12 @@ export default async function MyPurchasesPage() {
     shippingMethodCarrier: b.shippingMethod?.carrier ?? null,
     shippingMethodService: b.shippingMethod?.serviceName ?? null,
     deliveryMethod: b.deliveryMethod,
+    paymentMode: b.paymentMode,
     trackingUrl: b.trackingUrl,
     shippedAt: b.shippedAt?.toISOString() ?? null,
+    deliveredAt: b.deliveredAt?.toISOString() ?? null,
+    refundedAmount: b.refundedAmount ?? 0,
+    pickupScheduleStatus: b.pickupSchedule?.status ?? null,
     createdAt: b.createdAt.toISOString(),
     sourceType: b.auctionId
       ? "auction" as const
@@ -236,6 +244,7 @@ export default async function MyPurchasesPage() {
         })(),
         reference: i.reference ?? null,
         sellerNote: null, // Private: only visible to seller
+        refundedAt: i.refundedAt?.toISOString() ?? null,
       })),
       ...b.cardItems.map((ci) => ({
         id: ci.id,
@@ -249,6 +258,7 @@ export default async function MyPurchasesPage() {
         })(),
         reference: null,
         sellerNote: null,
+        refundedAt: null,
       })),
       // Multi-listing bundle (Fase 27.38): elke listing in de bundle als
       // eigen item-rij zodat koper precies ziet welke advertenties hij heeft
@@ -265,6 +275,7 @@ export default async function MyPurchasesPage() {
         })(),
         reference: null,
         sellerNote: null,
+        refundedAt: null,
       })),
     ]),
   }));

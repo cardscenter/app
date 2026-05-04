@@ -35,6 +35,7 @@ type BundleItem = {
   imageUrl: string | null;
   reference: string | null;
   sellerNote: string | null;
+  refundedAt: string | null;
   // Fase 27.29: gegroepeerde rijen — 5× dezelfde booster wordt één rij met
   // quantity=5 + subtotal=5×price. Voor unieke regels blijft quantity=1
   // en subtotal=price.
@@ -54,8 +55,12 @@ type PurchaseBundle = {
   shippingMethodCarrier: string | null;
   shippingMethodService: string | null;
   deliveryMethod: string;
+  paymentMode: string;
   trackingUrl: string | null;
   shippedAt: string | null;
+  deliveredAt: string | null;
+  refundedAmount: number;
+  pickupScheduleStatus: string | null;
   createdAt: string;
   sourceType: "claimsale" | "auction" | "listing";
   sourceTitle: string | null;
@@ -371,6 +376,7 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
         <OrderDetailModal
           namespace="purchases"
           order={{
+            bundleId: bundle.id,
             orderNumber: bundle.orderNumber,
             status: bundle.status,
             sourceType: bundle.sourceType,
@@ -381,9 +387,14 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
             totalCost: bundle.totalCost,
             shippingMethodCarrier: bundle.shippingMethodCarrier,
             shippingMethodService: bundle.shippingMethodService,
+            deliveryMethod: bundle.deliveryMethod,
+            paymentMode: bundle.paymentMode,
             trackingUrl: bundle.trackingUrl,
             createdAt: bundle.createdAt,
             shippedAt: bundle.shippedAt,
+            deliveredAt: bundle.deliveredAt,
+            refundedAmount: bundle.refundedAmount,
+            pickupScheduleStatus: bundle.pickupScheduleStatus,
             items: bundle.items,
             sellerName: bundle.sellerName,
           }}
