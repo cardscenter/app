@@ -1,10 +1,140 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { X, Printer, Package, MapPin } from "lucide-react";
-import { useRef } from "react";
+import { X, Printer, Package, MapPin, Check, Ban } from "lucide-react";
+import { Fragment, useRef } from "react";
 import Image from "next/image";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
+
+type TimelineStep = {
+  key: string;
+  label: string;
+  date: string | null;
+  state: "complete" | "current" | "pending" | "danger";
+};
+
+function formatShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+}
+
+function buildTimelineSteps(order: OrderData): TimelineStep[] {
+  const isPickup = order.deliveryMethod === "PICKUP";
+  const status = order.status;
+  const hasRefund = order.refundedAmount > 0;
+
+  if (status === "CANCELLED") {
+    return [
+      { key: "paid", label: "Betaald", date: order.createdAt, state: "complete" },
+      { key: "cancelled", label: "Geannuleerd", date: null, state: "danger" },
+    ];
+  }
+
+  const refundStep: TimelineStep | null = hasRefund
+    ? { key: "refund", label: `Refund €${order.refundedAmount.toFixed(2)}`, date: null, state: "complete" }
+    : null;
+
+  if (isPickup) {
+    const scheduledKnown = order.pickupScheduleStatus === "ACCEPTED"
+      || status === "SCHEDULED" || status === "COMPLETED";
+    const steps: TimelineStep[] = [
+      { key: "reserved", label: "Gereserveerd", date: order.createdAt, state: "complete" },
+      {
+        key: "scheduled",
+        label: "Afspraak",
+        date: null,
+        state: scheduledKnown
+          ? (status === "COMPLETED" ? "complete" : "current")
+          : "pending",
+      },
+      {
+        key: "completed",
+        label: "Opgehaald",
+        date: order.deliveredAt,
+        state: status === "COMPLETED" ? "complete" : "pending",
+      },
+    ];
+    if (refundStep) steps.push(refundStep);
+    return steps;
+  }
+
+  // SHIP-flow
+  const paidComplete = status === "PAID" || status === "SHIPPED" || status === "COMPLETED" || status === "DISPUTED";
+  const shippedComplete = !!order.shippedAt || status === "SHIPPED" || status === "COMPLETED" || status === "DISPUTED";
+  const deliveredComplete = status === "COMPLETED";
+  const steps: TimelineStep[] = [
+    { key: "paid", label: "Betaald", date: order.createdAt, state: paidComplete ? "complete" : "current" },
+    {
+      key: "shipped",
+      label: "Verzonden",
+      date: order.shippedAt,
+      state: shippedComplete ? "complete" : (status === "PAID" ? "current" : "pending"),
+    },
+    {
+      key: "delivered",
+      label: "Geleverd",
+      date: order.deliveredAt,
+      state: deliveredComplete ? "complete" : (status === "SHIPPED" ? "current" : "pending"),
+    },
+  ];
+  if (refundStep) steps.push(refundStep);
+  return steps;
+}
+
+function OrderTimeline({ order }: { order: OrderData }) {
+  const steps = buildTimelineSteps(order);
+  return (
+    <div className="mb-4 rounded-xl border border-border p-4">
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
+        {steps.map((step, idx) => {
+          const dotBase = "flex h-7 w-7 items-center justify-center rounded-full border-2 shrink-0";
+          const dotClass = step.state === "complete"
+            ? "bg-emerald-600 border-emerald-600 text-white"
+            : step.state === "current"
+              ? "bg-primary border-primary text-primary-foreground"
+              : step.state === "danger"
+                ? "bg-rose-600 border-rose-600 text-white"
+                : "border-border bg-card text-muted-foreground";
+          const labelClass = step.state === "pending"
+            ? "text-muted-foreground"
+            : step.state === "danger"
+              ? "text-rose-600 dark:text-rose-400"
+              : "text-foreground";
+          const connectorClass = step.state === "complete"
+            ? "bg-emerald-600"
+            : step.state === "danger"
+              ? "bg-rose-600"
+              : "bg-border";
+          return (
+            <Fragment key={step.key}>
+              <div className="flex items-center gap-2 min-w-0 shrink-0">
+                <div className={`${dotBase} ${dotClass}`}>
+                  {step.state === "complete" ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : step.state === "danger" ? (
+                    <Ban className="h-3.5 w-3.5" />
+                  ) : step.state === "current" ? (
+                    <span className="h-2 w-2 rounded-full bg-current" />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-xs font-medium ${labelClass}`}>{step.label}</p>
+                  {step.date && (
+                    <p className="text-[11px] text-muted-foreground tabular-nums">{formatShortDate(step.date)}</p>
+                  )}
+                </div>
+              </div>
+              {idx < steps.length - 1 && (
+                <div className={`h-0.5 flex-1 min-w-[16px] ${connectorClass}`} />
+              )}
+            </Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 type BundleItem = {
   id: string;
@@ -198,6 +328,9 @@ export function OrderDetailModal({
             </button>
           </div>
         </div>
+
+        {/* Status timeline */}
+        <OrderTimeline order={order} />
 
         {/* Shipping address (seller view) */}
         {hasAddress && (
