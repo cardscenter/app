@@ -15,8 +15,8 @@ export function SourceTypeBadge({ type, namespace = "sales" }: { type: string; n
   const Icon = config.icon;
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${config.bg} ${config.text}`}>
-      <Icon className="h-2.5 w-2.5" />
+    <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold ${config.bg} ${config.text}`}>
+      <Icon className="h-3 w-3" />
       {t(config.key)}
     </span>
   );

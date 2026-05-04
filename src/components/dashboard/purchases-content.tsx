@@ -302,7 +302,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <SourceTypeBadge type={bundle.sourceType} />
-              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground">
+              <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono font-semibold text-muted-foreground">
                 {bundle.orderNumber}
               </span>
               <Link
@@ -331,7 +331,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
               {bundle.sourceType === "claimsale" ? (
                 <span>{t("items", { count: bundle.items.length })}</span>
               ) : (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase">
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide">
                   {bundle.sourceType === "auction" ? t("sourceAuction") : t("sourceListing")}
                 </span>
               )}
