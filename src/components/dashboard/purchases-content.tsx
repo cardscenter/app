@@ -3,7 +3,6 @@
 import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useState } from "react";
 import { confirmDelivery } from "@/actions/purchase";
-import { contactSeller } from "@/actions/message";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
@@ -17,7 +16,6 @@ import {
   Clock,
   AlertTriangle,
   ExternalLink,
-  MessageCircle,
   Star,
   CreditCard,
 } from "lucide-react";
@@ -608,8 +606,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
 
           {/* PAID: annulering aanvragen via mutual-akkoord-flow (verkoper moet akkoord geven) */}
           {bundle.status === "PAID" && (
-            <div className="border-t border-border/50 px-4 py-3 space-y-2">
-              <ContactSellerFromPurchase sellerId={bundle.sellerId} sellerName={bundle.sellerName} orderNumber={bundle.orderNumber} />
+            <div className="border-t border-border/50 px-4 py-3">
               <CancellationActions
                 bundleId={bundle.id}
                 currentUserId={currentUserId}
@@ -720,46 +717,6 @@ function DeliveryConfirmForm({
         </button>
       </div>
     </div>
-  );
-}
-
-// Contact seller button (creates/finds conversation + prefills cancel request)
-function ContactSellerFromPurchase({
-  sellerId,
-  sellerName,
-  orderNumber,
-}: {
-  sellerId: string;
-  sellerName: string;
-  orderNumber: string;
-}) {
-  const t = useTranslations("purchases");
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-
-  async function handleContact() {
-    setLoading(true);
-    const result = await contactSeller(sellerId);
-    if ("error" in result) {
-      toast.error(result.error);
-      setLoading(false);
-      return;
-    }
-    if (result.conversationId) {
-      const message = t("cancelRequestMessage", { sellerName, orderNumber });
-      router.push(`/berichten/${result.conversationId}?prefill=${encodeURIComponent(message)}`);
-    }
-  }
-
-  return (
-    <button
-      onClick={handleContact}
-      disabled={loading}
-      className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
-    >
-      <MessageCircle className="h-3.5 w-3.5" />
-      {loading ? "..." : t("requestCancel")}
-    </button>
   );
 }
 
