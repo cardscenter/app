@@ -4,7 +4,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
-import { cancelOrderBySeller } from "@/actions/purchase";
+import { CancellationActions } from "./cancellation-actions";
 import { toast } from "sonner";
 import {
   Package,
@@ -150,10 +150,13 @@ export function SalesContent({
   bundles,
   stats,
   pendingAuctions = [],
+  currentUserId,
 }: {
   bundles: SaleBundle[];
   stats: Stats;
   pendingAuctions?: PendingAuction[];
+  /** Voor CancellationActions — bepaalt of de seller proposer of responder is. */
+  currentUserId: string;
 }) {
   const t = useTranslations("sales");
   const tc = useTranslations("common");
@@ -268,7 +271,7 @@ export function SalesContent({
       ) : (
         <div className="space-y-4">
           {filtered.map((bundle) => (
-            <SaleBundleCard key={bundle.id} bundle={bundle} locale={locale} />
+            <SaleBundleCard key={bundle.id} bundle={bundle} locale={locale} currentUserId={currentUserId} />
           ))}
         </div>
       )}
@@ -334,12 +337,9 @@ function PendingAuctionCard({ auction, locale }: { auction: PendingAuction; loca
   );
 }
 
-function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string }) {
+function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle; locale: string; currentUserId: string }) {
   const t = useTranslations("sales");
-  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
   const [showOrderDetail, setShowOrderDetail] = useState(false);
 
   const date = new Date(bundle.createdAt);
@@ -620,7 +620,7 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
             </div>
           </div>
 
-          {/* PAID: Ship bundle form + cancel option */}
+          {/* PAID: verzendformulier + annulering-aanvragen-flow (mutual akkoord) */}
           {bundle.status === "PAID" && (
             <div className="border-t border-border/50 px-4 py-3 space-y-4">
               <ShipBundleForm
@@ -632,49 +632,12 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
               />
 
               <div className="border-t border-border/50 pt-3">
-              {!showCancelConfirm ? (
-                <button
-                  onClick={() => setShowCancelConfirm(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900 dark:bg-red-950/50 dark:text-red-400 dark:hover:bg-red-950"
-                >
-                  <XCircle className="h-4 w-4" />
-                  {t("cancelOrder")}
-                </button>
-              ) : (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
-                  <p className="text-sm text-red-700 dark:text-red-400">
-                    {t("cancelConfirm", { amount: bundle.totalCost.toFixed(2) })}
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={async () => {
-                        setCancelling(true);
-                        const result = await cancelOrderBySeller(bundle.id);
-                        if (result?.error) {
-                          toast.error(result.error);
-                          setCancelling(false);
-                          setShowCancelConfirm(false);
-                        } else {
-                          toast.success(t("cancelSuccess"));
-                          setShowCancelConfirm(false);
-                          router.refresh();
-                        }
-                      }}
-                      disabled={cancelling}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                    >
-                      {cancelling ? "..." : t("cancelConfirmButton")}
-                    </button>
-                    <button
-                      onClick={() => setShowCancelConfirm(false)}
-                      disabled={cancelling}
-                      className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50"
-                    >
-                      {t("cancelDismiss")}
-                    </button>
-                  </div>
-                </div>
-              )}
+                <p className="mb-2 text-xs text-muted-foreground italic">{t("refundAfterShipHint")}</p>
+                <CancellationActions
+                  bundleId={bundle.id}
+                  currentUserId={currentUserId}
+                  bundleStatus={bundle.status}
+                />
               </div>
             </div>
           )}

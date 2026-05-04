@@ -5,118 +5,15 @@ import { prisma } from "@/lib/prisma";
 import { refundEscrow, releaseEscrow, partialRefundEscrow } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 
-const CANCEL_DAYS = 7;
 const AUTO_CONFIRM_DAYS = 30;
 
-// Buyer cancels purchase (after 7 days without shipping)
-export async function cancelPurchase(bundleId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Niet ingelogd" };
-
-  const bundle = await prisma.shippingBundle.findUnique({
-    where: { id: bundleId },
-    include: { seller: { select: { displayName: true } } },
-  });
-
-  if (!bundle) return { error: "Bestelling niet gevonden" };
-  if (bundle.buyerId !== session.user.id) return { error: "Niet geautoriseerd" };
-  if (bundle.status !== "PAID") return { error: "Kan alleen betaalde bestellingen annuleren" };
-
-  // Check if 7 days have passed since purchase
-  const daysSincePurchase = (Date.now() - bundle.createdAt.getTime()) / (1000 * 60 * 60 * 24);
-  if (daysSincePurchase < CANCEL_DAYS) {
-    return { error: "CANCEL_TOO_EARLY", daysRemaining: Math.ceil(CANCEL_DAYS - daysSincePurchase) };
-  }
-
-  // Refund: release escrow back to buyer
-  await refundEscrow(
-    bundle.sellerId,
-    session.user.id,
-    bundle.totalCost,       // full refund to buyer (items + shipping)
-    bundle.totalItemCost,   // only item costs were in seller's escrow
-    `Geannuleerd: bestelling bij ${bundle.seller.displayName}`,
-    bundle.id
-  );
-
-  // Set items back to AVAILABLE
-  await prisma.claimsaleItem.updateMany({
-    where: { shippingBundleId: bundle.id },
-    data: {
-      status: "AVAILABLE",
-      buyerId: null,
-      shippingBundleId: null,
-    },
-  });
-
-  // Mark bundle as cancelled
-  await prisma.shippingBundle.update({
-    where: { id: bundleId },
-    data: { status: "CANCELLED" },
-  });
-
-  // Notify seller
-  await createNotification(
-    bundle.sellerId,
-    "ORDER_CANCELLED",
-    "Bestelling geannuleerd",
-    `De koper heeft de bestelling geannuleerd omdat deze niet binnen 7 dagen is verzonden.`,
-    "/dashboard/claimsales"
-  );
-
-  return { success: true };
-}
-
-// Seller cancels a PAID order (refund to buyer)
-export async function cancelOrderBySeller(bundleId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Niet ingelogd" };
-
-  const bundle = await prisma.shippingBundle.findUnique({
-    where: { id: bundleId },
-    include: { buyer: { select: { displayName: true } } },
-  });
-
-  if (!bundle) return { error: "Bestelling niet gevonden" };
-  if (bundle.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
-  if (bundle.status !== "PAID") return { error: "Kan alleen betaalde bestellingen annuleren" };
-
-  // Refund buyer: release escrow back to buyer
-  await refundEscrow(
-    session.user.id,        // seller
-    bundle.buyerId,         // buyer gets refund
-    bundle.totalCost,       // full refund (items + shipping)
-    bundle.totalItemCost,   // item costs in escrow
-    `Geannuleerd door verkoper: bestelling ${bundle.id}`,
-    bundle.id
-  );
-
-  // Set claimsale items back to AVAILABLE
-  await prisma.claimsaleItem.updateMany({
-    where: { shippingBundleId: bundle.id },
-    data: {
-      status: "AVAILABLE",
-      buyerId: null,
-      shippingBundleId: null,
-    },
-  });
-
-  // Mark bundle as cancelled
-  await prisma.shippingBundle.update({
-    where: { id: bundleId },
-    data: { status: "CANCELLED" },
-  });
-
-  // Notify buyer
-  await createNotification(
-    bundle.buyerId,
-    "ORDER_CANCELLED",
-    "Bestelling geannuleerd door verkoper",
-    "De verkoper heeft je bestelling geannuleerd. Het volledige bedrag is teruggestort op je saldo.",
-    "/dashboard/aankopen"
-  );
-
-  return { success: true };
-}
+// Direct-cancel-actions BESTAAN BEWUST NIET MEER (Fase 28). Beide partijen
+// hebben vanaf het moment van betalen een bindende overeenkomst. Annuleren
+// kan alleen via `requestCancellation` (cancellation.ts) — de wederpartij
+// moet akkoord geven, of na 7 dagen verloopt het verzoek. Vóór Fase 28 kon
+// de seller direct annuleren zonder buyer-akkoord en de buyer pas na 7d —
+// die asymmetrie schond de leverplicht en is volledig vervangen door de
+// mutual-akkoord-flow.
 
 // Seller marks bundle as shipped with tracking URL
 export async function markAsShipped(

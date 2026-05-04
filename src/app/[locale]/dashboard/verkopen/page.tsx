@@ -330,7 +330,7 @@ export default async function MySalesPage() {
                 counterpartyName: b.buyerName,
               }))}
           />
-          <SalesContent bundles={serialized} stats={stats} pendingAuctions={pendingAuctions} />
+          <SalesContent bundles={serialized} stats={stats} pendingAuctions={pendingAuctions} currentUserId={userId} />
         </>
       )}
     </div>

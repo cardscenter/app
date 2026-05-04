@@ -2,7 +2,7 @@
 
 import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useState } from "react";
-import { cancelPurchase, confirmDelivery } from "@/actions/purchase";
+import { confirmDelivery } from "@/actions/purchase";
 import { contactSeller } from "@/actions/message";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
@@ -26,6 +26,7 @@ import { OpenDisputeForm } from "./open-dispute-form";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
 import { OrderDetailModal } from "./order-detail-modal";
 import { PendingAuctionPayments } from "./pending-auction-payments";
+import { CancellationActions } from "./cancellation-actions";
 
 type BundleItem = {
   id: string;
@@ -100,7 +101,6 @@ const STATUS_BADGE: Record<Tab, string> = {
   DISPUTED: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
 };
 
-const CANCEL_DAYS = 7;
 const AUTO_CONFIRM_DAYS = 30;
 
 type PendingAuctionPayment = {
@@ -116,6 +116,8 @@ interface PurchasesContentProps {
   /** Voor PendingAuctionPayments component — laat de breakdown 'beschikbaar/tekort' zien. */
   availableBalance?: number;
   reservedBalance?: number;
+  /** Huidige user-id — doorgegeven aan CancellationActions zodat die weet wie proposer/responder is. */
+  currentUserId: string;
 }
 
 export function PurchasesContent({
@@ -123,6 +125,7 @@ export function PurchasesContent({
   pendingAuctionPayments = [],
   availableBalance = 0,
   reservedBalance = 0,
+  currentUserId,
 }: PurchasesContentProps) {
   const t = useTranslations("purchases");
   const locale = useLocale();
@@ -245,7 +248,7 @@ export function PurchasesContent({
       ) : (
         <div className="space-y-4">
           {filtered.map((bundle) => (
-            <BundleCard key={bundle.id} bundle={bundle} locale={locale} />
+            <BundleCard key={bundle.id} bundle={bundle} locale={locale} currentUserId={currentUserId} />
           ))}
         </div>
       )}
@@ -253,12 +256,9 @@ export function PurchasesContent({
   );
 }
 
-function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string }) {
+function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle; locale: string; currentUserId: string }) {
   const t = useTranslations("purchases");
-  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [showDeliveryConfirm, setShowDeliveryConfirm] = useState(false);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
@@ -269,10 +269,6 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
   const formattedDate = date.toLocaleDateString(locale === "nl" ? "nl-NL" : "en-GB", {
     day: "numeric", month: "long", year: "numeric",
   });
-
-  const daysSincePurchase = (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
-  const canCancel = bundle.status === "PAID" && daysSincePurchase >= CANCEL_DAYS;
-  const daysRemaining = Math.max(0, Math.ceil(CANCEL_DAYS - daysSincePurchase));
 
   // Auto-confirm date for SHIPPED bundles
   const autoConfirmDate = bundle.shippedAt
@@ -288,29 +284,6 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
     : bundle.shippingMethodCarrier
       ? `${bundle.shippingMethodCarrier} — ${bundle.shippingMethodService}`
       : t("noShippingMethod");
-
-  async function handleCancel() {
-    setCancelling(true);
-    const result = await cancelPurchase(bundle.id);
-
-    if (result?.error === "CANCEL_TOO_EARLY") {
-      toast.error(t("cancelTooEarly", { days: result.daysRemaining ?? 0 }));
-      setCancelling(false);
-      setShowConfirm(false);
-      return;
-    }
-
-    if (result?.error) {
-      toast.error(t("cancelNotAllowed"));
-      setCancelling(false);
-      setShowConfirm(false);
-      return;
-    }
-
-    toast.success(t("cancelSuccess"));
-    setShowConfirm(false);
-    router.refresh();
-  }
 
   return (
     <div className="rounded-xl glass overflow-hidden">
@@ -421,17 +394,10 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
       {/* Status hints (collapsed) */}
       {!expanded && bundle.status === "PAID" && (
         <div className="border-t border-border/50 px-4 py-2">
-          {canCancel ? (
-            <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span>{t("canCancelNow")}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              <span>{t("canCancelIn", { days: daysRemaining })}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span>{t("waitingForShipment")}</span>
+          </div>
         </div>
       )}
 
@@ -631,52 +597,15 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
             </div>
           )}
 
-          {/* PAID: cancel/request cancel */}
+          {/* PAID: annulering aanvragen via mutual-akkoord-flow (verkoper moet akkoord geven) */}
           {bundle.status === "PAID" && (
-            <div className="border-t border-border/50 px-4 py-3">
-              {canCancel && !showConfirm && (
-                <button
-                  onClick={() => setShowConfirm(true)}
-                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 dark:border-red-900 dark:bg-red-950/50 dark:text-red-400 dark:hover:bg-red-950"
-                >
-                  {t("cancelOrder")}
-                </button>
-              )}
-
-              {!canCancel && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{t("canCancelIn", { days: daysRemaining })}</span>
-                  </div>
-                  <ContactSellerFromPurchase sellerId={bundle.sellerId} sellerName={bundle.sellerName} orderNumber={bundle.orderNumber} />
-                  <p className="text-xs text-muted-foreground">{t("requestCancelHint")}</p>
-                </div>
-              )}
-
-              {showConfirm && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
-                  <p className="text-sm text-red-700 dark:text-red-400">
-                    {t("cancelConfirm", { amount: bundle.totalCost.toFixed(2) })}
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={handleCancel}
-                      disabled={cancelling}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                    >
-                      {cancelling ? "..." : t("cancelConfirmButton")}
-                    </button>
-                    <button
-                      onClick={() => setShowConfirm(false)}
-                      disabled={cancelling}
-                      className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50"
-                    >
-                      {t("cancelDismiss")}
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="border-t border-border/50 px-4 py-3 space-y-2">
+              <ContactSellerFromPurchase sellerId={bundle.sellerId} sellerName={bundle.sellerName} orderNumber={bundle.orderNumber} />
+              <CancellationActions
+                bundleId={bundle.id}
+                currentUserId={currentUserId}
+                bundleStatus={bundle.status}
+              />
             </div>
           )}
 

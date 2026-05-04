@@ -67,9 +67,9 @@ PokeWallet is **de enige pricing-bron**. Alle andere APIs zijn verwijderd:
 - ❌ tcggo (was niet geactiveerd, weg)
 - ❌ PriceCharting (verwijderd, ook variants scrape weg)
 
-## Marktprijs-formule (geïmplementeerd 2026-04-19)
+## Marktprijs-formule (4 lagen, laatst uitgebreid 2026-04-29)
 
-`src/lib/display-price.ts` bevat **`getMarktprijs()`** en **`getMarktprijsReverseHolo()`** — outlier-bestendige prijsberekening met 3 lagen verdediging.
+`src/lib/display-price.ts` bevat **`getMarktprijs()`** en **`getMarktprijsReverseHolo()`** — outlier-bestendige prijsberekening met 4 lagen verdediging.
 
 ### Waarom geen raw `priceAvg` tonen
 PokeWallet's `cardmarket.avg` kan vervuild raken door:
@@ -78,13 +78,12 @@ PokeWallet's `cardmarket.avg` kan vervuild raken door:
 3. **idProduct-collisions** (bv. Pawniard BB #142 deelde idProduct met andere variant → CM avg €14,31 vs werkelijk ~€5)
 4. **Volledig verkeerde product-mapping** (bv. 151 Squirtle Common toont CM €160 → wijst naar Pokemon Center jumbo, `cardmarket_id=null` in pokewallet response)
 
-### De 3-laags formule (normal):
+### De 4-laags formule (normal):
 ```ts
 function getMarktprijs(card) {
-  let prijs = card.priceAvg;
-
-  // 1. Spike-detectie: als avg > 3× low → outlier-spike → use avg7
-  if (priceLow > 0 && priceLow * 3 < priceAvg) prijs = priceAvg7 ?? priceTrend ?? priceAvg;
+  // 1. excludeHighSpike op rolling-avgs: drop max als > median × 1.5
+  const inputs = excludeHighSpike([priceAvg, priceAvg7, priceTrend].filter(Boolean));
+  let prijs = mean(inputs);
 
   // 2. TCGPlayer cross-check (rariteit-aware tier!)
   const tpEur = (priceTcgplayerHolofoilMarket ?? priceTcgplayerNormalMarket) * 0.92;
@@ -92,9 +91,24 @@ function getMarktprijs(card) {
     if (prijs > tpEur * 5) prijs = tpEur * euTierAdjustment(tpEur, card.rarity);  // EXTREME → trust TP
     else if (tpEur * 1.5 < prijs) prijs = (prijs + tpEur) / 2;                    // MILD → blend
   }
+
+  // 3. Snapshot-anchor (NIEUW 2026-04-29): als ≥5 daily snapshots
+  //    beschikbaar EXCL. vandaag, en prijs > snapshot_median × 2,
+  //    klamp naar median × 1.5. Vangt kortdurende spikes op.
+  if (card.recentSnapshots && median(card.recentSnapshots) != null) {
+    const m = median(card.recentSnapshots);
+    if (prijs > m * 2) prijs = m * 1.5;
+  }
+
   return Math.round(prijs * 100) / 100;
 }
 ```
+
+**Snapshot-anchor design notes:**
+- Klamp naar median × 1.5, NIET naar median zelf — release-week hype mag tot 50%/wk doorkomen, alleen 200%+ spikes worden gedempt.
+- Geen symmetrische crash-clamp — een plotse daling is meestal een echte correctie, niet een glitch.
+- Snapshots zijn EXCL. vandaag (sync schrijft vandaag's snapshot weg via dezelfde `getMarktprijs()` → feedback-loop voorkomen door vandaag uit te sluiten).
+- Voor inherently-foil cards: gebruik `recentReverseSnapshots` als anchor (sync stopt de gefilterde holo-prijs in `priceReverse`-kolom via `getMarktprijsReverseHolo`).
 
 ### EU-tier adjustment (cruciaal — RARITEIT-AWARE!)
 
@@ -152,6 +166,22 @@ Pokewallet's CardMarket-RH faalt vaak voor cards met idProduct-collisions (bv. 1
 - **Geen TCGPlayer prijs expliciet tonen op de UI** — alleen onze Marktprijs (afgesproken met user 2026-04-19)
 - **Manuele overrides** via `priceOverrideAvg` blijven leidend (niet door Marktprijs overschreven)
 - **Display in UI**: `cardToPricingSnapshot()` in `card-helpers.ts` returnt `avg = getMarktprijs(card)`. Auction/listing detail pages krijgen automatisch de Marktprijs via `getCardPricing(tcgdexId)`.
+
+## % stijging/daling — apples-to-apples REGEL (toegevoegd 2026-04-29)
+
+**Gevaarlijke valkuil:** `(getMarktprijs - priceAvg7) / priceAvg7` is FOUT. Marktprijs is gefilterd, priceAvg7 is rauw — op cards waar het filter actief is geeft dat fake -50% drops zonder echte marktverandering.
+
+Voorbeeld Pawniard BB #142: raw priceAvg=€14,31, raw priceAvg7=€14,31, Marktprijs=€6,57 (TP-blend) → naïeve delta = -54% terwijl er niets gebeurd is.
+
+**Correct (in `display-price.ts`):**
+- `computeWeeklyDeltaPct(card)` / `computeMonthlyDeltaPct(card)` voor normal
+- `computeReverseWeeklyDeltaPct(card)` / `computeReverseMonthlyDeltaPct(card)` voor RH
+- Voorkeur: snapshot uit `CardPriceHistory` van ~7d/30d geleden (apples-to-apples op gefilterde Marktprijs, ±2 dagen tolerantie)
+- Fallback: raw priceAvg vs priceAvg7 wanneer geen snapshot beschikbaar (apples-to-apples op rauwe data, minder accuraat maar niet kapot)
+
+`findHistoricPrice(history, daysAgo)` is geëxporteerd voor custom call-sites zoals inherently-foil branches die hun eigen ad-hoc current Marktprijs hebben.
+
+**Top 10 stijgers/dalers** (`/kaarten` overview): batch-query `CardPriceHistory` voor ~9 dagen, build `Map<cardId, SnapshotPoint[]>` en geef door aan computeWeeklyDeltaPct. Cards zonder ≥5d-oud snapshot vallen terug op raw fallback met striktere 5%-drempel (i.p.v. 3%).
 
 ## Set-mapping valkuilen (LET OP!)
 
@@ -324,6 +354,60 @@ curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/search?q=Klink&limit=100"
 - `limit` (default 20, **max 100**) — let op: lager dan /sets endpoint
 
 ### PRO endpoints (in onze tier inbegrepen)
+
+#### `GET /cards/:id/price-history` 🆕 v1.3.0 (2026-04-29)
+Volledige TCGPlayer + CardMarket time-series met pre-computed % change fields. Pro-only.
+
+```bash
+curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/cards/pk_xxx/price-history"
+```
+
+**Response shape:**
+```jsonc
+{
+  "success": true,
+  "card_id": "pk_xxx",
+  "tcgplayer": {
+    "current": 5.26,
+    "history": {
+      "price_7d": 4.93,  "price_14d": 5.10,
+      "price_30d": null, "price_60d": null, "price_120d": null,
+      "change_7d": 6.69, "change_14d": 3.14,
+      "change_30d": null, "change_60d": null, "change_120d": null
+    }
+  },
+  "cardmarket": {
+    "current": 4.52,
+    "history": { /* same shape */ }
+  }
+}
+```
+
+**Important:**
+- 7d/14d windows zijn nu live; **30d/60d/120d rollen geleidelijk uit** — altijd null-checken.
+- 1 call per fetch — gebruik on-demand (detail-pagina charts), NIET bulk-sync. Voor 18.350 cards = 18.350 calls = 37% van Pro budget per dag.
+- Onze `CardPriceHistory` snapshot-tabel blijft primaire bron voor delta-berekening omdat die op de gefilterde Marktprijs is gebaseerd; pokewallet's history geeft rauwe CM/TP data zonder onze outlier-correctie.
+- `getCardPriceHistory(pokewalletId)` in `client.ts` is de Typed wrapper.
+
+#### `GET /analytics/top-cards` 🆕 v1.3.0 (2026-04-29)
+Top N cards globally door price of growth. Pro-only.
+
+```bash
+curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/analytics/top-cards?metric=growth&source=cm&limit=20"
+```
+
+**Parameters:**
+- `metric=price` (default) of `metric=growth` (7-day delta)
+- `source=tcg` of `source=cm`
+- `limit=1-100`
+
+**Status onze project:** niet geïntegreerd. Onze eigen Top 10 stijgers/dalers gebruikt CardPriceHistory snapshot-deltas die op de gefilterde Marktprijs werken — preciezer voor onze marktplaats-context dan rauwe CM/TP-deltas. Endpoint is geen prioriteit zolang onze snapshot-data groeit.
+
+### Free Trial (toegevoegd v1.3.0)
+Free / Coffee / Early Access tiers kunnen een 7-day trial activeren via dashboard. Trial-headers in elke Pro response: `X-Trial-Expires-At`, `X-Trial-Days-Remaining`. Niet relevant voor ons (Pro-tier sinds 2026-04-19).
+
+### Database cleanup (v1.3.0)
+Booster boxes, ETBs, tins, bundles uit historische price-data verwijderd — **historische prijs-tracking dekt nu alleen losse kaarten**. Wij filterden sealed al uit via `isSealedProduct()` in sync, dus geen impact.
 
 #### `GET /sets/:setCode/statistics`
 Set-niveau prijsstatistieken: avg/min/max + duurste kaart + 7d trend + rarity breakdown. **Cachen, refresh 1×/dag per set.**

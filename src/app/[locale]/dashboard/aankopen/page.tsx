@@ -320,6 +320,7 @@ export default async function MyPurchasesPage() {
             }))}
             availableBalance={availableBalance}
             reservedBalance={reservedBalance}
+            currentUserId={userId}
           />
         </>
       )}
