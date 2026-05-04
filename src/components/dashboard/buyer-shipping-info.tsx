@@ -130,12 +130,6 @@ export function BuyerShippingInfo({
         </div>
       )}
 
-      {/* Escrow info */}
-      {(bundleStatus === "PAID" || bundleStatus === "SHIPPED") && (
-        <div className="border-t border-border/50 px-5 py-2">
-          <p className="text-xs text-muted-foreground italic">{t("escrowInfo")}</p>
-        </div>
-      )}
     </div>
   );
 }

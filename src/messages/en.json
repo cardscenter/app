@@ -1336,10 +1336,13 @@
     "rejected": "Request rejected",
     "cancel": "Close",
     "reason": {
+      "BUYER_WRONG_ITEM": "Wrong item ordered",
+      "BUYER_DUPLICATE": "Duplicate order",
+      "BUYER_SELLER_UNRESPONSIVE": "Seller unresponsive",
       "SELLER_OUT_OF_STOCK": "Out of stock",
-      "DAMAGED": "Damage discovered",
-      "SHIPPING_NOT_POSSIBLE": "Cannot ship right now",
-      "UNRESPONSIVE": "Other party unresponsive",
+      "SELLER_DAMAGED": "Item damaged",
+      "SELLER_SHIPPING_NOT_POSSIBLE": "Cannot ship right now",
+      "SELLER_BUYER_UNRESPONSIVE": "Buyer unresponsive",
       "OTHER": "Other"
     }
   },
@@ -1595,8 +1598,7 @@
     "confirmShipped": "Confirm shipment",
     "cancel": "Cancel",
     "viewTracking": "View tracking",
-    "shippingProof": "Shipping proof photos",
-    "escrowInfo": "The amount is held in escrow until the buyer confirms delivery."
+    "shippingProof": "Shipping proof photos"
   },
   "seller": {
     "totalSales": "{count, plural, =0 {0 sales} one {1 sale} other {# sales}}"
@@ -1694,7 +1696,6 @@
     "itemsCost": "Items",
     "shippingCost": "Shipping cost",
     "totalCost": "Total",
-    "escrowInfo": "The amount is held in escrow until the buyer confirms delivery.",
     "viewDispute": "View dispute",
     "cancelOrder": "Cancel order",
     "cancelConfirm": "Are you sure you want to cancel this order of €{amount}? The amount will be refunded to the buyer.",
@@ -1759,7 +1760,6 @@
     "itemsCost": "Items",
     "shippingCost": "Shipping cost",
     "totalCost": "Total",
-    "escrowHeld": "The amount is held in escrow until you confirm delivery.",
     "viewDispute": "View dispute"
   },
   "disputes": {

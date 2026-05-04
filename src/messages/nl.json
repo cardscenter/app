@@ -1336,10 +1336,13 @@
     "rejected": "Verzoek afgewezen",
     "cancel": "Sluiten",
     "reason": {
+      "BUYER_WRONG_ITEM": "Verkeerd item gekocht",
+      "BUYER_DUPLICATE": "Dubbel besteld",
+      "BUYER_SELLER_UNRESPONSIVE": "Verkoper reageert niet",
       "SELLER_OUT_OF_STOCK": "Niet meer op voorraad",
-      "DAMAGED": "Schade ontdekt",
-      "SHIPPING_NOT_POSSIBLE": "Verzending nu niet mogelijk",
-      "UNRESPONSIVE": "Wederpartij reageert niet",
+      "SELLER_DAMAGED": "Item beschadigd",
+      "SELLER_SHIPPING_NOT_POSSIBLE": "Verzending nu niet mogelijk",
+      "SELLER_BUYER_UNRESPONSIVE": "Koper reageert niet",
       "OTHER": "Anders"
     }
   },
@@ -1595,8 +1598,7 @@
     "confirmShipped": "Bevestig verzending",
     "cancel": "Annuleren",
     "viewTracking": "Tracking bekijken",
-    "shippingProof": "Verzendbewijs foto's",
-    "escrowInfo": "Het bedrag wordt vastgehouden in escrow totdat de koper de ontvangst bevestigt."
+    "shippingProof": "Verzendbewijs foto's"
   },
   "seller": {
     "totalSales": "{count, plural, =0 {0 verkopen} one {1 verkoop} other {# verkopen}}"
@@ -1694,7 +1696,6 @@
     "itemsCost": "Items",
     "shippingCost": "Verzendkosten",
     "totalCost": "Totaal",
-    "escrowInfo": "Het bedrag wordt vastgehouden in escrow totdat de koper de ontvangst bevestigt.",
     "viewDispute": "Bekijk geschil",
     "cancelOrder": "Bestelling annuleren",
     "cancelConfirm": "Weet je zeker dat je deze bestelling van €{amount} wilt annuleren? Het bedrag wordt teruggestort naar de koper.",
@@ -1759,7 +1760,6 @@
     "itemsCost": "Items",
     "shippingCost": "Verzendkosten",
     "totalCost": "Totaal",
-    "escrowHeld": "Het bedrag wordt vastgehouden in escrow totdat je de ontvangst bevestigt.",
     "viewDispute": "Bekijk geschil"
   },
   "disputes": {

@@ -620,16 +620,11 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                 bundleId={bundle.id}
                 currentUserId={currentUserId}
                 bundleStatus={bundle.status}
+                userRole="buyer"
               />
             </div>
           )}
 
-          {/* Escrow info for PAID/SHIPPED */}
-          {(bundle.status === "PAID" || bundle.status === "SHIPPED") && (
-            <div className="border-t border-border/50 px-4 py-2">
-              <p className="text-xs text-muted-foreground italic">{t("escrowHeld")}</p>
-            </div>
-          )}
         </div>
       )}
     </div>

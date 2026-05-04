@@ -1486,7 +1486,7 @@ model CancellationRequest {
   proposedById     String
   proposedBy       User           @relation("CancellationProposer", fields: [proposedById], references: [id])
 
-  reason           String   // SELLER_OUT_OF_STOCK | DAMAGED | SHIPPING_NOT_POSSIBLE | UNRESPONSIVE | OTHER
+  reason           String   // Buyer: BUYER_WRONG_ITEM | BUYER_DUPLICATE | BUYER_SELLER_UNRESPONSIVE | OTHER. Seller: SELLER_OUT_OF_STOCK | SELLER_DAMAGED | SELLER_SHIPPING_NOT_POSSIBLE | SELLER_BUYER_UNRESPONSIVE | OTHER.
   details          String?
 
   status           String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | EXPIRED

@@ -10,12 +10,19 @@ import {
   respondToCancellation,
   getActiveCancellationRequest,
 } from "@/actions/cancellation";
-import { CANCELLATION_REASONS, type CancellationReason } from "@/lib/cancellation-config";
+import {
+  BUYER_CANCELLATION_REASONS,
+  SELLER_CANCELLATION_REASONS,
+  type CancellationReason,
+} from "@/lib/cancellation-config";
 
 interface CancellationActionsProps {
   bundleId: string;
   currentUserId: string;
   bundleStatus: string;
+  /** Of de huidige user als koper of als verkoper kijkt — bepaalt welke
+   *  set redenen zichtbaar is in het aanvraagformulier. */
+  userRole: "buyer" | "seller";
 }
 
 interface PendingRequest {
@@ -26,14 +33,16 @@ interface PendingRequest {
   proposedBy: { id: string; displayName: string };
 }
 
-export function CancellationActions({ bundleId, currentUserId, bundleStatus }: CancellationActionsProps) {
+export function CancellationActions({ bundleId, currentUserId, bundleStatus, userRole }: CancellationActionsProps) {
   const t = useTranslations("cancellation");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [request, setRequest] = useState<PendingRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [showRequestForm, setShowRequestForm] = useState(false);
-  const [reason, setReason] = useState<CancellationReason>("SELLER_OUT_OF_STOCK");
+  // Welke redenen + default afhankelijk van role
+  const reasonOptions = userRole === "buyer" ? BUYER_CANCELLATION_REASONS : SELLER_CANCELLATION_REASONS;
+  const [reason, setReason] = useState<CancellationReason>(reasonOptions[0]);
   const [details, setDetails] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionNote, setRejectionNote] = useState("");
@@ -270,7 +279,7 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
               onChange={(e) => setReason(e.target.value as CancellationReason)}
               className="mt-1 block w-full glass-input px-3 py-2 text-sm text-foreground"
             >
-              {CANCELLATION_REASONS.map((r) => (
+              {reasonOptions.map((r) => (
                 <option key={r} value={r}>
                   {t(`reason.${r}`)}
                 </option>
