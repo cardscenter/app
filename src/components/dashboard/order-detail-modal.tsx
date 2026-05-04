@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { X, Printer, Package, MapPin, Check, Ban } from "lucide-react";
+import { X, Printer, Package, MapPin, Check, Ban, RotateCcw } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import Image from "next/image";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
@@ -304,6 +304,18 @@ export function OrderDetailModal({
   const sortedItems = applySort(allItems, sortKey);
   const sortLabel = SORT_OPTIONS.find((o) => o.key === sortKey)?.label ?? "Standaard";
 
+  // Refund-history opbouw: per-item refunds + eventueel restant uit custom-amount
+  // refunds die niet aan een item gekoppeld waren. items zijn al gegroepeerd
+  // (qty + subtotal) — refunded en niet-refunded zitten in aparte buckets door
+  // de page-level group-key-aanpassing, dus subtotal klopt per groep.
+  const refundedItemRows = order.items.filter((i) => i.refundedAt);
+  const itemsRefundSum = refundedItemRows.reduce(
+    (sum, i) => sum + i.price * (i.quantity ?? 1),
+    0,
+  );
+  const customRefundDelta = Math.max(0, order.refundedAmount - itemsRefundSum);
+  const netTotal = Math.max(0, order.totalCost - order.refundedAmount);
+
   function handlePrint() {
     const content = printRef.current;
     if (!content) return;
@@ -513,11 +525,65 @@ export function OrderDetailModal({
             <span>{t("shippingCost")}{shippingLabel && ` (${shippingLabel})`}</span>
             <span>&euro;{order.shippingCost.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-sm font-bold text-foreground pt-1.5 border-t border-border/50">
-            <span>{t("totalCost")}</span>
-            <span>&euro;{order.totalCost.toFixed(2)}</span>
+          {order.refundedAmount > 0 && (
+            <div className="flex justify-between text-sm text-emerald-700 dark:text-emerald-400">
+              <span>Refund</span>
+              <span>−&euro;{order.refundedAmount.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-baseline gap-3 pt-1.5 border-t border-border/50">
+            <span className="text-sm font-bold text-foreground">{t("totalCost")}</span>
+            {order.refundedAmount > 0 ? (
+              <span className="flex items-baseline gap-2">
+                <span className="text-xs text-muted-foreground line-through">&euro;{order.totalCost.toFixed(2)}</span>
+                <span className="text-sm font-bold text-foreground">&euro;{netTotal.toFixed(2)}</span>
+              </span>
+            ) : (
+              <span className="text-sm font-bold text-foreground">&euro;{order.totalCost.toFixed(2)}</span>
+            )}
           </div>
         </div>
+
+        {/* Refund-historie (zichtbaar voor beide partijen) */}
+        {order.refundedAmount > 0 && (
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+            <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <RotateCcw className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+              Refund-historie
+            </h3>
+            <div className="space-y-1">
+              {refundedItemRows.map((item) => (
+                <div key={item.id} className="flex justify-between gap-3 text-xs">
+                  <span className="text-muted-foreground truncate">
+                    {(item.quantity ?? 1) > 1 ? `${item.quantity}× ` : ""}{item.cardName}
+                    {item.refundedAt && (
+                      <span className="ml-2 text-[11px] text-muted-foreground/70 tabular-nums">
+                        {formatShortDate(item.refundedAt)}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-emerald-700 dark:text-emerald-400 shrink-0 tabular-nums">
+                    −&euro;{(item.price * (item.quantity ?? 1)).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+              {customRefundDelta > 0.005 && (
+                <div className="flex justify-between gap-3 text-xs">
+                  <span className="text-muted-foreground">Aanvullende refund op bundle</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 tabular-nums">
+                    −&euro;{customRefundDelta.toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="mt-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-900/50 flex justify-between text-sm font-semibold">
+              <span className="text-foreground">Totaal terugbetaald</span>
+              <span className="text-emerald-700 dark:text-emerald-400 tabular-nums">
+                &euro;{order.refundedAmount.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Tracking */}
         {order.trackingUrl && (
