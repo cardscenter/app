@@ -9,15 +9,12 @@ import { SellerRefundForm } from "./seller-refund-form";
 
 type SortKey = "default" | "name" | "condition" | "priceHigh" | "priceLow" | "reference" | "refundStatus";
 
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "default", label: "Standaard" },
-  { key: "name", label: "Naam (A–Z)" },
-  { key: "condition", label: "Conditie" },
-  { key: "priceHigh", label: "Prijs (hoog → laag)" },
-  { key: "priceLow", label: "Prijs (laag → hoog)" },
-  { key: "reference", label: "Kaart-nummer" },
-  { key: "refundStatus", label: "Refund-status" },
-];
+const SORT_KEYS: SortKey[] = ["default", "name", "condition", "priceHigh", "priceLow", "reference", "refundStatus"];
+
+// i18n-key suffix per SortKey ("default" → "sortDefault")
+function sortI18nKey(k: SortKey): string {
+  return `sort${k.charAt(0).toUpperCase()}${k.slice(1)}`;
+}
 
 // Mint-naar-Played volgorde voor sorteren op conditie. Onbekende waarden
 // landen achteraan (indexOf === -1, mappen we naar Number.MAX).
@@ -62,11 +59,13 @@ function applySort<T extends { name: string; condition: string; price: number; r
   return arr;
 }
 
+type TimelineStepKey = "paid" | "shipped" | "delivered" | "reserved" | "scheduled" | "completed" | "cancelled" | "refund";
+
 type TimelineStep = {
-  key: string;
-  label: string;
+  key: TimelineStepKey;
   date: string | null;
   state: "complete" | "current" | "pending" | "danger";
+  amount?: number;
 };
 
 function formatShortDate(iso: string) {
@@ -80,23 +79,22 @@ function buildTimelineSteps(order: OrderData): TimelineStep[] {
 
   if (status === "CANCELLED") {
     return [
-      { key: "paid", label: "Betaald", date: order.createdAt, state: "complete" },
-      { key: "cancelled", label: "Geannuleerd", date: null, state: "danger" },
+      { key: "paid", date: order.createdAt, state: "complete" },
+      { key: "cancelled", date: null, state: "danger" },
     ];
   }
 
   const refundStep: TimelineStep | null = hasRefund
-    ? { key: "refund", label: `Refund €${order.refundedAmount.toFixed(2)}`, date: null, state: "complete" }
+    ? { key: "refund", date: null, state: "complete", amount: order.refundedAmount }
     : null;
 
   if (isPickup) {
     const scheduledKnown = order.pickupScheduleStatus === "ACCEPTED"
       || status === "SCHEDULED" || status === "COMPLETED";
     const steps: TimelineStep[] = [
-      { key: "reserved", label: "Gereserveerd", date: order.createdAt, state: "complete" },
+      { key: "reserved", date: order.createdAt, state: "complete" },
       {
         key: "scheduled",
-        label: "Afspraak",
         date: null,
         state: scheduledKnown
           ? (status === "COMPLETED" ? "complete" : "current")
@@ -104,7 +102,6 @@ function buildTimelineSteps(order: OrderData): TimelineStep[] {
       },
       {
         key: "completed",
-        label: "Opgehaald",
         date: order.deliveredAt,
         state: status === "COMPLETED" ? "complete" : "pending",
       },
@@ -118,16 +115,14 @@ function buildTimelineSteps(order: OrderData): TimelineStep[] {
   const shippedComplete = !!order.shippedAt || status === "SHIPPED" || status === "COMPLETED" || status === "DISPUTED";
   const deliveredComplete = status === "COMPLETED";
   const steps: TimelineStep[] = [
-    { key: "paid", label: "Betaald", date: order.createdAt, state: paidComplete ? "complete" : "current" },
+    { key: "paid", date: order.createdAt, state: paidComplete ? "complete" : "current" },
     {
       key: "shipped",
-      label: "Verzonden",
       date: order.shippedAt,
       state: shippedComplete ? "complete" : (status === "PAID" ? "current" : "pending"),
     },
     {
       key: "delivered",
-      label: "Geleverd",
       date: order.deliveredAt,
       state: deliveredComplete ? "complete" : (status === "SHIPPED" ? "current" : "pending"),
     },
@@ -136,7 +131,25 @@ function buildTimelineSteps(order: OrderData): TimelineStep[] {
   return steps;
 }
 
+function timelineLabel(step: TimelineStep, t: (k: string, vars?: Record<string, string | number>) => string): string {
+  if (step.key === "refund" && step.amount !== undefined) {
+    return t("orderDetail.timelineRefund", { amount: step.amount.toFixed(2) });
+  }
+  const map: Record<TimelineStepKey, string> = {
+    paid: "orderDetail.timelinePaid",
+    shipped: "orderDetail.timelineShipped",
+    delivered: "orderDetail.timelineDelivered",
+    reserved: "orderDetail.timelineReserved",
+    scheduled: "orderDetail.timelineScheduled",
+    completed: "orderDetail.timelineCompleted",
+    cancelled: "orderDetail.timelineCancelled",
+    refund: "orderDetail.timelineRefund",
+  };
+  return t(map[step.key]);
+}
+
 function OrderTimeline({ order }: { order: OrderData }) {
+  const tc = useTranslations("common");
   const steps = buildTimelineSteps(order);
   return (
     <div className="mb-4 rounded-xl border border-border p-4">
@@ -175,7 +188,7 @@ function OrderTimeline({ order }: { order: OrderData }) {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className={`text-xs font-medium ${labelClass}`}>{step.label}</p>
+                  <p className={`text-xs font-medium ${labelClass}`}>{timelineLabel(step, tc)}</p>
                   {step.date && (
                     <p className="text-[11px] text-muted-foreground tabular-nums">{formatShortDate(step.date)}</p>
                   )}
@@ -302,7 +315,7 @@ export function OrderDetailModal({
         : [];
 
   const sortedItems = applySort(allItems, sortKey);
-  const sortLabel = SORT_OPTIONS.find((o) => o.key === sortKey)?.label ?? "Standaard";
+  const sortLabel = tc(`orderDetail.${sortI18nKey(sortKey)}`);
 
   // Refund-history opbouw: per-item refunds + eventueel restant uit custom-amount
   // refunds die niet aan een item gekoppeld waren. items zijn al gegroepeerd
@@ -501,14 +514,14 @@ export function OrderDetailModal({
           <div className="flex items-center justify-between gap-3 mb-2">
             <h3 className="text-sm font-semibold text-foreground">{t("items", { count: sortedItems.length })}</h3>
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="hidden sm:inline">Sorteer:</span>
+              <span className="hidden sm:inline">{tc("orderDetail.sortBy")}</span>
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
                 className="rounded-lg border border-border bg-card px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.key} value={opt.key}>{opt.label}</option>
+                {SORT_KEYS.map((key) => (
+                  <option key={key} value={key}>{tc(`orderDetail.${sortI18nKey(key)}`)}</option>
                 ))}
               </select>
             </label>
@@ -543,7 +556,7 @@ export function OrderDetailModal({
                       )}
                       {isRefunded && (
                         <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-                          Refund
+                          {tc("orderDetail.refundBadge")}
                         </span>
                       )}
                     </div>
@@ -595,7 +608,7 @@ export function OrderDetailModal({
           </div>
           {order.refundedAmount > 0 && (
             <div className="flex justify-between text-sm text-emerald-700 dark:text-emerald-400">
-              <span>Refund</span>
+              <span>{tc("orderDetail.refundRow")}</span>
               <span>−&euro;{order.refundedAmount.toFixed(2)}</span>
             </div>
           )}
@@ -617,7 +630,7 @@ export function OrderDetailModal({
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
             <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
               <RotateCcw className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-              Refund-historie
+              {tc("orderDetail.refundHistoryTitle")}
             </h3>
             <div className="space-y-1">
               {refundedItemRows.map((item) => (
@@ -637,7 +650,7 @@ export function OrderDetailModal({
               ))}
               {customRefundDelta > 0.005 && (
                 <div className="flex justify-between gap-3 text-xs">
-                  <span className="text-muted-foreground">Aanvullende refund op bundle</span>
+                  <span className="text-muted-foreground">{tc("orderDetail.refundBundle")}</span>
                   <span className="text-emerald-700 dark:text-emerald-400 tabular-nums">
                     −&euro;{customRefundDelta.toFixed(2)}
                   </span>
@@ -645,7 +658,7 @@ export function OrderDetailModal({
               )}
             </div>
             <div className="mt-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-900/50 flex justify-between text-sm font-semibold">
-              <span className="text-foreground">Totaal terugbetaald</span>
+              <span className="text-foreground">{tc("orderDetail.refundTotal")}</span>
               <span className="text-emerald-700 dark:text-emerald-400 tabular-nums">
                 &euro;{order.refundedAmount.toFixed(2)}
               </span>
@@ -659,13 +672,15 @@ export function OrderDetailModal({
             <div className="flex items-start gap-2">
               <Truck className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Verzending</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{tc("orderDetail.shippingTitle")}</p>
                 {shippingLabel && (
                   <p className="text-sm font-semibold text-foreground">{shippingLabel}</p>
                 )}
                 <p className="text-xs text-muted-foreground tabular-nums">
-                  Verzonden op {new Date(order.shippedAt).toLocaleDateString("nl-NL", {
-                    day: "numeric", month: "long", year: "numeric",
+                  {tc("orderDetail.shippedOn", {
+                    date: new Date(order.shippedAt).toLocaleDateString("nl-NL", {
+                      day: "numeric", month: "long", year: "numeric",
+                    }),
                   })}
                 </p>
                 {order.trackingUrl && (

@@ -24,7 +24,32 @@
     "contactSeller": "Contacteer verkoper",
     "marketplace": "Marktplaats",
     "cards": "Database",
-    "customization": "Personalisatie"
+    "customization": "Personalisatie",
+    "orderDetail": {
+      "sortBy": "Sorteer:",
+      "sortDefault": "Standaard",
+      "sortName": "Naam (A–Z)",
+      "sortCondition": "Conditie",
+      "sortPriceHigh": "Prijs (hoog → laag)",
+      "sortPriceLow": "Prijs (laag → hoog)",
+      "sortReference": "Kaart-nummer",
+      "sortRefundStatus": "Refund-status",
+      "timelinePaid": "Betaald",
+      "timelineShipped": "Verzonden",
+      "timelineDelivered": "Geleverd",
+      "timelineReserved": "Gereserveerd",
+      "timelineScheduled": "Afspraak",
+      "timelineCompleted": "Opgehaald",
+      "timelineCancelled": "Geannuleerd",
+      "timelineRefund": "Refund €{amount}",
+      "refundBadge": "Refund",
+      "shippingTitle": "Verzending",
+      "shippedOn": "Verzonden op {date}",
+      "refundRow": "Refund",
+      "refundHistoryTitle": "Refund-historie",
+      "refundBundle": "Aanvullende refund op bundle",
+      "refundTotal": "Totaal terugbetaald"
+    }
   },
   "auth": {
     "loginTitle": "Inloggen",

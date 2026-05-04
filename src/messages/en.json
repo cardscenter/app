@@ -24,7 +24,32 @@
     "contactSeller": "Contact seller",
     "marketplace": "Marketplace",
     "cards": "Database",
-    "customization": "Customization"
+    "customization": "Customization",
+    "orderDetail": {
+      "sortBy": "Sort:",
+      "sortDefault": "Default",
+      "sortName": "Name (A–Z)",
+      "sortCondition": "Condition",
+      "sortPriceHigh": "Price (high → low)",
+      "sortPriceLow": "Price (low → high)",
+      "sortReference": "Card number",
+      "sortRefundStatus": "Refund status",
+      "timelinePaid": "Paid",
+      "timelineShipped": "Shipped",
+      "timelineDelivered": "Delivered",
+      "timelineReserved": "Reserved",
+      "timelineScheduled": "Scheduled",
+      "timelineCompleted": "Picked up",
+      "timelineCancelled": "Cancelled",
+      "timelineRefund": "Refund €{amount}",
+      "refundBadge": "Refund",
+      "shippingTitle": "Shipping",
+      "shippedOn": "Shipped on {date}",
+      "refundRow": "Refund",
+      "refundHistoryTitle": "Refund history",
+      "refundBundle": "Additional refund on bundle",
+      "refundTotal": "Total refunded"
+    }
   },
   "auth": {
     "loginTitle": "Login",
