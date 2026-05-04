@@ -2,9 +2,64 @@
 
 import { useTranslations } from "next-intl";
 import { X, Printer, Package, MapPin, Check, Ban } from "lucide-react";
-import { Fragment, useRef } from "react";
+import { Fragment, useRef, useState } from "react";
 import Image from "next/image";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
+
+type SortKey = "default" | "name" | "condition" | "priceHigh" | "priceLow" | "reference" | "refundStatus";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "default", label: "Standaard" },
+  { key: "name", label: "Naam (A–Z)" },
+  { key: "condition", label: "Conditie" },
+  { key: "priceHigh", label: "Prijs (hoog → laag)" },
+  { key: "priceLow", label: "Prijs (laag → hoog)" },
+  { key: "reference", label: "Kaart-nummer" },
+  { key: "refundStatus", label: "Refund-status" },
+];
+
+// Mint-naar-Played volgorde voor sorteren op conditie. Onbekende waarden
+// landen achteraan (indexOf === -1, mappen we naar Number.MAX).
+const CONDITION_ORDER = [
+  "Mint",
+  "Near Mint",
+  "Excellent",
+  "Good",
+  "Light Played",
+  "Lightly Played",
+  "Played",
+  "Poor",
+];
+
+function conditionRank(c: string): number {
+  const idx = CONDITION_ORDER.indexOf(c);
+  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+}
+
+function applySort<T extends { name: string; condition: string; price: number; reference: string | null; refundedAt: string | null }>(
+  items: T[],
+  sortKey: SortKey,
+): T[] {
+  if (sortKey === "default") return items;
+  const arr = [...items];
+  switch (sortKey) {
+    case "name":
+      return arr.sort((a, b) => a.name.localeCompare(b.name, "nl"));
+    case "condition":
+      return arr.sort((a, b) => conditionRank(a.condition) - conditionRank(b.condition));
+    case "priceHigh":
+      return arr.sort((a, b) => b.price - a.price);
+    case "priceLow":
+      return arr.sort((a, b) => a.price - b.price);
+    case "reference":
+      return arr.sort((a, b) =>
+        (a.reference ?? "").localeCompare(b.reference ?? "", "nl", { numeric: true }),
+      );
+    case "refundStatus":
+      return arr.sort((a, b) => Number(!!a.refundedAt) - Number(!!b.refundedAt));
+  }
+  return arr;
+}
 
 type TimelineStep = {
   key: string;
@@ -193,6 +248,7 @@ export function OrderDetailModal({
   const t = useTranslations(namespace);
   const tc = useTranslations("common");
   const printRef = useRef<HTMLDivElement>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("default");
 
   const date = new Date(order.createdAt);
   const formattedDate = date.toLocaleDateString("nl-NL", {
@@ -244,6 +300,9 @@ export function OrderDetailModal({
           }]
         : [];
 
+  const sortedItems = applySort(allItems, sortKey);
+  const sortLabel = SORT_OPTIONS.find((o) => o.key === sortKey)?.label ?? "Standaard";
+
   function handlePrint() {
     const content = printRef.current;
     if (!content) return;
@@ -289,14 +348,14 @@ export function OrderDetailModal({
               {order.buyerCountry}
             </div>
           </>)}
-          <h2>Items ({allItems.length})</h2>
+          <h2>Items ({sortedItems.length}) — gesorteerd op: {sortLabel}</h2>
           <table><thead><tr><th>#</th><th>Item</th><th>Nr.</th><th>Conditie</th>{isSeller && <th>Ref.</th>}<th className="r">Prijs</th></tr></thead>
-          <tbody>{allItems.map((item, i) => (
-            <tr key={i}><td>{i+1}</td><td>{item.name}</td><td>{item.reference || "—"}</td><td>{item.condition || "—"}</td>{isSeller && <td>{item.sellerNote || "—"}</td>}<td className="r">&euro;{item.price.toFixed(2)}</td></tr>
+          <tbody>{sortedItems.map((item, i) => (
+            <tr key={i}><td>{i+1}</td><td>{item.name}{item.refundedAt ? " (refund)" : ""}</td><td>{item.reference || "—"}</td><td>{item.condition || "—"}</td>{isSeller && <td>{item.sellerNote || "—"}</td>}<td className="r">&euro;{item.price.toFixed(2)}</td></tr>
           ))}</tbody></table>
           <h2>Overzicht</h2>
           <table><tbody>
-            <tr><td>Items ({allItems.length})</td><td className="r">&euro;{order.totalItemCost.toFixed(2)}</td></tr>
+            <tr><td>Items ({sortedItems.length})</td><td className="r">&euro;{order.totalItemCost.toFixed(2)}</td></tr>
             <tr><td>Verzendkosten{shippingLabel && ` (${shippingLabel})`}</td><td className="r">&euro;{order.shippingCost.toFixed(2)}</td></tr>
             <tr className="tot"><td><strong>Totaal</strong></td><td className="r"><strong>&euro;{order.totalCost.toFixed(2)}</strong></td></tr>
           </tbody></table>
@@ -358,41 +417,68 @@ export function OrderDetailModal({
 
         {/* Items list */}
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-foreground mb-2">{t("items", { count: allItems.length })}</h3>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h3 className="text-sm font-semibold text-foreground">{t("items", { count: sortedItems.length })}</h3>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="hidden sm:inline">Sorteer:</span>
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="rounded-lg border border-border bg-card px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.key} value={opt.key}>{opt.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
           <div className="divide-y divide-border/50 rounded-xl border border-border overflow-hidden">
-            {allItems.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-3 px-4 py-3">
-                <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">{idx + 1}</span>
-                {item.imageUrl ? (
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-muted">
-                    <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="40px" />
+            {sortedItems.map((item, idx) => {
+              const isRefunded = !!item.refundedAt;
+              return (
+                <div key={item.id} className={`flex items-center gap-3 px-4 py-3 ${isRefunded ? "opacity-60" : ""}`}>
+                  <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">{idx + 1}</span>
+                  {item.imageUrl ? (
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="40px" />
+                    </div>
+                  ) : (
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-muted flex items-center justify-center">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {item.quantity > 1 && (
+                        <span className="shrink-0 text-xs font-semibold text-muted-foreground">{item.quantity}×</span>
+                      )}
+                      <p className={`text-sm font-medium truncate ${isRefunded ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                        {item.name}
+                      </p>
+                      {item.reference && (
+                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                          #{item.reference}
+                        </span>
+                      )}
+                      {isRefunded && (
+                        <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                          Refund
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {item.condition && <p className="text-xs text-muted-foreground">{item.condition}</p>}
+                      {item.sellerNote && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">{item.sellerNote}</p>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <div className="h-10 w-10 shrink-0 rounded-lg bg-muted flex items-center justify-center">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                    {item.reference && (
-                      <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-                        #{item.reference}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {item.condition && <p className="text-xs text-muted-foreground">{item.condition}</p>}
-                    {item.sellerNote && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400">{item.sellerNote}</p>
-                    )}
-                  </div>
+                  <span className={`text-sm font-medium shrink-0 ${isRefunded ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                    &euro;{(item.quantity > 1 ? item.price * item.quantity : item.price).toFixed(2)}
+                  </span>
                 </div>
-                <span className="text-sm font-medium text-foreground shrink-0">
-                  &euro;{item.price.toFixed(2)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
