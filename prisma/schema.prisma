@@ -773,6 +773,13 @@ model ShippingBundle {
 
   refundedAmount Float   @default(0) // Total amount refunded to buyer so far
 
+  // Auto-expire (Fase 28): gevuld door cron `auto-cancel-stale-paid` als
+  // bundle 14 dagen op PAID staat zonder shipping. Differentieert mutual-akkoord
+  // CANCELLED van system-forced CANCELLED — admin gebruikt dit veld om
+  // probleem-sellers te detecteren (zeker als seller eerder een cancel-verzoek
+  // afwees). Mutual-akkoord-cancels hebben dit veld leeg.
+  autoExpiredAt DateTime?
+
   // Status (Fase 27): PENDING | PAID | SCHEDULED | SHIPPED | COMPLETED | CANCELLED | DISPUTED.
   // SCHEDULED = pickup-moment vastgelegd, wacht op code-confirm. Voor EXTERNAL-bundles:
   // PENDING (RESERVED-fase) → SCHEDULED (na pickup-lock) → COMPLETED. PAID/SHIPPED wordt

@@ -21,6 +21,7 @@ import {
   X,
   Shield,
   ArrowLeft,
+  AlertTriangle,
 } from "lucide-react";
 
 type Section = {
@@ -37,6 +38,7 @@ export function AdminNav({
     withdrawals?: number;
     buybacks?: number;
     reports?: number;
+    sellerWarnings?: number;
   };
 }) {
   const t = useTranslations("admin");
@@ -58,6 +60,7 @@ export function AdminNav({
         { href: "/dashboard/admin/withdrawals", labelKey: "navWithdrawals", icon: Wallet, badge: pendingCounts?.withdrawals },
         { href: "/dashboard/admin/buybacks", labelKey: "navBuybacks", icon: ArrowDownToLine, badge: pendingCounts?.buybacks },
         { href: "/dashboard/admin/reports", labelKey: "navReports", icon: Flag, badge: pendingCounts?.reports },
+        { href: "/dashboard/admin/seller-warnings", labelKey: "navSellerWarnings", icon: AlertTriangle, badge: pendingCounts?.sellerWarnings },
         { href: "/dashboard/admin/bank-transfers", labelKey: "navBankTransfers", icon: CreditCard },
       ],
     },

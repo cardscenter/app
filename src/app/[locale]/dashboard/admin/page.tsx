@@ -13,6 +13,7 @@ import {
   History,
   Coins,
   TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 
 export default async function AdminOverviewPage() {
@@ -29,6 +30,7 @@ export default async function AdminOverviewPage() {
     pendingWithdrawals,
     pendingBuybacks,
     openReports,
+    sellerWarnings,
     totalEscrow,
     totalPendingPayouts,
     totalUserBalance,
@@ -40,6 +42,14 @@ export default async function AdminOverviewPage() {
     prisma.withdrawalRequest.count({ where: { status: "PENDING" } }),
     prisma.buybackRequest.count({ where: { status: { in: ["PENDING", "RECEIVED", "INSPECTING"] } } }),
     prisma.userReport.count({ where: { status: { in: ["OPEN", "REVIEWING"] } } }),
+    // Seller-warnings: bundles auto-geannuleerd door cron (PAID >14d niet verzonden).
+    // Alleen events van afgelopen 30 dagen tellen — historische incidenten zijn al
+    // afgehandeld of staan in audit-log.
+    prisma.shippingBundle.count({
+      where: {
+        autoExpiredAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
+    }),
     prisma.user.aggregate({ _sum: { heldBalance: true } }),
     prisma.withdrawalRequest.aggregate({
       where: { status: { in: ["PENDING", "APPROVED"] } },
@@ -66,6 +76,7 @@ export default async function AdminOverviewPage() {
     { href: "/dashboard/admin/withdrawals", labelKey: "kpiPendingWithdrawals", value: pendingWithdrawals, Icon: Wallet, accent: "blue" as const },
     { href: "/dashboard/admin/buybacks", labelKey: "kpiPendingBuybacks", value: pendingBuybacks, Icon: ArrowDownToLine, accent: "amber" as const },
     { href: "/dashboard/admin/reports", labelKey: "kpiPendingReports", value: openReports, Icon: Flag, accent: "purple" as const },
+    { href: "/dashboard/admin/seller-warnings", labelKey: "kpiSellerWarnings", value: sellerWarnings, Icon: AlertTriangle, accent: "rose" as const },
   ] as const;
 
   const finTiles = [

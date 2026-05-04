@@ -16,6 +16,9 @@ import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
 import { finalizeAuction } from "@/actions/auction";
+import { refundEscrow } from "@/actions/wallet";
+
+const STALE_PAID_DAYS = 14;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -44,6 +47,7 @@ export const CRON_JOB_NAMES = [
   "bundle-offer-payment-deadline",
   "pickup-reservation-timeout",
   "pickup-reminder",
+  "auto-cancel-stale-paid",
 ] as const;
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
 
@@ -141,6 +145,12 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     description:
       "Stuurt 24-uur-reminder aan beide partijen voor ACCEPTED ophaalmomenten die binnen ~1 dag plaatsvinden. Set reminderSentAt zodat dezelfde afspraak niet dubbel pingt.",
     schedule: "Elke uur",
+    allowManualRun: true,
+  },
+  "auto-cancel-stale-paid": {
+    description:
+      "Annuleert PAID-bundles automatisch die ${STALE_PAID_DAYS} dagen niet zijn verzonden (SHIP-flow, geen actief PENDING cancel-verzoek). Volledige refund naar koper, items terug op de markt, autoExpiredAt ingevuld zodat admin probleem-sellers kan filteren.".replace("${STALE_PAID_DAYS}", String(STALE_PAID_DAYS)),
+    schedule: "Dagelijks",
     allowManualRun: true,
   },
 };
@@ -649,5 +659,97 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       processed++;
     }
     return { itemsProcessed: processed, result: { processed, total: due.length } };
+  },
+  "auto-cancel-stale-paid": async () => {
+    // Vindt PAID SHIP-bundles die 14d na createdAt nog niet zijn verzonden en
+    // waarop geen actief annuleringsverzoek loopt. Refundt volledig + zet
+    // status CANCELLED + autoExpiredAt. Symmetrisch met auction-payment-deadline:
+    // ene partij voldoet niet aan z'n verplichting → andere partij wint automatisch.
+    const cutoff = new Date(Date.now() - STALE_PAID_DAYS * 24 * 60 * 60 * 1000);
+    const stale = await prisma.shippingBundle.findMany({
+      where: {
+        status: "PAID",
+        deliveryMethod: "SHIP",
+        shippedAt: null,
+        createdAt: { lt: cutoff },
+        cancellationRequests: { none: { status: "PENDING" } },
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        buyerId: true,
+        sellerId: true,
+        totalCost: true,
+        refundedAmount: true,
+        listingId: true,
+      },
+    });
+
+    let processed = 0;
+    for (const b of stale) {
+      const refundAmount = Math.max(0, b.totalCost - b.refundedAmount);
+
+      // Refund + heldBalance-decrement (alles in escrow sinds Fase 28-escrow-fix)
+      await refundEscrow(
+        b.sellerId,
+        b.buyerId,
+        refundAmount,
+        refundAmount,
+        `Automatisch geannuleerd na ${STALE_PAID_DAYS} dagen zonder verzending: bestelling ${b.orderNumber}`,
+        b.id,
+      );
+
+      // Items terug naar AVAILABLE
+      await prisma.claimsaleItem.updateMany({
+        where: { shippingBundleId: b.id },
+        data: { status: "AVAILABLE", buyerId: null, shippingBundleId: null },
+      });
+
+      // Listing terug op ACTIVE als die nog SOLD stond
+      if (b.listingId) {
+        await prisma.listing.updateMany({
+          where: { id: b.listingId, status: "SOLD" },
+          data: { status: "ACTIVE", buyerId: null },
+        });
+      }
+
+      // Multi-listing bundle: alle bundleListings → ACTIVE
+      const bundleListings = await prisma.bundleListing.findMany({
+        where: { shippingBundleId: b.id },
+        select: { listingId: true },
+      });
+      if (bundleListings.length > 0) {
+        await prisma.listing.updateMany({
+          where: { id: { in: bundleListings.map((bl) => bl.listingId) }, status: "SOLD" },
+          data: { status: "ACTIVE", buyerId: null },
+        });
+      }
+
+      // Bundle markeren — autoExpiredAt scheidt deze van mutual-akkoord-cancels
+      await prisma.shippingBundle.update({
+        where: { id: b.id },
+        data: { status: "CANCELLED", autoExpiredAt: new Date() },
+      });
+
+      // Notificaties — buyer krijgt positieve melding, seller waarschuwing
+      await createNotification(
+        b.buyerId,
+        "ORDER_CANCELLED",
+        "Bestelling automatisch geannuleerd",
+        `De verkoper heeft bestelling ${b.orderNumber} niet binnen ${STALE_PAID_DAYS} dagen verzonden. Het volledige bedrag (€${refundAmount.toFixed(2)}) is teruggestort op je saldo.`,
+        "/dashboard/aankopen",
+      );
+      await createNotification(
+        b.sellerId,
+        "ORDER_CANCELLED",
+        "Bestelling automatisch geannuleerd",
+        `Bestelling ${b.orderNumber} is automatisch geannuleerd omdat je niet binnen ${STALE_PAID_DAYS} dagen hebt verzonden. Herhaaldelijk niet-verzenden kan leiden tot account-suspensie.`,
+        "/dashboard/verkopen",
+      );
+
+      processed++;
+    }
+
+    return { itemsProcessed: processed, result: { processed, total: stale.length } };
   },
 };
