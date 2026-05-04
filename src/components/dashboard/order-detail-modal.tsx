@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { X, Printer, Package, MapPin, Check, Ban, RotateCcw } from "lucide-react";
+import { X, Printer, Package, MapPin, Check, Ban, RotateCcw, Truck, ExternalLink } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import Image from "next/image";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
@@ -585,13 +585,34 @@ export function OrderDetailModal({
           </div>
         )}
 
-        {/* Tracking */}
-        {order.trackingUrl && (
+        {/* Verzending — alleen voor SHIP-bundles die verzonden zijn */}
+        {order.deliveryMethod !== "PICKUP" && order.shippedAt && (
           <div className="mt-4 rounded-xl border border-border p-4">
-            <p className="text-xs font-medium text-muted-foreground mb-1">{t("trackingLink")}</p>
-            <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">
-              {order.trackingUrl}
-            </a>
+            <div className="flex items-start gap-2">
+              <Truck className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Verzending</p>
+                {shippingLabel && (
+                  <p className="text-sm font-semibold text-foreground">{shippingLabel}</p>
+                )}
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  Verzonden op {new Date(order.shippedAt).toLocaleDateString("nl-NL", {
+                    day: "numeric", month: "long", year: "numeric",
+                  })}
+                </p>
+                {order.trackingUrl && (
+                  <a
+                    href={order.trackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-flex items-center gap-1 text-sm text-primary hover:underline break-all"
+                  >
+                    {t("trackingLink")}
+                    <ExternalLink className="h-3 w-3 shrink-0" />
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
