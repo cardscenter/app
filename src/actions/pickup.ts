@@ -314,10 +314,21 @@ export async function confirmPickup(input: { shippingBundleId: string; code: str
   });
   if (!result.ok) return { error: "Status is gewijzigd" };
 
-  // Escrow-release alleen voor PLATFORM-bundles
+  // Escrow-release alleen voor PLATFORM-bundles. Refund-aware (zelfde
+  // berekening als confirmDelivery): commissie alleen over items, shipping
+  // fee-vrij. Voor pickup is shippingCost meestal 0, maar de formule werkt
+  // ook als die later gevuld wordt.
   if (bundle.paymentMode === "PLATFORM") {
+    const releaseAmount = Math.max(0, bundle.totalCost - bundle.refundedAmount);
+    const commissionableAmount = Math.max(0, bundle.totalItemCost - bundle.refundedAmount);
     try {
-      await releaseEscrow(bundle.sellerId, bundle.totalCost, `Ophaal voltooid: ${bundle.orderNumber}`, bundle.id);
+      await releaseEscrow(
+        bundle.sellerId,
+        releaseAmount,
+        `Ophaal voltooid: ${bundle.orderNumber}`,
+        bundle.id,
+        commissionableAmount,
+      );
     } catch (e) {
       // Best-effort log; bundle is al COMPLETED. Manual release via admin als nodig.
       console.error("Escrow-release na pickup-confirm failed:", e);

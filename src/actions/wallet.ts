@@ -215,13 +215,19 @@ export async function escrowCredit(userId: string, amount: number, description: 
 }
 
 // Internal: release escrow → move heldBalance to balance (delivery confirmed)
-// Commission is deducted from seller based on their account tier
-export async function releaseEscrow(userId: string, amount: number, description: string, relatedShippingBundleId?: string) {
+// Commission is deducted from seller based on their account tier.
+//
+// `amount` = totaal bedrag dat uit heldBalance vrijkomt (items + verzending).
+// `commissionableAmount` = portie waarover commissie geheven wordt (alleen items).
+//   Default = `amount` voor backward-compat met legacy-callers waar shipping
+//   nooit in escrow zat. Nieuwe callers (Fase 28) geven beide expliciet.
+export async function releaseEscrow(userId: string, amount: number, description: string, relatedShippingBundleId?: string, commissionableAmount?: number) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("User not found");
 
   const commissionRate = getCommissionRate(user.accountType);
-  const commissionAmount = Math.round(amount * commissionRate * 100) / 100;
+  const commissionBase = commissionableAmount ?? amount;
+  const commissionAmount = Math.round(commissionBase * commissionRate * 100) / 100;
   const sellerReceives = amount - commissionAmount;
 
   const balanceBefore = user.balance;

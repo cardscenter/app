@@ -138,13 +138,17 @@ export async function respondToCancellation(
     return { error: "Bestelling is niet meer in PAID status" };
   }
 
+  // Hele totalCost zit in seller's heldBalance sinds Fase 28 (zowel items als
+  // verzending). Trek het resterende deel (na eventuele partial refunds) terug
+  // naar de koper en uit de escrow.
+  const refundAmount = Math.max(0, bundle.totalCost - bundle.refundedAmount);
   await refundEscrow(
     bundle.sellerId,
     bundle.buyerId,
-    bundle.totalCost,       // koper krijgt items + verzendkosten terug
-    bundle.totalItemCost,   // alleen item-kosten zaten in escrow
+    refundAmount,
+    refundAmount,           // alles in escrow → escrow-decrement gelijk aan refund
     `Geannuleerd via wederzijds akkoord: bestelling ${bundle.orderNumber}`,
-    bundle.id
+    bundle.id,
   );
 
   // Reset claimsale items naar AVAILABLE (idem als cancelPurchase).

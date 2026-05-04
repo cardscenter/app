@@ -319,24 +319,29 @@ export async function acceptMutualResolution(disputeId: string) {
 
   await logDisputeEvent(disputeId, session.user.id, "PROPOSAL_ACCEPTED", `€${refundAmount.toFixed(2)}`);
 
-  // Process partial refund
+  // Process partial refund — heldBalance bevat sinds Fase 28 ook shipping,
+  // dus escrow-decrement = refund-bedrag direct.
   await partialRefundEscrow(
     bundle.sellerId,
     bundle.buyerId,
     refundAmount,
     refundAmount,
     `Geschil onderling opgelost: €${refundAmount.toFixed(2)} terugbetaald`,
-    bundle.id
+    bundle.id,
   );
 
-  // Release remaining escrow to seller
-  const remainingEscrow = bundle.totalItemCost - refundAmount;
+  // Release remaining escrow to seller — refund-aware. Total al in escrow,
+  // dus releaseAmount = totalCost − (alle refunds incl deze partial).
+  const totalRefundedAfter = bundle.refundedAmount + refundAmount;
+  const remainingEscrow = Math.max(0, bundle.totalCost - totalRefundedAfter);
   if (remainingEscrow > 0) {
+    const commissionableRemaining = Math.max(0, bundle.totalItemCost - totalRefundedAfter);
     await releaseEscrow(
       bundle.sellerId,
       remainingEscrow,
       `Geschil opgelost: resterend bedrag vrijgegeven`,
-      bundle.id
+      bundle.id,
+      commissionableRemaining,
     );
   }
 
@@ -372,14 +377,16 @@ export async function autoResolveDisputes() {
 
   for (const dispute of expiredOpen) {
     const bundle = dispute.shippingBundle;
-    // Seller did not respond within deadline → buyer wins
+    // Seller did not respond within deadline → buyer wins. Hele resterende
+    // escrow gaat terug naar koper (totalCost incl shipping zit in heldBalance).
+    const refundAmount = Math.max(0, bundle.totalCost - bundle.refundedAmount);
     await refundEscrow(
       bundle.sellerId,
       bundle.buyerId,
-      bundle.totalCost,
-      bundle.totalItemCost,
+      refundAmount,
+      refundAmount,
       `Geschil auto-opgelost: verkoper heeft niet gereageerd binnen ${SELLER_RESPONSE_DAYS} dagen`,
-      bundle.id
+      bundle.id,
     );
     await finalizeDispute(dispute.id, bundle.id, "RESOLVED_BUYER", "REFUND_FULL", bundle.sellerId, bundle.buyerId);
     resolved++;
@@ -504,14 +511,15 @@ export async function adminResolveDispute(data: {
   const bundle = dispute.shippingBundle;
 
   if (data.decision === "BUYER") {
-    // Full refund to buyer
+    // Full refund to buyer — resterende escrow (na eventuele eerdere partials).
+    const refundAmount = Math.max(0, bundle.totalCost - bundle.refundedAmount);
     await refundEscrow(
       bundle.sellerId,
       bundle.buyerId,
-      bundle.totalCost,
-      bundle.totalItemCost,
+      refundAmount,
+      refundAmount,
       `Beheerder: volledige terugbetaling aan koper`,
-      bundle.id
+      bundle.id,
     );
     await prisma.shippingBundle.update({
       where: { id: bundle.id },
@@ -528,12 +536,15 @@ export async function adminResolveDispute(data: {
       },
     });
   } else if (data.decision === "SELLER") {
-    // No refund, release to seller
+    // No refund, release resterende escrow aan seller. Commissie alleen over items.
+    const releaseAmount = Math.max(0, bundle.totalCost - bundle.refundedAmount);
+    const commissionableAmount = Math.max(0, bundle.totalItemCost - bundle.refundedAmount);
     await releaseEscrow(
       bundle.sellerId,
-      bundle.totalItemCost,
+      releaseAmount,
       `Beheerder: geen terugbetaling, bedrag vrijgegeven`,
-      bundle.id
+      bundle.id,
+      commissionableAmount,
     );
     await prisma.shippingBundle.update({
       where: { id: bundle.id },
@@ -550,18 +561,27 @@ export async function adminResolveDispute(data: {
       },
     });
   } else if (data.decision === "PARTIAL" && data.partialAmount) {
-    // Partial refund
+    // Partial refund — heldBalance bevat totalCost; refund-decrement = bedrag.
     await partialRefundEscrow(
       bundle.sellerId,
       bundle.buyerId,
       data.partialAmount,
       data.partialAmount,
       `Beheerder: gedeeltelijke terugbetaling €${data.partialAmount.toFixed(2)}`,
-      bundle.id
+      bundle.id,
     );
-    const remaining = bundle.totalItemCost - data.partialAmount;
+    // Release resterende escrow aan seller. Commissie alleen over items.
+    const totalRefundedAfter = bundle.refundedAmount + data.partialAmount;
+    const remaining = Math.max(0, bundle.totalCost - totalRefundedAfter);
+    const commissionableRemaining = Math.max(0, bundle.totalItemCost - totalRefundedAfter);
     if (remaining > 0) {
-      await releaseEscrow(bundle.sellerId, remaining, `Beheerder: resterend bedrag vrijgegeven`, bundle.id);
+      await releaseEscrow(
+        bundle.sellerId,
+        remaining,
+        `Beheerder: resterend bedrag vrijgegeven`,
+        bundle.id,
+        commissionableRemaining,
+      );
     }
     await prisma.shippingBundle.update({
       where: { id: bundle.id },

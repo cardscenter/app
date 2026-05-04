@@ -460,11 +460,21 @@ export async function checkout(shippingSelections?: Record<string, string>) {
         ci.claimsaleItemId
       );
 
-      // Hold payment in escrow (released when buyer confirms delivery)
+      // Hold payment in escrow (released when buyer confirms delivery).
+      // Voor de eerste item in een bundle voegen we de shippingCost ook toe,
+      // zodat heldBalance de volledige bundle.totalCost dekt — dat zorgt dat
+      // refunds en cancels het verzendbedrag uit escrow kunnen halen ipv het
+      // uit het niets te creëren. Commissie wordt bij `releaseEscrow` alleen
+      // over de items berekend (commissionableAmount = totalItemCost).
+      const escrowAmount = isFirstItemInBundle
+        ? ci.claimsaleItem.price + shippingCost
+        : ci.claimsaleItem.price;
       await escrowCredit(
         sellerId,
-        ci.claimsaleItem.price,
-        `Escrow: ${ci.claimsaleItem.cardName}`,
+        escrowAmount,
+        isFirstItemInBundle
+          ? `Escrow: ${ci.claimsaleItem.cardName} + verzending`
+          : `Escrow: ${ci.claimsaleItem.cardName}`,
         bundle.id
       );
 
