@@ -127,12 +127,20 @@ export async function confirmDelivery(
     },
   });
 
-  // Release escrow to seller
+  // Release escrow to seller. Met de Fase-28 escrow-flow zit de hele
+  // bundle.totalCost (items + verzending) in heldBalance. Bij delivery komt
+  // het resterende deel (na eventuele partial refunds) vrij. Commissie wordt
+  // alleen over het item-deel berekend; verzending is fee-vrij voor seller.
+  // Refunds worden conservatief eerst van items afgeschreven (commissieBase
+  // krimpt), pas overshoot raakt shipping.
+  const releaseAmount = Math.max(0, bundle.totalCost - bundle.refundedAmount);
+  const commissionableAmount = Math.max(0, bundle.totalItemCost - bundle.refundedAmount);
   await releaseEscrow(
     bundle.sellerId,
-    bundle.totalItemCost,
+    releaseAmount,
     `Bezorgd bevestigd: bestelling ${bundle.id}`,
-    bundle.id
+    bundle.id,
+    commissionableAmount,
   );
 
   // Create review if provided
@@ -200,12 +208,15 @@ export async function autoConfirmDeliveries() {
       },
     });
 
-    // Release escrow to seller
+    // Release escrow to seller — refund-aware (zelfde berekening als confirmDelivery)
+    const releaseAmount = Math.max(0, bundle.totalCost - bundle.refundedAmount);
+    const commissionableAmount = Math.max(0, bundle.totalItemCost - bundle.refundedAmount);
     await releaseEscrow(
       bundle.sellerId,
-      bundle.totalItemCost,
+      releaseAmount,
       `Auto-bevestigd na ${AUTO_CONFIRM_DAYS} dagen: bestelling ${bundle.id}`,
-      bundle.id
+      bundle.id,
+      commissionableAmount,
     );
 
     // Notify both parties
@@ -284,19 +295,15 @@ export async function issueSellerRefund(bundleId: string, amount: number, reason
   const description = `Terugbetaling door verkoper: bestelling ${bundle.orderNumber}${reasonSnippet}`;
 
   if (isShipped) {
-    // Calculate how much to deduct from seller's escrow (proportional to item cost)
-    const totalEscrowRemaining = bundle.totalItemCost - (bundle.refundedAmount > bundle.shippingCost
-      ? bundle.refundedAmount - bundle.shippingCost
-      : 0);
-    const escrowDeduction = refundAmount >= maxRefundable
-      ? totalEscrowRemaining
-      : Math.min(refundAmount, totalEscrowRemaining);
-
+    // Sinds Fase 28 zit de hele bundle.totalCost in seller's heldBalance, dus
+    // is het escrow-decrement simpelweg gelijk aan het refund-bedrag — geen
+    // proportionele berekening meer nodig. partialRefundEscrow clamp't
+    // automatisch op heldBalance ≥ 0 als safety-net voor pre-Fase-28 bundles.
     await partialRefundEscrow(
       session.user.id,
       bundle.buyerId,
       refundAmount,
-      escrowDeduction,
+      refundAmount,
       description,
       bundle.id,
     );
@@ -309,8 +316,14 @@ export async function issueSellerRefund(bundleId: string, amount: number, reason
       prisma.user.findUnique({ where: { id: session.user.id } }),
     ]);
     if (!buyer || !seller) return { error: "Gebruiker niet gevonden" };
-    if (seller.balance < refundAmount) {
-      return { error: "Onvoldoende saldo om deze terugbetaling uit te voeren. Stort eerst saldo bij." };
+    // Beschikbaar saldo = balance − reservedBalance (40%-reserves voor actieve bids).
+    // Refund mag deze niet onder 0 trekken; anders raken seller's auction-reserves
+    // onderdekkend en kunnen winning-bid-betalingen later falen.
+    const sellerAvailable = seller.balance - seller.reservedBalance;
+    if (sellerAvailable < refundAmount) {
+      return {
+        error: `Onvoldoende beschikbaar saldo om deze terugbetaling uit te voeren. Beschikbaar: €${sellerAvailable.toFixed(2)}. Stort eerst saldo bij.`,
+      };
     }
 
     const buyerBefore = buyer.balance;
