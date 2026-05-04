@@ -353,9 +353,25 @@ function BundleCard({ bundle, locale }: { bundle: PurchaseBundle; locale: string
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-sm font-bold text-foreground">
-            &euro;{bundle.totalCost.toFixed(2)}
-          </span>
+          {bundle.refundedAmount > 0 ? (
+            <div className="flex flex-col items-end leading-tight">
+              <span className="text-[11px] text-muted-foreground line-through tabular-nums">
+                &euro;{bundle.totalCost.toFixed(2)}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-foreground tabular-nums">
+                  &euro;{(bundle.totalCost - bundle.refundedAmount).toFixed(2)}
+                </span>
+                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 tabular-nums dark:bg-emerald-950 dark:text-emerald-400">
+                  &minus;&euro;{bundle.refundedAmount.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm font-bold text-foreground tabular-nums">
+              &euro;{bundle.totalCost.toFixed(2)}
+            </span>
+          )}
           <button
             onClick={() => setShowOrderDetail(true)}
             className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
