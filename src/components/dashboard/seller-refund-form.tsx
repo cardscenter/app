@@ -5,74 +5,36 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { issueSellerRefund } from "@/actions/purchase";
 import { toast } from "sonner";
-import { RotateCcw, Check } from "lucide-react";
-import Image from "next/image";
-
-type BundleItem = {
-  id: string;
-  cardName: string;
-  condition: string;
-  price: number;
-  imageUrl: string | null;
-  refundedAt: string | null;
-};
+import { RotateCcw } from "lucide-react";
 
 export function SellerRefundForm({
   bundleId,
   buyerName,
   totalCost,
   refundedAmount,
-  items,
 }: {
   bundleId: string;
   buyerName: string;
   totalCost: number;
   refundedAmount: number;
-  items: BundleItem[];
 }) {
   const t = useTranslations("sales");
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
-  const [customAmount, setCustomAmount] = useState("");
-  const [useCustom, setUseCustom] = useState(items.length === 0);
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const maxRefundable = Math.round((totalCost - (refundedAmount ?? 0)) * 100) / 100;
   const isFullyRefunded = maxRefundable <= 0;
 
-  const refundableItems = items.filter((item) => !item.refundedAt);
-
-  const selectedItemTotal = items
-    .filter((item) => selectedItemIds.has(item.id))
-    .reduce((sum, item) => sum + item.price, 0);
-
-  const refundAmount = useCustom
-    ? Math.min(parseFloat(customAmount) || 0, maxRefundable)
-    : Math.min(selectedItemTotal, maxRefundable);
-
+  const refundAmount = Math.min(parseFloat(amount) || 0, maxRefundable);
   const isValid = refundAmount > 0 && refundAmount <= maxRefundable;
-
-  function toggleItem(id: string) {
-    setSelectedItemIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setUseCustom(false);
-  }
-
-  function switchToCustom() {
-    setUseCustom(true);
-    setSelectedItemIds(new Set());
-  }
 
   async function handleRefund() {
     setSubmitting(true);
-    const selectedIds = useCustom ? undefined : Array.from(selectedItemIds);
-    const result = await issueSellerRefund(bundleId, refundAmount, selectedIds);
+    const result = await issueSellerRefund(bundleId, refundAmount, reason.trim() || undefined);
     if (result?.error) {
       toast.error(result.error);
       setSubmitting(false);
@@ -82,8 +44,8 @@ export function SellerRefundForm({
       setSubmitting(false);
       setShowConfirm(false);
       setOpen(false);
-      setCustomAmount("");
-      setSelectedItemIds(new Set());
+      setAmount("");
+      setReason("");
       router.refresh();
     }
   }
@@ -120,82 +82,39 @@ export function SellerRefundForm({
         )}
       </div>
 
-      {/* Item selection (only for claimsale bundles with items) */}
-      {items.length > 0 && (
-        <div className="mt-3">
-          <p className="text-xs font-medium text-muted-foreground mb-2">{t("refundSelectItems")}</p>
-          <div className="space-y-1.5">
-            {items.map((item) => {
-              const isRefunded = !!item.refundedAt;
-              return (
-                <label
-                  key={item.id}
-                  className={`flex items-center gap-3 rounded-lg border p-2 transition-colors ${
-                    isRefunded
-                      ? "border-border/30 bg-muted/20 cursor-not-allowed opacity-60"
-                      : selectedItemIds.has(item.id) && !useCustom
-                        ? "border-orange-300 bg-orange-100/50 dark:border-orange-800 dark:bg-orange-950/40 cursor-pointer"
-                        : "border-border/50 hover:bg-muted/30 cursor-pointer"
-                  }`}
-                >
-                  {isRefunded ? (
-                    <Check className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
-                  ) : (
-                    <input
-                      type="checkbox"
-                      checked={selectedItemIds.has(item.id) && !useCustom}
-                      onChange={() => toggleItem(item.id)}
-                      className="h-4 w-4 rounded border-border text-orange-600 focus:ring-orange-500"
-                    />
-                  )}
-                  {item.imageUrl && (
-                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded bg-muted">
-                      <Image src={item.imageUrl} alt={item.cardName} fill className="object-cover" sizes="32px" />
-                    </div>
-                  )}
-                  <span className={`flex-1 text-sm truncate ${isRefunded ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                    {item.cardName}
-                  </span>
-                  <span className={`text-sm font-medium shrink-0 ${isRefunded ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                    &euro;{item.price.toFixed(2)}
-                  </span>
-                  {isRefunded && (
-                    <span className="text-xs text-green-600 dark:text-green-400 shrink-0">{t("refundedLabel")}</span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Custom amount */}
+      {/* Amount input */}
       <div className="mt-3">
-        {items.length > 0 && (
-          <button
-            onClick={switchToCustom}
-            className={`mb-2 text-xs font-medium transition-colors ${
-              useCustom ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("refundCustomAmount")}
-          </button>
-        )}
-        {(useCustom || items.length === 0) && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground">&euro;</span>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              max={maxRefundable}
-              value={customAmount}
-              onChange={(e) => setCustomAmount(e.target.value)}
-              placeholder={t("refundAmountPlaceholder")}
-              className="w-full rounded-lg glass-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-400"
-            />
-          </div>
-        )}
+        <label className="block text-xs font-medium text-muted-foreground mb-1">
+          {t("refundAmountLabel")}
+        </label>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-foreground">&euro;</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            max={maxRefundable}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder={t("refundAmountPlaceholder")}
+            className="w-full rounded-lg glass-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-400"
+          />
+        </div>
+      </div>
+
+      {/* Reason input (optioneel) */}
+      <div className="mt-3">
+        <label className="block text-xs font-medium text-muted-foreground mb-1">
+          {t("refundReasonLabel")}
+        </label>
+        <input
+          type="text"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={t("refundReasonPlaceholder")}
+          maxLength={120}
+          className="w-full rounded-lg glass-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-400"
+        />
       </div>
 
       {/* Confirm/cancel */}
@@ -211,8 +130,8 @@ export function SellerRefundForm({
           <button
             onClick={() => {
               setOpen(false);
-              setCustomAmount("");
-              setSelectedItemIds(new Set());
+              setAmount("");
+              setReason("");
               setShowConfirm(false);
             }}
             className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50"
@@ -225,6 +144,11 @@ export function SellerRefundForm({
           <p className="text-sm text-orange-800 dark:text-orange-300">
             {t("refundConfirm", { amount: refundAmount.toFixed(2), buyer: buyerName })}
           </p>
+          {reason.trim() && (
+            <p className="mt-1.5 text-xs text-orange-700/80 dark:text-orange-400/80 italic">
+              &ldquo;{reason.trim()}&rdquo;
+            </p>
+          )}
           <div className="mt-3 flex gap-2">
             <button
               onClick={handleRefund}

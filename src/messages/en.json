@@ -1699,19 +1699,18 @@
     "orderDetails": "Order details",
     "refundButton": "Issue refund",
     "refundTitle": "Refund to buyer",
-    "refundDescription": "Send a (partial) refund to the buyer. This will be deducted from the escrow amount.",
+    "refundDescription": "Send a (partial) refund to the buyer. Enter an amount and optionally a reason that the buyer will see.",
     "refundAmountLabel": "Amount",
     "refundAmountPlaceholder": "Enter an amount",
+    "refundReasonLabel": "Reason (optional, visible to buyer)",
+    "refundReasonPlaceholder": "E.g. damaged card, missing item, discount",
     "refundMaxAmount": "Maximum: €{amount}",
     "refundAlreadyRefunded": "Already refunded: €{amount}",
-    "refundSelectItems": "Or select items to refund:",
-    "refundCustomAmount": "Custom amount",
     "refundConfirm": "Are you sure you want to refund €{amount} to {buyer}? This cannot be undone.",
     "refundConfirmButton": "Yes, refund",
     "refundCancelButton": "Cancel",
     "refundSuccess": "€{amount} has been refunded to the buyer.",
-    "refundFullyRefunded": "This order has already been fully refunded.",
-    "refundedLabel": "Refunded"
+    "refundFullyRefunded": "This order has already been fully refunded."
   },
   "purchases": {
     "title": "My Purchases",

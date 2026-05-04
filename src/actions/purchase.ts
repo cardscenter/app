@@ -339,8 +339,17 @@ export async function autoConfirmDeliveries() {
   return { confirmed };
 }
 
-// Seller issues a (partial) refund on a SHIPPED order
-export async function issueSellerRefund(bundleId: string, amount: number, itemIds?: string[]) {
+// Window waarin een verkoper na delivery nog een refund kan uitgeven zonder
+// dispute-flow. Voor Cardmarket-stijl coulance: 30 dagen na deliveredAt op
+// COMPLETED-bundles. Daarna alleen via dispute-flow.
+const COMPLETED_REFUND_WINDOW_DAYS = 30;
+
+// Seller issues a (partial) refund — manueel bedrag + optionele reden.
+// Twee paden:
+//  - SHIPPED: deduct van seller's heldBalance (escrow nog actief)
+//  - COMPLETED binnen 30d na deliveredAt: deduct van seller's balance
+//    (escrow al released; refund gaat uit eigen zak — commissie blijft betaald)
+export async function issueSellerRefund(bundleId: string, amount: number, reason?: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -353,52 +362,102 @@ export async function issueSellerRefund(bundleId: string, amount: number, itemId
 
   if (!bundle) return { error: "Bestelling niet gevonden" };
   if (bundle.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
-  if (bundle.status !== "SHIPPED") return { error: "Kan alleen verzonden bestellingen terugbetalen" };
+
+  // Status-gate: SHIPPED altijd, COMPLETED alleen binnen 30d na delivery.
+  const isShipped = bundle.status === "SHIPPED";
+  const isCompletedInWindow =
+    bundle.status === "COMPLETED"
+    && bundle.deliveredAt !== null
+    && Date.now() - bundle.deliveredAt.getTime() <= COMPLETED_REFUND_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  if (!isShipped && !isCompletedInWindow) {
+    if (bundle.status === "COMPLETED") {
+      return { error: `Refund is alleen mogelijk binnen ${COMPLETED_REFUND_WINDOW_DAYS} dagen na levering. Open een geschil voor latere claims.` };
+    }
+    return { error: "Refund is alleen mogelijk op verzonden of recent geleverde bestellingen" };
+  }
 
   const maxRefundable = bundle.totalCost - bundle.refundedAmount;
   if (maxRefundable <= 0) return { error: "Deze bestelling is al volledig terugbetaald" };
 
   // Round to 2 decimals
   const refundAmount = Math.min(Math.round(amount * 100) / 100, Math.round(maxRefundable * 100) / 100);
+  if (refundAmount <= 0) return { error: "Ongeldig bedrag" };
 
-  // Calculate how much to deduct from seller's escrow (proportional to item cost)
-  // If refunding full remaining amount, deduct remaining escrow. Otherwise, proportional.
-  const totalEscrowRemaining = bundle.totalItemCost - (bundle.refundedAmount > bundle.shippingCost
-    ? bundle.refundedAmount - bundle.shippingCost
-    : 0);
-  const escrowDeduction = refundAmount >= maxRefundable
-    ? totalEscrowRemaining
-    : Math.min(refundAmount, totalEscrowRemaining);
+  const reasonSnippet = reason && reason.trim().length > 0 ? ` — ${reason.trim().slice(0, 120)}` : "";
+  const description = `Terugbetaling door verkoper: bestelling ${bundle.orderNumber}${reasonSnippet}`;
 
-  await partialRefundEscrow(
-    session.user.id,    // seller
-    bundle.buyerId,     // buyer gets refund
-    refundAmount,
-    escrowDeduction,
-    `Terugbetaling door verkoper: bestelling ${bundle.orderNumber}`,
-    bundle.id
-  );
+  if (isShipped) {
+    // Calculate how much to deduct from seller's escrow (proportional to item cost)
+    const totalEscrowRemaining = bundle.totalItemCost - (bundle.refundedAmount > bundle.shippingCost
+      ? bundle.refundedAmount - bundle.shippingCost
+      : 0);
+    const escrowDeduction = refundAmount >= maxRefundable
+      ? totalEscrowRemaining
+      : Math.min(refundAmount, totalEscrowRemaining);
 
-  // Update refunded amount on bundle
+    await partialRefundEscrow(
+      session.user.id,
+      bundle.buyerId,
+      refundAmount,
+      escrowDeduction,
+      description,
+      bundle.id,
+    );
+  } else {
+    // COMPLETED-pad: escrow is al released. Deduct rechtstreeks van seller.balance,
+    // krediteer buyer.balance, log één Transaction-rij voor buyer (audit-trail in
+    // refund-history). Seller-side Transaction wordt apart gelogd.
+    const [buyer, seller] = await Promise.all([
+      prisma.user.findUnique({ where: { id: bundle.buyerId } }),
+      prisma.user.findUnique({ where: { id: session.user.id } }),
+    ]);
+    if (!buyer || !seller) return { error: "Gebruiker niet gevonden" };
+    if (seller.balance < refundAmount) {
+      return { error: "Onvoldoende saldo om deze terugbetaling uit te voeren. Stort eerst saldo bij." };
+    }
+
+    const buyerBefore = buyer.balance;
+    const sellerBefore = seller.balance;
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: buyer.id },
+        data: { balance: buyerBefore + refundAmount },
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: buyer.id,
+          type: "PURCHASE",
+          amount: refundAmount,
+          balanceBefore: buyerBefore,
+          balanceAfter: buyerBefore + refundAmount,
+          description,
+          relatedShippingBundleId: bundle.id,
+        },
+      }),
+      prisma.user.update({
+        where: { id: seller.id },
+        data: { balance: sellerBefore - refundAmount },
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: seller.id,
+          type: "SALE",
+          amount: -refundAmount,
+          balanceBefore: sellerBefore,
+          balanceAfter: sellerBefore - refundAmount,
+          description: `Terugbetaling aan koper: bestelling ${bundle.orderNumber}${reasonSnippet}`,
+          relatedShippingBundleId: bundle.id,
+        },
+      }),
+    ]);
+  }
+
+  // Update refunded amount op bundle (geldt voor beide paden)
   await prisma.shippingBundle.update({
     where: { id: bundleId },
     data: { refundedAmount: bundle.refundedAmount + refundAmount },
   });
-
-  // Mark specific items as refunded AND release them so the seller can re-list
-  // them on the same (or a fresh) claimsale. Without this, refunded items get
-  // stuck SOLD with a stale shippingBundleId.
-  if (itemIds && itemIds.length > 0) {
-    await prisma.claimsaleItem.updateMany({
-      where: { id: { in: itemIds }, shippingBundleId: bundleId },
-      data: {
-        status: "AVAILABLE",
-        buyerId: null,
-        shippingBundleId: null,
-        refundedAt: new Date(),
-      },
-    });
-  }
 
   // Notify buyer
   await createNotification(
@@ -406,7 +465,7 @@ export async function issueSellerRefund(bundleId: string, amount: number, itemId
     "ORDER_REFUND",
     "Terugbetaling ontvangen",
     `De verkoper heeft €${refundAmount.toFixed(2)} terugbetaald voor bestelling ${bundle.orderNumber}.`,
-    "/dashboard/aankopen"
+    "/dashboard/aankopen",
   );
 
   return { success: true, refundedAmount: refundAmount };

@@ -1699,19 +1699,18 @@
     "orderDetails": "Orderdetails",
     "refundButton": "Bedrag terugstorten",
     "refundTitle": "Terugbetaling aan koper",
-    "refundDescription": "Stuur een (gedeeltelijke) terugbetaling naar de koper. Dit wordt van het escrow-bedrag afgetrokken.",
+    "refundDescription": "Stuur een (gedeeltelijke) terugbetaling naar de koper. Vul een bedrag in en optioneel een reden voor de koper.",
     "refundAmountLabel": "Bedrag",
     "refundAmountPlaceholder": "Voer een bedrag in",
+    "refundReasonLabel": "Reden (optioneel, zichtbaar voor koper)",
+    "refundReasonPlaceholder": "Bijv. beschadigde kaart, ontbrekende item, korting",
     "refundMaxAmount": "Maximaal: €{amount}",
     "refundAlreadyRefunded": "Al terugbetaald: €{amount}",
-    "refundSelectItems": "Of selecteer items om terug te betalen:",
-    "refundCustomAmount": "Eigen bedrag",
     "refundConfirm": "Weet je zeker dat je €{amount} wilt terugbetalen aan {buyer}? Dit kan niet ongedaan worden gemaakt.",
     "refundConfirmButton": "Ja, terugbetalen",
     "refundCancelButton": "Annuleren",
     "refundSuccess": "€{amount} is terugbetaald aan de koper.",
-    "refundFullyRefunded": "Deze bestelling is al volledig terugbetaald.",
-    "refundedLabel": "Terugbetaald"
+    "refundFullyRefunded": "Deze bestelling is al volledig terugbetaald."
   },
   "purchases": {
     "title": "Mijn Aankopen",

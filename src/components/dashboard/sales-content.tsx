@@ -689,7 +689,6 @@ function SaleBundleCard({ bundle, locale }: { bundle: SaleBundle; locale: string
                   buyerName={bundle.buyerName}
                   totalCost={bundle.totalCost}
                   refundedAmount={bundle.refundedAmount}
-                  items={bundle.items}
                 />
               </div>
             </div>

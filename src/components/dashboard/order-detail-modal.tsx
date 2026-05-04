@@ -317,6 +317,17 @@ export function OrderDetailModal({
   const sortedItems = applySort(allItems, sortKey);
   const sortLabel = tc(`orderDetail.${sortI18nKey(sortKey)}`);
 
+  // Refund-eligibility: SHIPPED altijd; COMPLETED binnen 30 dagen na deliveredAt.
+  // Daarbuiten is dispute-flow de juiste route. Synchroniseert met server-guard
+  // in issueSellerRefund (purchase.ts COMPLETED_REFUND_WINDOW_DAYS).
+  const refundEligible =
+    order.status === "SHIPPED"
+    || (
+      order.status === "COMPLETED"
+      && order.deliveredAt !== null
+      && Date.now() - new Date(order.deliveredAt).getTime() <= 30 * 24 * 60 * 60 * 1000
+    );
+
   // Refund-history opbouw: per-item refunds + eventueel restant uit custom-amount
   // refunds die niet aan een item gekoppeld waren. items zijn al gegroepeerd
   // (qty + subtotal) — refunded en niet-refunded zitten in aparte buckets door
@@ -576,22 +587,14 @@ export function OrderDetailModal({
           </div>
         </div>
 
-        {/* Inline refund-actie (seller, SHIPPED only) */}
-        {isSeller && order.status === "SHIPPED" && (
+        {/* Inline refund-actie — SHIPPED altijd, COMPLETED binnen 30d na delivery */}
+        {isSeller && refundEligible && (
           <div className="mb-4">
             <SellerRefundForm
               bundleId={order.bundleId}
               buyerName={buyerFullName || order.buyerName || "—"}
               totalCost={order.totalCost}
               refundedAmount={order.refundedAmount}
-              items={order.items.map((i) => ({
-                id: i.id,
-                cardName: i.cardName,
-                condition: i.condition,
-                price: i.price,
-                imageUrl: i.imageUrl,
-                refundedAt: i.refundedAt,
-              }))}
             />
           </div>
         )}
