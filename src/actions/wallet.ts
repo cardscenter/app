@@ -230,6 +230,16 @@ export async function releaseEscrow(userId: string, amount: number, description:
   const commissionAmount = Math.round(commissionBase * commissionRate * 100) / 100;
   const sellerReceives = amount - commissionAmount;
 
+  // Clamp escrow-decrement op heldBalance ≥ 0. Negatief escrow betekent dat
+  // er meer is uitbetaald dan vastgehouden — een data-inconsistentie. We
+  // loggen het zodat het zichtbaar wordt en verwerken zo veel mogelijk.
+  const safeEscrowDecrement = Math.min(amount, Math.max(user.heldBalance, 0));
+  if (safeEscrowDecrement < amount) {
+    console.error(
+      `[releaseEscrow] heldBalance shortfall for user ${userId}: trying to release €${amount.toFixed(2)} but only €${user.heldBalance.toFixed(2)} held. Bundle: ${relatedShippingBundleId ?? "n/a"}. Seller balance still credited fully.`,
+    );
+  }
+
   const balanceBefore = user.balance;
   const balanceAfter = balanceBefore + sellerReceives;
 
@@ -238,7 +248,7 @@ export async function releaseEscrow(userId: string, amount: number, description:
       where: { id: userId },
       data: {
         balance: balanceAfter,
-        heldBalance: { decrement: amount },
+        heldBalance: { decrement: safeEscrowDecrement },
       },
     }),
     prisma.transaction.create({
@@ -316,8 +326,22 @@ export async function partialRefundEscrow(sellerId: string, buyerId: string, ref
 
 // Internal: refund escrow → return funds to buyer, reduce seller heldBalance
 export async function refundEscrow(sellerId: string, buyerId: string, amount: number, sellerItemAmount: number, description: string, relatedShippingBundleId?: string) {
-  const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
+  const [buyer, seller] = await Promise.all([
+    prisma.user.findUnique({ where: { id: buyerId } }),
+    prisma.user.findUnique({ where: { id: sellerId } }),
+  ]);
   if (!buyer) throw new Error("Buyer not found");
+  if (!seller) throw new Error("Seller not found");
+
+  // Clamp escrow-decrement op heldBalance ≥ 0 — zelfde safety-net als bij
+  // releaseEscrow en partialRefundEscrow. Buyer wordt nog steeds volledig
+  // gerefund, maar de heldBalance-decrement wordt niet groter dan beschikbaar.
+  const safeEscrowDecrement = Math.min(sellerItemAmount, Math.max(seller.heldBalance, 0));
+  if (safeEscrowDecrement < sellerItemAmount) {
+    console.error(
+      `[refundEscrow] heldBalance shortfall for seller ${sellerId}: trying to release €${sellerItemAmount.toFixed(2)} but only €${seller.heldBalance.toFixed(2)} held. Bundle: ${relatedShippingBundleId ?? "n/a"}. Buyer refund still processed fully.`,
+    );
+  }
 
   const buyerBalanceBefore = buyer.balance;
   const buyerBalanceAfter = buyerBalanceBefore + amount;
@@ -339,10 +363,10 @@ export async function refundEscrow(sellerId: string, buyerId: string, amount: nu
         relatedShippingBundleId,
       },
     }),
-    // Reduce seller's held balance
+    // Reduce seller's held balance — clamped op 0
     prisma.user.update({
       where: { id: sellerId },
-      data: { heldBalance: { decrement: sellerItemAmount } },
+      data: { heldBalance: { decrement: safeEscrowDecrement } },
     }),
   ]);
 }

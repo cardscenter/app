@@ -36,6 +36,7 @@ export async function requestWithdrawal(formData: FormData) {
     select: {
       balance: true,
       reservedBalance: true,
+      heldBalance: true,
       iban: true,
       accountHolderName: true,
     },
@@ -46,6 +47,11 @@ export async function requestWithdrawal(formData: FormData) {
     return { error: "Vul eerst je bankgegevens in via Dashboard → Profiel." };
   }
 
+  // BELANGRIJK: uitbetalingen werken UITSLUITEND op `balance`. heldBalance
+  // (escrow voor lopende verkopen) komt pas vrij bij delivery-confirm via
+  // releaseEscrow. Available is dus expliciet `balance − reservedBalance`,
+  // zónder heldBalance. Een verkoper kan geen uitbetaling doen op geld dat
+  // nog in escrow staat — dat zou de koper-bescherming ondermijnen.
   const available = user.balance - user.reservedBalance;
   if (amount > available) {
     return { error: `Onvoldoende beschikbaar saldo. Beschikbaar: €${available.toFixed(2)}.` };

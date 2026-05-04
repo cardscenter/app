@@ -111,6 +111,26 @@ async function cleanupOldData() {
     ...new Set(oldItems.map((i) => i.shippingBundleId).filter((id): id is string => id !== null)),
   ];
 
+  // Voor we de bundles deleten: rol de heldBalance terug die we eerder
+  // hebben opgevoerd. Anders blijven sellers met "spook-escrow" zitten.
+  if (bundleIds.length > 0) {
+    const oldBundles = await prisma.shippingBundle.findMany({
+      where: { id: { in: bundleIds }, status: { in: ["PAID", "SHIPPED"] } },
+      select: { sellerId: true, totalCost: true, refundedAmount: true },
+    });
+    const sellerEscrowDecrement = new Map<string, number>();
+    for (const b of oldBundles) {
+      const delta = b.totalCost - b.refundedAmount;
+      sellerEscrowDecrement.set(b.sellerId, (sellerEscrowDecrement.get(b.sellerId) ?? 0) + delta);
+    }
+    for (const [sellerId, decrement] of sellerEscrowDecrement) {
+      await prisma.user.update({
+        where: { id: sellerId },
+        data: { heldBalance: { decrement } },
+      });
+    }
+  }
+
   // Delete in dependency order
   await prisma.claimsaleItem.deleteMany({ where: { claimsaleId: { in: saleIds } } });
   if (bundleIds.length > 0) {
@@ -225,6 +245,23 @@ async function createBundle(cfg: BundleConfig) {
       updatedAt: purchaseDate,
     },
   });
+
+  // Wallet-state simuleren zodat heldBalance/balance reflecteert wat de status
+  // logisch impliceert. Anders raakt 't escrow-systeem inconsistent zodra een
+  // tester delivery bevestigt of een refund uitgeeft op een testbundle.
+  if (cfg.status === "PAID" || cfg.status === "SHIPPED") {
+    // PAID/SHIPPED: hele totalCost zit in seller's heldBalance, eventuele
+    // refundedAmount is al uitgekeerd aan buyer (niet meer in escrow).
+    const escrowDelta = totalCost - refundedAmount;
+    if (escrowDelta > 0) {
+      await prisma.user.update({
+        where: { id: cfg.sellerId },
+        data: { heldBalance: { increment: escrowDelta } },
+      });
+    }
+  }
+  // CANCELLED + COMPLETED hoeven geen heldBalance — bij CANCELLED is alles
+  // teruggestort, bij COMPLETED is alles aan seller's balance vrijgegeven.
 
   // Items
   for (let i = 0; i < items.length; i++) {
