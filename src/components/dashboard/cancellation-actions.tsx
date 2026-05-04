@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Ban } from "lucide-react";
+import { Ban, Clock } from "lucide-react";
 import { toast } from "sonner";
 import {
   requestCancellation,
@@ -37,12 +37,17 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
   const [details, setDetails] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionNote, setRejectionNote] = useState("");
+  // Bumpen na een mutatie zodat de useEffect opnieuw fetcht — router.refresh()
+  // re-fetcht alleen RSC-payload, deze client-component re-runt niet vanzelf.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (bundleStatus !== "PAID") {
       setLoading(false);
+      setRequest(null);
       return;
     }
+    setLoading(true);
     getActiveCancellationRequest(bundleId).then((r) => {
       if (r) {
         setRequest({
@@ -52,10 +57,12 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
           expiresAt: r.expiresAt.toISOString(),
           proposedBy: r.proposedBy,
         });
+      } else {
+        setRequest(null);
       }
       setLoading(false);
     });
-  }, [bundleId, bundleStatus]);
+  }, [bundleId, bundleStatus, refreshKey]);
 
   if (bundleStatus !== "PAID") return null;
   if (loading) return null;
@@ -75,6 +82,7 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
       toast.success(t("requestSubmitted"));
       setShowRequestForm(false);
       setDetails("");
+      setRefreshKey((k) => k + 1);
       router.refresh();
     });
   }
@@ -89,6 +97,7 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
         return;
       }
       toast.success(t("accepted"));
+      setRefreshKey((k) => k + 1);
       router.refresh();
     });
   }
@@ -104,8 +113,22 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
       toast.success(t("rejected"));
       setShowRejectForm(false);
       setRejectionNote("");
+      setRefreshKey((k) => k + 1);
       router.refresh();
     });
+  }
+
+  // Format helper voor "Verloopt over X dagen/uur/minuten" — i18n-vriendelijk
+  // doordat we per granulariteit een aparte key gebruiken
+  function formatExpiresIn(expiresAt: Date): string {
+    const ms = expiresAt.getTime() - Date.now();
+    if (ms <= 0) return t("expiresInExpired");
+    const minutes = Math.ceil(ms / (1000 * 60));
+    if (minutes < 60) return t("expiresInMinutes", { count: minutes });
+    const hours = Math.ceil(minutes / 60);
+    if (hours < 24) return t("expiresInHours", { count: hours });
+    const days = Math.ceil(hours / 24);
+    return t("expiresInDays", { count: days });
   }
 
   // Pending request: I'm the proposer
@@ -113,9 +136,33 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
     const expires = new Date(request.expiresAt);
     return (
       <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
-        <p className="font-medium text-amber-700 dark:text-amber-300">{t("waitingForResponse")}</p>
-        <p className="text-xs text-amber-600 dark:text-amber-400">
-          {t("expiresOn", { date: expires.toLocaleDateString("nl-NL") })}
+        <p className="font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+          <Clock className="h-4 w-4" />
+          {t("waitingForResponse")}
+        </p>
+
+        {/* Wat ik heb ingediend */}
+        <dl className="mt-2 space-y-1 text-xs">
+          <div className="flex gap-1.5">
+            <dt className="text-muted-foreground shrink-0">{t("reasonLabel")}:</dt>
+            <dd className="font-medium text-foreground">{t(`reason.${request.reason}` as never)}</dd>
+          </div>
+          {request.details && (
+            <div>
+              <dt className="text-muted-foreground">{t("detailsLabel")}:</dt>
+              <dd className="italic text-foreground">&ldquo;{request.details}&rdquo;</dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Wat de wederpartij gaat doen */}
+        <p className="mt-2 text-xs text-amber-700/90 dark:text-amber-300/90">
+          {t("proposerExplain")}
+        </p>
+
+        {/* Countdown */}
+        <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400 tabular-nums">
+          {formatExpiresIn(expires)}
         </p>
       </div>
     );
@@ -123,15 +170,32 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
 
   // Pending request: I'm the responder
   if (request) {
+    const expires = new Date(request.expiresAt);
     return (
       <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
         <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
           {t("incomingRequest", { name: request.proposedBy.displayName })}
         </p>
-        <p className="mt-1 text-xs text-foreground">
-          {t("reasonLabel")}: {t(`reason.${request.reason}` as never)}
+        <dl className="mt-2 space-y-1 text-xs">
+          <div className="flex gap-1.5">
+            <dt className="text-muted-foreground shrink-0">{t("reasonLabel")}:</dt>
+            <dd className="font-medium text-foreground">{t(`reason.${request.reason}` as never)}</dd>
+          </div>
+          {request.details && (
+            <div>
+              <dt className="text-muted-foreground">{t("detailsLabel")}:</dt>
+              <dd className="italic text-foreground">&ldquo;{request.details}&rdquo;</dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Countdown + uitleg wat-bij-niet-reageren */}
+        <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400 tabular-nums">
+          {formatExpiresIn(expires)}
         </p>
-        {request.details && <p className="mt-1 text-xs text-muted-foreground">{request.details}</p>}
+        <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-300/80">
+          {t("responderExplain")}
+        </p>
 
         {showRejectForm ? (
           <div className="mt-3 space-y-2">
