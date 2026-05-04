@@ -325,9 +325,15 @@ export function OrderDetailModal({
       body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px;color:#111}
       h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:16px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}
       .meta{color:#666;font-size:13px;margin-bottom:16px}
+      .status{background:#f5f5f5;padding:8px 12px;border-radius:6px;margin:8px 0;font-size:12px;color:#444}
+      .status strong{color:#111}
       table{width:100%;border-collapse:collapse;margin:8px 0}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #eee;font-size:13px}
       th{font-weight:600;background:#f9f9f9}.r{text-align:right}.tot{font-weight:700;border-top:2px solid #333}
       .addr{background:#f5f5f5;padding:12px;border-radius:6px;margin:8px 0;font-size:13px}
+      .strike{text-decoration:line-through;color:#999}
+      .refund{color:#047857}
+      .ship{background:#fafafa;padding:10px 12px;border-left:3px solid #0ea5e9;margin:8px 0;font-size:12px;color:#444}
+      .ship strong{color:#111}
       .foot{margin-top:24px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:8px}
       @media print{body{padding:0}}
     </style></head><body>${content.innerHTML}
@@ -352,6 +358,22 @@ export function OrderDetailModal({
             {order.buyerName && ` — Koper: ${buyerFullName || order.buyerName}`}
             {order.sellerName && ` — Verkoper: ${order.sellerName}`}
           </div>
+          {/* Compact status-regel — vervangt de Cardmarket-stijl tijdlijn op papier */}
+          <div className="status">
+            {buildTimelineSteps(order).map((step, i, arr) => (
+              <span key={step.key}>
+                {step.state === "complete" || step.state === "current" ? (
+                  <strong>{step.label}</strong>
+                ) : step.state === "danger" ? (
+                  <span style={{ color: "#b91c1c" }}>{step.label}</span>
+                ) : (
+                  <span style={{ color: "#999" }}>{step.label}</span>
+                )}
+                {step.date && ` ${formatShortDate(step.date)}`}
+                {i < arr.length - 1 && " · "}
+              </span>
+            ))}
+          </div>
           {hasAddress && (<>
             <h2>Verzendadres</h2>
             <div className="addr">
@@ -361,18 +383,64 @@ export function OrderDetailModal({
               {order.buyerCountry}
             </div>
           </>)}
+          {order.deliveryMethod !== "PICKUP" && order.shippedAt && (
+            <div className="ship">
+              {shippingLabel && <><strong>{shippingLabel}</strong><br/></>}
+              Verzonden op {new Date(order.shippedAt).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}
+              {order.trackingUrl && <><br/>Track-and-trace: {order.trackingUrl}</>}
+            </div>
+          )}
           <h2>Items ({sortedItems.length}) — gesorteerd op: {sortLabel}</h2>
-          <table><thead><tr><th>#</th><th>Item</th><th>Nr.</th><th>Conditie</th>{isSeller && <th>Ref.</th>}<th className="r">Prijs</th></tr></thead>
-          <tbody>{sortedItems.map((item, i) => (
-            <tr key={i}><td>{i+1}</td><td>{item.name}{item.refundedAt ? " (refund)" : ""}</td><td>{item.reference || "—"}</td><td>{item.condition || "—"}</td>{isSeller && <td>{item.sellerNote || "—"}</td>}<td className="r">&euro;{item.price.toFixed(2)}</td></tr>
-          ))}</tbody></table>
+          <table><thead><tr><th>#</th><th>Aantal</th><th>Item</th><th>Nr.</th><th>Conditie</th>{isSeller && <th>Notitie</th>}<th className="r">Prijs</th></tr></thead>
+          <tbody>{sortedItems.map((item, i) => {
+            const refunded = !!item.refundedAt;
+            const lineCls = refunded ? "strike" : "";
+            return (
+              <tr key={item.id}>
+                <td className={lineCls}>{i+1}</td>
+                <td className={lineCls}>{item.quantity > 1 ? `${item.quantity}×` : "1×"}</td>
+                <td className={lineCls}>{item.name}{refunded ? " (refund)" : ""}</td>
+                <td className={lineCls}>{item.reference || "—"}</td>
+                <td className={lineCls}>{item.condition || "—"}</td>
+                {isSeller && <td className={lineCls}>{item.sellerNote || "—"}</td>}
+                <td className={`r ${lineCls}`}>&euro;{(item.quantity > 1 ? item.price * item.quantity : item.price).toFixed(2)}</td>
+              </tr>
+            );
+          })}</tbody></table>
           <h2>Overzicht</h2>
           <table><tbody>
             <tr><td>Items ({sortedItems.length})</td><td className="r">&euro;{order.totalItemCost.toFixed(2)}</td></tr>
             <tr><td>Verzendkosten{shippingLabel && ` (${shippingLabel})`}</td><td className="r">&euro;{order.shippingCost.toFixed(2)}</td></tr>
-            <tr className="tot"><td><strong>Totaal</strong></td><td className="r"><strong>&euro;{order.totalCost.toFixed(2)}</strong></td></tr>
+            {order.refundedAmount > 0 && (
+              <tr className="refund"><td>Refund</td><td className="r">−&euro;{order.refundedAmount.toFixed(2)}</td></tr>
+            )}
+            <tr className="tot">
+              <td><strong>Totaal</strong></td>
+              <td className="r">
+                {order.refundedAmount > 0 ? (
+                  <><span className="strike">&euro;{order.totalCost.toFixed(2)}</span> <strong>&euro;{netTotal.toFixed(2)}</strong></>
+                ) : (
+                  <strong>&euro;{order.totalCost.toFixed(2)}</strong>
+                )}
+              </td>
+            </tr>
           </tbody></table>
-          {order.trackingUrl && (<><h2>Tracking</h2><p>{order.trackingUrl}</p></>)}
+          {order.refundedAmount > 0 && (<>
+            <h2>Refund-historie</h2>
+            <table><tbody>
+              {refundedItemRows.map((item) => (
+                <tr key={item.id} className="refund">
+                  <td>{(item.quantity ?? 1) > 1 ? `${item.quantity}× ` : ""}{item.cardName}</td>
+                  <td>{item.refundedAt ? formatShortDate(item.refundedAt) : ""}</td>
+                  <td className="r">−&euro;{(item.price * (item.quantity ?? 1)).toFixed(2)}</td>
+                </tr>
+              ))}
+              {customRefundDelta > 0.005 && (
+                <tr className="refund"><td colSpan={2}>Aanvullende refund op bundle</td><td className="r">−&euro;{customRefundDelta.toFixed(2)}</td></tr>
+              )}
+              <tr className="tot refund"><td colSpan={2}><strong>Totaal terugbetaald</strong></td><td className="r"><strong>&euro;{order.refundedAmount.toFixed(2)}</strong></td></tr>
+            </tbody></table>
+          </>)}
         </div>
 
         {/* Visual header */}
