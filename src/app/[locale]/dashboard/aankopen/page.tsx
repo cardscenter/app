@@ -136,6 +136,32 @@ export default async function MyPurchasesPage() {
     },
   });
 
+  // Refund-events per bundle (Fase 28). Eén Transaction-rij per refund op
+  // buyer-side — geschreven door zowel SHIPPED-pad (partialRefundEscrow) als
+  // COMPLETED-pad (manueel uit balance). Description-prefix "Gedeeltelijke
+  // terugbetaling" identificeert ze. Reden zit als suffix " — <reden>".
+  const bundleIds = bundles.map((b) => b.id);
+  const refundTransactions = bundleIds.length > 0
+    ? await prisma.transaction.findMany({
+        where: {
+          userId,
+          relatedShippingBundleId: { in: bundleIds },
+          description: { startsWith: "Gedeeltelijke terugbetaling" },
+        },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, amount: true, createdAt: true, description: true, relatedShippingBundleId: true },
+      })
+    : [];
+  const refundEventsByBundle = new Map<string, { id: string; amount: number; createdAt: string; reason: string | null }[]>();
+  for (const tx of refundTransactions) {
+    if (!tx.relatedShippingBundleId) continue;
+    const reasonMatch = tx.description.match(/—\s*(.+?)$/);
+    const reason = reasonMatch ? reasonMatch[1].trim() : null;
+    const list = refundEventsByBundle.get(tx.relatedShippingBundleId) ?? [];
+    list.push({ id: tx.id, amount: tx.amount, createdAt: tx.createdAt.toISOString(), reason });
+    refundEventsByBundle.set(tx.relatedShippingBundleId, list);
+  }
+
   // Voor pickup-bundles zonder bundle-proposal-conversation: zoek bestaande
   // listing-conversation tussen (buyer, seller, listing) zodat de chat-knop
   // direct naar de juiste chat navigeert. Niet voor multi-listing bundles.
@@ -206,6 +232,7 @@ export default async function MyPurchasesPage() {
     shippedAt: b.shippedAt?.toISOString() ?? null,
     deliveredAt: b.deliveredAt?.toISOString() ?? null,
     refundedAmount: b.refundedAmount ?? 0,
+    refundEvents: refundEventsByBundle.get(b.id) ?? [],
     pickupScheduleStatus: b.pickupSchedule?.status ?? null,
     createdAt: b.createdAt.toISOString(),
     sourceType: b.auctionId

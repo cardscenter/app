@@ -44,6 +44,13 @@ type BundleItem = {
   subtotal?: number;
 };
 
+type RefundEvent = {
+  id: string;
+  amount: number;
+  createdAt: string;
+  reason: string | null;
+};
+
 type PurchaseBundle = {
   id: string;
   orderNumber: string;
@@ -61,6 +68,7 @@ type PurchaseBundle = {
   shippedAt: string | null;
   deliveredAt: string | null;
   refundedAmount: number;
+  refundEvents: RefundEvent[];
   pickupScheduleStatus: string | null;
   createdAt: string;
   sourceType: "claimsale" | "auction" | "listing";
@@ -383,6 +391,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
             shippedAt: bundle.shippedAt,
             deliveredAt: bundle.deliveredAt,
             refundedAmount: bundle.refundedAmount,
+            refundEvents: bundle.refundEvents,
             pickupScheduleStatus: bundle.pickupScheduleStatus,
             items: bundle.items,
             sellerName: bundle.sellerName,

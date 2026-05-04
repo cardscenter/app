@@ -45,6 +45,13 @@ type DisputeInfo = {
   reason: string;
 };
 
+type RefundEvent = {
+  id: string;
+  amount: number;
+  createdAt: string;
+  reason: string | null;
+};
+
 type SaleBundle = {
   id: string;
   orderNumber: string;
@@ -63,6 +70,7 @@ type SaleBundle = {
   shippedAt: string | null;
   deliveredAt: string | null;
   refundedAmount: number;
+  refundEvents: RefundEvent[];
   pickupScheduleStatus: string | null;
   createdAt: string;
   sourceType: "claimsale" | "auction" | "listing";
@@ -472,6 +480,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
             shippedAt: bundle.shippedAt,
             deliveredAt: bundle.deliveredAt,
             refundedAmount: bundle.refundedAmount,
+            refundEvents: bundle.refundEvents,
             pickupScheduleStatus: bundle.pickupScheduleStatus,
             items: bundle.items,
             buyerName: bundle.buyerName,

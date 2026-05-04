@@ -218,6 +218,13 @@ type BundleItem = {
   subtotal?: number;
 };
 
+type RefundEvent = {
+  id: string;
+  amount: number;
+  createdAt: string;
+  reason: string | null;
+};
+
 type OrderData = {
   bundleId: string;
   orderNumber: string;
@@ -237,6 +244,7 @@ type OrderData = {
   shippedAt: string | null;
   deliveredAt: string | null;
   refundedAmount: number;
+  refundEvents: RefundEvent[];
   pickupScheduleStatus: string | null;
   items: BundleItem[];
   buyerName?: string;
@@ -328,16 +336,9 @@ export function OrderDetailModal({
       && Date.now() - new Date(order.deliveredAt).getTime() <= 30 * 24 * 60 * 60 * 1000
     );
 
-  // Refund-history opbouw: per-item refunds + eventueel restant uit custom-amount
-  // refunds die niet aan een item gekoppeld waren. items zijn al gegroepeerd
-  // (qty + subtotal) — refunded en niet-refunded zitten in aparte buckets door
-  // de page-level group-key-aanpassing, dus subtotal klopt per groep.
-  const refundedItemRows = order.items.filter((i) => i.refundedAt);
-  const itemsRefundSum = refundedItemRows.reduce(
-    (sum, i) => sum + i.price * (i.quantity ?? 1),
-    0,
-  );
-  const customRefundDelta = Math.max(0, order.refundedAmount - itemsRefundSum);
+  // Refund-history per event (Fase 28). Eén Transaction-rij per refund,
+  // opgehaald in de page-query op buyer-side description-prefix. Reason is
+  // optioneel (uit description-suffix).
   const netTotal = Math.max(0, order.totalCost - order.refundedAmount);
 
   function handlePrint() {
@@ -452,15 +453,16 @@ export function OrderDetailModal({
           {order.refundedAmount > 0 && (<>
             <h2>Refund-historie</h2>
             <table><tbody>
-              {refundedItemRows.map((item) => (
-                <tr key={item.id} className="refund">
-                  <td>{(item.quantity ?? 1) > 1 ? `${item.quantity}× ` : ""}{item.cardName}</td>
-                  <td>{item.refundedAt ? formatShortDate(item.refundedAt) : ""}</td>
-                  <td className="r">−&euro;{(item.price * (item.quantity ?? 1)).toFixed(2)}</td>
-                </tr>
-              ))}
-              {customRefundDelta > 0.005 && (
-                <tr className="refund"><td colSpan={2}>Aanvullende refund op bundle</td><td className="r">−&euro;{customRefundDelta.toFixed(2)}</td></tr>
+              {order.refundEvents.length > 0 ? (
+                order.refundEvents.map((ev) => (
+                  <tr key={ev.id} className="refund">
+                    <td>{formatShortDate(ev.createdAt)}</td>
+                    <td>{ev.reason || "—"}</td>
+                    <td className="r">−&euro;{ev.amount.toFixed(2)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr className="refund"><td colSpan={2}>Refund op bundle</td><td className="r">−&euro;{order.refundedAmount.toFixed(2)}</td></tr>
               )}
               <tr className="tot refund"><td colSpan={2}><strong>Totaal terugbetaald</strong></td><td className="r"><strong>&euro;{order.refundedAmount.toFixed(2)}</strong></td></tr>
             </tbody></table>
@@ -628,34 +630,36 @@ export function OrderDetailModal({
           </div>
         </div>
 
-        {/* Refund-historie (zichtbaar voor beide partijen) */}
+        {/* Refund-historie (zichtbaar voor beide partijen) — één regel per refund-event */}
         {order.refundedAmount > 0 && (
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
             <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
               <RotateCcw className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
               {tc("orderDetail.refundHistoryTitle")}
             </h3>
-            <div className="space-y-1">
-              {refundedItemRows.map((item) => (
-                <div key={item.id} className="flex justify-between gap-3 text-xs">
-                  <span className="text-muted-foreground truncate">
-                    {(item.quantity ?? 1) > 1 ? `${item.quantity}× ` : ""}{item.cardName}
-                    {item.refundedAt && (
-                      <span className="ml-2 text-[11px] text-muted-foreground/70 tabular-nums">
-                        {formatShortDate(item.refundedAt)}
+            <div className="space-y-2">
+              {order.refundEvents.length > 0 ? (
+                order.refundEvents.map((ev) => (
+                  <div key={ev.id} className="flex justify-between gap-3 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-muted-foreground tabular-nums">
+                        {formatShortDate(ev.createdAt)}
                       </span>
-                    )}
-                  </span>
-                  <span className="text-emerald-700 dark:text-emerald-400 shrink-0 tabular-nums">
-                    −&euro;{(item.price * (item.quantity ?? 1)).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-              {customRefundDelta > 0.005 && (
+                      {ev.reason && (
+                        <span className="ml-2 text-foreground italic">&ldquo;{ev.reason}&rdquo;</span>
+                      )}
+                    </div>
+                    <span className="text-emerald-700 dark:text-emerald-400 shrink-0 tabular-nums">
+                      −&euro;{ev.amount.toFixed(2)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                // Fallback voor pre-Fase-28 refunds zonder Transaction-event
                 <div className="flex justify-between gap-3 text-xs">
                   <span className="text-muted-foreground">{tc("orderDetail.refundBundle")}</span>
                   <span className="text-emerald-700 dark:text-emerald-400 tabular-nums">
-                    −&euro;{customRefundDelta.toFixed(2)}
+                    −&euro;{order.refundedAmount.toFixed(2)}
                   </span>
                 </div>
               )}

@@ -107,6 +107,31 @@ export default async function MySalesPage() {
     },
   });
 
+  // Refund-events per bundle (Fase 28). Buyer-side Transaction-records met
+  // prefix "Gedeeltelijke terugbetaling" — uniek per refund, geschreven door
+  // beide refund-paden (SHIPPED via heldBalance, COMPLETED uit seller.balance).
+  // Seller-side records ("Terugbetaling aan koper") matcht deze prefix niet.
+  const bundleIds = bundles.map((b) => b.id);
+  const refundTransactions = bundleIds.length > 0
+    ? await prisma.transaction.findMany({
+        where: {
+          relatedShippingBundleId: { in: bundleIds },
+          description: { startsWith: "Gedeeltelijke terugbetaling" },
+        },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, amount: true, createdAt: true, description: true, relatedShippingBundleId: true },
+      })
+    : [];
+  const refundEventsByBundle = new Map<string, { id: string; amount: number; createdAt: string; reason: string | null }[]>();
+  for (const tx of refundTransactions) {
+    if (!tx.relatedShippingBundleId) continue;
+    const reasonMatch = tx.description.match(/—\s*(.+?)$/);
+    const reason = reasonMatch ? reasonMatch[1].trim() : null;
+    const list = refundEventsByBundle.get(tx.relatedShippingBundleId) ?? [];
+    list.push({ id: tx.id, amount: tx.amount, createdAt: tx.createdAt.toISOString(), reason });
+    refundEventsByBundle.set(tx.relatedShippingBundleId, list);
+  }
+
   // Bestaande listing-conversations voor pickup-bundles zoeken zodat seller
   // direct naar de chat met de buyer kan navigeren (anders zou de knop
   // "noConversationSeller" tonen — seller kan zelf geen nieuwe chat maken).
@@ -195,6 +220,7 @@ export default async function MySalesPage() {
     shippedAt: b.shippedAt?.toISOString() ?? null,
     deliveredAt: b.deliveredAt?.toISOString() ?? null,
     refundedAmount: b.refundedAmount ?? 0,
+    refundEvents: refundEventsByBundle.get(b.id) ?? [],
     pickupScheduleStatus: b.pickupSchedule?.status ?? null,
     createdAt: b.createdAt.toISOString(),
     sourceType: b.auctionId
