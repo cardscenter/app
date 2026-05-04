@@ -1331,9 +1331,9 @@
     "rejected": "Verzoek afgewezen",
     "cancel": "Sluiten",
     "reason": {
-      "BUYER_CHANGED_MIND": "Koper bedacht zich",
       "SELLER_OUT_OF_STOCK": "Niet meer op voorraad",
       "DAMAGED": "Schade ontdekt",
+      "SHIPPING_NOT_POSSIBLE": "Verzending nu niet mogelijk",
       "UNRESPONSIVE": "Wederpartij reageert niet",
       "OTHER": "Anders"
     }

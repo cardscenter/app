@@ -33,7 +33,7 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus }: C
   const [request, setRequest] = useState<PendingRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [showRequestForm, setShowRequestForm] = useState(false);
-  const [reason, setReason] = useState<CancellationReason>("BUYER_CHANGED_MIND");
+  const [reason, setReason] = useState<CancellationReason>("SELLER_OUT_OF_STOCK");
   const [details, setDetails] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionNote, setRejectionNote] = useState("");

@@ -8,10 +8,14 @@
 
 export const CANCELLATION_DEADLINE_DAYS = 7;
 
+// Geldige redenen voor een annuleringsverzoek. "Koper bedacht zich" is bewust
+// niet beschikbaar — een PAID-bundle is een bindende overeenkomst en is geen
+// geldige reden om unilateraal te annuleren. Voor échte koper-correcties
+// (verkeerd item, dubbel besteld) gebruikt de koper "OTHER" met toelichting.
 export const CANCELLATION_REASONS = [
-  "BUYER_CHANGED_MIND",
   "SELLER_OUT_OF_STOCK",
   "DAMAGED",
+  "SHIPPING_NOT_POSSIBLE",
   "UNRESPONSIVE",
   "OTHER",
 ] as const;

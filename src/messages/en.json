@@ -1331,9 +1331,9 @@
     "rejected": "Request rejected",
     "cancel": "Close",
     "reason": {
-      "BUYER_CHANGED_MIND": "Buyer changed their mind",
       "SELLER_OUT_OF_STOCK": "Out of stock",
       "DAMAGED": "Damage discovered",
+      "SHIPPING_NOT_POSSIBLE": "Cannot ship right now",
       "UNRESPONSIVE": "Other party unresponsive",
       "OTHER": "Other"
     }
