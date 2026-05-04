@@ -1737,7 +1737,7 @@
     "autoConfirmWarning": "Will be auto-confirmed on {date} if you do not respond.",
     "confirmDelivery": "Confirm delivery",
     "confirmDeliveryDescription": "Confirm that you have received the order. Optionally leave a review for the seller.",
-    "deliveryConfirmed": "Delivery confirmed! The amount has been released to the seller.",
+    "deliveryConfirmed": "Purchase completed. Thanks for confirming!",
     "ratePackaging": "Packaging",
     "rateShipping": "Shipping speed",
     "rateCommunication": "Communication",

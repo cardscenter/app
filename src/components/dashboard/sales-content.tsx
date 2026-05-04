@@ -3,7 +3,6 @@
 import { useTranslations, useLocale } from "next-intl";
 import { useState } from "react";
 import { Link } from "@/i18n/navigation";
-import { useRouter } from "@/i18n/navigation";
 import { CancellationActions } from "./cancellation-actions";
 import { toast } from "sonner";
 import {

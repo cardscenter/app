@@ -1737,7 +1737,7 @@
     "autoConfirmWarning": "Wordt automatisch bevestigd op {date} als je niet reageert.",
     "confirmDelivery": "Ontvangst bevestigen",
     "confirmDeliveryDescription": "Bevestig dat je de bestelling hebt ontvangen. Laat optioneel een review achter voor de verkoper.",
-    "deliveryConfirmed": "Ontvangst bevestigd! Het bedrag is vrijgegeven aan de verkoper.",
+    "deliveryConfirmed": "Deze aankoop is nu afgerond. Bedankt voor het bevestigen!",
     "ratePackaging": "Verpakking",
     "rateShipping": "Verzendsnelheid",
     "rateCommunication": "Communicatie",

@@ -264,6 +264,7 @@ export function PurchasesContent({
 
 function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle; locale: string; currentUserId: string }) {
   const t = useTranslations("purchases");
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [showDeliveryConfirm, setShowDeliveryConfirm] = useState(false);
