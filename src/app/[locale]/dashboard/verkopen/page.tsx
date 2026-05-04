@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { SalesContent } from "@/components/dashboard/sales-content";
-import { CancellationsSection } from "@/components/dashboard/cancellations-section";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
 
 // Idem als in /aankopen: groepeer items met dezelfde cardName + conditie
@@ -342,20 +341,6 @@ export default async function MySalesPage() {
       ) : (
         <>
           <ActivePickupsSection pickups={sellerActivePickups} />
-          <CancellationsSection
-            currentUserId={userId}
-            paidBundles={serialized
-              // Alleen bundles met een actief PENDING annuleringsverzoek —
-              // anders zou alle PAID-verkopen hier dubbel verschijnen.
-              .filter((b) => b.status === "PAID" && b.hasActiveCancellation)
-              .map((b) => ({
-                id: b.id,
-                orderNumber: b.orderNumber,
-                status: b.status,
-                totalCost: b.totalCost,
-                counterpartyName: b.buyerName,
-              }))}
-          />
           <SalesContent bundles={serialized} stats={stats} pendingAuctions={pendingAuctions} currentUserId={userId} />
         </>
       )}

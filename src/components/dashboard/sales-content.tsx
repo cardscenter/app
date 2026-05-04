@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   MapPin,
   CreditCard,
+  Ban,
 } from "lucide-react";
 import Image from "next/image";
 import { ShipBundleForm } from "./ship-bundle-form";
@@ -57,6 +58,7 @@ type SaleBundle = {
   buyerName: string;
   buyerId: string;
   status: string;
+  hasActiveCancellation: boolean;
   shippingCost: number;
   totalItemCost: number;
   totalCost: number;
@@ -397,6 +399,12 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
               >
                 {t(STATUS_KEYS[statusTab] ?? "statusPaid")}
               </span>
+              {bundle.hasActiveCancellation && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                  <Ban className="h-3 w-3" />
+                  {t("cancellationPending")}
+                </span>
+              )}
               {bundle.disputeInfo && (
                 <Link
                   href={`/dashboard/geschillen/${bundle.disputeInfo.id}`}

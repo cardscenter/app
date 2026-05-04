@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Star,
   CreditCard,
+  Ban,
 } from "lucide-react";
 import Image from "next/image";
 import { OpenDisputeForm } from "./open-dispute-form";
@@ -55,6 +56,7 @@ type PurchaseBundle = {
   sellerName: string;
   sellerId: string;
   status: string;
+  hasActiveCancellation: boolean;
   shippingCost: number;
   totalItemCost: number;
   totalCost: number;
@@ -317,6 +319,12 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                 {t(`status${bundle.status.charAt(0) + bundle.status.slice(1).toLowerCase()}` as
                   | "statusPaid" | "statusShipped" | "statusCompleted" | "statusCancelled" | "statusDisputed")}
               </span>
+              {bundle.hasActiveCancellation && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                  <Ban className="h-3 w-3" />
+                  {t("cancellationPending")}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
               <span>{formattedDate}</span>

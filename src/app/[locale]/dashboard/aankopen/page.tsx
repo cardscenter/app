@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
-import { CancellationsSection } from "@/components/dashboard/cancellations-section";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
 
 // Groepeer items met dezelfde cardName + conditie tot één rij met aantal +
@@ -320,21 +319,6 @@ export default async function MyPurchasesPage() {
       ) : (
         <>
           <ActivePickupsSection pickups={activePickups} />
-          <CancellationsSection
-            currentUserId={userId}
-            paidBundles={serialized
-              // Alleen bundles met een actief PENDING annuleringsverzoek —
-              // anders zou de hele PAID-lijst hier dubbel verschijnen
-              // (rommelige UX bij meer dan een paar aankopen).
-              .filter((b) => b.status === "PAID" && b.hasActiveCancellation)
-              .map((b) => ({
-                id: b.id,
-                orderNumber: b.orderNumber,
-                status: b.status,
-                totalCost: b.totalCost,
-                counterpartyName: b.sellerName,
-              }))}
-          />
           {/* Pending-payments verschijnen als eigen tab in PurchasesContent
               (Fase 27.94). Default-tab springt naar PENDING als die items heeft. */}
           <PurchasesContent
