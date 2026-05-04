@@ -5,6 +5,7 @@ import { X, Printer, Package, MapPin, Check, Ban } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import Image from "next/image";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
+import { SellerRefundForm } from "./seller-refund-form";
 
 type SortKey = "default" | "name" | "condition" | "priceHigh" | "priceLow" | "reference" | "refundStatus";
 
@@ -481,6 +482,26 @@ export function OrderDetailModal({
             })}
           </div>
         </div>
+
+        {/* Inline refund-actie (seller, SHIPPED only) */}
+        {isSeller && order.status === "SHIPPED" && (
+          <div className="mb-4">
+            <SellerRefundForm
+              bundleId={order.bundleId}
+              buyerName={buyerFullName || order.buyerName || "—"}
+              totalCost={order.totalCost}
+              refundedAmount={order.refundedAmount}
+              items={order.items.map((i) => ({
+                id: i.id,
+                cardName: i.cardName,
+                condition: i.condition,
+                price: i.price,
+                imageUrl: i.imageUrl,
+                refundedAt: i.refundedAt,
+              }))}
+            />
+          </div>
+        )}
 
         {/* Totals */}
         <div className="rounded-xl border border-border p-4 space-y-1.5">
