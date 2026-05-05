@@ -108,9 +108,11 @@ export default async function SubscriptionPage() {
                         &euro;{tier.monthlyPrice.toFixed(2)}
                         <span className="text-sm font-normal text-muted-foreground">/{t("month")}</span>
                       </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {t("orYearly", { price: tier.yearlyPrice.toFixed(2) })}
-                      </p>
+                      {tier.yearlyPrice != null && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t("orYearly", { price: tier.yearlyPrice.toFixed(2) })}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>

@@ -66,8 +66,31 @@ model User {
   lastLoginIpAt DateTime?
 
   // Account type & role
-  accountType       String   @default("FREE") // FREE | PRO | UNLIMITED | ADMIN
+  accountType       String   @default("FREE") // FREE | PRO | UNLIMITED | ENTERPRISE | ADMIN
   premiumExpiresAt  DateTime?
+
+  // Tier-based denormalisatie (Fase 31). Search-boost queries sorteren op
+  // dit veld: FREE=1, PRO=2, UNLIMITED=3, ENTERPRISE=4. Gevuld in
+  // upgradeToTier + downgrade-cron + grace-expiry-cron.
+  tierRank          Int      @default(1)
+
+  // Vanity shop URL (Fase 31) — Unlimited+ users kunnen /winkel/<slug>
+  // claimen die naar /verkoper/<userId> redirect. Lowercase a-z 0-9 -, 3-32 chars.
+  shopSlug          String?  @unique
+
+  // Featured-listing quota (Fase 31). Per-tier maandelijks aantal gratis
+  // HOMEPAGE_SPOTLIGHTs. Reset door reset-free-upsells cron op de 1e.
+  freeUpsellsRemaining Int      @default(0)
+  freeUpsellsResetAt   DateTime?
+
+  // Bid-confirmation modal preference (Fase 31). True = modal nooit tonen,
+  // bid wordt direct geplaatst. Default false = standaard modal voor eerste
+  // bod per veiling (per-veiling tracking client-side via localStorage).
+  skipBidConfirmation Boolean @default(false)
+
+  // Mollie recurring-billing customer ID (Fase 31). Hergebruikt over
+  // meerdere subscription-cycli zodat Mollie weet om welke klant het gaat.
+  mollieCustomerId  String?
 
   // Account kind (individual vs business)
   accountKind       String   @default("INDIVIDUAL") // INDIVIDUAL | BUSINESS
@@ -1203,9 +1226,9 @@ model Subscription {
   userId        String
   user          User     @relation(fields: [userId], references: [id])
 
-  tier          String   // PRO | UNLIMITED
+  tier          String   // PRO | UNLIMITED | ENTERPRISE
   billingCycle  String   @default("MONTHLY") // MONTHLY | YEARLY
-  status        String   @default("ACTIVE")  // ACTIVE | CANCELLED | EXPIRED
+  status        String   @default("ACTIVE")  // PENDING | ACTIVE | CANCELLED | EXPIRED
 
   startsAt      DateTime @default(now())
   expiresAt     DateTime
@@ -1215,11 +1238,30 @@ model Subscription {
   yearlyPrice   Float?
   paymentMethod String?  // For future payment integration (Fase 17)
 
+  // Mollie recurring-billing (Fase 31). mollieCustomerId is gespiegeld
+  // op User maar handig per record voor history/debug. mollieSubscriptionId
+  // null voor Enterprise (handmatige facturatie buiten Mollie).
+  mollieSubscriptionId String?
+  mollieCustomerId     String?
+
+  // Payment-cycle status (Fase 31). PAID = recente betaling geslaagd.
+  // GRACE = laatste betaling failed, gracePeriodEnd zet 7d-deadline.
+  // EXPIRED = grace verlopen + downgrade gedaan.
+  paymentStatus    String    @default("PAID") // PAID | FAILED | GRACE | EXPIRED
+  gracePeriodEnd   DateTime?
+  nextBillingAt    DateTime?
+
+  // Legacy-pricing flag (Fase 31). Bestaande PRO/Unlimited-abonnementen
+  // van vóór de prijs/commissie-revisie behouden hun oude tarief tot
+  // expiresAt. getEffectiveCommissionRate respecteert deze flag.
+  legacyPricing    Boolean   @default(false)
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([userId])
   @@index([status, expiresAt])
+  @@index([paymentStatus, gracePeriodEnd])
 }
 
 // ============================================================
