@@ -205,7 +205,7 @@ export default async function AdminOverviewPage() {
               <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
                 <div className="min-w-0 flex-1">
                   <p>
-                    <span className="font-medium">{e.admin.displayName}</span>{" "}
+                    <span className="font-medium">{e.admin?.displayName ?? "Systeem"}</span>{" "}
                     <code className="rounded bg-muted px-1 py-0.5 text-[10px]">{e.action}</code>{" "}
                     <span className="text-muted-foreground">on</span>{" "}
                     <code className="text-[11px]">{e.targetType}{e.targetId ? `:${e.targetId.slice(0, 8)}…` : ""}</code>

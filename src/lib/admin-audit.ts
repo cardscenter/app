@@ -25,7 +25,10 @@ export type AdminAction =
   | "BID_IP_OVERLAP"
   | "SYSTEM_AUTO_SUSPEND"
   | "GRANT_BID_DEPOSIT_EXEMPTION"
-  | "REVOKE_BID_DEPOSIT_EXEMPTION";
+  | "REVOKE_BID_DEPOSIT_EXEMPTION"
+  // Fase 31 — Enterprise-aanvraag
+  | "APPROVE_ENTERPRISE_REQUEST"
+  | "REJECT_ENTERPRISE_REQUEST";
 
 export type AdminTargetType =
   | "USER"
@@ -41,7 +44,8 @@ export type AdminTargetType =
   | "CARDSET"
   | "CARD"
   | "CRON"
-  | "REPORT";
+  | "REPORT"
+  | "ENTERPRISE_REQUEST";
 
 /**
  * Log an admin or system action.

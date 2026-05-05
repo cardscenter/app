@@ -22,6 +22,7 @@ import {
   Shield,
   ArrowLeft,
   AlertTriangle,
+  Building2,
 } from "lucide-react";
 
 type Section = {
@@ -39,6 +40,7 @@ export function AdminNav({
     buybacks?: number;
     reports?: number;
     sellerWarnings?: number;
+    enterpriseRequests?: number;
   };
 }) {
   const t = useTranslations("admin");
@@ -61,6 +63,7 @@ export function AdminNav({
         { href: "/dashboard/admin/buybacks", labelKey: "navBuybacks", icon: ArrowDownToLine, badge: pendingCounts?.buybacks },
         { href: "/dashboard/admin/reports", labelKey: "navReports", icon: Flag, badge: pendingCounts?.reports },
         { href: "/dashboard/admin/seller-warnings", labelKey: "navSellerWarnings", icon: AlertTriangle, badge: pendingCounts?.sellerWarnings },
+        { href: "/dashboard/admin/enterprise-requests", labelKey: "navEnterpriseRequests", icon: Building2, badge: pendingCounts?.enterpriseRequests },
         { href: "/dashboard/admin/bank-transfers", labelKey: "navBankTransfers", icon: CreditCard },
       ],
     },

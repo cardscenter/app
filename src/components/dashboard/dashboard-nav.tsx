@@ -49,7 +49,7 @@ interface LevelInfo {
 type DashboardNavProps = {
   accountType?: string;
   level?: LevelInfo;
-  adminPendingCounts?: { disputes?: number; verifications?: number; withdrawals?: number; buybacks?: number; reports?: number };
+  adminPendingCounts?: { disputes?: number; verifications?: number; withdrawals?: number; buybacks?: number; reports?: number; sellerWarnings?: number; enterpriseRequests?: number };
 };
 
 // Thin wrapper: decides which nav to render based on path + admin status.

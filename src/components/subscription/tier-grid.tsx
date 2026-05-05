@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Sparkles, Zap, Crown, Building2, Check } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import {
   ACCOUNT_TIERS,
   TIER_BREAK_EVENS_MONTHLY,
@@ -257,14 +258,12 @@ function TierCta({ tierKey, cycle, isCurrent, hasPendingEnterpriseRequest }: Cta
       );
     }
     return (
-      <button
-        type="button"
-        disabled
-        className="w-full cursor-not-allowed rounded-xl bg-violet-500/80 py-2.5 text-center text-sm font-medium text-white opacity-50"
-        title={t("upgradeSoon")}
+      <Link
+        href="/dashboard/abonnement/enterprise-aanvraag"
+        className="block w-full rounded-xl bg-violet-500 py-2.5 text-center text-sm font-medium text-white transition hover:bg-violet-600"
       >
         {t("enterpriseRequestCta")}
-      </button>
+      </Link>
     );
   }
 

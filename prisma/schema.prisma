@@ -190,6 +190,10 @@ model User {
   bundleProposalsAsBuyer  BundleProposal[] @relation("BundleProposalBuyer")
   bundleProposalsAsSeller BundleProposal[] @relation("BundleProposalSeller")
   pickupSchedulesProposed PickupSchedule[] @relation("PickupProposer")
+
+  // Enterprise-aanvragen (Fase 31)
+  enterpriseRequests       EnterpriseRequest[] @relation("EnterpriseRequester")
+  enterpriseRequestsReviewed EnterpriseRequest[] @relation("EnterpriseReviewer")
 }
 
 // ============================================================
@@ -1219,6 +1223,42 @@ model CartItem {
 // ============================================================
 // SUBSCRIPTIONS
 // ============================================================
+
+// ============================================================
+// ENTERPRISE REQUEST (Fase 31)
+// ============================================================
+//
+// Self-serve aanvraag voor de Enterprise-tier. Admin reviewt handmatig
+// in /dashboard/admin/enterprise-requests en zet bij approval een custom
+// monthlyPrice via upgradeToTier(...). Eén PENDING per user — bestaande
+// PENDING blokkeert nieuwe submit. Niet @unique op userId zodat een
+// gebruiker na rejection/cancellation opnieuw kan indienen.
+
+model EnterpriseRequest {
+  id                      String   @id @default(cuid())
+
+  userId                  String
+  user                    User     @relation("EnterpriseRequester", fields: [userId], references: [id])
+
+  shopName                String
+  estimatedMonthlyRevenue Float
+  phone                   String
+  motivation              String
+
+  status                  String   @default("PENDING") // PENDING | APPROVED | REJECTED
+
+  reviewedAt              DateTime?
+  reviewedById            String?
+  reviewedBy              User?    @relation("EnterpriseReviewer", fields: [reviewedById], references: [id])
+  rejectionReason         String?
+  approvedMonthlyPrice    Float?
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
 
 model Subscription {
   id            String   @id @default(cuid())

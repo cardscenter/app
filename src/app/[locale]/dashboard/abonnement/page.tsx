@@ -33,6 +33,11 @@ export default async function SubscriptionPage() {
     },
   });
 
+  const pendingEnterpriseRequest = await prisma.enterpriseRequest.findFirst({
+    where: { userId: session.user.id, status: "PENDING" },
+    select: { id: true },
+  });
+
   const currentTier = getTierConfig(user.accountType);
   const isAdmin = user.accountType === "ADMIN";
 
@@ -53,7 +58,7 @@ export default async function SubscriptionPage() {
 
       <TierGrid
         currentAccountType={user.accountType}
-        hasPendingEnterpriseRequest={false}
+        hasPendingEnterpriseRequest={!!pendingEnterpriseRequest}
       />
     </div>
   );
