@@ -3,8 +3,10 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { Upload } from "lucide-react";
 import { ListingCard } from "@/components/listing/listing-card";
 import { ListingStatusBadge } from "@/components/listing/listing-status-badge";
+import { hasFeature } from "@/lib/subscription-tiers";
 import type { ListingStatus } from "@/types";
 
 export default async function DashboardMarktplaatsPage({
@@ -24,6 +26,12 @@ export default async function DashboardMarktplaatsPage({
     include: { seller: { select: { displayName: true } } },
   });
 
+  const me = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { accountType: true },
+  });
+  const canBulkUpload = hasFeature(me?.accountType ?? "FREE", "bulkUpload");
+
   const active          = listings.filter((l) => l.status === "ACTIVE");
   const partiallySold   = listings.filter((l) => l.status === "PARTIALLY_SOLD");
   const reserved        = listings.filter((l) => l.status === "RESERVED");
@@ -32,14 +40,25 @@ export default async function DashboardMarktplaatsPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">{t("myListings")}</h1>
-        <Link
-          href={`/${locale}/marktplaats/nieuw`}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg"
-        >
-          + {t("createTitle")}
-        </Link>
+        <div className="flex items-center gap-2">
+          {canBulkUpload && (
+            <Link
+              href={`/${locale}/marktplaats/bulk-upload`}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <Upload className="h-4 w-4" />
+              Bulk-upload
+            </Link>
+          )}
+          <Link
+            href={`/${locale}/marktplaats/nieuw`}
+            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg"
+          >
+            + {t("createTitle")}
+          </Link>
+        </div>
       </div>
 
       <Section title={t("sections.active")} status="ACTIVE" items={active} locale={locale} emptyKey="noListings" />

@@ -1166,3 +1166,124 @@ export async function closePartiallySoldListing(listingId: string) {
   return { success: true };
 }
 
+// Bulk-import van listings via CSV (Fase 31, PRO+ feature). Per rij wordt
+// een minimale listing aangemaakt — sellers vullen images en specifieke
+// velden achteraf aan via de standaard edit-flow. Geen one-big-transaction
+// (timeout-risico bij 50+ rijen) — per-rij Prisma create + per-rij error capture.
+import { hasFeature } from "@/lib/subscription-tiers";
+import { parseCsvText, type BulkRow } from "@/lib/listing-bulk-import";
+
+export async function bulkImportListings(csvText: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { accountType: true, city: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  if (!hasFeature(user.accountType, "bulkUpload")) {
+    return { error: "Bulk-upload is alleen beschikbaar voor PRO en hogere abonnementen." };
+  }
+
+  const parsed = parseCsvText(csvText);
+  if (parsed.rows.length === 0) {
+    return {
+      error: parsed.errors.length > 0
+        ? `Geen geldige rijen gevonden (${parsed.errors.length} fouten).`
+        : "Geen rijen in CSV.",
+      errors: parsed.errors,
+    };
+  }
+
+  // Account-limit check vooraf — voorkom dat we 30 rijen importeren tot we
+  // op rij 31 tegen de limit aanlopen. Tel actieve listings + nieuwe rijen.
+  const limitCheck = await checkListingLimit(session.user.id);
+  const remaining = limitCheck.max === Infinity ? Infinity : limitCheck.max - limitCheck.current;
+  if (!limitCheck.allowed) {
+    return { error: `Listing-limiet bereikt (${limitCheck.current}/${limitCheck.max}). Upgrade je abonnement of verwijder oude listings.` };
+  }
+  if (remaining !== Infinity && parsed.rows.length > remaining) {
+    return {
+      error: `Te veel rijen voor je tier-limiet. Je kunt nog ${remaining} listings aanmaken, CSV bevat er ${parsed.rows.length}.`,
+    };
+  }
+
+  // Voor PICKUP/BOTH: User.city is verplicht zoals in createListing
+  const hasPickupRows = parsed.rows.some(
+    (r) => r.data.deliveryMethod === "PICKUP" || r.data.deliveryMethod === "BOTH",
+  );
+  if (hasPickupRows && !user.city) {
+    return { error: "Vul eerst je woonplaats in via Dashboard → Verzending voor ophaal-listings." };
+  }
+
+  // Per-rij creatie. Errors per rij geaggregeerd; geen rollback bij partial failure.
+  const created: { row: number; listingId: string; title: string }[] = [];
+  const errors: { row: number; field?: string; message: string }[] = [...parsed.errors];
+
+  for (const { row, data } of parsed.rows) {
+    try {
+      const listing = await createSingleBulkListing(session.user.id, data, user.city);
+      created.push({ row, listingId: listing.id, title: data.title });
+    } catch (e) {
+      errors.push({
+        row,
+        message: e instanceof Error ? e.message : "Onbekende fout",
+      });
+    }
+  }
+
+  return { success: true, createdCount: created.length, created, errors };
+}
+
+async function createSingleBulkListing(
+  sellerId: string,
+  data: BulkRow,
+  userCity: string | null,
+) {
+  const isPickup = data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH";
+
+  let methodSnapshots: { id: string; price: number }[] = [];
+  if (data.shippingMethodIds.length > 0) {
+    const methods = await prisma.sellerShippingMethod.findMany({
+      where: { id: { in: data.shippingMethodIds }, sellerId },
+    });
+    methodSnapshots = methods.map((m) => ({ id: m.id, price: m.price }));
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const listing = await tx.listing.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        imageUrls: "[]",
+        listingType: data.listingType,
+        pricingType: data.pricingType,
+        price: data.pricingType === "FIXED" ? data.price : null,
+        deliveryMethod: data.deliveryMethod,
+        freeShipping: false,
+        shippingCost: null,
+        pickupCity: isPickup ? userCity : null,
+        condition: data.condition ?? null,
+        sellerId,
+        allowDirectBuy: true,
+        acceptsOffers: true,
+        allowPlatformPickup: true,
+        allowExternalPickup: true,
+      },
+    });
+
+    for (const m of methodSnapshots) {
+      await tx.listingShippingMethod.create({
+        data: { listingId: listing.id, shippingMethodId: m.id, price: m.price },
+      });
+    }
+
+    return listing;
+  });
+}
+
