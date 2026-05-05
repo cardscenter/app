@@ -1239,10 +1239,30 @@ export async function bulkImportListings(csvText: string) {
   }
 
   // Per-rij creatie. Errors per rij geaggregeerd; geen rollback bij partial failure.
+  // Audit-fix: per-rij re-check van listing-limit zodat parallelle creations
+  // tijdens import niet de tier-cap kunnen overschrijden. Initial limit-check
+  // is alleen pre-flight; tussen pre-flight en per-rij create kunnen andere
+  // listings de cap raken.
   const created: { row: number; listingId: string; title: string }[] = [];
   const errors: { row: number; field?: string; message: string }[] = [...parsed.errors];
 
-  for (const { row, data } of parsed.rows) {
+  for (let i = 0; i < parsed.rows.length; i++) {
+    const { row, data } = parsed.rows[i];
+
+    // Re-check limit voor elke rij — pakt parallelle creations vanuit
+    // andere acties (gewone createListing, andere bulk-import-call) op.
+    const liveLimit = await checkListingLimit(session.user.id);
+    if (!liveLimit.allowed) {
+      errors.push({
+        row,
+        message: `Tier-limiet bereikt tijdens import (${liveLimit.current}/${liveLimit.max}). Resterende rijen overgeslagen.`,
+      });
+      for (let j = i + 1; j < parsed.rows.length; j++) {
+        errors.push({ row: parsed.rows[j].row, message: "Tier-limiet bereikt, overgeslagen." });
+      }
+      break;
+    }
+
     try {
       const listing = await createSingleBulkListing(session.user.id, data, user.city);
       created.push({ row, listingId: listing.id, title: data.title });
@@ -1263,6 +1283,7 @@ async function createSingleBulkListing(
   userCity: string | null,
 ) {
   const isPickup = data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH";
+  const isShipping = data.deliveryMethod === "SHIP" || data.deliveryMethod === "BOTH";
 
   let methodSnapshots: { id: string; price: number }[] = [];
   if (data.shippingMethodIds.length > 0) {
@@ -1270,6 +1291,16 @@ async function createSingleBulkListing(
       where: { id: { in: data.shippingMethodIds }, sellerId },
     });
     methodSnapshots = methods.map((m) => ({ id: m.id, price: m.price }));
+
+    // Audit-fix: dezelfde non-LETTER-validatie als createListing — bulk-rijen
+    // mogen niet alleen briefpost aanbieden, anders kan koper niet kopen.
+    const hasNonLetter = methods.some((m) => m.shippingType !== "LETTER");
+    if (isShipping && !hasNonLetter) {
+      throw new Error("Minstens één pakket- of brievenbuspakket-optie vereist (alleen briefpost is niet voldoende)");
+    }
+  } else if (isShipping) {
+    // SHIP/BOTH-rijen MOETEN minstens één shipping-method opgeven.
+    throw new Error("shippingMethodIds verplicht voor SHIP/BOTH-listings");
   }
 
   return await prisma.$transaction(async (tx) => {
