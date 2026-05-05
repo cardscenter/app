@@ -4,10 +4,16 @@ import { useTranslations } from "next-intl";
 import { placeBid, buyNow } from "@/actions/auction";
 import { getMinimumNextBid } from "@/lib/auction/bid-increments";
 import { BID_RESERVE_RATE } from "@/lib/auction/bid-tiers";
+import { calculateBidFees } from "@/lib/auction/fees";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { QuickBidButtons } from "@/components/auction/quick-bid-buttons";
 import { Link } from "@/i18n/navigation";
+import {
+  BidConfirmationModal,
+  hasConfirmedBidForAuction,
+  markBidConfirmedForAuction,
+} from "@/components/auction/bid-confirmation-modal";
 
 export function BidSection({
   auctionId,
@@ -20,6 +26,7 @@ export function BidSection({
   isHighestBidder,
   deliveryMethod = "SHIP",
   pickupCity = null,
+  skipBidConfirmation = false,
 }: {
   auctionId: string;
   currentBid: number | null;
@@ -32,13 +39,17 @@ export function BidSection({
   /** Fase 27.95: SHIP/PICKUP/BOTH. Bij BOTH moet bidder per bod kiezen. */
   deliveryMethod?: "SHIP" | "PICKUP" | "BOTH";
   pickupCity?: string | null;
+  /** Fase 31: globale user-preference om de bid-modal helemaal over te slaan. */
+  skipBidConfirmation?: boolean;
 }) {
   const t = useTranslations("auction");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [bidWarning, setBidWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showBuyNowConfirm, setShowBuyNowConfirm] = useState(false);
+  // Fase 31: bid-modal en buy-now-modal — beide via BidConfirmationModal.
+  const [pendingBid, setPendingBid] = useState<number | null>(null);
+  const [pendingBuyNow, setPendingBuyNow] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // Synchroon guard tegen dubbele submits: setState is async, dus tussen
   // klik 1 en de re-render-met-disabled-button kan klik 2 al binnenkomen.
@@ -64,26 +75,36 @@ export function BidSection({
     return code;
   }
 
-  async function handleBid(formData: FormData) {
+  async function submitBid(amount: number) {
     if (submittingRef.current) return;
     submittingRef.current = true;
     setLoading(true);
     setError(null);
     try {
-      const amount = parseFloat(formData.get("bidAmount") as string);
-      // Voor BOTH: stuur deliveryChoice mee. Voor SHIP/PICKUP-only: backend
-      // negeert de waarde en gebruikt auction.deliveryMethod.
       const result = await placeBid(auctionId, amount, deliveryChoice);
       if (result?.error) {
         setError(result.error);
       } else {
-        // Geen router.refresh() — SSE-events (bid-placed + balance-changed)
-        // updaten live-auction-content + UserBalance instant. Wel input clearen.
+        markBidConfirmedForAuction(auctionId);
         if (inputRef.current) inputRef.current.value = "";
       }
     } finally {
       setLoading(false);
       submittingRef.current = false;
+    }
+  }
+
+  async function handleBid(formData: FormData) {
+    const amount = parseFloat(formData.get("bidAmount") as string);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    // Fase 31: toon modal bij eerste bod op deze veiling, tenzij user de
+    // preference globaal heeft uitgezet.
+    const skipModal = skipBidConfirmation || hasConfirmedBidForAuction(auctionId);
+    if (skipModal) {
+      await submitBid(amount);
+    } else {
+      setPendingBid(amount);
     }
   }
 
@@ -93,20 +114,29 @@ export function BidSection({
     }
   }
 
-  async function handleBuyNowConfirmed() {
+  async function submitBuyNow() {
     setLoading(true);
     setError(null);
-    setShowBuyNowConfirm(false);
+    setPendingBuyNow(false);
     const result = await buyNow(auctionId, deliveryChoice);
     if (result?.error) {
       setError(result.error);
     } else {
-      // Buy-now flipt status naar BOUGHT_NOW; SSE balance-changed update header,
-      // maar voor de page-state (status, ENDED-banner, payment-flow) hebben we
-      // nog SSR nodig — daarom hier wel router.refresh().
+      markBidConfirmedForAuction(auctionId);
       router.refresh();
     }
     setLoading(false);
+  }
+
+  function handleBuyNowClick() {
+    // Fase 31: zelfde modal-flow als reguliere bid. Buy Now zonder bids/met
+    // bids/zonder bids — alle paden tonen modal tenzij user-preference uit.
+    const skipModal = skipBidConfirmation || hasConfirmedBidForAuction(auctionId);
+    if (skipModal) {
+      void submitBuyNow();
+    } else {
+      setPendingBuyNow(true);
+    }
   }
 
   return (
@@ -259,10 +289,10 @@ export function BidSection({
         </form>
       )}
 
-      {/* Buy now */}
-      {buyNowPrice && !showBuyNowConfirm && (
+      {/* Buy now (Fase 31: opent BidConfirmationModal ipv inline-confirm) */}
+      {buyNowPrice && (
         <button
-          onClick={() => setShowBuyNowConfirm(true)}
+          onClick={handleBuyNowClick}
           disabled={loading}
           className="w-full rounded-xl border-2 border-primary px-4 py-3 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-50 transition-all"
         >
@@ -270,39 +300,42 @@ export function BidSection({
         </button>
       )}
 
-      {/* Buy now confirmation */}
-      {buyNowPrice && showBuyNowConfirm && (() => {
-        const canPayFull = availableBalance !== undefined && availableBalance >= buyNowPrice;
-        const reserveAmount = Math.round(buyNowPrice * BID_RESERVE_RATE * 100) / 100;
-        return (
-          <div className="glass-subtle rounded-2xl border-2 border-primary/30 p-4 space-y-3">
-            <p className="text-sm font-medium text-foreground text-center">
-              {t("buyNowConfirmTitle")}
-            </p>
-            <p className="text-xs text-muted-foreground text-center">
-              {canPayFull
-                ? t("buyNowConfirmMessage", { price: buyNowPrice.toFixed(2) })
-                : t("buyNowConfirmPartial", { price: buyNowPrice.toFixed(2), reserve: reserveAmount.toFixed(2) })}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowBuyNowConfirm(false)}
-                disabled={loading}
-                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50 transition-all"
-              >
-                {t("buyNowCancel")}
-              </button>
-              <button
-                onClick={handleBuyNowConfirmed}
-                disabled={loading}
-                className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
-              >
-                {t("buyNowConfirm")}
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Bid confirmation modal (Fase 31). ownReserveOnThisAuction berekent
+          z'n eigen reserve (= 10% van currentBid + premium) zodat het modal
+          alleen het delta-reserve toont — niet z'n eigen al-vastgehouden geld. */}
+      {pendingBid !== null && (
+        <BidConfirmationModal
+          bidAmount={pendingBid}
+          availableBalance={availableBalance ?? 0}
+          ownReserveOnThisAuction={
+            isHighestBidder
+              ? Math.round(calculateBidFees(currentBid ?? 0).total * BID_RESERVE_RATE * 100) / 100
+              : 0
+          }
+          context="bid"
+          isFirstBid={!hasConfirmedBidForAuction(auctionId)}
+          onCancel={() => setPendingBid(null)}
+          onConfirm={() => {
+            const a = pendingBid;
+            setPendingBid(null);
+            if (a !== null) void submitBid(a);
+          }}
+        />
+      )}
+
+      {/* Buy Now confirmation modal (Fase 31) */}
+      {pendingBuyNow && buyNowPrice !== null && (
+        <BidConfirmationModal
+          bidAmount={buyNowPrice}
+          availableBalance={availableBalance ?? 0}
+          ownReserveOnThisAuction={0}
+          context="buyNow"
+          isFirstBid={false}
+          onCancel={() => setPendingBuyNow(false)}
+          onConfirm={() => void submitBuyNow()}
+        />
+      )}
+
     </div>
   );
 }

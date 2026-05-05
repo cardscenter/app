@@ -194,6 +194,23 @@ const shopSlugSchema = z
   .refine((s) => !s.startsWith("-") && !s.endsWith("-"), "Mag niet beginnen of eindigen met een koppelteken")
   .refine((s) => !SHOP_SLUG_RESERVED.has(s), "Deze naam is gereserveerd");
 
+// Bid-confirmation preference (Fase 31). True = modal nooit tonen,
+// bid wordt direct geplaatst. Default false = standaard modal voor
+// eerste bod per veiling (per-veiling tracking client-side via
+// localStorage). Geen suspension-check — een geschorste user kan deze
+// preference toch wijzigen.
+export async function updateBidConfirmationPreference(skip: boolean) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { skipBidConfirmation: skip },
+  });
+
+  return { success: true };
+}
+
 export async function updateShopSlug(rawSlug: string | null) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };

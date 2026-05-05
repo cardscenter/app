@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { createAuctionSchema } from "@/lib/validations/auction";
 import { checkAuctionLimit } from "@/lib/account-limits";
 import { getMinimumNextBid, ANTI_SNIPE_MINUTES, ANTI_SNIPE_EXTENSION_MINUTES } from "@/lib/auction/bid-increments";
-import { deductBalance, escrowCredit } from "@/actions/wallet";
+import { deductBalance, deductBidPayment, escrowCredit } from "@/actions/wallet";
+import { calculateBidFees } from "@/lib/auction/fees";
 import { resolveAutoBids } from "@/lib/auction/autobid";
 import { createNotification } from "@/actions/notification";
 import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
@@ -488,9 +489,20 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
     distinct: ["bidderId"],
   });
 
-  if (available >= auction.buyNowPrice) {
-    // Full payment — immediate purchase
-    await deductBalance(session.user.id, auction.buyNowPrice, "PURCHASE", `Direct gekocht: ${auction.title}`, auctionId);
+  // Fase 31: 3% buyer's premium ook op Buy Now (alle paden — bid, BuyNow met
+  // bids, BuyNow zonder bids).
+  const buyNowFees = calculateBidFees(auction.buyNowPrice);
+
+  if (available >= buyNowFees.total) {
+    // Full payment — immediate purchase. Premium gaat naar platform via
+    // deductBidPayment, escrow voor seller blijft het bid-deel.
+    await deductBidPayment(
+      session.user.id,
+      buyNowFees.bid,
+      buyNowFees.premium,
+      `Direct gekocht: ${auction.title}`,
+      auctionId,
+    );
     await escrowCredit(auction.sellerId, auction.buyNowPrice, `Verkocht (direct kopen): ${auction.title}`);
 
     await prisma.auction.update({
@@ -709,28 +721,28 @@ export async function finalizeAuction(auctionId: string) {
   const winner = await prisma.user.findUnique({ where: { id: highestBid.bidderId } });
   const totalCost = highestBid.amount;
 
+  // Fase 31: koper betaalt bid + 3% buyer's premium. Premium gaat naar
+  // platform via deductBidPayment, escrow voor seller blijft het bid-deel.
+  const bidFees = calculateBidFees(totalCost);
+
   // Fase 29: check of winner kan betalen ZONDER andere reserves te raken.
   // Voorheen werd `winner.balance >= totalCost` gebruikt, wat een dubbel-besteden
-  // vector opent: stel winner heeft balance €1000 en bid op een andere auction
-  // voor €500 (reserve €75 = 15%), winner bid op deze auction €1000 (reserve
-  // €150). Met de oude check was 1000 ≥ 1000 → full deduct → balance €0,
-  // maar de €75 reserve van die andere auction is nu onderdekkend.
-  // Correcte check: balance - andere-reserves ≥ totalCost. De eigen 15%-reserve
-  // op deze auction wordt 'omgezet' naar de werkelijke betaling, andere reserves
-  // blijven intact. Identiek patroon aan completeAuctionPayment.
+  // vector opent. Correcte check: balance - andere-reserves ≥ bid+premium.
+  // De eigen 10%-reserve op deze auction wordt 'omgezet' naar de werkelijke
+  // betaling, andere reserves blijven intact.
   const ownReserveOnThisAuction = winner ? calculateReserveAmount(totalCost) : 0;
   const winnerEffectiveAvailable = winner
     ? winner.balance - winner.reservedBalance + ownReserveOnThisAuction
     : 0;
 
-  if (winner && winnerEffectiveAvailable >= totalCost) {
-    // Winner has enough balance — deduct full amount and escrow to seller
-    await deductBalance(
+  if (winner && winnerEffectiveAvailable >= bidFees.total) {
+    // Winner has enough balance — deduct bid+premium and escrow bid to seller
+    await deductBidPayment(
       highestBid.bidderId,
-      totalCost,
-      "AUCTION_WIN",
+      bidFees.bid,
+      bidFees.premium,
       `Veiling gewonnen: ${auction.title}`,
-      auctionId
+      auctionId,
     );
 
     await escrowCredit(
@@ -1020,19 +1032,17 @@ export async function completeAuctionPayment(auctionId: string) {
   const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!buyer) return { error: "Gebruiker niet gevonden" };
 
-  // Fase 27.98 + 29: sync vóór de availableBalance-check zodat we niet op stale
-  // reservedBalance werken (kan ontstaan na status-flips of fout-historiek).
-  // Het 15%-commitment voor deze AWAITING_PAYMENT auction zit IN reservedBalance,
-  // dus we vergelijken totalCost tegen (balance - reserved + die 15%).
+  // Fase 27.98 + 29 + 31: sync vóór de availableBalance-check. Het 10%-commitment
+  // voor deze AWAITING_PAYMENT auction zit IN reservedBalance. Koper betaalt
+  // bid + 3% buyer's premium (Fase 31).
   const syncedReserved = await syncReservedBalance(session.user.id);
   const totalCost = auction.finalPrice ?? 0;
+  const fees = calculateBidFees(totalCost);
   const ownReserveOnThisAuction = calculateReserveAmount(totalCost);
-  // Available exclusief de eigen reserve op deze auction (die wordt zo
-  // sowieso 'omgezet' naar de echte deductie).
   const availableExcludingOwnReserve = buyer.balance - syncedReserved + ownReserveOnThisAuction;
 
-  if (availableExcludingOwnReserve < totalCost) {
-    return { error: `Onvoldoende saldo. Benodigd: €${totalCost.toFixed(2)}, beschikbaar: €${availableExcludingOwnReserve.toFixed(2)}` };
+  if (availableExcludingOwnReserve < fees.total) {
+    return { error: `Onvoldoende saldo. Benodigd: €${fees.total.toFixed(2)} (incl. €${fees.premium.toFixed(2)} veilingkosten), beschikbaar: €${availableExcludingOwnReserve.toFixed(2)}` };
   }
 
   // Bestaande PENDING bundle bevat de delivery-keuze die bij finalize/buyNow
@@ -1044,10 +1054,11 @@ export async function completeAuctionPayment(auctionId: string) {
     return { error: "Vul eerst je adres in via Dashboard → Verzending" };
   }
 
-  // Deduct from buyer
-  await deductBalance(session.user.id, totalCost, "AUCTION_WIN", `Veiling gewonnen: ${auction.title}`, auctionId);
+  // Deduct bid+premium from buyer (Fase 31). Premium gaat naar platform via
+  // de AUCTION_PREMIUM-Transaction in deductBidPayment.
+  await deductBidPayment(session.user.id, fees.bid, fees.premium, `Veiling gewonnen: ${auction.title}`, auctionId);
 
-  // Escrow for seller
+  // Escrow for seller (alleen het bid-deel — premium is platform-revenue)
   await escrowCredit(auction.sellerId, totalCost, `Veiling verkocht (escrow): ${auction.title}`);
 
   // Promote the PENDING bundle (created by finalizeAuction) to PAID, filling

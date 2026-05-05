@@ -168,6 +168,65 @@ export async function deductBalance(userId: string, amount: number, type: string
   return balanceAfter;
 }
 
+// Auction-specific: deduct buyer payment for an auction win, splitting the
+// total into a PURCHASE-leg (bid) and an AUCTION_PREMIUM-leg (3% buyer's
+// premium, Fase 31). Both legs hit the buyer's balance; only the PURCHASE
+// portion ends up in seller-escrow via separate escrowCredit. The premium
+// goes to the platform as fee revenue.
+//
+// Returnt het uiteindelijke balance-saldo na beide deductions zodat callers
+// het kunnen gebruiken voor logging.
+export async function deductBidPayment(
+  userId: string,
+  bidAmount: number,
+  premiumAmount: number,
+  description: string,
+  relatedAuctionId: string,
+) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error("User not found");
+
+  const total = bidAmount + premiumAmount;
+  if (user.balance < total) throw new Error("Insufficient balance for bid + premium");
+
+  const balanceBefore = user.balance;
+  const afterBid = Math.round((balanceBefore - bidAmount) * 100) / 100;
+  const afterTotal = Math.round((balanceBefore - total) * 100) / 100;
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { balance: afterTotal },
+    }),
+    prisma.transaction.create({
+      data: {
+        userId,
+        type: "PURCHASE",
+        amount: -bidAmount,
+        balanceBefore,
+        balanceAfter: afterBid,
+        description,
+        relatedAuctionId,
+      },
+    }),
+    prisma.transaction.create({
+      data: {
+        userId,
+        type: "AUCTION_PREMIUM",
+        amount: -premiumAmount,
+        balanceBefore: afterBid,
+        balanceAfter: afterTotal,
+        description: `Veilingkosten 3%: ${description}`,
+        relatedAuctionId,
+      },
+    }),
+  ]);
+
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
+
+  return afterTotal;
+}
+
 // Internal: credit balance (used when seller receives payment)
 export async function creditBalance(userId: string, amount: number, type: string, description: string, relatedAuctionId?: string, relatedClaimsaleItemId?: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });

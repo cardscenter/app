@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BidSection } from "./bid-section";
+import { AuctionFeeExplainer } from "./auction-fee-explainer";
 import { AutoBidForm } from "./autobid-form";
 import { CountdownTimer } from "./countdown-timer";
 import { Link } from "@/i18n/navigation";
@@ -48,6 +49,8 @@ interface LiveAuctionContentProps {
   /** Fase 27.95 */
   deliveryMethod?: "SHIP" | "PICKUP" | "BOTH";
   pickupCity?: string | null;
+  /** Fase 31: globale user-preference om de bid-confirmation modal te skippen */
+  skipBidConfirmation?: boolean;
   children?: React.ReactNode;
 }
 
@@ -70,6 +73,7 @@ export function LiveAuctionContent({
   reservedBalance,
   deliveryMethod = "SHIP",
   pickupCity = null,
+  skipBidConfirmation = false,
   children,
 }: LiveAuctionContentProps) {
   const t = useTranslations("auction");
@@ -331,6 +335,7 @@ export function LiveAuctionContent({
           {/* Bid form */}
           {isActive && !isOwner && currentUserId && (
             <div className="mt-6 space-y-4">
+              <AuctionFeeExplainer />
               <BidSection
                 auctionId={auctionId}
                 currentBid={bidData.currentBid}
@@ -342,6 +347,7 @@ export function LiveAuctionContent({
                 reservedBalance={reservedBalance}
                 deliveryMethod={deliveryMethod}
                 pickupCity={pickupCity}
+                skipBidConfirmation={skipBidConfirmation}
               />
               <AutoBidForm
                 auctionId={auctionId}

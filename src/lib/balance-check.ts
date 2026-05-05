@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { BID_RESERVE_RATE } from "@/lib/auction/bid-tiers";
 import { getMinimumNextBid } from "@/lib/auction/bid-increments";
+import { calculateBidTotalFromBid } from "@/lib/auction/fees";
 
 /**
  * Calculate the available balance (what the user can actually spend/bid with).
@@ -14,11 +15,16 @@ export function getAvailableBalance(user: { balance: number; reservedBalance: nu
  *
  * Fase 30A: één rate (10%) over de hele linie — geldt voor zowel ACTIVE bids
  * als AWAITING_PAYMENT-winnaars. Was eerst 40% (te hoog), toen 15% (Fase 29),
- * nu 10% zodat bieders meer parallel kunnen meedoen. 10% × €2000 = €200 borg —
- * mental model klopt.
+ * nu 10% zodat bieders meer parallel kunnen meedoen. 10% × €2000 = €200 borg.
+ *
+ * Fase 31: reserve gaat over `total = bid + 3% premium` ipv alleen `bid` —
+ * koper moet uiteindelijk total kunnen betalen als hij wint, dus reserve
+ * dekt nu de hele afschrijving. `bidAmount` blijft het bod dat de bidder
+ * intypt; de premium-component wordt intern toegevoegd via fees-helper.
  */
 export function calculateReserveAmount(bidAmount: number): number {
-  return Math.round(bidAmount * BID_RESERVE_RATE * 100) / 100;
+  const total = calculateBidTotalFromBid(bidAmount);
+  return Math.round(total * BID_RESERVE_RATE * 100) / 100;
 }
 
 /**

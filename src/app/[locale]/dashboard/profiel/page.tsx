@@ -7,6 +7,7 @@ import { AddressForm } from "@/components/dashboard/address-form";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
 import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
 import { ShopSlugForm } from "@/components/dashboard/shop-slug-form";
+import { BidConfirmationToggle } from "@/components/dashboard/bid-confirmation-toggle";
 import { SellingCountriesToggle } from "@/components/dashboard/selling-countries-toggle";
 import { SessionProvider } from "next-auth/react";
 import { Link } from "@/i18n/navigation";
@@ -248,14 +249,17 @@ export default async function ProfilePage() {
         </Section>
       )}
 
-      {/* SECTIE 7 — Voorkeuren (runner-up) */}
+      {/* SECTIE 7 — Voorkeuren (runner-up + bid-bevestiging) */}
       <Section
         icon={<Settings className="size-5" />}
         title="Voorkeuren"
-        description="Instellingen voor automatische processen."
+        description="Instellingen voor automatische processen en bevestigings-modals."
       >
-        <div className="max-w-lg">
+        <div className="max-w-lg space-y-5">
           <RunnerUpSettings current={user.maxRunnerUpAttempts} />
+          <div className="border-t border-border pt-4">
+            <BidConfirmationToggle currentValue={user.skipBidConfirmation} />
+          </div>
         </div>
       </Section>
 

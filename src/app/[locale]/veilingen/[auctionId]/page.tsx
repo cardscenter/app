@@ -57,7 +57,7 @@ export default async function AuctionDetailPage({
   const currentUser = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { balance: true, reservedBalance: true, heldBalance: true },
+        select: { balance: true, reservedBalance: true, heldBalance: true, skipBidConfirmation: true },
       })
     : null;
   const userAvailableBalance = currentUser
@@ -202,6 +202,7 @@ export default async function AuctionDetailPage({
             reservedBalance={currentUser?.reservedBalance ?? 0}
             deliveryMethod={auction.deliveryMethod as "SHIP" | "PICKUP" | "BOTH"}
             pickupCity={auction.pickupCity}
+            skipBidConfirmation={currentUser?.skipBidConfirmation ?? false}
           >
             {sellerInfo && <SellerInfoBlock seller={sellerInfo} />}
             {!isOwner && session?.user && (
