@@ -11,21 +11,36 @@ export function getAvailableBalance(user: { balance: number; reservedBalance: nu
 }
 
 /**
- * Calculate how much should be reserved for a given bid amount.
+ * Calculate how much should be reserved for a bid amount (NOT a total!).
+ *
+ * **WAARSCHUWING — semantiek is misleidend (Fase 31)**: deze functie
+ * accepteert het BOD (zonder fee) en berekent intern `total = bid + 3%
+ * premium`, dan returnt `total × 10%`. De naam zegt "reserve voor een bid",
+ * de implementatie doet impliciet de premium-expansion. Geef NOOIT een
+ * vooraf-berekende total door — dan reken je dubbel.
+ *
+ * Voorbeelden:
+ *   calculateReserveAmount(1000)  // 1000 × 1.03 × 0.10 = 103.00 ✓
+ *   calculateReserveAmount(1030)  // 1030 × 1.03 × 0.10 = 106.09 ✗ (DUBBEL FEE)
  *
  * Fase 30A: één rate (10%) over de hele linie — geldt voor zowel ACTIVE bids
  * als AWAITING_PAYMENT-winnaars. Was eerst 40% (te hoog), toen 15% (Fase 29),
- * nu 10% zodat bieders meer parallel kunnen meedoen. 10% × €2000 = €200 borg.
+ * nu 10%. 10% × (€2000 × 1.03) = €206 borg op een €2000-bod.
  *
- * Fase 31: reserve gaat over `total = bid + 3% premium` ipv alleen `bid` —
- * koper moet uiteindelijk total kunnen betalen als hij wint, dus reserve
- * dekt nu de hele afschrijving. `bidAmount` blijft het bod dat de bidder
- * intypt; de premium-component wordt intern toegevoegd via fees-helper.
+ * Fase 31: reserve gaat over `bid + premium` ipv alleen bid — koper moet
+ * uiteindelijk total kunnen betalen als hij wint.
  */
 export function calculateReserveAmount(bidAmount: number): number {
   const total = calculateBidTotalFromBid(bidAmount);
   return Math.round(total * BID_RESERVE_RATE * 100) / 100;
 }
+
+/**
+ * Alias met expliciete naam voor toekomstige callers — accepteert bid-amount,
+ * returnt reserve over (bid + premium). Identiek aan `calculateReserveAmount`,
+ * maar de naam geeft duidelijkheid over wat de input/output is.
+ */
+export const calculateReserveForBid = calculateReserveAmount;
 
 /**
  * Get the current reserved amount for a specific user on a specific auction.

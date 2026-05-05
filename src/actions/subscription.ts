@@ -25,7 +25,9 @@ export async function getSubscriptionInfo() {
     orderBy: { createdAt: "desc" },
   });
 
-  const tierKey = (user.accountType === "ADMIN" ? "UNLIMITED" : user.accountType) as TierKey;
+  // ADMIN mapt naar ENTERPRISE-config sinds Fase 31 (was UNLIMITED). Houd
+  // dit consistent met getTierConfig in subscription-tiers.ts.
+  const tierKey = (user.accountType === "ADMIN" ? "ENTERPRISE" : user.accountType) as TierKey;
   const tierConfig = ACCOUNT_TIERS[tierKey] ?? ACCOUNT_TIERS.FREE;
 
   return {

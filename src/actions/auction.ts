@@ -554,52 +554,61 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
     // het hier expliciet te doen zodat de UI direct juiste cijfers toont.
     await syncReservedBalance(session.user.id);
   } else {
-    // Partial payment — reserve 15% (Fase 29), give 5-day deadline. Bij niet-
+    // Partial payment — reserve 10% (Fase 30), give 5-day deadline. Bij niet-
     // betalen na 5d activeert auction-payment-deadline cron forfait + strike
-    // voor amounts ≥ €2500.
+    // voor amounts ≥ €2000 (Fase 31).
     const paymentDeadline = new Date();
     paymentDeadline.setDate(paymentDeadline.getDate() + 5);
 
-    await prisma.auction.update({
-      where: { id: auctionId },
-      data: {
-        status: "BOUGHT_NOW",
-        winnerId: session.user.id,
-        finalPrice: auction.buyNowPrice,
-        paymentStatus: "AWAITING_PAYMENT",
-        paymentDeadline,
-      },
+    // Atomic: auction-flip + bid-record + pending-bundle in één $transaction
+    // (audit-fix Fase 31). Voorheen waren dit 3 sequentiële prisma-calls;
+    // bij failure tussen stap 1 en 3 ontstond een orphaned auction in
+    // AWAITING_PAYMENT zonder bid-record waardoor de cron-rotatie geen
+    // runner-up vond. syncReservedBalance blijft buiten de transactie omdat
+    // het een afgeleide herberekening is (idempotent — kan later herhaald).
+    await prisma.$transaction(async (tx) => {
+      await tx.auction.update({
+        where: { id: auctionId },
+        data: {
+          status: "BOUGHT_NOW",
+          winnerId: session.user.id,
+          finalPrice: auction.buyNowPrice,
+          paymentStatus: "AWAITING_PAYMENT",
+          paymentDeadline,
+        },
+      });
+
+      await tx.auctionBid.create({
+        data: { auctionId, bidderId: session.user.id, amount: auction.buyNowPrice },
+      });
+
+      // Pre-create PENDING ShippingBundle (Fase 27.93). Inline omdat
+      // createPendingBundle een eigen prisma.shippingBundle.create doet
+      // buiten onze tx — we herhalen die logica hier zodat het atomic blijft.
+      await tx.shippingBundle.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          buyerId: session.user.id,
+          sellerId: auction.sellerId,
+          shippingCost: 0,
+          totalItemCost: auction.buyNowPrice,
+          totalCost: auction.buyNowPrice,
+          status: "PENDING",
+          auctionId,
+          deliveryMethod: chosenDelivery,
+          buyerStreet: chosenDelivery === "SHIP" ? user.street ?? null : null,
+          buyerHouseNumber: chosenDelivery === "SHIP" ? user.houseNumber ?? null : null,
+          buyerPostalCode: chosenDelivery === "SHIP" ? user.postalCode ?? null : null,
+          buyerCity: chosenDelivery === "SHIP" ? user.city ?? null : null,
+          buyerCountry: chosenDelivery === "SHIP" ? user.country ?? null : null,
+        },
+      });
     });
 
-    // Reserve 15% by creating a bid record so syncReservedBalance picks it up
-    await prisma.auctionBid.create({
-      data: { auctionId, bidderId: session.user.id, amount: auction.buyNowPrice },
-    });
+    // Idempotente reserve-recalculatie buiten de tx — leest bid-records
+    // die binnen de tx zijn aangemaakt. Bij hier-falen blijft de DB consistent;
+    // syncReservedBalance kan opnieuw vanuit een andere actie of via cron.
     await syncReservedBalance(session.user.id);
-
-    // Pre-create PENDING ShippingBundle (Fase 27.93). Consistent met
-    // finalizeAuction zodat seller een 'wacht-op-betaling' sale ziet en de
-    // koper de aankoop kan terugvinden via de Pending-Auctions sectie op
-    // /dashboard/aankopen. completeAuctionPayment promoot deze rij naar PAID
-    // i.p.v. een nieuwe aan te maken (auctionId @unique).
-    // deliveryMethod: snapshot van koper-keuze (Fase 27.95).
-    await createPendingBundle({
-      buyerId: session.user.id,
-      sellerId: auction.sellerId,
-      totalItemCost: auction.buyNowPrice,
-      shippingCost: 0,
-      auctionId,
-      deliveryMethod: chosenDelivery,
-      address: chosenDelivery === "SHIP"
-        ? {
-            street: user.street,
-            houseNumber: user.houseNumber,
-            postalCode: user.postalCode,
-            city: user.city,
-            country: user.country,
-          }
-        : undefined,
-    });
 
     await createNotification(
       session.user.id,
