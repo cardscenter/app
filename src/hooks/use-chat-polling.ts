@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRealtime } from "@/components/providers/realtime-provider";
 
 export interface PolledMessage {
   id: string;
@@ -64,6 +65,8 @@ export function useChatPolling({
   const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const visibleRef = useRef(typeof document !== "undefined" ? !document.hidden : true);
   const fetchingRef = useRef(false);
+  const tickRef = useRef<() => void>(() => {});
+  const { subscribe } = useRealtime();
 
   useEffect(() => {
     if (!enabled) return;
@@ -108,6 +111,8 @@ export function useChatPolling({
       }
     }
 
+    tickRef.current = tick;
+
     function handleVisibilityChange() {
       visibleRef.current = !document.hidden;
       if (visibleRef.current) {
@@ -126,6 +131,19 @@ export function useChatPolling({
       if (intervalRef.current) clearTimeout(intervalRef.current);
     };
   }, [conversationId, enabled, fastIntervalMs, slowIntervalMs, emptyPollsBeforeBackoff]);
+
+  // SSE: nieuwe berichten komen via de user-channel binnen. Bij een match
+  // op deze conversation triggeren we direct een tick — dat haalt het
+  // bericht (en eventuele pickup-state-changes) instant op.
+  useEffect(() => {
+    if (!enabled) return;
+    return subscribe("new-message", (event) => {
+      if (event.type !== "new-message") return;
+      if (event.payload.conversationId !== conversationId) return;
+      if (intervalRef.current) clearTimeout(intervalRef.current);
+      tickRef.current();
+    });
+  }, [enabled, conversationId, subscribe]);
 
   return { newMessages, pickupState };
 }

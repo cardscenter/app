@@ -10,10 +10,11 @@ interface PaymentMethodModalProps {
   /** Echte beschikbare saldo (= balance - reservedBalance). Dit is wat overal
    *  als "Beschikbaar" getoond wordt. */
   availableBalance: number;
-  /** Extra krediet specifiek voor DEZE betaling — bv. de 40%-reservering die
+  /** Extra krediet specifiek voor DEZE betaling — bv. de 15%-reservering die
    *  al voor deze auction is vastgehouden en bij payment automatisch wordt
-   *  vrijgegeven. Telt mee voor de canPay-check, maar verschijnt apart in de
-   *  UI zodat de koper begrijpt waar het vandaan komt. Default 0. */
+   *  vrijgegeven (Fase 29 — was 40%). Telt mee voor de canPay-check, maar
+   *  verschijnt apart in de UI zodat de koper begrijpt waar het vandaan komt.
+   *  Default 0. */
   extraCredit?: number;
   onConfirm: () => void;
   onCancel: () => void;

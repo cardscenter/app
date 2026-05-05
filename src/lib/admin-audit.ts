@@ -20,7 +20,12 @@ export type AdminAction =
   | "BULK_REMOVE_AUCTIONS"
   | "BULK_REMOVE_CLAIMSALES"
   | "RESET_IBAN_COOLDOWN"
-  | "FORCE_USERNAME_RESET";
+  | "FORCE_USERNAME_RESET"
+  // Fase 29 — veiling-binding + anti-shill
+  | "BID_IP_OVERLAP"
+  | "SYSTEM_AUTO_SUSPEND"
+  | "GRANT_BID_DEPOSIT_EXEMPTION"
+  | "REVOKE_BID_DEPOSIT_EXEMPTION";
 
 export type AdminTargetType =
   | "USER"
@@ -38,6 +43,13 @@ export type AdminTargetType =
   | "CRON"
   | "REPORT";
 
+/**
+ * Log an admin or system action.
+ *
+ * Pass `adminId` as a userId for human-driven actions, or `"system"` for
+ * automated actions (cron auto-suspend, IP-overlap-flagging). System events
+ * land in the same audit log met `actorType="SYSTEM"` en `adminId=null`.
+ */
 export async function logAdminAction(params: {
   adminId: string;
   action: AdminAction;
@@ -45,9 +57,11 @@ export async function logAdminAction(params: {
   targetId?: string | null;
   metadata?: Record<string, unknown>;
 }) {
+  const isSystem = params.adminId === "system";
   await prisma.adminAuditLog.create({
     data: {
-      adminId: params.adminId,
+      adminId: isSystem ? null : params.adminId,
+      actorType: isSystem ? "SYSTEM" : "USER",
       action: params.action,
       targetType: params.targetType,
       targetId: params.targetId ?? null,

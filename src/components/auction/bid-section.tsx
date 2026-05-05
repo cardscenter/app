@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { placeBid, buyNow } from "@/actions/auction";
 import { getMinimumNextBid } from "@/lib/auction/bid-increments";
+import { BID_RESERVE_RATE } from "@/lib/auction/bid-tiers";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { QuickBidButtons } from "@/components/auction/quick-bid-buttons";
@@ -39,29 +40,51 @@ export function BidSection({
   const [loading, setLoading] = useState(false);
   const [showBuyNowConfirm, setShowBuyNowConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Synchroon guard tegen dubbele submits: setState is async, dus tussen
+  // klik 1 en de re-render-met-disabled-button kan klik 2 al binnenkomen.
+  const submittingRef = useRef(false);
   // Voor BOTH: koper kiest. Voor SHIP/PICKUP: vast op die mode.
   const [deliveryChoice, setDeliveryChoice] = useState<"SHIP" | "PICKUP">(
     deliveryMethod === "PICKUP" ? "PICKUP" : "SHIP"
   );
 
   const minimumBid = currentBid === null ? startingBid : getMinimumNextBid(currentBid);
-  // Maximum bid: 2.5x available balance (since only 40% is reserved)
-  const maxBid = availableBalance !== undefined ? Math.floor((availableBalance / 0.4) * 100) / 100 : undefined;
+  // Maximum bid: 1 / BID_RESERVE_RATE × available balance (Fase 30A: 10% reserve
+  // → 10× available). Was 40% (2.5×) en daarna 15% (~6.7×) — we hebben de drempel
+  // verlaagd zodat bidders met klein saldo ook in het middensegment kunnen meedoen.
+  const maxBid = availableBalance !== undefined ? Math.floor((availableBalance / BID_RESERVE_RATE) * 100) / 100 : undefined;
   const hasReservedFunds = (reservedBalance ?? 0) > 0;
 
+  // Server geeft soms een error-code i.p.v. mensenlijke tekst (Fase 29).
+  // Vertaal naar i18n; CTA-link wordt apart gerenderd voor verified-eis.
+  function translateError(code: string | null): string | null {
+    if (!code) return null;
+    if (code === "VERIFIED_REQUIRED_FOR_HIGH_BID") return t("verifiedRequired.message");
+    if (code === "BID_IP_OVERLAPS_SELLER") return t("shillProtection.message");
+    return code;
+  }
+
   async function handleBid(formData: FormData) {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     setError(null);
-    const amount = parseFloat(formData.get("bidAmount") as string);
-    // Voor BOTH: stuur deliveryChoice mee. Voor SHIP/PICKUP-only: backend
-    // negeert de waarde en gebruikt auction.deliveryMethod.
-    const result = await placeBid(auctionId, amount, deliveryChoice);
-    if (result?.error) {
-      setError(result.error);
-    } else {
-      router.refresh();
+    try {
+      const amount = parseFloat(formData.get("bidAmount") as string);
+      // Voor BOTH: stuur deliveryChoice mee. Voor SHIP/PICKUP-only: backend
+      // negeert de waarde en gebruikt auction.deliveryMethod.
+      const result = await placeBid(auctionId, amount, deliveryChoice);
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        // Geen router.refresh() — SSE-events (bid-placed + balance-changed)
+        // updaten live-auction-content + UserBalance instant. Wel input clearen.
+        if (inputRef.current) inputRef.current.value = "";
+      }
+    } finally {
+      setLoading(false);
+      submittingRef.current = false;
     }
-    setLoading(false);
   }
 
   function handleQuickBid(amount: number) {
@@ -78,6 +101,9 @@ export function BidSection({
     if (result?.error) {
       setError(result.error);
     } else {
+      // Buy-now flipt status naar BOUGHT_NOW; SSE balance-changed update header,
+      // maar voor de page-state (status, ENDED-banner, payment-flow) hebben we
+      // nog SSR nodig — daarom hier wel router.refresh().
       router.refresh();
     }
     setLoading(false);
@@ -87,7 +113,15 @@ export function BidSection({
     <div className="space-y-4">
       {error && (
         <div className="glass-subtle rounded-2xl bg-red-50/50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
-          {error}
+          <p>{translateError(error)}</p>
+          {error === "VERIFIED_REQUIRED_FOR_HIGH_BID" && (
+            <Link
+              href="/dashboard/verificatie"
+              className="mt-2 inline-block text-xs font-medium underline hover:no-underline"
+            >
+              {t("verifiedRequired.cta")}
+            </Link>
+          )}
         </div>
       )}
 
@@ -213,6 +247,15 @@ export function BidSection({
               {t("placeBid")}
             </button>
           </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {t.rich("termsAcceptanceNote", {
+              link: (chunks) => (
+                <Link href="/veilingen/voorwaarden" className="underline hover:no-underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
+          </p>
         </form>
       )}
 
@@ -230,7 +273,7 @@ export function BidSection({
       {/* Buy now confirmation */}
       {buyNowPrice && showBuyNowConfirm && (() => {
         const canPayFull = availableBalance !== undefined && availableBalance >= buyNowPrice;
-        const reserveAmount = Math.round(buyNowPrice * 0.4 * 100) / 100;
+        const reserveAmount = Math.round(buyNowPrice * BID_RESERVE_RATE * 100) / 100;
         return (
           <div className="glass-subtle rounded-2xl border-2 border-primary/30 p-4 space-y-3">
             <p className="text-sm font-medium text-foreground text-center">

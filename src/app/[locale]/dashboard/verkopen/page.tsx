@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { SalesContent } from "@/components/dashboard/sales-content";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
 
@@ -33,8 +34,9 @@ function groupBundleItems(items: RawItem[]) {
 
 export default async function MySalesPage() {
   const session = await auth();
+  if (!session?.user?.id) redirect("/login");
   const t = await getTranslations("sales");
-  const userId = session!.user!.id!;
+  const userId = session.user.id;
 
   // Fetch shipping bundles (all statuses except PENDING)
   const bundles = await prisma.shippingBundle.findMany({

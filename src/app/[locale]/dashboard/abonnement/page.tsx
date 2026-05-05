@@ -1,15 +1,17 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { ACCOUNT_TIERS, getTierConfig, type TierKey } from "@/lib/subscription-tiers";
 import { Check, X, Crown, Zap, Sparkles } from "lucide-react";
 
 export default async function SubscriptionPage() {
   const session = await auth();
+  if (!session?.user?.id) redirect("/login");
   const t = await getTranslations("subscription");
 
   const user = await prisma.user.findUnique({
-    where: { id: session!.user!.id },
+    where: { id: session.user.id },
     select: { accountType: true, premiumExpiresAt: true },
   });
 
@@ -19,7 +21,7 @@ export default async function SubscriptionPage() {
   const isAdmin = user.accountType === "ADMIN";
 
   const subscription = await prisma.subscription.findFirst({
-    where: { userId: session!.user!.id, status: { in: ["ACTIVE", "CANCELLED"] } },
+    where: { userId: session.user.id, status: { in: ["ACTIVE", "CANCELLED"] } },
     orderBy: { createdAt: "desc" },
   });
 

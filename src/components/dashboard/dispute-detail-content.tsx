@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
+import { useRefreshOnRealtime } from "@/hooks/use-refresh-on-realtime";
 import {
   respondToDispute,
   acceptSellerResponse,
@@ -124,6 +125,11 @@ export function DisputeDetailContent({ dispute }: { dispute: DisputeData }) {
   const t = useTranslations("disputes");
   const locale = useLocale();
   const router = useRouter();
+
+  // Real-time refresh wanneer wederpartij/admin een actie doet (Fase 30C)
+  useRefreshOnRealtime(["dispute-changed"], (e) => {
+    return e.type === "dispute-changed" && e.payload.disputeId === dispute.id;
+  });
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(locale === "nl" ? "nl-NL" : "en-GB", {

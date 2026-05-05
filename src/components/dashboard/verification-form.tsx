@@ -4,9 +4,13 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { submitVerification } from "@/actions/verification";
 import { ImageUploader } from "@/components/ui/image-uploader";
+import { useRefreshOnRealtime } from "@/hooks/use-refresh-on-realtime";
 
 export function VerificationForm() {
   const t = useTranslations("verification");
+
+  // Real-time refresh wanneer admin verificatie goedkeurt/afwijst (Fase 30C)
+  useRefreshOnRealtime(["verification-changed"]);
   const [documentType, setDocumentType] = useState("ID_CARD");
   const [frontImageUrl, setFrontImageUrl] = useState("");
   const [backImageUrl, setBackImageUrl] = useState("");

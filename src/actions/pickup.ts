@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { requireNotSuspended } from "@/lib/suspension";
 import { releaseEscrow } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { publishNewMessageForConversation } from "@/actions/message";
+import { publish, userChannel } from "@/lib/realtime";
 import {
   proposePickupSchema,
   confirmPickupSchema,
@@ -136,6 +138,14 @@ export async function proposePickup(input: {
     conversationId ? `/nl/berichten/${conversationId}` : "/dashboard/aankopen"
   );
 
+  if (conversationId) {
+    await publishNewMessageForConversation(
+      conversationId,
+      session.user.id,
+      `📅 Ophaalmoment voorgesteld`,
+    );
+  }
+
   return { success: true, scheduleId };
 }
 
@@ -188,6 +198,14 @@ export async function respondToPickup(scheduleId: string, action: "ACCEPT" | "RE
         : "/dashboard/aankopen"
     );
 
+    if (bundle.bundleProposal?.conversationId) {
+      await publishNewMessageForConversation(
+        bundle.bundleProposal.conversationId,
+        session.user.id,
+        `❌ Ophaalmoment afgewezen`,
+      );
+    }
+
     return { success: true };
   }
 
@@ -228,6 +246,14 @@ export async function respondToPickup(scheduleId: string, action: "ACCEPT" | "RE
       ? `/nl/berichten/${bundle.bundleProposal.conversationId}`
       : "/dashboard/aankopen"
   );
+
+  if (bundle.bundleProposal?.conversationId) {
+    await publishNewMessageForConversation(
+      bundle.bundleProposal.conversationId,
+      session.user.id,
+      `✅ Ophaalmoment bevestigd`,
+    );
+  }
 
   return { success: true };
 }
@@ -343,6 +369,21 @@ export async function confirmPickup(input: { shippingBundleId: string; code: str
     "/dashboard/aankopen"
   );
 
+  // Real-time: bundle COMPLETED + balance-changed (PLATFORM escrow-release)
+  for (const uid of [bundle.buyerId, bundle.sellerId]) {
+    publish(userChannel(uid), { type: "bundle-changed", payload: { bundleId: bundle.id, status: "COMPLETED" } });
+    if (bundle.paymentMode === "PLATFORM") {
+      publish(userChannel(uid), { type: "balance-changed", payload: {} });
+    }
+  }
+  if (bundle.bundleProposal?.conversationId) {
+    await publishNewMessageForConversation(
+      bundle.bundleProposal.conversationId,
+      session.user.id,
+      `📦 Ophaal bevestigd`,
+    );
+  }
+
   return { success: true };
 }
 
@@ -447,6 +488,17 @@ export async function confirmExternalPickup(shippingBundleId: string) {
     "/dashboard/verkopen"
   );
 
+  for (const uid of [bundle.buyerId, bundle.sellerId]) {
+    publish(userChannel(uid), { type: "bundle-changed", payload: { bundleId: bundle.id, status: "COMPLETED" } });
+  }
+  if (bundle.bundleProposal?.conversationId) {
+    await publishNewMessageForConversation(
+      bundle.bundleProposal.conversationId,
+      session.user.id,
+      `📦 Ophaal bevestigd`,
+    );
+  }
+
   return { success: true };
 }
 
@@ -521,6 +573,14 @@ export async function cancelExternalReservation(shippingBundleId: string) {
       ? `/nl/berichten/${bundle.bundleProposal.conversationId}`
       : isBuyer ? "/dashboard/verkopen" : "/dashboard/aankopen"
   );
+
+  if (bundle.bundleProposal?.conversationId) {
+    await publishNewMessageForConversation(
+      bundle.bundleProposal.conversationId,
+      session.user.id,
+      `🚫 Ophaal-reservering geannuleerd`,
+    );
+  }
 
   return { success: true };
 }

@@ -5,6 +5,7 @@ import { ArrowLeft, ShieldCheck, Ban, AlertCircle } from "lucide-react";
 import { isUserSuspended } from "@/lib/suspension";
 import { maskIban, formatIbanForDisplay } from "@/lib/validations/iban";
 import { UserActionBar } from "@/components/admin/user-action-bar";
+import { BidDepositExemptionToggle } from "@/components/admin/bid-deposit-exemption-toggle";
 
 const TABS = [
   { key: "profile", label: "Profiel" },
@@ -72,6 +73,11 @@ export default async function AdminUserDetailPage({
       country: true,
       sellingCountries: true,
       maxRunnerUpAttempts: true,
+      paymentFailureCount: true,
+      paymentFailureLastAt: true,
+      isBusinessBidExempt: true,
+      lastLoginIp: true,
+      lastLoginIpAt: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -211,6 +217,55 @@ function ProfileTab({ user }: { user: NonNullable<Awaited<ReturnType<typeof pris
       <Field label="Aangemaakt" value={user.createdAt?.toLocaleString("nl-NL")} />
       <Field label="Laatst bijgewerkt" value={user.updatedAt?.toLocaleString("nl-NL")} />
       {user.suspensionReason && <Field label="Suspension reden" value={user.suspensionReason} />}
+
+      {/* Fase 29: veiling-status — strikes, borg-vrijstelling, IP-tracking */}
+      <div className="md:col-span-3 mt-2 rounded-lg border border-border bg-muted/30 p-4">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Veiling-status (Fase 29)
+        </h3>
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-3">
+          <Field
+            label="Wanbetalingen (strikes)"
+            value={
+              user.paymentFailureCount > 0 ? (
+                <span className={user.paymentFailureCount >= 2 ? "font-semibold text-rose-600" : "text-amber-600"}>
+                  {user.paymentFailureCount}× wanbetaling
+                </span>
+              ) : (
+                <span className="text-emerald-600">Geen</span>
+              )
+            }
+          />
+          <Field label="Laatste wanbetaling" value={user.paymentFailureLastAt?.toLocaleString("nl-NL")} />
+          <Field
+            label="Borg-vrijstelling"
+            value={
+              user.isBusinessBidExempt ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                  Actief
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Niet vrijgesteld</span>
+              )
+            }
+          />
+          <Field
+            label="Laatste login-IP"
+            value={user.lastLoginIp ? <code className="text-xs">{user.lastLoginIp}</code> : null}
+          />
+          <Field label="Login-IP geupdate" value={user.lastLoginIpAt?.toLocaleString("nl-NL")} />
+        </dl>
+        {/* Toggle voor BUSINESS-accounts — INDIVIDUAL ziet de knop niet */}
+        {user.accountKind === "BUSINESS" && user.vatNumber && user.cocNumber && (
+          <div className="mt-4 border-t border-border pt-4">
+            <BidDepositExemptionToggle
+              userId={user.id}
+              userName={user.displayName}
+              currentlyExempt={user.isBusinessBidExempt}
+            />
+          </div>
+        )}
+      </div>
     </dl>
   );
 }

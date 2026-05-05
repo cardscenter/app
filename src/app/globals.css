@@ -512,3 +512,28 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Bell + Message-icon shake on new event (Fase 30A) ── */
+
+@keyframes bell-shake {
+  0%, 100% { transform: rotate(0); }
+  10%, 30%, 50%, 70% { transform: rotate(-12deg); }
+  20%, 40%, 60%, 80% { transform: rotate(12deg); }
+  90% { transform: rotate(-6deg); }
+}
+
+.animate-bell-shake {
+  animation: bell-shake 600ms ease-in-out;
+  transform-origin: top center;
+}
+
+/* ── Flash-in voor nieuwe-melding overlay (Fase 30A) ── */
+
+@keyframes flash-in {
+  0% { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-flash-in {
+  animation: flash-in 220ms ease-out;
+}

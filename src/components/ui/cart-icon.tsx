@@ -5,13 +5,16 @@ import Link from "next/link";
 import { useLocale } from "next-intl";
 import { useEffect, useState } from "react";
 import { getCartCount } from "@/actions/cart";
+import { useRealtime } from "@/components/providers/realtime-provider";
 
 export function CartIcon() {
   const locale = useLocale();
   const [count, setCount] = useState(0);
+  const { subscribe } = useRealtime();
 
   useEffect(() => {
     getCartCount().then(setCount);
+    // 30s polling als fallback voor disconnected SSE
     const interval = setInterval(() => {
       getCartCount().then(setCount);
     }, 30000);
@@ -26,6 +29,15 @@ export function CartIcon() {
       window.removeEventListener("cart-updated", handleCartUpdated);
     };
   }, []);
+
+  // Real-time: andere claimers die expirenwn / cart-content cleared bij checkout
+  // / 15-min cron — alle paden publishen cart-changed met verse count.
+  useEffect(() => {
+    return subscribe("cart-changed", (event) => {
+      if (event.type !== "cart-changed") return;
+      setCount(event.payload.count);
+    });
+  }, [subscribe]);
 
   return (
     <Link

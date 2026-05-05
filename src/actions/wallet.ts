@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCommissionRate } from "@/lib/subscription-tiers";
 import { logAdminAction } from "@/lib/admin-audit";
+import { publish, userChannel } from "@/lib/realtime";
 
 // Get current user's balance
 export async function getBalance(): Promise<number | null> {
@@ -70,6 +71,8 @@ export async function adminDeposit(userId: string, amount: number, description?:
     }),
   ]);
 
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
+
   return { success: true, newBalance: balanceAfter };
 }
 
@@ -125,6 +128,8 @@ export async function confirmBankTransfer(userId: string, amount: number, adminN
     },
   });
 
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
+
   return { success: true, newBalance: balanceAfter };
 }
 
@@ -158,6 +163,8 @@ export async function deductBalance(userId: string, amount: number, type: string
     }),
   ]);
 
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
+
   return balanceAfter;
 }
 
@@ -187,6 +194,8 @@ export async function creditBalance(userId: string, amount: number, type: string
       },
     }),
   ]);
+
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
 
   return balanceAfter;
 }
@@ -282,6 +291,8 @@ export async function releaseEscrow(userId: string, amount: number, description:
   }
 
   await prisma.$transaction(operations);
+
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
 }
 
 // Internal: partial refund escrow → return partial funds to buyer, keep rest in escrow
@@ -322,6 +333,9 @@ export async function partialRefundEscrow(sellerId: string, buyerId: string, ref
       data: { heldBalance: { decrement: safeEscrowDeduction } },
     }),
   ]);
+
+  publish(userChannel(buyerId), { type: "balance-changed", payload: {} });
+  publish(userChannel(sellerId), { type: "balance-changed", payload: {} });
 }
 
 // Internal: refund escrow → return funds to buyer, reduce seller heldBalance
@@ -369,4 +383,7 @@ export async function refundEscrow(sellerId: string, buyerId: string, amount: nu
       data: { heldBalance: { decrement: safeEscrowDecrement } },
     }),
   ]);
+
+  publish(userChannel(buyerId), { type: "balance-changed", payload: {} });
+  publish(userChannel(sellerId), { type: "balance-changed", payload: {} });
 }

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Clock, Check, CheckCircle2, XCircle } from "lucide-react";
 import { maskIban } from "@/lib/validations/iban";
+import { useRefreshOnRealtime } from "@/hooks/use-refresh-on-realtime";
 
 interface WithdrawalRow {
   id: string;
@@ -17,6 +18,9 @@ interface WithdrawalRow {
 
 export function WithdrawalHistory({ requests }: { requests: WithdrawalRow[] }) {
   const t = useTranslations("withdrawal");
+
+  // Real-time refresh wanneer admin approve/reject/markPaid uitvoert (Fase 30C)
+  useRefreshOnRealtime(["withdrawal-changed"]);
 
   if (requests.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("noHistory")}</p>;

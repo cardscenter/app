@@ -8,6 +8,12 @@ import { createNotification } from "@/actions/notification";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
+import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
+
+async function publishCartCount(userId: string) {
+  const count = await prisma.cartItem.count({ where: { userId } });
+  publish(userChannel(userId), { type: "cart-changed", payload: { count } });
+}
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -306,6 +312,14 @@ export async function expireClaimedItems(claimsaleId?: string) {
 
   const expiredIds = expiredItems.map((i) => i.id);
 
+  // Pak vóór de delete welke users hun cart-content kwijt raken zodat we
+  // per user een cart-changed event kunnen publishen na de transaction.
+  const affectedUsers = await prisma.cartItem.findMany({
+    where: { claimsaleItemId: { in: expiredIds } },
+    select: { userId: true },
+    distinct: ["userId"],
+  });
+
   // Reset items to AVAILABLE and delete associated cart items in transaction
   await prisma.$transaction([
     prisma.claimsaleItem.updateMany({
@@ -316,6 +330,9 @@ export async function expireClaimedItems(claimsaleId?: string) {
       where: { claimsaleItemId: { in: expiredIds } },
     }),
   ]);
+
+  // Cart-count event per user die items kwijt is (Fase 30C)
+  for (const u of affectedUsers) await publishCartCount(u.userId);
 
   // One notification per (seller, claimsale) — batched so a sweep across
   // many items in the same claimsale doesn't flood the seller.
@@ -341,6 +358,15 @@ export async function expireClaimedItems(claimsaleId?: string) {
         ? `Een gereserveerd item op "${title}" is vrijgegeven omdat de koper niet heeft afgerekend.`
         : `${count} gereserveerde items op "${title}" zijn vrijgegeven omdat de kopers niet hebben afgerekend.`;
     await createNotification(sellerId, "ITEM_SOLD", "Reservering verlopen", body, `/nl/claimsales/${csid}`);
+  }
+
+  // Real-time broadcast per vrijgegeven item zodat viewers van die claimsale
+  // direct zien dat het weer beschikbaar is (Fase 30B).
+  for (const item of expiredItems) {
+    publish(claimsaleChannel(item.claimsaleId), {
+      type: "claimsale-item-claimed",
+      payload: { claimsaleId: item.claimsaleId, itemId: item.id, status: "AVAILABLE" },
+    });
   }
 
   return { expired: expiredIds.length };
@@ -416,6 +442,14 @@ export async function claimItem(claimsaleItemId: string) {
     }
     throw e;
   }
+
+  // Real-time broadcast naar iedereen die op de claimsale-page kijkt (Fase 30B)
+  publish(claimsaleChannel(item.claimsaleId), {
+    type: "claimsale-item-claimed",
+    payload: { claimsaleId: item.claimsaleId, itemId: claimsaleItemId, status: "CLAIMED" },
+  });
+  // Cart count update naar de claimer (Fase 30C)
+  await publishCartCount(userId);
 
   return { success: true, expiresAt: expiresAt.toISOString(), cardName: item.cardName };
 }
@@ -526,6 +560,13 @@ export async function unclaimItem(claimsaleItemId: string) {
       where: { userId, claimsaleItemId },
     }),
   ]);
+
+  // Real-time: item terug op de markt + cart-count update voor de user (Fase 30C)
+  publish(claimsaleChannel(item.claimsaleId), {
+    type: "claimsale-item-claimed",
+    payload: { claimsaleId: item.claimsaleId, itemId: claimsaleItemId, status: "AVAILABLE" },
+  });
+  await publishCartCount(userId);
 
   return { success: true };
 }

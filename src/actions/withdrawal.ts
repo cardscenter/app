@@ -6,7 +6,12 @@ import { deductBalance, creditBalance } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
 import { WITHDRAWAL_MIN_AMOUNT } from "@/lib/withdrawal-config";
+import { publish, userChannel } from "@/lib/realtime";
 import { z } from "zod";
+
+function publishWithdrawalChanged(userId: string, withdrawalId: string, status: string) {
+  publish(userChannel(userId), { type: "withdrawal-changed", payload: { withdrawalId, status } });
+}
 
 const requestSchema = z.object({
   amount: z.coerce.number().min(WITHDRAWAL_MIN_AMOUNT, `Minimaal €${WITHDRAWAL_MIN_AMOUNT}`),
@@ -162,6 +167,8 @@ export async function approveWithdrawal(withdrawalId: string, adminNote?: string
     metadata: { userId: w.userId, amount: w.amount, adminNote: adminNote?.trim() || null },
   });
 
+  publishWithdrawalChanged(w.userId, withdrawalId, "APPROVED");
+
   return { success: true };
 }
 
@@ -196,6 +203,8 @@ export async function markWithdrawalPaid(withdrawalId: string) {
     targetId: withdrawalId,
     metadata: { userId: w.userId, amount: w.amount },
   });
+
+  publishWithdrawalChanged(w.userId, withdrawalId, "PAID");
 
   return { success: true };
 }
@@ -245,6 +254,8 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
     targetId: withdrawalId,
     metadata: { userId: w.userId, amount: w.amount, reason: trimmed },
   });
+
+  publishWithdrawalChanged(w.userId, withdrawalId, "REJECTED");
 
   return { success: true };
 }

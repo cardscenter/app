@@ -250,7 +250,7 @@
     "buyNow": "Buy Now",
     "buyNowConfirmTitle": "Confirm Buy Now",
     "buyNowConfirmMessage": "Are you sure you want to buy this item for \u20AC{price}? This amount will be deducted from your balance immediately.",
-    "buyNowConfirmPartial": "Are you sure you want to buy this item for \u20AC{price}? 40% of this amount (\u20AC{reserve}) will be held until you complete payment. You have 5 days to pay.",
+    "buyNowConfirmPartial": "Are you sure you want to buy this item for \u20AC{price}? 10% of this amount (\u20AC{reserve}) will be held until you complete payment. You have 5 days to pay.",
     "buyNowConfirm": "Yes, buy now",
     "buyNowCancel": "Cancel",
     "minimumBid": "Minimum bid",
@@ -339,14 +339,28 @@
     "balanceReservedInfo": "€{amount} of your balance is reserved for bids on other auctions.",
     "bidTooHighWarning": "You don't have enough balance for this bid. Your maximum bid is €{max}. Top up your balance to bid higher.",
     "noBalanceTitle": "Make a deposit to place bids",
-    "noBalanceMessage": "You need at least 40% of your bid amount as balance to place a valid bid.",
+    "noBalanceMessage": "You need at least 10% of your bid amount as balance to place a valid bid.",
     "topUpBalance": "Top up balance",
     "bidExceedsBalanceWarning": "Your bid exceeds your deposited balance. Consider <link>topping up your balance</link> if you plan to keep bidding on this lot.",
     "sortBy": "Sort by",
     "sortNewest": "Newest first",
     "sortEndingSoon": "Ending soonest",
     "sortHighestBid": "Highest bid",
-    "sortMostBids": "Most bids"
+    "sortMostBids": "Most bids",
+    "verifiedRequired": {
+      "message": "Bids ≥ €2000 require a verified account. Verify your identity to place this bid.",
+      "cta": "Verify your account"
+    },
+    "termsAcceptanceNote": "By bidding you agree to the <link>auction terms</link>.",
+    "shillProtection": {
+      "message": "Bid rejected: this account shares a network with the seller."
+    },
+    "failures": {
+      "strikeWarning": "You have {count} payment failure{count, plural, one {} other {s}} on auctions. At 2× you'll be auto-suspended for 30 days, at 3× permanently.",
+      "forfeited": "Deposit of €{amount} forfeited due to payment failure.",
+      "autoSuspendTemp": "Account suspended for 30 days due to 2× payment failures on auctions.",
+      "autoSuspendPermanent": "Account permanently suspended due to 3× payment failures on auctions."
+    }
   },
   "claimsale": {
     "createTitle": "New Claimsale",
@@ -424,7 +438,7 @@
     "availableBalance": "Available balance",
     "availableBalanceHint": "This amount is available for purchases and bids.",
     "reservedBalance": "Reserved for bids",
-    "reservedBalanceHint": "40% of your active bids is reserved as a guarantee.",
+    "reservedBalanceHint": "10% of your active bids is reserved as a guarantee.",
     "totalBalance": "Total balance",
     "totalBalanceHint": "Available + reserved balance combined.",
     "heldBalance": "Held in escrow",
@@ -867,7 +881,7 @@
     "withdrawn": "Withdrawn",
     "pending": "Pending",
     "cancelled": "Cancelled",
-    "insufficientBalance": "Insufficient balance (minimum 40% required)",
+    "insufficientBalance": "Insufficient balance (minimum 10% required)",
     "paymentDeadline": "Pay within 5 days",
     "completePayment": "Complete payment",
     "proposalAccepted": "Offer accepted! The listing has been sold.",
@@ -2154,6 +2168,7 @@
     "kpiPendingBuybacks": "Buyback requests",
     "kpiPendingReports": "Reports",
     "kpiSellerWarnings": "Unshipped",
+    "kpiBidDefaulters": "Defaulters (suspended)",
     "kpiTotalEscrow": "Total escrow",
     "kpiPendingPayouts": "Pending payouts",
     "kpiTotalUserBalance": "Total user balance",

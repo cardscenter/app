@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
+import { publish, userChannel } from "@/lib/realtime";
 import { z } from "zod";
 
 async function requireAdmin() {
@@ -89,6 +90,8 @@ export async function suspendUser(targetId: string, formData: FormData) {
     },
   });
 
+  publish(userChannel(targetId), { type: "suspension-changed", payload: { suspended: true } });
+
   return { success: true };
 }
 
@@ -127,6 +130,8 @@ export async function liftSuspension(targetId: string) {
     targetId,
     metadata: { targetName: target.displayName },
   });
+
+  publish(userChannel(targetId), { type: "suspension-changed", payload: { suspended: false } });
 
   return { success: true };
 }

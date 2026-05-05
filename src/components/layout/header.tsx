@@ -6,8 +6,9 @@ import { useSession, SessionProvider } from "next-auth/react";
 import { UserBalance } from "./user-balance";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, MessageCircle, Search } from "lucide-react";
+import { Menu, X, Search } from "lucide-react";
 import { NotificationBell } from "@/components/ui/notification-bell";
+import { MessageIcon } from "@/components/ui/message-icon";
 import { SearchBar } from "@/components/search/search-bar";
 import { CartIcon } from "@/components/ui/cart-icon";
 import { AdminShield } from "@/components/layout/admin-shield";
@@ -127,14 +128,8 @@ function HeaderContent() {
               {/* Admin shield (only renders for ADMIN accounts) */}
               <AdminShield />
 
-              {/* Messages */}
-              <Link
-                href="/berichten"
-                className="rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
-                title={t("messages")}
-              >
-                <MessageCircle className="h-5 w-5" />
-              </Link>
+              {/* Messages — real-time bell-style popover */}
+              <MessageIcon />
 
               {/* Cart */}
               <CartIcon />

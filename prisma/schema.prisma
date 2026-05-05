@@ -32,7 +32,7 @@ model User {
   // Wallet
   balance         Float     @default(0)
   heldBalance     Float     @default(0) // Escrow: held until buyer confirms delivery
-  reservedBalance Float     @default(0) // Reserved by active auction bids (40% of bid amount)
+  reservedBalance Float     @default(0) // Reserved by active auction bids (15% of bid amount, Fase 29)
 
   // Bank transfer
   bankTransferReference String? @unique // e.g. "atomicsnipz8729376290"
@@ -48,6 +48,22 @@ model User {
   suspensionType    String?   // TEMPORARY | PERMANENT
   suspensionReason  String?
   suspensionAdminId String?
+
+  // Veiling-wanbetalingen (Fase 29). Strike-counter — bij wanbetaling op een
+  // veiling +1, bij 2× = auto-suspend 30d, bij 3× = permanent. Decay −1 na
+  // 365 dagen zonder nieuwe failure (cron payment-failure-decay).
+  paymentFailureCount  Int      @default(0)
+  paymentFailureLastAt DateTime?
+
+  // Borg-vrijstelling (Fase 29) — admin-toggle voor BUSINESS-accounts met
+  // valide vatNumber + cocNumber. Vrijstelling van verified-eis bij ≥€2500
+  // bids; borg-forfait blijft van toepassing bij wanbetaling.
+  isBusinessBidExempt Boolean @default(false)
+
+  // IP-tracking voor anti-shill-bidding (Fase 29). Snapshot bij login/session
+  // refresh. Geen historie — overschreven bij elke nieuwe login.
+  lastLoginIp   String?
+  lastLoginIpAt DateTime?
 
   // Account type & role
   accountType       String   @default("FREE") // FREE | PRO | UNLIMITED | ADMIN
@@ -487,6 +503,10 @@ model AuctionBid {
   // Bij SHIP-only of PICKUP-only auctions blijft dit null (de auction-deliveryMethod
   // bepaalt dan).
   deliveryChoice String?
+
+  // IP-snapshot bij bid-tijd voor anti-shill-bidding-detectie (Fase 29).
+  // Wordt na 90d genull't door cron prune-bid-ips. Privacy-policy dekt dit.
+  bidderIp String?
 
   @@index([auctionId, amount])
   @@index([bidderId])
@@ -1623,10 +1643,14 @@ model BulkBuybackItem {
 model AdminAuditLog {
   id          String   @id @default(cuid())
 
-  adminId     String
-  admin       User     @relation("AdminAuditLogActor", fields: [adminId], references: [id])
+  // adminId nullable per Fase 29 — system-driven events (cron auto-suspend,
+  // IP-overlap-detectie) hebben geen menselijke admin. actorType onderscheidt
+  // human (USER) van automated (SYSTEM).
+  adminId     String?
+  admin       User?    @relation("AdminAuditLogActor", fields: [adminId], references: [id])
+  actorType   String   @default("USER") // USER | SYSTEM
 
-  action      String   // SUSPEND_USER | LIFT_SUSPENSION | APPROVE_WITHDRAWAL | REJECT_WITHDRAWAL | MARK_PAID | ADMIN_RESOLVE_DISPUTE | REVIEW_VERIFICATION | UPDATE_BUYBACK_STATUS | CONFIRM_BANK_TRANSFER | REVIEW_REPORT | UPDATE_APP_CONFIG | EDIT_SERIES | EDIT_CARDSET | EDIT_CARD | RUN_CRON_MANUALLY | BULK_REMOVE_LISTINGS | BULK_REMOVE_AUCTIONS | BULK_REMOVE_CLAIMSALES | RESET_IBAN_COOLDOWN | FORCE_USERNAME_RESET
+  action      String   // SUSPEND_USER | LIFT_SUSPENSION | APPROVE_WITHDRAWAL | REJECT_WITHDRAWAL | MARK_PAID | ADMIN_RESOLVE_DISPUTE | REVIEW_VERIFICATION | UPDATE_BUYBACK_STATUS | CONFIRM_BANK_TRANSFER | REVIEW_REPORT | UPDATE_APP_CONFIG | EDIT_SERIES | EDIT_CARDSET | EDIT_CARD | RUN_CRON_MANUALLY | BULK_REMOVE_LISTINGS | BULK_REMOVE_AUCTIONS | BULK_REMOVE_CLAIMSALES | RESET_IBAN_COOLDOWN | FORCE_USERNAME_RESET | BID_IP_OVERLAP | SYSTEM_AUTO_SUSPEND | GRANT_BID_DEPOSIT_EXEMPTION | REVOKE_BID_DEPOSIT_EXEMPTION
   targetType  String   // USER | WITHDRAWAL | DISPUTE | VERIFICATION | BUYBACK | LISTING | AUCTION | CLAIMSALE | APP_CONFIG | SERIES | CARDSET | CARD | CRON | REPORT
   targetId    String?
   metadata    String?  // JSON blob with extra context (amount, oldStatus, newStatus, reason, etc.)
@@ -1634,6 +1658,7 @@ model AdminAuditLog {
   createdAt   DateTime @default(now())
 
   @@index([adminId])
+  @@index([actorType])
   @@index([targetType, targetId])
   @@index([createdAt])
 }

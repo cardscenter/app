@@ -6,9 +6,16 @@ import { revalidatePath } from "next/cache";
 import { refundEscrow, releaseEscrow, partialRefundEscrow } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
+import { publish, userChannel } from "@/lib/realtime";
 
 async function logDisputeEvent(disputeId: string, actorId: string, type: string, detail?: string) {
   await prisma.disputeEvent.create({ data: { disputeId, actorId, type, detail } });
+}
+
+function publishDisputeChanged(buyerId: string, sellerId: string, disputeId: string, status: string) {
+  for (const uid of [buyerId, sellerId]) {
+    publish(userChannel(uid), { type: "dispute-changed", payload: { disputeId, status } });
+  }
 }
 
 const DISPUTE_OPEN_AFTER_DAYS = 10; // Buyer can open dispute 10 days after shipment
@@ -98,6 +105,8 @@ export async function openDispute(data: {
     `/dashboard/geschillen/${dispute.id}`
   );
 
+  publishDisputeChanged(bundle.buyerId, bundle.sellerId, dispute.id, "OPEN");
+
   revalidatePath(`/dashboard/geschillen/${dispute.id}`);
   revalidatePath("/dashboard/geschillen");
   return { success: true, disputeId: dispute.id };
@@ -146,6 +155,8 @@ export async function respondToDispute(data: {
     `/dashboard/geschillen/${dispute.id}`
   );
 
+  publishDisputeChanged(dispute.shippingBundle.buyerId, dispute.shippingBundle.sellerId, dispute.id, "SELLER_RESPONDED");
+
   revalidatePath(`/dashboard/geschillen/${data.disputeId}`);
   revalidatePath("/dashboard/geschillen");
   return { success: true };
@@ -191,6 +202,8 @@ export async function acceptSellerResponse(disputeId: string) {
     `/dashboard/geschillen/${disputeId}`
   );
 
+  publishDisputeChanged(dispute.shippingBundle.buyerId, dispute.shippingBundle.sellerId, disputeId, "RESOLVED_SELLER");
+
   revalidatePath(`/dashboard/geschillen/${disputeId}`);
   revalidatePath("/dashboard/geschillen");
   return { success: true };
@@ -230,6 +243,8 @@ export async function rejectAndResolve(disputeId: string) {
   const notifyText = "Het geschil is doorgestuurd naar een beheerder voor beoordeling.";
   await createNotification(bundle.buyerId, "DISPUTE_ESCALATED", "Geschil geëscaleerd", notifyText, `/dashboard/geschillen/${disputeId}`);
   await createNotification(bundle.sellerId, "DISPUTE_ESCALATED", "Geschil geëscaleerd", notifyText, `/dashboard/geschillen/${disputeId}`);
+
+  publishDisputeChanged(bundle.buyerId, bundle.sellerId, disputeId, "ESCALATED");
 
   revalidatePath(`/dashboard/geschillen/${disputeId}`);
   revalidatePath("/dashboard/geschillen");
@@ -286,6 +301,8 @@ export async function proposeMutualResolution(disputeId: string, amount: number)
     `Er is een gedeeltelijke terugbetaling van €${amount.toFixed(2)} voorgesteld.`,
     `/dashboard/geschillen/${disputeId}`
   );
+
+  publishDisputeChanged(bundle.buyerId, bundle.sellerId, disputeId, dispute.status);
 
   revalidatePath(`/dashboard/geschillen/${disputeId}`);
   revalidatePath("/dashboard/geschillen");
@@ -687,6 +704,13 @@ async function finalizeDispute(
     sellerText,
     `/dashboard/geschillen/${disputeId}`
   );
+
+  // Real-time dispute-changed + bundle-changed (resolution flipt bundle naar
+  // COMPLETED/SHIPPED). Beide partijen ontvangen via user-channel (Fase 30C).
+  publishDisputeChanged(buyerId, sellerId, disputeId, status);
+  for (const uid of [buyerId, sellerId]) {
+    publish(userChannel(uid), { type: "bundle-changed", payload: { bundleId, status: "DISPUTE_RESOLVED" } });
+  }
 }
 
 // Withdraw own settlement proposal

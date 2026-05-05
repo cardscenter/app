@@ -5,13 +5,17 @@ import { NextResponse } from "next/server";
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ balance: null }, { status: 401 });
+    return NextResponse.json({ balance: null, reservedBalance: null, availableBalance: null }, { status: 401 });
   }
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { balance: true },
+    select: { balance: true, reservedBalance: true },
   });
 
-  return NextResponse.json({ balance: user?.balance ?? 0 });
+  const balance = user?.balance ?? 0;
+  const reservedBalance = user?.reservedBalance ?? 0;
+  const availableBalance = Math.max(0, balance - reservedBalance);
+
+  return NextResponse.json({ balance, reservedBalance, availableBalance });
 }

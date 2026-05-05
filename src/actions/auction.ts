@@ -15,6 +15,10 @@ import { createPendingBundle } from "@/lib/shipping-bundle";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
+import { bidPassesVerifiedGate, IP_OVERLAP_LOOKBACK_DAYS } from "@/lib/auction/bid-tiers";
+import { logAdminAction } from "@/lib/admin-audit";
+import { publish, publishMany, userChannel, auctionChannel } from "@/lib/realtime";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
 
@@ -243,7 +247,7 @@ export async function placeBid(auctionId: string, amount: number, deliveryChoice
     return { error: "Je bent al de hoogste bieder" };
   }
 
-  // Check available balance (40% reserve model)
+  // Check available balance (15% reserve model — Fase 29)
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
@@ -252,13 +256,74 @@ export async function placeBid(auctionId: string, amount: number, deliveryChoice
   const ageCheck = checkAmountAllowed(user, amount);
   if (!ageCheck.allowed) return { error: ageCheck.error! };
 
+  // Fase 29: bids ≥ €2500 vereisen een geverifieerd account (tenzij admin
+  // explicit business-vrijstelling heeft toegekend). Onder de drempel is
+  // verificatie niet nodig.
+  if (!bidPassesVerifiedGate(amount, user)) {
+    return { error: "VERIFIED_REQUIRED_FOR_HIGH_BID" };
+  }
+
   if (getAvailableBalance(user) < calculateReserveAmount(amount)) {
     return { error: "Onvoldoende saldo" };
   }
 
+  // Fase 29: IP-snapshot voor anti-shill-bidding-detectie. Werk via headers()
+  // (next/headers). Hard-block als bidder-IP overlapt met seller's recente
+  // login-IP (binnen IP_OVERLAP_LOOKBACK_DAYS), anders soft-flag als ander
+  // bidder-account op deze veiling al vanaf dezelfde IP heeft gebid.
+  const reqHeaders = await headers();
+  const bidderIp =
+    reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    reqHeaders.get("x-real-ip") ||
+    null;
+
+  if (bidderIp) {
+    // Hard-block: zelfde netwerk als verkoper binnen 7d-window
+    const seller = await prisma.user.findUnique({
+      where: { id: auction.sellerId },
+      select: { lastLoginIp: true, lastLoginIpAt: true },
+    });
+    if (
+      seller?.lastLoginIp === bidderIp &&
+      seller.lastLoginIpAt &&
+      seller.lastLoginIpAt > new Date(Date.now() - IP_OVERLAP_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
+    ) {
+      return { error: "BID_IP_OVERLAPS_SELLER" };
+    }
+
+    // Soft-flag: ander bidder-account op deze veiling vanaf dezelfde IP
+    const otherBid = await prisma.auctionBid.findFirst({
+      where: {
+        auctionId,
+        bidderIp,
+        bidderId: { not: session.user.id },
+      },
+      select: { bidderId: true },
+    });
+    if (otherBid) {
+      await logAdminAction({
+        adminId: "system",
+        action: "BID_IP_OVERLAP",
+        targetType: "AUCTION",
+        targetId: auctionId,
+        metadata: {
+          bidderId: session.user.id,
+          otherBidderId: otherBid.bidderId,
+          ip: bidderIp,
+        },
+      });
+    }
+  }
+
   // Create bid record (no balance deduction — only reserves)
-  await prisma.auctionBid.create({
-    data: { auctionId, bidderId: session.user.id, amount, deliveryChoice: bidDeliveryChoice },
+  const bid = await prisma.auctionBid.create({
+    data: {
+      auctionId,
+      bidderId: session.user.id,
+      amount,
+      deliveryChoice: bidDeliveryChoice,
+      bidderIp,
+    },
   });
 
   // Sync reserved balance for new bidder
@@ -302,7 +367,31 @@ export async function placeBid(auctionId: string, amount: number, deliveryChoice
       `Je bod van €${previousHighestBid.amount.toFixed(2)} op "${auction.title}" is overboden.`,
       `/nl/veilingen/${auctionId}`
     );
+
+    // Real-time outbid-event (Fase 30A) — toast + UserBalance refresh
+    publish(userChannel(previousHighestBid.bidderId), {
+      type: "outbid",
+      payload: { auctionId, auctionTitle: auction.title, newAmount: amount },
+    });
+    publish(userChannel(previousHighestBid.bidderId), { type: "balance-changed", payload: {} });
   }
+
+  // Real-time bid-placed broadcast naar iedereen die op deze auction-page kijkt
+  // (bidId placeholder — `bid` is de net-aangemaakte AuctionBid).
+  publish(auctionChannel(auctionId), {
+    type: "bid-placed",
+    payload: {
+      auctionId,
+      bidId: bid.id,
+      amount,
+      bidderName: "anoniem",
+      currentBid: amount,
+      bidCount: 0,
+    },
+  });
+
+  // Refresh balance van de nieuwe bidder zelf — reservering ging omhoog.
+  publish(userChannel(session.user.id), { type: "balance-changed", payload: {} });
 
   // Resolve autobids — other users' autobids may outbid this manual bid
   const result = await resolveAutoBids(auctionId, amount, session.user.id);
@@ -360,9 +449,22 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
   const available = getAvailableBalance(user);
   const reserveNeeded = calculateReserveAmount(auction.buyNowPrice);
 
-  // Need at least 40% to proceed
+  // Account-age cap geldt ook voor buyNow — financieel commitment van buyNowPrice
+  const ageCheck = checkAmountAllowed(user, auction.buyNowPrice);
+  if (!ageCheck.allowed) return { error: ageCheck.error! };
+
+  // Fase 29: buyNowPrice ≥ €2500 vereist een geverifieerd account, ook bij
+  // direct-koop. Anders kan iemand de verified-eis omzeilen door buyNow te
+  // gebruiken in plaats van een gewoon bod. Geldt voor zowel full-payment als
+  // partial-payment pad — partial heeft 5d deadline en dus wanbetalingsrisico,
+  // full-payment is direct geld weg dus minder risico, maar consistent gate.
+  if (!bidPassesVerifiedGate(auction.buyNowPrice, user)) {
+    return { error: "VERIFIED_REQUIRED_FOR_HIGH_BID" };
+  }
+
+  // Need at least 15% (Fase 29) — minimum to enter partial-payment flow
   if (available < reserveNeeded) {
-    return { error: `Onvoldoende saldo. Je hebt minimaal €${reserveNeeded.toFixed(2)} (40%) nodig.` };
+    return { error: `Onvoldoende saldo. Je hebt minimaal €${reserveNeeded.toFixed(2)} (15%) nodig.` };
   }
 
   // Release reserves for ALL other bidders on this auction
@@ -426,7 +528,9 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
     // het hier expliciet te doen zodat de UI direct juiste cijfers toont.
     await syncReservedBalance(session.user.id);
   } else {
-    // Partial payment — reserve 40%, give 5-day deadline
+    // Partial payment — reserve 15% (Fase 29), give 5-day deadline. Bij niet-
+    // betalen na 5d activeert auction-payment-deadline cron forfait + strike
+    // voor amounts ≥ €2500.
     const paymentDeadline = new Date();
     paymentDeadline.setDate(paymentDeadline.getDate() + 5);
 
@@ -441,7 +545,7 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
       },
     });
 
-    // Reserve 40% by creating a bid record so syncReservedBalance picks it up
+    // Reserve 15% by creating a bid record so syncReservedBalance picks it up
     await prisma.auctionBid.create({
       data: { auctionId, bidderId: session.user.id, amount: auction.buyNowPrice },
     });
@@ -493,8 +597,24 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
   for (const { bidderId } of allBidderIds) {
     if (bidderId !== session.user.id) {
       await syncReservedBalance(bidderId);
+      // Real-time balance-changed (Fase 30A) — andere bidders zien hun
+      // reserve terug nadat een buyNow de auction afsluit.
+      publish(userChannel(bidderId), { type: "balance-changed", payload: {} });
     }
   }
+
+  // Real-time balance + auction-won voor de buyer + balance voor seller (escrow).
+  publish(userChannel(session.user.id), { type: "balance-changed", payload: {} });
+  publish(userChannel(auction.sellerId), { type: "balance-changed", payload: {} });
+  publish(userChannel(session.user.id), {
+    type: "auction-won",
+    payload: {
+      auctionId,
+      auctionTitle: auction.title,
+      finalPrice: auction.buyNowPrice,
+      paymentDeadline: available >= auction.buyNowPrice ? null : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  });
 
   return { success: true };
 }
@@ -530,6 +650,10 @@ export async function finalizeAuction(auctionId: string) {
       `Je veiling "${auction.title}" is afgelopen zonder biedingen.`,
       `/nl/veilingen/${auctionId}`
     );
+    publish(auctionChannel(auctionId), {
+      type: "auction-ended",
+      payload: { auctionId, status: "ENDED_NO_BIDS", finalPrice: null },
+    });
     return;
   }
 
@@ -548,7 +672,7 @@ export async function finalizeAuction(auctionId: string) {
           : "SHIP"; // Fallback voor BOTH zonder bid-keuze
 
   if (auction.reservePrice && highestBid.amount < auction.reservePrice) {
-    // Reserve not met — no payment needed (40% reserve model, no actual deduction was made)
+    // Reserve not met — no payment needed (15% reserve model, no actual deduction was made)
     await prisma.auction.update({
       where: { id: auctionId },
       data: { status: "ENDED_RESERVE_NOT_MET" },
@@ -560,6 +684,10 @@ export async function finalizeAuction(auctionId: string) {
       `Je veiling "${auction.title}" is afgelopen op €${highestBid.amount.toFixed(2)} maar heeft de reserveprijs niet gehaald.`,
       `/nl/veilingen/${auctionId}`
     );
+    publish(auctionChannel(auctionId), {
+      type: "auction-ended",
+      payload: { auctionId, status: "ENDED_RESERVE_NOT_MET", finalPrice: highestBid.amount },
+    });
     return;
   }
 
@@ -567,7 +695,21 @@ export async function finalizeAuction(auctionId: string) {
   const winner = await prisma.user.findUnique({ where: { id: highestBid.bidderId } });
   const totalCost = highestBid.amount;
 
-  if (winner && winner.balance >= totalCost) {
+  // Fase 29: check of winner kan betalen ZONDER andere reserves te raken.
+  // Voorheen werd `winner.balance >= totalCost` gebruikt, wat een dubbel-besteden
+  // vector opent: stel winner heeft balance €1000 en bid op een andere auction
+  // voor €500 (reserve €75 = 15%), winner bid op deze auction €1000 (reserve
+  // €150). Met de oude check was 1000 ≥ 1000 → full deduct → balance €0,
+  // maar de €75 reserve van die andere auction is nu onderdekkend.
+  // Correcte check: balance - andere-reserves ≥ totalCost. De eigen 15%-reserve
+  // op deze auction wordt 'omgezet' naar de werkelijke betaling, andere reserves
+  // blijven intact. Identiek patroon aan completeAuctionPayment.
+  const ownReserveOnThisAuction = winner ? calculateReserveAmount(totalCost) : 0;
+  const winnerEffectiveAvailable = winner
+    ? winner.balance - winner.reservedBalance + ownReserveOnThisAuction
+    : 0;
+
+  if (winner && winnerEffectiveAvailable >= totalCost) {
     // Winner has enough balance — deduct full amount and escrow to seller
     await deductBalance(
       highestBid.bidderId,
@@ -635,6 +777,20 @@ export async function finalizeAuction(auctionId: string) {
       `"${auction.title}" is verkocht voor €${totalCost.toFixed(2)}. Bekijk je verkopen om te verzenden.`,
       "/dashboard/verkopen"
     );
+
+    // Real-time auction-won + balance-changed (Fase 30A) + auction-ended broadcast (Fase 30B)
+    publish(userChannel(highestBid.bidderId), {
+      type: "auction-won",
+      payload: { auctionId, auctionTitle: auction.title, finalPrice: totalCost, paymentDeadline: null },
+    });
+    publishMany(
+      [userChannel(highestBid.bidderId), userChannel(auction.sellerId)],
+      { type: "balance-changed", payload: {} },
+    );
+    publish(auctionChannel(auctionId), {
+      type: "auction-ended",
+      payload: { auctionId, status: "ENDED_SOLD", finalPrice: totalCost },
+    });
   } else {
     // Winner doesn't have enough balance — set AWAITING_PAYMENT with 5-day deadline
     const paymentDeadline = new Date();
@@ -653,7 +809,8 @@ export async function finalizeAuction(auctionId: string) {
 
     // Fase 27.98: post-flip sync. Winner-bid is niet meer ACTIVE; in plaats
     // daarvan pakt recalculateTotalReserved nu de AWAITING_PAYMENT-tak op.
-    // Effect: 40% van finalPrice blijft gereserveerd tot completeAuctionPayment.
+    // Effect: 15% van finalPrice blijft gereserveerd tot completeAuctionPayment
+    // (Fase 29 — was 40%).
     await syncReservedBalance(highestBid.bidderId);
 
     // Pre-create a PENDING ShippingBundle so the buyer sees a "wacht op
@@ -699,6 +856,23 @@ export async function finalizeAuction(auctionId: string) {
       `"${auction.title}" is verkocht voor €${totalCost.toFixed(2)} maar de winnaar moet nog betalen. Verzend pas zodra de betaling binnen is (5 dagen deadline).`,
       `/nl/veilingen/${auctionId}`
     );
+
+    // Real-time auction-won (AWAITING_PAYMENT-pad) + balance-changed (Fase 30A)
+    publish(userChannel(highestBid.bidderId), {
+      type: "auction-won",
+      payload: {
+        auctionId,
+        auctionTitle: auction.title,
+        finalPrice: totalCost,
+        paymentDeadline: paymentDeadline.toISOString(),
+      },
+    });
+    publish(userChannel(highestBid.bidderId), { type: "balance-changed", payload: {} });
+    // Auction-ended broadcast — alle viewers zien de status-flip (Fase 30B)
+    publish(auctionChannel(auctionId), {
+      type: "auction-ended",
+      payload: { auctionId, status: "ENDED_SOLD", finalPrice: totalCost },
+    });
   }
 }
 
@@ -738,9 +912,18 @@ export async function setAutoBid(auctionId: string, maxAmount: number, deliveryC
     return { error: `Maximum autobied moet minimaal €${minimumBid.toFixed(2)} zijn` };
   }
 
-  // Check available balance (40% of max autobid amount)
+  // Check available balance (15% of max autobid amount — Fase 29)
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || getAvailableBalance(user) < calculateReserveAmount(maxAmount)) {
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  // Fase 29: autobid maxAmount ≥ €2500 vereist verified-account (tenzij
+  // business-vrijstelling). Zelfde regel als placeBid — anders kan iemand
+  // via autobid de drempel omzeilen.
+  if (!bidPassesVerifiedGate(maxAmount, user)) {
+    return { error: "VERIFIED_REQUIRED_FOR_HIGH_BID" };
+  }
+
+  if (getAvailableBalance(user) < calculateReserveAmount(maxAmount)) {
     return { error: "Onvoldoende saldo" };
   }
 
@@ -823,10 +1006,10 @@ export async function completeAuctionPayment(auctionId: string) {
   const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!buyer) return { error: "Gebruiker niet gevonden" };
 
-  // Fase 27.98: sync vóór de availableBalance-check zodat we niet op stale
+  // Fase 27.98 + 29: sync vóór de availableBalance-check zodat we niet op stale
   // reservedBalance werken (kan ontstaan na status-flips of fout-historiek).
-  // Het 40%-commitment voor deze AWAITING_PAYMENT auction zit IN reservedBalance,
-  // dus we vergelijken totalCost tegen (balance - reserved + die 40%).
+  // Het 15%-commitment voor deze AWAITING_PAYMENT auction zit IN reservedBalance,
+  // dus we vergelijken totalCost tegen (balance - reserved + die 15%).
   const syncedReserved = await syncReservedBalance(session.user.id);
   const totalCost = auction.finalPrice ?? 0;
   const ownReserveOnThisAuction = calculateReserveAmount(totalCost);
@@ -898,8 +1081,8 @@ export async function completeAuctionPayment(auctionId: string) {
 
   // Fase 27.102: post-payment sync. Auction.paymentStatus is nu PAID dus
   // recalculateTotalReserved telt deze auction niet meer (filter op
-  // AWAITING_PAYMENT). Zonder sync blijft de oude 40%-reserve in
-  // User.reservedBalance hangen, terwijl het commitment is afgerond.
+  // AWAITING_PAYMENT). Zonder sync blijft de oude reserve (15% sinds Fase 29,
+  // was 40%) in User.reservedBalance hangen, terwijl het commitment is afgerond.
   // Symptoom: 27 buyer betaalde Buy-Now van €714.42, balance correct -€714.42,
   // maar reservedBalance bleef €285.77 staan in plaats van €0.
   await syncReservedBalance(session.user.id);
@@ -911,6 +1094,12 @@ export async function completeAuctionPayment(auctionId: string) {
     "Veilingbetaling ontvangen!",
     `De betaling voor "${auction.title}" is voltooid. Bekijk je verkopen om te verzenden.`,
     "/dashboard/verkopen"
+  );
+
+  // Real-time balance-changed (Fase 30A) — buyer betaalde, seller kreeg escrow.
+  publishMany(
+    [userChannel(session.user.id), userChannel(auction.sellerId)],
+    { type: "balance-changed", payload: {} },
   );
 
   return { success: true };

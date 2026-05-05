@@ -2,14 +2,16 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 
 export default async function MyClaimsalesPage() {
   const session = await auth();
+  if (!session?.user?.id) redirect("/login");
   const t = await getTranslations("dashboard");
   const tc = await getTranslations("claimsale");
 
   const claimsales = await prisma.claimsale.findMany({
-    where: { sellerId: session!.user!.id },
+    where: { sellerId: session.user.id },
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { items: true } },

@@ -3,6 +3,7 @@
 import { useTranslations, useLocale } from "next-intl";
 import { useState } from "react";
 import { Link } from "@/i18n/navigation";
+import { useRefreshOnRealtime } from "@/hooks/use-refresh-on-realtime";
 import { CancellationActions } from "./cancellation-actions";
 import { toast } from "sonner";
 import {
@@ -170,6 +171,9 @@ export function SalesContent({
   const t = useTranslations("sales");
   const tc = useTranslations("common");
   const locale = useLocale();
+
+  // Real-time refresh bij bundle/dispute updates (Fase 30C)
+  useRefreshOnRealtime(["bundle-changed", "dispute-changed"]);
   const [search, setSearch] = useState("");
 
   const searchLower = search.toLowerCase().trim();

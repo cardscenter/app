@@ -7,6 +7,7 @@ import { getLevel, getNextLevel, getLevelProgress } from "@/lib/seller-levels";
 import { isUserSuspended } from "@/lib/suspension";
 import { SuspensionBanner } from "@/components/dashboard/suspension-banner";
 import { PageContainer } from "@/components/layout/page-container";
+import { RealtimePageRefresh } from "@/components/providers/realtime-page-refresh";
 
 export default async function DashboardLayout({
   children,
@@ -38,6 +39,7 @@ export default async function DashboardLayout({
 
   return (
     <PageContainer width="wide" className="py-8">
+      <RealtimePageRefresh events={["suspension-changed"]} />
       <div className="flex flex-col gap-8 md:flex-row">
         <aside className="w-full md:w-64 shrink-0">
           <DashboardNav

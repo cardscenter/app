@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
+import { publish, userChannel } from "@/lib/realtime";
 
 export async function submitVerification(formData: FormData) {
   const session = await auth();
@@ -163,6 +164,11 @@ export async function adminReviewVerification(
       userId: request.userId,
       userName: request.user.displayName,
     },
+  });
+
+  publish(userChannel(request.userId), {
+    type: "verification-changed",
+    payload: { status: decision },
   });
 
   return { success: true };

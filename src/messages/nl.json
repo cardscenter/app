@@ -250,7 +250,7 @@
     "buyNow": "Direct Kopen",
     "buyNowConfirmTitle": "Direct kopen bevestigen",
     "buyNowConfirmMessage": "Weet je zeker dat je dit item direct wilt kopen voor \u20AC{price}? Dit bedrag wordt direct van je saldo afgeschreven.",
-    "buyNowConfirmPartial": "Weet je zeker dat je dit item direct wilt kopen voor \u20AC{price}? Er wordt 40% van dit bedrag (\u20AC{reserve}) vastgehouden totdat je het kavel hebt afgerekend. Je hebt hiervoor 5 dagen de tijd.",
+    "buyNowConfirmPartial": "Weet je zeker dat je dit item direct wilt kopen voor \u20AC{price}? Er wordt 10% van dit bedrag (\u20AC{reserve}) vastgehouden totdat je het kavel hebt afgerekend. Je hebt hiervoor 5 dagen de tijd.",
     "buyNowConfirm": "Ja, kopen",
     "buyNowCancel": "Annuleren",
     "minimumBid": "Minimaal bod",
@@ -339,14 +339,28 @@
     "balanceReservedInfo": "€{amount} van je saldo wordt vastgehouden voor biedingen op andere veilingen.",
     "bidTooHighWarning": "Je hebt onvoldoende saldo om dit bod te doen. Je maximale bod is €{max}. Vul je saldo aan om hoger te kunnen bieden.",
     "noBalanceTitle": "Doe een storting om te kunnen bieden",
-    "noBalanceMessage": "Je hebt minimaal 40% van het bod als saldo nodig om een geldig bod uit te brengen.",
+    "noBalanceMessage": "Je hebt minimaal 10% van het bod als saldo nodig om een geldig bod uit te brengen.",
     "topUpBalance": "Saldo opwaarderen",
     "bidExceedsBalanceWarning": "Je bod is hoger dan je gestorte saldo. Overweeg om je saldo te verhogen door een <link>storting te doen</link> als je van plan bent op dit kavel te blijven bieden.",
     "sortBy": "Sorteren op",
     "sortNewest": "Nieuwste eerst",
     "sortEndingSoon": "Snelst sluitend",
     "sortHighestBid": "Hoogste bod",
-    "sortMostBids": "Meeste biedingen"
+    "sortMostBids": "Meeste biedingen",
+    "verifiedRequired": {
+      "message": "Bod ≥ €2000 vereist een geverifieerd account. Verifieer je identiteit om dit bod te plaatsen.",
+      "cta": "Verifieer je account"
+    },
+    "termsAcceptanceNote": "Door te bieden ga je akkoord met de <link>veilingvoorwaarden</link>.",
+    "shillProtection": {
+      "message": "Bod geweigerd: dit account deelt een netwerk met de verkoper."
+    },
+    "failures": {
+      "strikeWarning": "Je hebt {count} wanbetaling{count, plural, one {} other {en}} bij veilingen. Bij 2× volgt automatisch 30 dagen schorsing, bij 3× permanent.",
+      "forfeited": "Borg van €{amount} verbeurd wegens wanbetaling.",
+      "autoSuspendTemp": "Account 30 dagen geschorst wegens 2× wanbetaling op veilingen.",
+      "autoSuspendPermanent": "Account permanent geschorst wegens 3× wanbetaling op veilingen."
+    }
   },
   "claimsale": {
     "createTitle": "Nieuwe Claimsale",
@@ -424,7 +438,7 @@
     "availableBalance": "Beschikbaar saldo",
     "availableBalanceHint": "Dit bedrag kun je direct gebruiken voor aankopen en biedingen.",
     "reservedBalance": "Gereserveerd voor biedingen",
-    "reservedBalanceHint": "40% van je actieve biedingen wordt gereserveerd als garantie.",
+    "reservedBalanceHint": "10% van je actieve biedingen wordt gereserveerd als garantie.",
     "totalBalance": "Totaal saldo",
     "totalBalanceHint": "Beschikbaar + gereserveerd saldo samen.",
     "heldBalance": "In escrow",
@@ -867,7 +881,7 @@
     "withdrawn": "Ingetrokken",
     "pending": "In afwachting",
     "cancelled": "Geannuleerd",
-    "insufficientBalance": "Onvoldoende saldo (minimaal 40% vereist)",
+    "insufficientBalance": "Onvoldoende saldo (minimaal 10% vereist)",
     "paymentDeadline": "Betaal binnen 5 dagen",
     "completePayment": "Betaling voltooien",
     "proposalAccepted": "Voorstel geaccepteerd! De advertentie is verkocht.",
@@ -2154,6 +2168,7 @@
     "kpiPendingBuybacks": "Inkoopaanvragen",
     "kpiPendingReports": "Rapporten",
     "kpiSellerWarnings": "Niet-verzonden",
+    "kpiBidDefaulters": "Wanbetalers (geschorst)",
     "kpiTotalEscrow": "Totaal in escrow",
     "kpiPendingPayouts": "Te betalen uitbetalingen",
     "kpiTotalUserBalance": "Totaal user-balance",

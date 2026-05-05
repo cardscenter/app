@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 declare module "next-auth" {
@@ -48,6 +49,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
 
         if (!passwordMatch) return null;
+
+        // Fase 29: snapshot login-IP voor anti-shill-bidding-detectie. Wordt
+        // door placeBid gebruikt om hard-block te triggeren als een bidder
+        // hetzelfde netwerk als de seller deelt. Headers() werkt in NextAuth
+        // callbacks (server-context). Falen we de IP te bepalen, dan slaan
+        // we de update gewoon over — login mag daarop niet vastlopen.
+        try {
+          const reqHeaders = await headers();
+          const ip =
+            reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+            reqHeaders.get("x-real-ip") ||
+            null;
+          if (ip) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { lastLoginIp: ip, lastLoginIpAt: new Date() },
+            });
+          }
+        } catch {
+          // Negeer — IP-tracking is niet kritiek voor de login-flow.
+        }
 
         return {
           id: user.id,

@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { publish, userChannel } from "@/lib/realtime";
 
 export async function createNotification(
   userId: string,
@@ -12,6 +13,16 @@ export async function createNotification(
 ) {
   await prisma.notification.create({
     data: { userId, type, title, body, link },
+  });
+
+  // Real-time bell-update (Fase 30A) — geef de verse unreadCount mee zodat
+  // de client geen extra GET hoeft te doen.
+  const unreadCount = await prisma.notification.count({
+    where: { userId, read: false },
+  });
+  publish(userChannel(userId), {
+    type: "notification-created",
+    payload: { unreadCount },
   });
 }
 
@@ -46,4 +57,28 @@ export async function markAllAsRead() {
   });
 
   return { success: true };
+}
+
+/**
+ * Laatste N notificaties voor de bell-popover. Read+unread combined,
+ * meest-recente eerst. Gebruikt door /api/notifications/recent.
+ */
+export async function getRecentNotifications(limit = 6) {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  return prisma.notification.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      body: true,
+      link: true,
+      read: true,
+      createdAt: true,
+    },
+  });
 }

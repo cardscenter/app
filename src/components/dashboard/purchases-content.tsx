@@ -6,6 +6,7 @@ import { confirmDelivery } from "@/actions/purchase";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
+import { useRefreshOnRealtime } from "@/hooks/use-refresh-on-realtime";
 import {
   Package,
   Truck,
@@ -138,6 +139,9 @@ export function PurchasesContent({
   const t = useTranslations("purchases");
   const locale = useLocale();
   const [search, setSearch] = useState("");
+
+  // Real-time refresh bij bundle/dispute updates (Fase 30C)
+  useRefreshOnRealtime(["bundle-changed", "dispute-changed"]);
 
   const searchLower = search.toLowerCase().trim();
   const searchedBundles = searchLower

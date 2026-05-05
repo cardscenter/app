@@ -14,6 +14,14 @@ import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
 import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
+import { publish, listingChannel, userChannel } from "@/lib/realtime";
+
+function publishListingChanged(listingId: string, status: string) {
+  publish(listingChannel(listingId), {
+    type: "listing-changed",
+    payload: { listingId, status },
+  });
+}
 
 
 export async function createListing(formData: FormData) {
@@ -518,6 +526,8 @@ export async function buyListing(
     "/dashboard/verkopen"
   );
 
+  publishListingChanged(listingId, "SOLD");
+
   return { success: true };
 }
 
@@ -890,6 +900,8 @@ export async function updateListingStatus(listingId: string, status: "DELETED") 
     sellerId: session.user.id,
   });
 
+  publishListingChanged(listingId, status);
+
   return { success: true };
 }
 
@@ -1009,6 +1021,8 @@ export async function pauseListing(listingId: string) {
     sellerId: session.user.id,
   });
 
+  publishListingChanged(listingId, "PAUSED");
+
   return { success: true };
 }
 
@@ -1051,6 +1065,8 @@ export async function resumeListing(listingId: string) {
   if (flipped.count === 0) {
     return { error: "Advertentie kon niet hervat worden — status is gewijzigd" };
   }
+
+  publishListingChanged(listingId, restoreStatus);
 
   return { success: true };
 }
@@ -1122,6 +1138,8 @@ export async function closePartiallySoldListing(listingId: string) {
     systemMessageReason: "afgesloten door de verkoper (overige items niet meer beschikbaar)",
     sellerId: session.user.id,
   });
+
+  publishListingChanged(listingId, "SOLD");
 
   return { success: true };
 }

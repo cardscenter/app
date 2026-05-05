@@ -4,6 +4,13 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { refundEscrow, releaseEscrow, partialRefundEscrow } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { publish, userChannel } from "@/lib/realtime";
+
+function publishBundleChanged(buyerId: string, sellerId: string, bundleId: string, status: string) {
+  for (const uid of [buyerId, sellerId]) {
+    publish(userChannel(uid), { type: "bundle-changed", payload: { bundleId, status } });
+  }
+}
 
 const AUTO_CONFIRM_DAYS = 30;
 
@@ -92,6 +99,8 @@ export async function markAsShipped(
     `${bundle.seller.displayName} heeft je bestelling verzonden.${trackingUrl ? " Volg je pakket via de trackinglink." : ""}`,
     "/dashboard/aankopen"
   );
+
+  publishBundleChanged(bundle.buyerId, bundle.sellerId, bundleId, "SHIPPED");
 
   return { success: true };
 }
@@ -182,6 +191,8 @@ export async function confirmDelivery(
   void checkAchievements(session.user.id);
   void checkAchievements(bundle.sellerId);
 
+  publishBundleChanged(bundle.buyerId, bundle.sellerId, bundleId, "COMPLETED");
+
   return { success: true };
 }
 
@@ -240,6 +251,8 @@ export async function autoConfirmDeliveries() {
     const { checkAchievements } = await import("@/lib/achievements");
     void checkAchievements(bundle.buyerId);
     void checkAchievements(bundle.sellerId);
+
+    publishBundleChanged(bundle.buyerId, bundle.sellerId, bundle.id, "COMPLETED");
 
     confirmed++;
   }
@@ -316,7 +329,7 @@ export async function issueSellerRefund(bundleId: string, amount: number, reason
       prisma.user.findUnique({ where: { id: session.user.id } }),
     ]);
     if (!buyer || !seller) return { error: "Gebruiker niet gevonden" };
-    // Beschikbaar saldo = balance − reservedBalance (40%-reserves voor actieve bids).
+    // Beschikbaar saldo = balance − reservedBalance (15%-reserves voor actieve bids — Fase 29).
     // Refund mag deze niet onder 0 trekken; anders raken seller's auction-reserves
     // onderdekkend en kunnen winning-bid-betalingen later falen.
     const sellerAvailable = seller.balance - seller.reservedBalance;

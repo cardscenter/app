@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getMinimumNextBid } from "@/lib/auction/bid-increments";
 import { createNotification } from "@/actions/notification";
 import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
+import { publish, userChannel, auctionChannel } from "@/lib/realtime";
 
 /**
  * After a manual bid is placed, check if any other user has an active AutoBid
@@ -56,7 +57,7 @@ export async function resolveAutoBids(
     return { finalBid: currentBidAmount, finalBidderId: currentBidderId };
   }
 
-  // Check autobidder's available balance (40% reserve model)
+  // Check autobidder's available balance (15% reserve model — Fase 29)
   const user = await prisma.user.findUnique({ where: { id: winner.userId } });
   if (!user || getAvailableBalance(user) < calculateReserveAmount(autobidAmount)) {
     // Deactivate this autobid — insufficient funds
@@ -119,6 +120,26 @@ export async function resolveAutoBids(
     `Je bod van €${currentBidAmount.toFixed(2)} op "${auction.title}" is overboden door een autobied van €${autobidAmount.toFixed(2)}.`,
     `/nl/veilingen/${auctionId}`
   );
+
+  // Real-time events (Fase 30A): outbid + balance-changed voor beide partijen,
+  // plus bid-placed broadcast naar iedereen die de auction-page bekijkt.
+  publish(userChannel(currentBidderId), {
+    type: "outbid",
+    payload: { auctionId, auctionTitle: auction.title, newAmount: autobidAmount },
+  });
+  publish(userChannel(currentBidderId), { type: "balance-changed", payload: {} });
+  publish(userChannel(winner.userId), { type: "balance-changed", payload: {} });
+  publish(auctionChannel(auctionId), {
+    type: "bid-placed",
+    payload: {
+      auctionId,
+      bidId: "autobid",
+      amount: autobidAmount,
+      bidderName: "anoniem",
+      currentBid: autobidAmount,
+      bidCount: 0,
+    },
+  });
 
   // Deactivate autobid if maxAmount is reached (can't bid higher)
   const nextAfterThis = getMinimumNextBid(autobidAmount);

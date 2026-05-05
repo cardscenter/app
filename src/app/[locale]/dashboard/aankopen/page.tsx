@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
 
@@ -37,12 +38,13 @@ function groupBundleItems(items: RawItem[]) {
 
 export default async function MyPurchasesPage() {
   const session = await auth();
+  if (!session?.user?.id) redirect("/login");
   const t = await getTranslations("purchases");
-  const userId = session!.user!.id!;
+  const userId = session.user.id;
 
   // Veilingen die wachten op restbetaling (Fase 27.93). Treedt op bij Nu-Kopen
-  // of Auction-Win met partial-balance (40-99%): de winner heeft een 5d
-  // payment-deadline. Voorheen alleen zichtbaar op /dashboard/saldo, wat
+  // of Auction-Win met partial-balance (15-99% sinds Fase 29): de winner heeft
+  // een 5d payment-deadline. Voorheen alleen zichtbaar op /dashboard/saldo, wat
   // verwarrend was — koper verwacht 'm bij /aankopen.
   const pendingAuctions = await prisma.auction.findMany({
     where: { winnerId: userId, paymentStatus: "AWAITING_PAYMENT" },

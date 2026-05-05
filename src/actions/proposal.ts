@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { publishNewMessageForConversation } from "@/actions/message";
 import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { checkAmountAllowed } from "@/lib/account-age";
@@ -224,6 +225,12 @@ export async function createProposal(
     );
   }
 
+  await publishNewMessageForConversation(
+    conversationId,
+    session.user.id,
+    `${type === "BUY" ? "💶 Koopvoorstel" : "💶 Verkoopvoorstel"}: €${amount.toFixed(2)}`,
+  );
+
   return { success: true, proposalId: proposal.id };
 }
 
@@ -313,6 +320,12 @@ export async function respondToProposal(
       `/nl/berichten/${proposal.conversationId}`
     );
 
+    await publishNewMessageForConversation(
+      proposal.conversationId,
+      session.user.id,
+      `❌ Voorstel afgewezen (€${proposal.amount.toFixed(2)})`,
+    );
+
     return { success: true, status: "REJECTED" };
   }
 
@@ -338,12 +351,14 @@ export async function respondToProposal(
 
   const availableBalance = buyer.balance - buyer.reservedBalance;
 
-  // For proposals WITHOUT a listing, no 40% minimum — just accept and set deadline if needed
-  // For proposals WITH a listing, require 40% minimum
+  // For proposals WITHOUT a listing: no minimum — just accept and set deadline if needed.
+  // For proposals WITH a listing: require 15% minimum (Fase 29 — was 40%, aligned met
+  // auction-flow zodat we één consistente threshold hanteren voor partial-balance
+  // commitments. Bij niet-betalen lift het strike-systeem mee.)
   if (proposal.listing) {
-    const minimumRequired = totalCost * 0.4;
+    const minimumRequired = Math.round(totalCost * 0.15 * 100) / 100;
     if (availableBalance < minimumRequired) {
-      return { error: `Onvoldoende saldo. Minimaal 40% (€${minimumRequired.toFixed(2)}) is vereist.` };
+      return { error: `Onvoldoende saldo. Minimaal 15% (€${minimumRequired.toFixed(2)}) is vereist.` };
     }
   }
 
@@ -523,6 +538,12 @@ export async function respondToProposal(
     );
   }
 
+  await publishNewMessageForConversation(
+    proposal.conversationId,
+    session.user.id,
+    `✅ Voorstel geaccepteerd (€${amount.toFixed(2)})`,
+  );
+
   return { success: true, status: "ACCEPTED" };
 }
 
@@ -680,6 +701,12 @@ export async function completeProposalPayment(proposalId: string) {
     "/dashboard/verkopen"
   );
 
+  await publishNewMessageForConversation(
+    proposal.conversationId,
+    session.user.id,
+    `💸 Betaling voltooid (€${totalCost.toFixed(2)})`,
+  );
+
   return { success: true };
 }
 
@@ -715,6 +742,12 @@ export async function withdrawProposal(proposalId: string) {
       `/nl/berichten/${proposal.conversationId}`
     );
   }
+
+  await publishNewMessageForConversation(
+    proposal.conversationId,
+    session.user.id,
+    `🚫 Voorstel ingetrokken (€${proposal.amount.toFixed(2)})`,
+  );
 
   return { success: true };
 }

@@ -1,12 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import type { CartSellerGroup } from "@/actions/cart";
 import { CartItemRow } from "@/components/cart/cart-item-row";
 import { CartCheckout } from "@/components/cart/cart-checkout";
 import { ShippingMethodPicker } from "@/components/checkout/shipping-method-picker";
+import { useRealtime } from "@/components/providers/realtime-provider";
 
 interface CartContentProps {
   groups: CartSellerGroup[];
@@ -17,7 +19,17 @@ interface CartContentProps {
 
 export function CartContent({ groups, buyerCountry, hasAddress, availableBalance }: CartContentProps) {
   const t = useTranslations("cart");
+  const router = useRouter();
   const [shippingSelections, setShippingSelections] = useState<Record<string, string>>({});
+  const { subscribe } = useRealtime();
+
+  // Real-time: bij cart-changed event (15-min expiry, andere checkout)
+  // herladen we de page zodat verlopen items echt verdwijnen.
+  useEffect(() => {
+    return subscribe("cart-changed", () => {
+      router.refresh();
+    });
+  }, [subscribe, router]);
 
   const selectMethod = (sellerId: string, methodId: string) => {
     setShippingSelections((prev) => ({ ...prev, [sellerId]: methodId }));

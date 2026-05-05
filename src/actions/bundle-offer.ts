@@ -6,6 +6,7 @@ import { requireNotSuspended } from "@/lib/suspension";
 import { checkAmountAllowed } from "@/lib/account-age";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
+import { publishNewMessageForConversation } from "@/actions/message";
 import { generateOrderNumber } from "@/lib/order-number";
 import { getBlockedUserIds } from "@/lib/blocking";
 import { createBundleOfferSchema, acceptBundleOfferShippingSchema, counterBundleOfferSchema } from "@/lib/validations/bundle-offer";
@@ -313,6 +314,12 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
     `/nl/berichten/${data.conversationId}`
   );
 
+  await publishNewMessageForConversation(
+    data.conversationId,
+    buyerId,
+    `📦 Bundel-voorstel: ${listings.length} ads — €${data.totalAmount.toFixed(2)}`,
+  );
+
   return { success: true, bundleProposalId: created.id };
 }
 
@@ -360,6 +367,12 @@ export async function withdrawBundleOffer(bundleProposalId: string) {
     "Bundel-voorstel ingetrokken",
     `Het bundel-voorstel van €${bp.totalAmount.toFixed(2)} is ingetrokken.`,
     `/nl/berichten/${bp.conversationId}`
+  );
+
+  await publishNewMessageForConversation(
+    bp.conversationId,
+    session.user.id,
+    `🚫 Bundel-voorstel ingetrokken (€${bp.totalAmount.toFixed(2)})`,
   );
 
   return { success: true };
@@ -488,6 +501,12 @@ export async function counterBundleOffer(input: { parentProposalId: string; tota
     `/nl/berichten/${parent.conversationId}`
   );
 
+  await publishNewMessageForConversation(
+    parent.conversationId,
+    session.user.id,
+    `↪️ Tegenbod €${parsed.data.totalAmount.toFixed(2)}`,
+  );
+
   return { success: true, childId: child.id };
 }
 
@@ -549,6 +568,11 @@ export async function respondToBundleOffer(
       "Bundel-voorstel afgewezen",
       `Je bundel-voorstel van €${bp.totalAmount.toFixed(2)} is afgewezen.`,
       `/nl/berichten/${bp.conversationId}`
+    );
+    await publishNewMessageForConversation(
+      bp.conversationId,
+      session.user.id,
+      `❌ Bundel-voorstel afgewezen (€${bp.totalAmount.toFixed(2)})`,
     );
     return { success: true };
   }
@@ -764,6 +788,12 @@ export async function respondToBundleOffer(
     `/nl/berichten/${bp.conversationId}`
   );
 
+  await publishNewMessageForConversation(
+    bp.conversationId,
+    session.user.id,
+    `✅ Bundel-voorstel geaccepteerd (€${totalAmount.toFixed(2)})`,
+  );
+
   return { success: true };
 }
 
@@ -857,6 +887,12 @@ export async function completeBundleOfferPayment(bundleProposalId: string) {
     "Bundel betaald",
     `De koper heeft de openstaande bundel van €${bp.totalAmount.toFixed(2)} voltooid.`,
     "/dashboard/verkopen"
+  );
+
+  await publishNewMessageForConversation(
+    bp.conversationId,
+    session.user.id,
+    `💸 Bundel-betaling voltooid (€${bp.totalAmount.toFixed(2)})`,
   );
 
   return { success: true };

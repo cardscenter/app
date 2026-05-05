@@ -9,6 +9,12 @@ import { checkAmountAllowed } from "@/lib/account-age";
 import { expireClaimedItems, unclaimItem, closeClaimsaleIfDepleted } from "@/actions/claimsale";
 import { requireNotSuspended } from "@/lib/suspension";
 import { requiresSignedShipping, isUntrackedAllowed, LETTER_MAX_ITEMS } from "@/lib/shipping/tracked-threshold";
+import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
+
+async function publishCartCount(userId: string) {
+  const count = await prisma.cartItem.count({ where: { userId } });
+  publish(userChannel(userId), { type: "cart-changed", payload: { count } });
+}
 
 /**
  * Remove item from cart. This also unclaims the item so it becomes available again.
@@ -443,6 +449,12 @@ export async function checkout(shippingSelections?: Record<string, string>) {
         continue;
       }
 
+      // Real-time broadcast: item is nu definitief verkocht (Fase 30B)
+      publish(claimsaleChannel(ci.claimsaleItem.claimsaleId), {
+        type: "claimsale-item-claimed",
+        payload: { claimsaleId: ci.claimsaleItem.claimsaleId, itemId: ci.claimsaleItemId, status: "SOLD" },
+      });
+
       // Deduct from buyer
       const isFirstItemInBundle = items.indexOf(ci) === 0 && shippingCost > 0;
       const deductAmount = isFirstItemInBundle
@@ -513,6 +525,17 @@ export async function checkout(shippingSelections?: Record<string, string>) {
     .filter((ci) => !newConflicts.some((c) => c.id === ci.claimsaleItemId))
     .map((ci) => ci.claimsaleItemId);
 
+  // Pak vóór de delete welke andere users hun cart-content kwijt raken,
+  // zodat we per affected-user een cart-changed event kunnen publishen.
+  const affectedOtherUsers = await prisma.cartItem.findMany({
+    where: {
+      userId: { not: session.user.id },
+      claimsaleItemId: { in: claimedItemIds },
+    },
+    select: { userId: true },
+    distinct: ["userId"],
+  });
+
   await prisma.cartItem.deleteMany({
     where: {
       OR: [
@@ -521,6 +544,10 @@ export async function checkout(shippingSelections?: Record<string, string>) {
       ],
     },
   });
+
+  // Real-time cart-changed events (Fase 30C)
+  await publishCartCount(session.user.id);
+  for (const u of affectedOtherUsers) await publishCartCount(u.userId);
 
   const allConflicts = [
     ...conflictedItems.map((ci) => ({

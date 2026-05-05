@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { RealtimePageRefresh } from "@/components/providers/realtime-page-refresh";
 
 // Mappt een status-string naar een kleur-bucket. ACTIVE/LIVE = koopbaar (groen),
 // PARTIALLY_SOLD = deels koopbaar (blauw), PAUSED = tijdelijk weg (geel),
@@ -75,6 +76,7 @@ export default async function WatchlistPage({
 
   return (
     <div className="space-y-6">
+      <RealtimePageRefresh events={["listing-changed", "auction-ended", "bid-placed"]} />
       <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
 
       {items.length === 0 ? (

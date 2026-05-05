@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
-
-const RESERVE_PERCENTAGE = 0.4; // 40% of bid amount must be reserved
+import { BID_RESERVE_RATE } from "@/lib/auction/bid-tiers";
+import { getMinimumNextBid } from "@/lib/auction/bid-increments";
 
 /**
  * Calculate the available balance (what the user can actually spend/bid with).
@@ -10,18 +10,23 @@ export function getAvailableBalance(user: { balance: number; reservedBalance: nu
 }
 
 /**
- * Calculate how much should be reserved for a given bid amount (40%).
+ * Calculate how much should be reserved for a given bid amount.
+ *
+ * Fase 30A: één rate (10%) over de hele linie — geldt voor zowel ACTIVE bids
+ * als AWAITING_PAYMENT-winnaars. Was eerst 40% (te hoog), toen 15% (Fase 29),
+ * nu 10% zodat bieders meer parallel kunnen meedoen. 10% × €2000 = €200 borg —
+ * mental model klopt.
  */
 export function calculateReserveAmount(bidAmount: number): number {
-  return Math.round(bidAmount * RESERVE_PERCENTAGE * 100) / 100;
+  return Math.round(bidAmount * BID_RESERVE_RATE * 100) / 100;
 }
 
 /**
  * Get the current reserved amount for a specific user on a specific auction.
  * Mirrort de logica van recalculateTotalReserved voor één auction:
- * - ACTIVE + user is hoogste bieder: 40% × max(userBid, autobidMax)
- * - ACTIVE + user is overboden maar heeft active autobid: 40% × autobidMax
- * - AWAITING_PAYMENT + user is winner: 40% × finalPrice
+ * - ACTIVE + user is hoogste bieder: 10% × max(userBid, autobidMax)
+ * - ACTIVE + user is overboden maar heeft active autobid: 10% × autobidMax
+ * - AWAITING_PAYMENT + user is winner: 10% × finalPrice
  * - Anders: 0
  */
 export async function getReservedForAuction(userId: string, auctionId: string): Promise<number> {
@@ -70,13 +75,13 @@ export async function getReservedForAuction(userId: string, auctionId: string): 
 /**
  * Recalculate total reserved balance from scratch for a user.
  *
- * Wat reserveert:
- * 1. ACTIVE auctions waar user de **huidige hoogste bieder** is — 40% van
+ * Wat reserveert (alle takken: 10% × bedrag, Fase 30A):
+ * 1. ACTIVE auctions waar user de **huidige hoogste bieder** is — 10% van
  *    max(user's highest bid, user's autobid max).
  * 2. ACTIVE auctions waar user is overboden maar een **actieve autobid** heeft —
- *    40% van autobid max (kan elk moment getriggerd worden door een nieuwe
+ *    10% van autobid max (kan elk moment getriggerd worden door een nieuwe
  *    bid, dus commitment moet vastgehouden worden).
- * 3. AWAITING_PAYMENT auctions waar user de **winner** is — 40% van finalPrice
+ * 3. AWAITING_PAYMENT auctions waar user de **winner** is — 10% van finalPrice
  *    (commitment tot completeAuctionPayment of cron-driven PAYMENT_FAILED).
  *
  * Wat NIET reserveert (bug-fix Fase 27.98):
@@ -103,10 +108,12 @@ export async function recalculateTotalReserved(userId: string): Promise<number> 
       paymentStatus: true,
       winnerId: true,
       finalPrice: true,
+      currentBid: true,
+      startingBid: true,
       bids: {
         orderBy: { amount: "desc" },
         take: 1,
-        select: { bidderId: true },
+        select: { bidderId: true, amount: true },
       },
     },
   });
@@ -138,7 +145,7 @@ export async function recalculateTotalReserved(userId: string): Promise<number> 
 
   let totalReserved = 0;
   for (const a of eligible) {
-    // AWAITING_PAYMENT-pad: winner reserveert 40% van finalPrice
+    // AWAITING_PAYMENT-pad: winner reserveert 10% van finalPrice (Fase 30A)
     if (a.paymentStatus === "AWAITING_PAYMENT" && a.winnerId === userId) {
       totalReserved += calculateReserveAmount(a.finalPrice ?? 0);
       continue;
@@ -149,13 +156,23 @@ export async function recalculateTotalReserved(userId: string): Promise<number> 
     const userBid = userHighestBidByAuction.get(a.id) ?? 0;
     const autoMax = autoMaxByAuction.get(a.id) ?? 0;
 
+    // Een autobid telt alleen als hij nog kan triggeren: maxAmount moet
+    // het volgende minimum-bod halen. Als de huidige currentBid al boven
+    // de autobid-max staat, is de autobid functioneel dood en mag geen
+    // geld meer vasthouden — hij wordt nooit meer ingezet (Fase 30A).
+    const currentTopAmount = a.bids[0]?.amount ?? a.currentBid ?? a.startingBid;
+    const minNextBid = getMinimumNextBid(currentTopAmount);
+    const autoCanTrigger = autoMax >= minNextBid;
+
     if (isHighestBidder) {
-      totalReserved += calculateReserveAmount(Math.max(userBid, autoMax));
-    } else if (autoMax > 0) {
+      // Eigen autobid telt alleen als die echt boven huidige bid kan komen.
+      const effectiveAutoMax = autoCanTrigger ? autoMax : 0;
+      totalReserved += calculateReserveAmount(Math.max(userBid, effectiveAutoMax));
+    } else if (autoCanTrigger) {
       // Overboden maar autobid kan triggeren → reserve max-amount
       totalReserved += calculateReserveAmount(autoMax);
     }
-    // Anders: niets — overboden zonder autobid = geld vrij
+    // Anders: niets — overboden zonder bruikbare autobid = geld vrij
   }
 
   return Math.round(totalReserved * 100) / 100;

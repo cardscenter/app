@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { publish, userChannel } from "@/lib/realtime";
 
 // ============================================================
 // TIERED ACHIEVEMENT DEFINITIONS (source of truth — DB is mirrored)
@@ -421,6 +422,18 @@ export async function checkAchievements(userId: string): Promise<TierUnlock[]> {
         rewardEmber: t.rewardEmber ?? 0,
         rewardXP: t.rewardXP ?? 0,
         rewardCosmeticKey: t.rewardCosmeticKey ?? null,
+      });
+
+      // Real-time achievement-unlocked event (Fase 30A) — listener fetcht
+      // dan zelf de rich PendingUnlock-data en toont de Trophy-toast direct.
+      publish(userChannel(userId), {
+        type: "achievement-unlocked",
+        payload: {
+          achievementKey: def.key,
+          tier: t.tier,
+          name: def.name,
+          description: def.description,
+        },
       });
     }
   }

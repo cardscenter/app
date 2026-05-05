@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { completeAuctionPayment } from "@/actions/auction";
 import { PaymentMethodModal } from "@/components/checkout/payment-method-modal";
+import { BID_RESERVE_RATE } from "@/lib/auction/bid-tiers";
 import { CreditCard, Clock, AlertCircle, Lock } from "lucide-react";
 
 interface PendingAuction {
@@ -18,16 +19,14 @@ interface PendingAuctionPaymentsProps {
   auctions: PendingAuction[];
   /** Beschikbaar saldo NA aftrek van alle reserves (balance - reservedBalance). */
   availableBalance: number;
-  /** Totale reservedBalance — gebruikt om de eigen 40%-reserve op deze auction
-   *  terug te rekenen voor de "echte" betaalcapaciteit. */
+  /** Totale reservedBalance — gebruikt om de eigen reserve (15% van finalPrice)
+   *  op deze auction terug te rekenen voor de "echte" betaalcapaciteit. */
   reservedBalance: number;
   /** Optionele callback die wordt aangeroepen na een succesvolle betaling.
    *  PurchasesContent gebruikt dit om naar de Betaald-tab te schakelen zodat
    *  de koper zijn nieuwe aankoop direct ziet. */
   onPaymentComplete?: () => void;
 }
-
-const RESERVE_PERCENTAGE = 0.4;
 
 function daysUntil(date: Date): number {
   const ms = date.getTime() - Date.now();
@@ -92,10 +91,10 @@ export function PendingAuctionPayments({
       <div className="space-y-3">
         {remaining.map((auction) => {
           const total = auction.finalPrice ?? 0;
-          // 40% van finalPrice zit al gereserveerd in reservedBalance en komt
+          // 15% van finalPrice zit al gereserveerd in reservedBalance en komt
           // automatisch vrij bij payment. De koper hoeft alleen het verschil
           // (totaal - reservering) uit z'n vrije saldo aan te vullen.
-          const ownReserve = Math.round(total * RESERVE_PERCENTAGE * 100) / 100;
+          const ownReserve = Math.round(total * BID_RESERVE_RATE * 100) / 100;
           const stillNeeded = Math.max(0, total - ownReserve);
           // Tekort = wat de koper nog te kort komt om de stillNeeded te dekken
           // uit z'n echte beschikbare saldo (reservering komt sowieso vrij).
@@ -137,7 +136,7 @@ export function PendingAuctionPayments({
                     Al vastgehouden
                   </div>
                   <p className="mt-0.5 font-semibold text-foreground">€{ownReserve.toFixed(2)}</p>
-                  <p className="text-[11px] text-muted-foreground">40% reservering</p>
+                  <p className="text-[11px] text-muted-foreground">10% reservering</p>
                 </div>
                 <div className="rounded-lg bg-muted/30 px-3 py-2">
                   <div className="text-xs text-muted-foreground">Nog te betalen</div>
@@ -177,9 +176,9 @@ export function PendingAuctionPayments({
 
               {/* Payment-modal — hetzelfde patroon als cart-checkout / direct-buy.
                   availableBalance is het ECHTE vrije saldo (matcht /saldo).
-                  extraCredit telt de eigen 40%-reserve mee voor de kan-ik-betalen
-                  check, en wordt apart in de modal getoond zodat de koper begrijpt
-                  waar het vandaan komt. */}
+                  extraCredit telt de eigen 10%-reserve mee voor de kan-ik-betalen
+                  check (Fase 30A — was 40%, dan 15%), en wordt apart in de modal
+                  getoond zodat de koper begrijpt waar het vandaan komt. */}
               {openModalId === auction.id && (
                 <PaymentMethodModal
                   totalCost={total}
@@ -196,7 +195,7 @@ export function PendingAuctionPayments({
                         <span>€{total.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Al vastgehouden (40%)</span>
+                        <span>Al vastgehouden (10%)</span>
                         <span>−€{ownReserve.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-xs font-medium text-foreground">

@@ -1,12 +1,14 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { DisputesOverview } from "@/components/dashboard/disputes-overview";
 
 export default async function DisputesPage() {
   const session = await auth();
+  if (!session?.user?.id) redirect("/login");
   const t = await getTranslations("disputes");
-  const userId = session!.user!.id!;
+  const userId = session.user.id;
 
   const disputes = await prisma.dispute.findMany({
     where: {

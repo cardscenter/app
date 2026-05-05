@@ -7,9 +7,10 @@ import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { AchievementUnlockListener } from "@/components/customization/achievement-unlock-listener";
+import { ResponsiveToaster } from "@/components/ui/responsive-toaster";
 import { auth } from "@/lib/auth";
-import { Toaster } from "sonner";
 import "../globals.css";
 
 const poppins = Poppins({
@@ -66,11 +67,13 @@ export default async function LocaleLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <Toaster position="bottom-center" richColors />
-            <AchievementUnlockListener isAuthenticated={!!session?.user?.id} />
+            <RealtimeProvider isAuthenticated={!!session?.user?.id}>
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+              <ResponsiveToaster />
+              <AchievementUnlockListener isAuthenticated={!!session?.user?.id} />
+            </RealtimeProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

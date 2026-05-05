@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ClaimsaleItemsFilter, type ClaimsaleItem } from "./claimsale-items-filter";
+import { useRealtime } from "@/components/providers/realtime-provider";
 
 interface StatusItem {
   id: string;
@@ -41,6 +42,8 @@ export function LiveClaimsaleItems({
   const prevStatusRef = useRef<Map<string, string>>(
     new Map(initialItems.map((i) => [i.id, i.status]))
   );
+  const { subscribe, registerChannels } = useRealtime();
+  const claimsaleChannels = useMemo(() => [`claimsale:${claimsaleId}`], [claimsaleId]);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -100,10 +103,12 @@ export function LiveClaimsaleItems({
     }
   }, [claimsaleId, t]);
 
+  // Polling-fallback (Fase 30B: SSE drijft de instant updates, polling
+  // lost dropped events op).
   useEffect(() => {
     if (!isLive) return;
 
-    const POLL_INTERVAL = 5000;
+    const POLL_INTERVAL = 15000;
     let timeoutId: NodeJS.Timeout;
 
     const poll = () => {
@@ -114,6 +119,22 @@ export function LiveClaimsaleItems({
     timeoutId = setTimeout(poll, POLL_INTERVAL);
     return () => clearTimeout(timeoutId);
   }, [isLive, fetchStatus]);
+
+  // SSE: register claimsale-channel zodat publieke item-status broadcasts
+  // van claimItem / cart-checkout / expireClaimedItems direct binnenkomen.
+  useEffect(() => {
+    if (!isLive) return;
+    return registerChannels(claimsaleChannels);
+  }, [isLive, registerChannels, claimsaleChannels]);
+
+  useEffect(() => {
+    if (!isLive) return;
+    return subscribe("claimsale-item-claimed", (event) => {
+      if (event.type !== "claimsale-item-claimed") return;
+      if (event.payload.claimsaleId !== claimsaleId) return;
+      fetchStatus();
+    });
+  }, [isLive, subscribe, claimsaleId, fetchStatus]);
 
   return (
     <ClaimsaleItemsFilter

@@ -17,6 +17,17 @@ import { createPendingBundle } from "@/lib/shipping-bundle";
 import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
 import { finalizeAuction } from "@/actions/auction";
 import { refundEscrow } from "@/actions/wallet";
+import { publish, userChannel, listingChannel } from "@/lib/realtime";
+import {
+  VERIFIED_BID_THRESHOLD,
+  BID_FORFEIT_AMOUNT,
+  STRIKE_TEMP_SUSPEND_THRESHOLD,
+  STRIKE_TEMP_SUSPEND_DAYS,
+  STRIKE_PERMANENT_THRESHOLD,
+  STRIKE_DECAY_DAYS,
+  BID_IP_RETENTION_DAYS,
+} from "@/lib/auction/bid-tiers";
+import { suspendUserSystem } from "@/lib/suspension";
 
 const STALE_PAID_DAYS = 14;
 
@@ -48,6 +59,8 @@ export const CRON_JOB_NAMES = [
   "pickup-reservation-timeout",
   "pickup-reminder",
   "auto-cancel-stale-paid",
+  "payment-failure-decay",
+  "prune-bid-ips",
 ] as const;
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
 
@@ -151,6 +164,18 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     description:
       "Annuleert PAID-bundles automatisch die ${STALE_PAID_DAYS} dagen niet zijn verzonden (SHIP-flow, geen actief PENDING cancel-verzoek). Volledige refund naar koper, items terug op de markt, autoExpiredAt ingevuld zodat admin probleem-sellers kan filteren.".replace("${STALE_PAID_DAYS}", String(STALE_PAID_DAYS)),
     schedule: "Dagelijks",
+    allowManualRun: true,
+  },
+  "payment-failure-decay": {
+    description:
+      `Verlaagt User.paymentFailureCount met 1 voor users wiens laatste wanbetaling >${STRIKE_DECAY_DAYS} dagen geleden is. Suspend wordt niet automatisch opgeheven — alleen de strike-counter verzacht na een jaar zonder problemen.`,
+    schedule: "Wekelijks",
+    allowManualRun: true,
+  },
+  "prune-bid-ips": {
+    description:
+      `Anonimiseert AuctionBid.bidderIp voor bids ouder dan ${BID_IP_RETENTION_DAYS} dagen (privacy/retentie). Login-IPs op User worden bij elke nieuwe login overschreven, dus geen apart prune nodig.`,
+    schedule: "Wekelijks",
     allowManualRun: true,
   },
 };
@@ -285,8 +310,8 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
 
         await syncReservedBalance(previousWinnerId);
 
-        // Fase 27.98: nieuwe winner krijgt sync zodat AWAITING_PAYMENT-tak in
-        // recalculateTotalReserved 40% van finalPrice voor 'm reserveert.
+        // Fase 27.98 + 29: nieuwe winner krijgt sync zodat AWAITING_PAYMENT-tak
+        // in recalculateTotalReserved 15% van finalPrice voor 'm reserveert.
         await syncReservedBalance(runnerUpBid.bidderId);
 
         const oldBundle = await prisma.shippingBundle.findUnique({ where: { auctionId: auction.id } });
@@ -324,6 +349,20 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
           `"${previousWinnerTitle}" is doorgeschoven naar de volgende bieder voor €${runnerUpBid.amount.toFixed(2)} (was €${previousWinnerPrice.toFixed(2)}).`,
           `/nl/veilingen/${auction.id}`);
 
+        // Real-time events (Fase 30A): runner-up krijgt auction-won-toast
+        // direct, vorige winner ziet z'n reservering vrijvallen.
+        publish(userChannel(runnerUpBid.bidderId), {
+          type: "auction-won",
+          payload: {
+            auctionId: auction.id,
+            auctionTitle: auction.title,
+            finalPrice: runnerUpBid.amount,
+            paymentDeadline: newDeadline.toISOString(),
+          },
+        });
+        publish(userChannel(runnerUpBid.bidderId), { type: "balance-changed", payload: {} });
+        publish(userChannel(previousWinnerId), { type: "balance-changed", payload: {} });
+
         rotated++;
         processed++;
         continue;
@@ -333,13 +372,92 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         where: { id: auction.id },
         data: { status: "PAYMENT_FAILED", paymentStatus: "PAYMENT_FAILED" },
       });
+
+      // Fase 29: borg-forfait + strike + auto-suspend voor wanbetaler
+      const isHighBid = previousWinnerPrice >= VERIFIED_BID_THRESHOLD;
+      let forfeitAmount = 0;
+
+      if (isHighBid) {
+        const wanbetaler = await prisma.user.findUnique({
+          where: { id: previousWinnerId },
+          select: { balance: true },
+        });
+        if (wanbetaler) {
+          // Clamp op beschikbare balance (≥ 0). De 10%-reserve van finalPrice
+          // staat tijdens AWAITING_PAYMENT al vast — dat geeft een minimum
+          // buffer van 10% × €2000 = €200, dus de €200 forfeit past altijd
+          // mits de user geen reservering heeft uitgegeven na winnen.
+          forfeitAmount = Math.min(BID_FORFEIT_AMOUNT, Math.max(wanbetaler.balance, 0));
+          if (forfeitAmount > 0) {
+            const balanceAfter = wanbetaler.balance - forfeitAmount;
+            await prisma.$transaction([
+              prisma.user.update({
+                where: { id: previousWinnerId },
+                data: { balance: balanceAfter },
+              }),
+              prisma.transaction.create({
+                data: {
+                  userId: previousWinnerId,
+                  type: "BID_DEPOSIT_FORFEIT",
+                  amount: -forfeitAmount,
+                  balanceBefore: wanbetaler.balance,
+                  balanceAfter,
+                  description: `Borg verbeurd: niet betaald op veiling "${previousWinnerTitle}"`,
+                  relatedAuctionId: auction.id,
+                },
+              }),
+            ]);
+          }
+        }
+      }
+
+      // Strike +1 (geldt ook voor low-value-bids — anti-griefing)
+      const updatedUser = await prisma.user.update({
+        where: { id: previousWinnerId },
+        data: {
+          paymentFailureCount: { increment: 1 },
+          paymentFailureLastAt: new Date(),
+        },
+        select: { paymentFailureCount: true },
+      });
+
+      // Auto-suspend bij thresholds
+      if (updatedUser.paymentFailureCount >= STRIKE_PERMANENT_THRESHOLD) {
+        await suspendUserSystem(
+          previousWinnerId,
+          "PERMANENT",
+          null,
+          `Auto-suspend: ${STRIKE_PERMANENT_THRESHOLD}× wanbetaling op veiling`,
+        );
+      } else if (updatedUser.paymentFailureCount >= STRIKE_TEMP_SUSPEND_THRESHOLD) {
+        await suspendUserSystem(
+          previousWinnerId,
+          "TEMPORARY",
+          STRIKE_TEMP_SUSPEND_DAYS,
+          `Auto-suspend: ${STRIKE_TEMP_SUSPEND_THRESHOLD}× wanbetaling op veiling`,
+        );
+      }
+
+      // syncReservedBalance daarna — auction is PAYMENT_FAILED, dus reserve
+      // op deze auction valt automatisch vrij. Surplus boven forfait keert
+      // terug naar `available`.
       await syncReservedBalance(previousWinnerId);
+
+      // Real-time balance-changed (Fase 30A) — wanbetaler ziet zijn saldo
+      // direct dalen (forfait) en de reserve weer vrijvallen.
+      publish(userChannel(previousWinnerId), { type: "balance-changed", payload: {} });
+
       const failedBundle = await prisma.shippingBundle.findUnique({ where: { auctionId: auction.id } });
       if (failedBundle && failedBundle.status === "PENDING") {
         await prisma.shippingBundle.delete({ where: { id: failedBundle.id } });
       }
+
+      const forfeitText = forfeitAmount > 0
+        ? ` Een borg van €${forfeitAmount.toFixed(2)} is verbeurd.`
+        : "";
+      const strikeText = ` Je staat nu op ${updatedUser.paymentFailureCount} wanbetaling${updatedUser.paymentFailureCount === 1 ? "" : "en"}.`;
       await createNotification(previousWinnerId, "AUCTION_WON", "Betaaltermijn verlopen",
-        `De betaaltermijn voor "${previousWinnerTitle}" (€${previousWinnerPrice.toFixed(2)}) is verlopen.`,
+        `De betaaltermijn voor "${previousWinnerTitle}" (€${previousWinnerPrice.toFixed(2)}) is verlopen.${forfeitText}${strikeText}`,
         `/nl/veilingen/${auction.id}`);
       await createNotification(auction.sellerId, "ITEM_SOLD", "Betaling niet ontvangen",
         `De koper heeft "${previousWinnerTitle}" niet betaald binnen de termijn. De veiling is geannuleerd.`,
@@ -411,6 +529,14 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
           `De koper heeft het voorstel voor "${contextTitle}" (€${amountStr}) niet betaald binnen de termijn.`,
           `/nl/berichten/${proposal.conversationId}`);
       }
+      // Real-time: listing terug op markt voor watchers + balance-update voor buyer
+      if (proposal.listing) {
+        publish(listingChannel(proposal.listing.id), {
+          type: "listing-changed",
+          payload: { listingId: proposal.listing.id, status: "ACTIVE" },
+        });
+      }
+      if (buyerId) publish(userChannel(buyerId), { type: "balance-changed", payload: {} });
       processed++;
     }
     return { itemsProcessed: processed, result: { processed, total: expiredProposals.length } };
@@ -419,7 +545,9 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     const now = new Date();
     const expired = await prisma.cancellationRequest.findMany({
       where: { status: "PENDING", expiresAt: { lt: now } },
-      include: { shippingBundle: { select: { orderNumber: true } } },
+      include: {
+        shippingBundle: { select: { id: true, orderNumber: true, buyerId: true, sellerId: true, status: true } },
+      },
     });
     let processed = 0;
     for (const r of expired) {
@@ -427,6 +555,13 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       await createNotification(r.proposedById, "NEW_MESSAGE", "Annuleringsverzoek verlopen",
         `Je annuleringsverzoek voor bestelling ${r.shippingBundle.orderNumber} is verlopen omdat de wederpartij niet heeft gereageerd. De bestelling staat nog open.`,
         "/dashboard/aankopen");
+      // Real-time: beide partijen zien PENDING-marker verdwijnen op /aankopen + /verkopen
+      for (const uid of [r.shippingBundle.buyerId, r.shippingBundle.sellerId]) {
+        publish(userChannel(uid), {
+          type: "bundle-changed",
+          payload: { bundleId: r.shippingBundle.id, status: r.shippingBundle.status },
+        });
+      }
       processed++;
     }
     return { itemsProcessed: processed, result: { processed, total: expired.length } };
@@ -529,6 +664,14 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       await createNotification(bp.sellerId, "NEW_MESSAGE", "Betaaltermijn verlopen",
         `De koper heeft een geaccepteerd bundel-voorstel van €${bp.totalAmount.toFixed(2)} niet betaald binnen de termijn. De advertenties staan weer actief.`,
         `/nl/berichten/${bp.conversationId}`);
+      // Real-time: balance-update voor buyer + listings terug op markt
+      publish(userChannel(bp.buyerId), { type: "balance-changed", payload: {} });
+      for (const lid of listingIds) {
+        publish(listingChannel(lid), {
+          type: "listing-changed",
+          payload: { listingId: lid, status: "ACTIVE" },
+        });
+      }
       processed++;
     }
 
@@ -613,6 +756,20 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         bundle.bundleProposal?.conversationId
           ? `/nl/berichten/${bundle.bundleProposal.conversationId}`
           : "/dashboard/verkopen");
+      // Real-time: bundle CANCELLED + listings terug op markt
+      for (const uid of [bundle.buyerId, bundle.sellerId]) {
+        publish(userChannel(uid), {
+          type: "bundle-changed",
+          payload: { bundleId: bundle.id, status: "CANCELLED" },
+        });
+      }
+      const allListingIds = listingIds.length > 0 ? listingIds : (bundle.listingId ? [bundle.listingId] : []);
+      for (const lid of allListingIds) {
+        publish(listingChannel(lid), {
+          type: "listing-changed",
+          payload: { listingId: lid, status: "ACTIVE" },
+        });
+      }
       processed++;
     }
     return { itemsProcessed: processed, result: { processed, total: expired.length } };
@@ -747,9 +904,72 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         "/dashboard/verkopen",
       );
 
+      // Real-time: bundle CANCELLED + balance-changed (refund) + listings ACTIVE
+      for (const uid of [b.buyerId, b.sellerId]) {
+        publish(userChannel(uid), {
+          type: "bundle-changed",
+          payload: { bundleId: b.id, status: "CANCELLED" },
+        });
+        publish(userChannel(uid), { type: "balance-changed", payload: {} });
+      }
+      if (b.listingId) {
+        publish(listingChannel(b.listingId), {
+          type: "listing-changed",
+          payload: { listingId: b.listingId, status: "ACTIVE" },
+        });
+      }
+      for (const bl of bundleListings) {
+        publish(listingChannel(bl.listingId), {
+          type: "listing-changed",
+          payload: { listingId: bl.listingId, status: "ACTIVE" },
+        });
+      }
+
       processed++;
     }
 
     return { itemsProcessed: processed, result: { processed, total: stale.length } };
+  },
+  "payment-failure-decay": async () => {
+    // Verlaag paymentFailureCount met 1 voor users die >365d geen nieuwe
+    // wanbetaling hebben gehad. Suspend wordt NIET automatisch opgeheven —
+    // alleen de strike-counter zakt. Een geschorste user blijft geschorst
+    // tot een admin handmatig liftSuspension uitvoert.
+    const cutoff = new Date(Date.now() - STRIKE_DECAY_DAYS * 24 * 60 * 60 * 1000);
+    const eligible = await prisma.user.findMany({
+      where: {
+        paymentFailureCount: { gt: 0 },
+        paymentFailureLastAt: { lt: cutoff },
+      },
+      select: { id: true, paymentFailureCount: true },
+    });
+    let processed = 0;
+    for (const u of eligible) {
+      await prisma.user.update({
+        where: { id: u.id },
+        data: {
+          paymentFailureCount: { decrement: 1 },
+          // paymentFailureLastAt updaten zodat de volgende decay weer 365d
+          // verder kan starten (anders zou een user met count=3 in één tick
+          // helemaal naar 0 gaan).
+          paymentFailureLastAt: new Date(),
+        },
+      });
+      processed++;
+    }
+    return { itemsProcessed: processed, result: { processed, total: eligible.length } };
+  },
+  "prune-bid-ips": async () => {
+    // Privacy-retentie: anonimiseer AuctionBid.bidderIp ouder dan 90d.
+    // Behoudt de bid-rij intact, alleen de IP-string wordt genull't.
+    const cutoff = new Date(Date.now() - BID_IP_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    const result = await prisma.auctionBid.updateMany({
+      where: {
+        bidderIp: { not: null },
+        createdAt: { lt: cutoff },
+      },
+      data: { bidderIp: null },
+    });
+    return { itemsProcessed: result.count, result: { pruned: result.count } };
   },
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BidSection } from "./bid-section";
@@ -8,6 +8,7 @@ import { AutoBidForm } from "./autobid-form";
 import { CountdownTimer } from "./countdown-timer";
 import { Link } from "@/i18n/navigation";
 import { ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRealtime } from "@/components/providers/realtime-provider";
 
 interface BidEntry {
   id: string;
@@ -136,9 +137,12 @@ export function LiveAuctionContent({
   useEffect(() => {
     if (bidData.status !== "ACTIVE") return;
 
+    // Polling-interval is hoger dan voorheen (was 5s/2s) omdat SSE-events nu
+    // de primaire weg zijn voor live-updates. Polling blijft als fallback voor
+    // gevallen waar SSE disconnected is, en als safety in laatste 30 min.
     const getInterval = () => {
       const timeLeft = new Date(bidData.endTime).getTime() - Date.now();
-      return timeLeft <= 30 * 60 * 1000 ? 2000 : 5000;
+      return timeLeft <= 30 * 60 * 1000 ? 2000 : 15000;
     };
 
     let timeoutId: NodeJS.Timeout;
@@ -150,6 +154,38 @@ export function LiveAuctionContent({
 
     return () => clearTimeout(timeoutId);
   }, [bidData.status, bidData.endTime, fetchBids]);
+
+  // Real-time bid-updates via SSE — registreer deze auction-channel zodat
+  // server-side bid-placed events direct binnen komen, en refetch bij
+  // elke event voor verse bid-volgorde + bidder-namen + autobid-trigger.
+  const { subscribe, registerChannels } = useRealtime();
+  const auctionChannels = useMemo(() => [`auction:${auctionId}`], [auctionId]);
+
+  useEffect(() => {
+    if (bidData.status !== "ACTIVE") return;
+    return registerChannels(auctionChannels);
+  }, [registerChannels, auctionChannels, bidData.status]);
+
+  useEffect(() => {
+    if (bidData.status !== "ACTIVE") return;
+    return subscribe("bid-placed", (event) => {
+      if (event.type !== "bid-placed") return;
+      if (event.payload.auctionId !== auctionId) return;
+      fetchBids();
+    });
+  }, [subscribe, auctionId, fetchBids, bidData.status]);
+
+  // Auction-ended broadcast (Fase 30B) — bij ENDED-flip ziet iedereen op
+  // de page direct de nieuwe status. router.refresh haalt verse SSR op
+  // zodat ENDED-banners + payment-CTA's correct renderen.
+  useEffect(() => {
+    return subscribe("auction-ended", (event) => {
+      if (event.type !== "auction-ended") return;
+      if (event.payload.auctionId !== auctionId) return;
+      setBidData((prev) => ({ ...prev, status: event.payload.status }));
+      router.refresh();
+    });
+  }, [subscribe, auctionId, router]);
 
   // Fase 27.97: zodra de countdown 0 bereikt en de auction nog ACTIVE is,
   // POST naar de finalize-endpoint zodat de status meteen flipt naar

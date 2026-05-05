@@ -6,6 +6,13 @@ import { refundEscrow } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { z } from "zod";
 import { CANCELLATION_DEADLINE_DAYS, CANCELLATION_REASONS } from "@/lib/cancellation-config";
+import { publish, userChannel, listingChannel } from "@/lib/realtime";
+
+function publishBundleChanged(buyerId: string, sellerId: string, bundleId: string, status: string) {
+  for (const uid of [buyerId, sellerId]) {
+    publish(userChannel(uid), { type: "bundle-changed", payload: { bundleId, status } });
+  }
+}
 
 const requestSchema = z.object({
   reason: z.enum(CANCELLATION_REASONS),
@@ -72,6 +79,10 @@ export async function requestCancellation(bundleId: string, formData: FormData) 
     "/dashboard/aankopen"
   );
 
+  // Real-time bundle-changed (Fase 30C) — beide partijen zien de PENDING-marker
+  // op /aankopen en /verkopen direct verschijnen.
+  publishBundleChanged(bundle.buyerId, bundle.sellerId, bundleId, bundle.status);
+
   return { success: true };
 }
 
@@ -128,6 +139,8 @@ export async function respondToCancellation(
       `Je annuleringsverzoek voor bestelling ${bundle.orderNumber} is afgewezen.${rejectionNote ? ` Reden: ${rejectionNote}` : ""}`,
       "/dashboard/aankopen"
     );
+
+    publishBundleChanged(bundle.buyerId, bundle.sellerId, bundle.id, bundle.status);
 
     return { success: true, status: "REJECTED" };
   }
@@ -208,6 +221,21 @@ export async function respondToCancellation(
     `Bestelling ${bundle.orderNumber} is geannuleerd. Het bedrag (€${bundle.totalCost.toFixed(2)}) is teruggestort.`,
     "/dashboard/aankopen"
   );
+
+  // Real-time events: bundle CANCELLED + listing terug op markt (Fase 30C)
+  publishBundleChanged(bundle.buyerId, bundle.sellerId, bundle.id, "CANCELLED");
+  if (bundle.listingId) {
+    publish(listingChannel(bundle.listingId), {
+      type: "listing-changed",
+      payload: { listingId: bundle.listingId, status: "ACTIVE" },
+    });
+  }
+  for (const bl of bundleListings) {
+    publish(listingChannel(bl.listingId), {
+      type: "listing-changed",
+      payload: { listingId: bl.listingId, status: "ACTIVE" },
+    });
+  }
 
   return { success: true, status: "ACCEPTED" };
 }

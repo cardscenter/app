@@ -31,6 +31,7 @@ export default async function AdminOverviewPage() {
     pendingBuybacks,
     openReports,
     sellerWarnings,
+    bidDefaulters,
     totalEscrow,
     totalPendingPayouts,
     totalUserBalance,
@@ -48,6 +49,17 @@ export default async function AdminOverviewPage() {
     prisma.shippingBundle.count({
       where: {
         autoExpiredAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
+    }),
+    // Fase 29: bid-defaulters die actief geschorst zijn vanwege wanbetaling.
+    // 2+ strikes én een actieve suspend (suspendedUntil > now of PERMANENT).
+    prisma.user.count({
+      where: {
+        paymentFailureCount: { gte: 2 },
+        OR: [
+          { suspensionType: "PERMANENT" },
+          { suspendedUntil: { gt: new Date() } },
+        ],
       },
     }),
     prisma.user.aggregate({ _sum: { heldBalance: true } }),
@@ -77,6 +89,7 @@ export default async function AdminOverviewPage() {
     { href: "/dashboard/admin/buybacks", labelKey: "kpiPendingBuybacks", value: pendingBuybacks, Icon: ArrowDownToLine, accent: "amber" as const },
     { href: "/dashboard/admin/reports", labelKey: "kpiPendingReports", value: openReports, Icon: Flag, accent: "purple" as const },
     { href: "/dashboard/admin/seller-warnings", labelKey: "kpiSellerWarnings", value: sellerWarnings, Icon: AlertTriangle, accent: "rose" as const },
+    { href: "/dashboard/admin/users?filter=bid-defaulters", labelKey: "kpiBidDefaulters", value: bidDefaulters, Icon: Ban, accent: "rose" as const },
   ] as const;
 
   const finTiles = [

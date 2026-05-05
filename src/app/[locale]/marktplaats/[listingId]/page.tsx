@@ -24,6 +24,7 @@ import { getSellerInfo } from "@/lib/seller-info";
 import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
 import { getCardPricing } from "@/lib/card-helpers";
 import { PageContainer } from "@/components/layout/page-container";
+import { ListingRealtimeWatcher } from "@/components/listing/listing-realtime-watcher";
 
 export default async function ListingDetailPage({
   params,
@@ -103,6 +104,7 @@ export default async function ListingDetailPage({
 
   return (
     <PageContainer width="default" className="py-8">
+      <ListingRealtimeWatcher listingId={listingId} />
       <Breadcrumbs
         items={[
           { label: tBreadcrumbs("marketplace"), href: "/marktplaats" },

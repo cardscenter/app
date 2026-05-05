@@ -5,6 +5,7 @@ import { setAutoBid, cancelAutoBid } from "@/actions/auction";
 import { getMinimumNextBid } from "@/lib/auction/bid-increments";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/navigation";
 
 export function AutoBidForm({
   auctionId,
@@ -141,7 +142,19 @@ export function AutoBidForm({
 
       {error && (
         <div className="rounded-xl bg-red-50/50 p-2 text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400">
-          {error}
+          {error === "VERIFIED_REQUIRED_FOR_HIGH_BID" ? (
+            <>
+              <p>{t("verifiedRequired.message")}</p>
+              <Link
+                href="/dashboard/verificatie"
+                className="mt-1 inline-block font-medium underline hover:no-underline"
+              >
+                {t("verifiedRequired.cta")}
+              </Link>
+            </>
+          ) : (
+            error
+          )}
         </div>
       )}
 
