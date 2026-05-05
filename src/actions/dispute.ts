@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { refundEscrow, releaseEscrow, partialRefundEscrow } from "@/actions/wallet";
+import { refundEscrow, releaseEscrow, partialRefundEscrow, refundAuctionPremium } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
 import { publish, userChannel } from "@/lib/realtime";
@@ -405,6 +405,10 @@ export async function autoResolveDisputes() {
       `Geschil auto-opgelost: verkoper heeft niet gereageerd binnen ${SELLER_RESPONSE_DAYS} dagen`,
       bundle.id,
     );
+    // Auction-bundles: 3% buyer's premium ook terugbetalen (Fase 31).
+    if (bundle.auctionId) {
+      await refundAuctionPremium(bundle.buyerId, bundle.auctionId);
+    }
     await finalizeDispute(dispute.id, bundle.id, "RESOLVED_BUYER", "REFUND_FULL", bundle.sellerId, bundle.buyerId);
     resolved++;
   }
@@ -538,6 +542,11 @@ export async function adminResolveDispute(data: {
       `Beheerder: volledige terugbetaling aan koper`,
       bundle.id,
     );
+    // Auction-bundles: 3% buyer's premium ook terugbetalen bij admin-BUYER
+    // beslissing (volledige refund = bundle gaat niet door, Fase 31).
+    if (bundle.auctionId) {
+      await refundAuctionPremium(bundle.buyerId, bundle.auctionId);
+    }
     await prisma.shippingBundle.update({
       where: { id: bundle.id },
       data: { status: "CANCELLED" },

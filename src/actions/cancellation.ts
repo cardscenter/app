@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { refundEscrow } from "@/actions/wallet";
+import { refundEscrow, refundAuctionPremium } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { z } from "zod";
 import { CANCELLATION_DEADLINE_DAYS, CANCELLATION_REASONS } from "@/lib/cancellation-config";
@@ -163,6 +163,13 @@ export async function respondToCancellation(
     `Geannuleerd via wederzijds akkoord: bestelling ${bundle.orderNumber}`,
     bundle.id,
   );
+
+  // Auction-bundles: 3% buyer's premium ook terugbetalen (Fase 31).
+  // Wederzijds akkoord = bundle gaat niet door, dus de platform-fee hoort
+  // niet bij ons te blijven. Idempotent — geen probleem als al gerefundeerd.
+  if (bundle.auctionId) {
+    await refundAuctionPremium(bundle.buyerId, bundle.auctionId);
+  }
 
   // Reset claimsale items naar AVAILABLE (idem als cancelPurchase).
   await prisma.claimsaleItem.updateMany({

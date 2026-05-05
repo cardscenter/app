@@ -16,7 +16,7 @@ import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
 import { finalizeAuction } from "@/actions/auction";
-import { refundEscrow } from "@/actions/wallet";
+import { refundEscrow, refundAuctionPremium } from "@/actions/wallet";
 import { publish, userChannel, listingChannel } from "@/lib/realtime";
 import {
   VERIFIED_BID_THRESHOLD,
@@ -846,6 +846,7 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         totalCost: true,
         refundedAmount: true,
         listingId: true,
+        auctionId: true,
       },
     });
 
@@ -862,6 +863,13 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         `Automatisch geannuleerd na ${STALE_PAID_DAYS} dagen zonder verzending: bestelling ${b.orderNumber}`,
         b.id,
       );
+
+      // Auction-bundles: 3% buyer's premium ook terugbetalen (Fase 31).
+      // Bundle ging niet door, dus de platform-fee hoort niet bij ons te
+      // blijven. Voor listing/claimsale-bundles is geen premium afgeschreven.
+      if (b.auctionId) {
+        await refundAuctionPremium(b.buyerId, b.auctionId);
+      }
 
       // Items terug naar AVAILABLE
       await prisma.claimsaleItem.updateMany({

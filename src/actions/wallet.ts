@@ -227,6 +227,69 @@ export async function deductBidPayment(
   return afterTotal;
 }
 
+// Refund the 3% buyer's premium for an auction (Fase 31). Aangeroepen
+// vanuit volledige-refund-paden (auto-cancel-stale-paid, dispute met
+// BUYER-decision, respondToCancellation ACCEPT) wanneer een auction-bundle
+// helemaal teruggedraaid wordt. Premium ging via deductBidPayment naar
+// platform; bij volledige cancel hoort die ook terug naar koper.
+//
+// Idempotent: checkt of er al een AUCTION_PREMIUM_REFUND-Transaction
+// bestaat voor deze buyer+auction; skip als ja. Veilig om meermaals aan
+// te roepen vanuit retry-cron of dubbele cancel-flows.
+//
+// NIET aangeroepen voor partial-refund-paden (PARTIAL dispute-decision,
+// seller-initiated issueSellerRefund) — premium is platform-fee voor de
+// auction-faciliteit en blijft bij gedeeltelijke refund staan.
+export async function refundAuctionPremium(buyerId: string, auctionId: string) {
+  // Vind de originele AUCTION_PREMIUM Transaction (negatief bedrag = afgeschreven)
+  const premiumTx = await prisma.transaction.findFirst({
+    where: { userId: buyerId, type: "AUCTION_PREMIUM", relatedAuctionId: auctionId },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!premiumTx) {
+    // Geen premium afgeschreven (bv. legacy bundle van vóór Fase 31, of
+    // off-platform pickup). Niets te refunden.
+    return { refunded: 0 };
+  }
+
+  // Idempotency-check: bestaat er al een refund voor deze buyer+auction?
+  const existingRefund = await prisma.transaction.findFirst({
+    where: { userId: buyerId, type: "AUCTION_PREMIUM_REFUND", relatedAuctionId: auctionId },
+  });
+  if (existingRefund) {
+    return { refunded: 0, alreadyRefunded: true };
+  }
+
+  const refundAmount = Math.abs(premiumTx.amount); // amount was negatief
+  const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
+  if (!buyer) throw new Error("Buyer not found");
+
+  const balanceBefore = buyer.balance;
+  const balanceAfter = Math.round((balanceBefore + refundAmount) * 100) / 100;
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: buyerId },
+      data: { balance: balanceAfter },
+    }),
+    prisma.transaction.create({
+      data: {
+        userId: buyerId,
+        type: "AUCTION_PREMIUM_REFUND",
+        amount: refundAmount,
+        balanceBefore,
+        balanceAfter,
+        description: `Veilingkosten teruggestort: ${premiumTx.description.replace(/^Veilingkosten 3%: /, "")}`,
+        relatedAuctionId: auctionId,
+      },
+    }),
+  ]);
+
+  publish(userChannel(buyerId), { type: "balance-changed", payload: {} });
+
+  return { refunded: refundAmount };
+}
+
 // Internal: credit balance (used when seller receives payment)
 export async function creditBalance(userId: string, amount: number, type: string, description: string, relatedAuctionId?: string, relatedClaimsaleItemId?: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
