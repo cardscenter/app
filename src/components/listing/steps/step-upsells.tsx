@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Star, TrendingUp, Zap } from "lucide-react";
-import { UPSELL_PRICING, calculateUpsellCost } from "@/lib/upsell-config";
+import { Star, TrendingUp, Zap, Gift } from "lucide-react";
+import { UPSELL_PRICING, applyFreeUpsellsToCost } from "@/lib/upsell-config";
 import { getUpsellDiscount } from "@/lib/subscription-tiers";
 import { UPSELL_TYPES } from "@/types";
 import type { UpsellType } from "@/types";
@@ -16,6 +16,7 @@ interface StepUpsellsProps {
   upsells: UpsellEntry[];
   userBalance: number;
   accountType: string;
+  freeUpsellsRemaining: number;
   onChange: (upsells: UpsellEntry[]) => void;
 }
 
@@ -31,7 +32,7 @@ const UPSELL_KEYS: Record<UpsellType, { label: string; desc: string }> = {
   URGENT_LABEL: { label: "upsellUrgent", desc: "upsellUrgentDesc" },
 };
 
-export function StepUpsells({ upsells, userBalance, accountType, onChange }: StepUpsellsProps) {
+export function StepUpsells({ upsells, userBalance, accountType, freeUpsellsRemaining, onChange }: StepUpsellsProps) {
   const t = useTranslations("listing");
   const discount = getUpsellDiscount(accountType);
   const hasDiscount = discount > 0;
@@ -49,12 +50,14 @@ export function StepUpsells({ upsells, userBalance, accountType, onChange }: Ste
     onChange(upsells.map((u) => (u.type === type ? { ...u, days } : u)));
   };
 
-  const totalCost = upsells.reduce(
-    (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, accountType),
-    0
-  );
+  // Use the same allocator as the server so the displayed per-entry cost
+  // matches what wordt afgeschreven. Free quota op HOMEPAGE_SPOTLIGHT-entries
+  // wordt greedy lineair toegewezen.
+  const allocation = applyFreeUpsellsToCost(upsells, accountType, freeUpsellsRemaining, "listing");
+  const totalCost = allocation.total;
   const remainingBalance = userBalance - totalCost;
   const insufficientBalance = remainingBalance < 0;
+  const freeQuotaLeft = freeUpsellsRemaining - allocation.freeUsed;
 
   return (
     <div className="space-y-5">
@@ -114,15 +117,37 @@ export function StepUpsells({ upsells, userBalance, accountType, onChange }: Ste
                   <span className="min-w-[3rem] text-right text-sm font-medium text-foreground">
                     {active.days}d
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    = &euro;{calculateUpsellCost(type, active.days, accountType).toFixed(2)}
-                  </span>
+                  {(() => {
+                    const idx = upsells.findIndex((u) => u.type === type);
+                    const entryCost = idx >= 0 ? allocation.perEntry[idx] : 0;
+                    const isFree = idx >= 0 && entryCost === 0 && type === "HOMEPAGE_SPOTLIGHT";
+                    return isFree ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        <Gift className="h-3 w-3" />
+                        Gratis
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        = &euro;{entryCost.toFixed(2)}
+                      </span>
+                    );
+                  })()}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Free-quota notice (Fase 31) */}
+      {freeUpsellsRemaining > 0 && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-1.5">
+            <Gift className="h-4 w-4" />
+            Je hebt nog {freeQuotaLeft} van {freeUpsellsRemaining} gratis Homepage-spotlight{freeUpsellsRemaining === 1 ? "" : "s"} deze maand. Voeg er één toe om gratis op de homepage te staan.
+          </span>
+        </div>
+      )}
 
       {/* Premium discount notice */}
       {hasDiscount && (

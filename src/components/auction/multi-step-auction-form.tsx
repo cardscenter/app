@@ -78,10 +78,11 @@ interface MultiStepAuctionFormProps {
   shippingMethods: SellerShippingMethod[];
   userBalance: number;
   accountType: string;
+  freeUpsellsRemaining?: number;
   userCity?: string | null;
 }
 
-export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType, userCity = null }: MultiStepAuctionFormProps) {
+export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType, freeUpsellsRemaining = 0, userCity = null }: MultiStepAuctionFormProps) {
   const t = useTranslations("auction");
   const ts = useTranslations("shipping");
   const router = useRouter();
@@ -286,6 +287,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
           upsells={form.upsells}
           userBalance={userBalance}
           accountType={accountType}
+          freeUpsellsRemaining={freeUpsellsRemaining}
           onChange={(v) => updateField("upsells", v)}
         />
       </section>

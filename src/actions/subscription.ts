@@ -2,7 +2,13 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ACCOUNT_TIERS, type TierKey, type BillingCycle } from "@/lib/subscription-tiers";
+import {
+  ACCOUNT_TIERS,
+  getMonthlyFreeUpsells,
+  getTierRank,
+  type TierKey,
+  type BillingCycle,
+} from "@/lib/subscription-tiers";
 
 export async function getSubscriptionInfo() {
   const session = await auth();
@@ -41,10 +47,15 @@ export async function getSubscriptionInfo() {
 }
 
 // Admin or system action: upgrade a user to a tier
+//
+// `customMonthlyPrice` (Fase 31): Enterprise-aanvragen kunnen op een
+// custom-prijs goedgekeurd worden via het admin-panel. Voor PRO/UNLIMITED
+// blijft de tier-config de bron-van-waarheid.
 export async function upgradeToTier(
   userId: string,
-  tier: "PRO" | "UNLIMITED",
-  billingCycle: BillingCycle
+  tier: "PRO" | "UNLIMITED" | "ENTERPRISE",
+  billingCycle: BillingCycle,
+  customMonthlyPrice?: number
 ) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { error: "Gebruiker niet gevonden" };
@@ -59,6 +70,11 @@ export async function upgradeToTier(
     expiresAt.setMonth(expiresAt.getMonth() + 1);
   }
 
+  const monthlyPrice = customMonthlyPrice ?? tierConfig.monthlyPrice;
+  const yearlyPrice = billingCycle === "YEARLY"
+    ? (tierConfig.yearlyPrice ?? monthlyPrice * 12)
+    : null;
+
   // Cancel any existing active subscription
   await prisma.subscription.updateMany({
     where: { userId, status: "ACTIVE" },
@@ -71,6 +87,12 @@ export async function upgradeToTier(
       data: {
         accountType: tier,
         premiumExpiresAt: expiresAt,
+        // Tier-search-boost denormalisatie (stap 8)
+        tierRank: getTierRank(tier),
+        // Direct quota toekennen zodat user meteen kan profiteren — geen
+        // wacht-tot-volgende-maand
+        freeUpsellsRemaining: getMonthlyFreeUpsells(tier),
+        freeUpsellsResetAt: now,
       },
     }),
     prisma.subscription.create({
@@ -81,8 +103,8 @@ export async function upgradeToTier(
         status: "ACTIVE",
         startsAt: now,
         expiresAt,
-        monthlyPrice: tierConfig.monthlyPrice,
-        yearlyPrice: tierConfig.yearlyPrice,
+        monthlyPrice,
+        yearlyPrice,
       },
     }),
   ]);
@@ -127,7 +149,13 @@ export async function checkAndDowngradeExpired(): Promise<{ downgraded: number }
   await prisma.$transaction([
     prisma.user.updateMany({
       where: { id: { in: userIds } },
-      data: { accountType: "FREE", premiumExpiresAt: null },
+      data: {
+        accountType: "FREE",
+        premiumExpiresAt: null,
+        tierRank: 1,
+        freeUpsellsRemaining: 0,
+        freeUpsellsResetAt: null,
+      },
     }),
     prisma.subscription.updateMany({
       where: { userId: { in: userIds }, status: "ACTIVE" },

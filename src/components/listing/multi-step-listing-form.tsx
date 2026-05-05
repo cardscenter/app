@@ -185,6 +185,7 @@ interface MultiStepListingFormProps {
   seriesList: SeriesWithSets[];
   userBalance: number;
   userAccountType: string;
+  freeUpsellsRemaining?: number;
   userCity?: string | null;
   shippingMethods?: SellerShippingMethod[];
 }
@@ -225,7 +226,7 @@ function SectionHeader({
   );
 }
 
-export function MultiStepListingForm({ seriesList, userBalance, userAccountType, userCity = null, shippingMethods = [] }: MultiStepListingFormProps) {
+export function MultiStepListingForm({ seriesList, userBalance, userAccountType, freeUpsellsRemaining = 0, userCity = null, shippingMethods = [] }: MultiStepListingFormProps) {
   const t = useTranslations("listing");
   const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
@@ -552,6 +553,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           upsells={form.upsells}
           userBalance={userBalance}
           accountType={userAccountType}
+          freeUpsellsRemaining={freeUpsellsRemaining}
           onChange={(v) => updateField("upsells", v)}
         />
       </section>

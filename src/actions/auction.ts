@@ -9,7 +9,7 @@ import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { resolveAutoBids } from "@/lib/auction/autobid";
 import { createNotification } from "@/actions/notification";
 import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
-import { calculateAuctionUpsellCost } from "@/lib/upsell-config";
+import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
 import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { checkAmountAllowed } from "@/lib/account-age";
@@ -68,19 +68,27 @@ export async function createAuction(formData: FormData) {
   // Parse upsells and calculate total cost
   let upsellEntries: { type: UpsellType; days: number }[] = [];
   let totalUpsellCost = 0;
+  let perEntryCosts: number[] = [];
+  let freeUsed = 0;
 
   if (data.upsells) {
     try {
       upsellEntries = JSON.parse(data.upsells) as { type: UpsellType; days: number }[];
       const seller = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { balance: true, reservedBalance: true, accountType: true },
+        select: { balance: true, reservedBalance: true, accountType: true, freeUpsellsRemaining: true },
       });
       const accountType = seller?.accountType ?? "FREE";
-      totalUpsellCost = upsellEntries.reduce(
-        (sum, entry) => sum + calculateAuctionUpsellCost(entry.type as UpsellType, entry.days, accountType),
-        0
+      const allocation = applyFreeUpsellsToCost(
+        upsellEntries,
+        accountType,
+        seller?.freeUpsellsRemaining ?? 0,
+        "auction"
       );
+      perEntryCosts = allocation.perEntry;
+      totalUpsellCost = allocation.total;
+      freeUsed = allocation.freeUsed;
+
       const availableBalance = (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
       if (totalUpsellCost > availableBalance) {
         return { error: "Onvoldoende saldo voor promotie-opties" };
@@ -162,15 +170,10 @@ export async function createAuction(formData: FormData) {
   }
 
   // Create upsell records and deduct balance
-  if (upsellEntries.length > 0 && totalUpsellCost > 0) {
-    const seller = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { accountType: true },
-    });
-    const accountType = seller?.accountType ?? "FREE";
-
-    for (const entry of upsellEntries) {
-      const cost = calculateAuctionUpsellCost(entry.type as UpsellType, entry.days, accountType);
+  if (upsellEntries.length > 0) {
+    for (let i = 0; i < upsellEntries.length; i++) {
+      const entry = upsellEntries[i];
+      const cost = perEntryCosts[i];
       const startsAt = new Date();
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + entry.days);
@@ -187,13 +190,24 @@ export async function createAuction(formData: FormData) {
       });
     }
 
-    await deductBalance(
-      session.user.id,
-      totalUpsellCost,
-      "UPSELL",
-      `Promotie-opties veiling: ${data.title}`,
-      auction.id
-    );
+    // Decrement free-upsell-quota op User (Fase 31). Niet binnen de
+    // upsell-create-loop maar als één update.
+    if (freeUsed > 0) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { freeUpsellsRemaining: { decrement: freeUsed } },
+      });
+    }
+
+    if (totalUpsellCost > 0) {
+      await deductBalance(
+        session.user.id,
+        totalUpsellCost,
+        "UPSELL",
+        `Promotie-opties veiling: ${data.title}`,
+        auction.id
+      );
+    }
   }
 
   // Award Ember for creating a listing (auctions count too)

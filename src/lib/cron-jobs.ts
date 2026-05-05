@@ -61,6 +61,7 @@ export const CRON_JOB_NAMES = [
   "auto-cancel-stale-paid",
   "payment-failure-decay",
   "prune-bid-ips",
+  "reset-free-upsells",
 ] as const;
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
 
@@ -176,6 +177,12 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     description:
       `Anonimiseert AuctionBid.bidderIp voor bids ouder dan ${BID_IP_RETENTION_DAYS} dagen (privacy/retentie). Login-IPs op User worden bij elke nieuwe login overschreven, dus geen apart prune nodig.`,
     schedule: "Wekelijks",
+    allowManualRun: true,
+  },
+  "reset-free-upsells": {
+    description:
+      "Reset op de 1e van de maand de gratis HOMEPAGE_SPOTLIGHT-quota voor alle PRO/Unlimited/Enterprise-abonnees naar de tier-default (1 / 5 / 999). Schedule deze cron op de 1e om 00:05 zodat alle users tegelijk hun nieuwe quota krijgen.",
+    schedule: "Maandelijks (1e)",
     allowManualRun: true,
   },
 };
@@ -971,5 +978,30 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       data: { bidderIp: null },
     });
     return { itemsProcessed: result.count, result: { pruned: result.count } };
+  },
+  "reset-free-upsells": async () => {
+    // Maandelijkse reset van gratis HOMEPAGE_SPOTLIGHT-quota per tier.
+    // Drie aparte updateMany ipv een loop omdat het aantal verschilt per tier
+    // en SQLite/Prisma geen CASE WHEN-update kent.
+    const now = new Date();
+    const [pro, unlim, ent] = await prisma.$transaction([
+      prisma.user.updateMany({
+        where: { accountType: "PRO" },
+        data: { freeUpsellsRemaining: 1, freeUpsellsResetAt: now },
+      }),
+      prisma.user.updateMany({
+        where: { accountType: "UNLIMITED" },
+        data: { freeUpsellsRemaining: 5, freeUpsellsResetAt: now },
+      }),
+      prisma.user.updateMany({
+        where: { accountType: { in: ["ENTERPRISE", "ADMIN"] } },
+        data: { freeUpsellsRemaining: 999, freeUpsellsResetAt: now },
+      }),
+    ]);
+    const total = pro.count + unlim.count + ent.count;
+    return {
+      itemsProcessed: total,
+      result: { pro: pro.count, unlimited: unlim.count, enterprise: ent.count, total },
+    };
   },
 };

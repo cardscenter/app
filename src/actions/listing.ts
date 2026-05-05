@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createListingSchema } from "@/lib/validations/listing";
-import { calculateUpsellCost } from "@/lib/upsell-config";
+import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
@@ -87,7 +87,7 @@ export async function createListing(formData: FormData) {
   // Get user for balance check, premium status, and city (voor pickup-listings)
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { balance: true, reservedBalance: true, accountType: true, city: true },
+    select: { balance: true, reservedBalance: true, accountType: true, city: true, freeUpsellsRemaining: true },
   });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
@@ -97,11 +97,20 @@ export async function createListing(formData: FormData) {
     return { error: "Vul eerst je woonplaats in via Dashboard → Verzending voordat je een ophaal-advertentie plaatst" };
   }
 
+  // Free-upsell-quota (Fase 31): tier-abonnement geeft N gratis HOMEPAGE_SPOTLIGHTs
+  // per maand. Helper verdeelt quota greedy lineair en geeft per-entry-cost terug.
+  let perEntryCosts: number[] = [];
+  let freeUsed = 0;
   if (upsellEntries.length > 0) {
-    totalUpsellCost = upsellEntries.reduce(
-      (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, user.accountType),
-      0
+    const allocation = applyFreeUpsellsToCost(
+      upsellEntries,
+      user.accountType,
+      user.freeUpsellsRemaining,
+      "listing"
     );
+    perEntryCosts = allocation.perEntry;
+    totalUpsellCost = allocation.total;
+    freeUsed = allocation.freeUsed;
 
     const availableBalance = user.balance - user.reservedBalance;
     if (availableBalance < totalUpsellCost) {
@@ -278,8 +287,9 @@ export async function createListing(formData: FormData) {
     if (upsellEntries.length > 0) {
       const now = new Date();
 
-      for (const entry of upsellEntries) {
-        const cost = calculateUpsellCost(entry.type, entry.days, user.accountType);
+      for (let i = 0; i < upsellEntries.length; i++) {
+        const entry = upsellEntries[i];
+        const cost = perEntryCosts[i];
         const expiresAt = new Date(now.getTime() + entry.days * 24 * 60 * 60 * 1000);
 
         await tx.listingUpsell.create({
@@ -294,26 +304,38 @@ export async function createListing(formData: FormData) {
         });
       }
 
-      // Deduct total upsell cost from balance
-      const balanceBefore = user.balance;
-      const balanceAfter = balanceBefore - totalUpsellCost;
+      // Decrement free-upsell-quota op User (Fase 31). Atomic in dezelfde
+      // transactie als de listing-create + balance-deduct zodat geen race
+      // tussen twee parallelle creaties dezelfde quota uitnut.
+      if (freeUsed > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { freeUpsellsRemaining: { decrement: freeUsed } },
+        });
+      }
 
-      await tx.user.update({
-        where: { id: userId },
-        data: { balance: balanceAfter },
-      });
+      // Deduct total upsell cost from balance (alleen het niet-gratis deel)
+      if (totalUpsellCost > 0) {
+        const balanceBefore = user.balance;
+        const balanceAfter = balanceBefore - totalUpsellCost;
 
-      await tx.transaction.create({
-        data: {
-          userId,
-          type: "FEE",
-          amount: -totalUpsellCost,
-          balanceBefore,
-          balanceAfter,
-          description: `Promotiekosten advertentie: ${upsellEntries.map((e) => e.type).join(", ")}`,
-          relatedListingId: newListing.id,
-        },
-      });
+        await tx.user.update({
+          where: { id: userId },
+          data: { balance: balanceAfter },
+        });
+
+        await tx.transaction.create({
+          data: {
+            userId,
+            type: "FEE",
+            amount: -totalUpsellCost,
+            balanceBefore,
+            balanceAfter,
+            description: `Promotiekosten advertentie: ${upsellEntries.map((e) => e.type).join(", ")}`,
+            relatedListingId: newListing.id,
+          },
+        });
+      }
     }
 
     return newListing;
