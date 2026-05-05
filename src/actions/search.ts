@@ -84,7 +84,9 @@ export async function searchAll(
             seller: { select: { displayName: true } },
             _count: { select: { bids: true } },
           },
-          orderBy: { createdAt: "desc" },
+          // Fase 31 search-boost: tier-key SECONDARY achter createdAt zodat
+          // gelijke timestamps de tier-volgorde volgen.
+          orderBy: [{ createdAt: "desc" as const }, { seller: { tierRank: "desc" as const } }],
           take: 50,
         })
       : Promise.resolve([]),
@@ -143,7 +145,7 @@ export async function searchAll(
               select: { id: true, price: true },
             },
           },
-          orderBy: { publishedAt: "desc" },
+          orderBy: [{ publishedAt: "desc" as const }, { seller: { tierRank: "desc" as const } }],
           take: 50,
         })
       : Promise.resolve([]),
@@ -168,7 +170,9 @@ export async function searchAll(
           include: {
             seller: { select: { displayName: true } },
           },
-          orderBy: { createdAt: "desc" },
+          // Fase 31 search-boost: tier-key SECONDARY achter createdAt zodat
+          // gelijke timestamps de tier-volgorde volgen.
+          orderBy: [{ createdAt: "desc" as const }, { seller: { tierRank: "desc" as const } }],
           take: 50,
         })
       : Promise.resolve([]),

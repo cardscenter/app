@@ -45,7 +45,8 @@ export default async function ClaimsalesPage({
 
   const claimsales = await prisma.claimsale.findMany({
     where: { status: "LIVE", ...countryFilter, ...blockingFilter },
-    orderBy: { publishedAt: "desc" },
+    // Fase 31 search-boost: tier-key SECONDARY achter publishedAt.
+    orderBy: [{ publishedAt: "desc" as const }, { seller: { tierRank: "desc" as const } }],
     skip: (safePage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: {

@@ -29,16 +29,19 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
 }
 
 function getOrderBy(sort: SortOption) {
+  // Tier-based search-boost (Fase 31): tier-key altijd SECONDARY zodat de
+  // gekozen sort dominant blijft. Tier-boost grijpt alleen bij ties.
+  const tierBoost = { seller: { tierRank: "desc" as const } };
   switch (sort) {
     case "ending":
-      return { endTime: "asc" as const };
+      return [{ endTime: "asc" as const }, tierBoost];
     case "highest":
-      return { currentBid: "desc" as const };
+      return [{ currentBid: "desc" as const }, tierBoost];
     case "bids":
-      return undefined; // handled in JS
+      return undefined; // handled in JS — tier-boost daar later
     case "newest":
     default:
-      return { createdAt: "desc" as const };
+      return [{ createdAt: "desc" as const }, tierBoost];
   }
 }
 

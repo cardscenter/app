@@ -38,14 +38,19 @@ export default async function MarktplaatsPage({
     ? sortRaw
     : "newest") as SortOption;
 
+  // Tier-based search-boost (Fase 31): tier-key is altijd SECONDARY zodat de
+  // gekozen sort dominant blijft. Tier-boost grijpt alleen bij ties op de
+  // primary sort (zeldzaam bij datum, vaker bij identieke prijs). Effect:
+  // FREE-users verliezen geen page-1-positie, maar Unlimited krijgt bij
+  // gelijke gevallen voorrang.
   function getListingOrderBy(s: SortOption) {
     switch (s) {
       case "price_asc":
-        return { price: "asc" as const };
+        return [{ price: "asc" as const }, { seller: { tierRank: "desc" as const } }, { createdAt: "desc" as const }];
       case "price_desc":
-        return { price: "desc" as const };
+        return [{ price: "desc" as const }, { seller: { tierRank: "desc" as const } }, { createdAt: "desc" as const }];
       default:
-        return { createdAt: "desc" as const };
+        return [{ createdAt: "desc" as const }, { seller: { tierRank: "desc" as const } }];
     }
   }
   const orderBy = getListingOrderBy(sort);
