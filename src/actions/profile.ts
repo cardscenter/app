@@ -174,3 +174,68 @@ export async function updateMaxRunnerUpAttempts(value: number) {
 
   return { success: true };
 }
+
+// Vanity shop-slug (Fase 31). Alleen Unlimited+/Enterprise/Admin mogen
+// een slug claimen. Slug verschijnt als /winkel/<slug> en redirect server-side
+// naar /verkoper/<userId>. Bij downgrade blijft de slug bewaard maar de
+// /winkel/-route stopt (notFound).
+const SHOP_SLUG_RESERVED = new Set([
+  "admin", "login", "register", "dashboard", "api", "winkel", "verkoper",
+  "marktplaats", "veilingen", "claimsales", "berichten", "winkelwagen",
+  "zoeken", "uploads", "customization", "abonnement", "saldo", "profiel",
+  "support", "help", "about", "contact", "test", "settings",
+]);
+
+const shopSlugSchema = z
+  .string()
+  .min(3, "Minimaal 3 tekens")
+  .max(32, "Maximaal 32 tekens")
+  .regex(/^[a-z0-9-]+$/, "Alleen kleine letters, cijfers en koppelteken toegestaan")
+  .refine((s) => !s.startsWith("-") && !s.endsWith("-"), "Mag niet beginnen of eindigen met een koppelteken")
+  .refine((s) => !SHOP_SLUG_RESERVED.has(s), "Deze naam is gereserveerd");
+
+export async function updateShopSlug(rawSlug: string | null) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { accountType: true, shopSlug: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  // Tier-gate: alleen Unlimited+/Enterprise/Admin
+  const allowed = ["UNLIMITED", "ENTERPRISE", "ADMIN"].includes(user.accountType);
+  if (!allowed) {
+    return { error: "Eigen winkel-URL is alleen beschikbaar voor Unlimited en Enterprise" };
+  }
+
+  // Lege string of null = slug verwijderen
+  if (rawSlug === null || rawSlug.trim() === "") {
+    if (user.shopSlug === null) return { success: true, unchanged: true };
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { shopSlug: null },
+    });
+    return { success: true, slug: null };
+  }
+
+  const slug = rawSlug.trim().toLowerCase();
+  const parsed = shopSlugSchema.safeParse(slug);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  if (user.shopSlug === slug) return { success: true, unchanged: true };
+
+  // Uniqueness pre-check (sneller foutmelding dan @unique-violation catch)
+  const taken = await prisma.user.findUnique({ where: { shopSlug: slug }, select: { id: true } });
+  if (taken && taken.id !== session.user.id) {
+    return { error: "Deze winkel-URL is al in gebruik" };
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { shopSlug: slug },
+  });
+
+  return { success: true, slug };
+}

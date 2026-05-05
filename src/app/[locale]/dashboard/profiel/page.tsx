@@ -6,6 +6,7 @@ import { ProfileForm } from "@/components/dashboard/profile-form";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
 import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
+import { ShopSlugForm } from "@/components/dashboard/shop-slug-form";
 import { SellingCountriesToggle } from "@/components/dashboard/selling-countries-toggle";
 import { SessionProvider } from "next-auth/react";
 import { Link } from "@/i18n/navigation";
@@ -233,6 +234,19 @@ export default async function ProfilePage() {
           />
         </div>
       </Section>
+
+      {/* SECTIE 6b — Eigen winkel-URL (Unlimited+/Enterprise/Admin) */}
+      {(user.accountType === "UNLIMITED" || user.accountType === "ENTERPRISE" || user.accountType === "ADMIN") && (
+        <Section
+          icon={<Sparkles className="size-5" />}
+          title="Eigen winkel-URL"
+          description="Een persoonlijke link naar je winkel-pagina. Inbegrepen bij Unlimited en Enterprise."
+        >
+          <div className="max-w-lg">
+            <ShopSlugForm currentSlug={user.shopSlug} />
+          </div>
+        </Section>
+      )}
 
       {/* SECTIE 7 — Voorkeuren (runner-up) */}
       <Section
