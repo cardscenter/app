@@ -191,13 +191,23 @@ export async function createAuction(formData: FormData) {
       });
     }
 
-    // Decrement free-upsell-quota op User (Fase 31). Niet binnen de
-    // upsell-create-loop maar als één update.
+    // Race-safe quota-decrement (audit-fix Fase 31). Conditional updateMany
+    // voorkomt dubbele claim als parallelle createAuction/createListing
+    // dezelfde quota intussen heeft uitgenut. Anders dan in createListing
+    // kunnen we hier niet rollbacken (auction + upsells zijn al gecreëerd
+    // buiten een wrapping-transaction). Bij race: log warning, seller krijgt
+    // dubbel gratis quota — minor finanical impact (€0,75/dag x N dagen).
+    // Volledige fix vereist refactor van createAuction naar één $transaction.
     if (freeUsed > 0) {
-      await prisma.user.update({
-        where: { id: session.user.id },
+      const updated = await prisma.user.updateMany({
+        where: { id: session.user.id, freeUpsellsRemaining: { gte: freeUsed } },
         data: { freeUpsellsRemaining: { decrement: freeUsed } },
       });
+      if (updated.count === 0) {
+        console.warn(
+          `[createAuction] Free-upsell quota race for user ${session.user.id}: claimed ${freeUsed} but quota was depleted. Seller received bonus quota.`
+        );
+      }
     }
 
     if (totalUpsellCost > 0) {

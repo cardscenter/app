@@ -211,7 +211,9 @@ export async function createListing(formData: FormData) {
   }
 
   // Atomic transaction: create listing + shipping methods + upsells + deduct balance
-  const listing = await prisma.$transaction(async (tx) => {
+  let listing;
+  try {
+    listing = await prisma.$transaction(async (tx) => {
     const newListing = await tx.listing.create({ data: listingData as never });
 
     // MULTI_CARD: leid per-item ListingCardItem-rows af uit het cardItems-JSON
@@ -304,14 +306,19 @@ export async function createListing(formData: FormData) {
         });
       }
 
-      // Decrement free-upsell-quota op User (Fase 31). Atomic in dezelfde
-      // transactie als de listing-create + balance-deduct zodat geen race
-      // tussen twee parallelle creaties dezelfde quota uitnut.
+      // Race-safe quota-decrement (audit-fix Fase 31). De allocator-snapshot
+      // werd buiten de tx gelezen; tussen de read en deze update kan een
+      // parallelle createListing dezelfde quota geclaimd hebben. Conditional
+      // updateMany zorgt dat we ALLEEN decrementeren als het quota nog
+      // beschikbaar is — anders gooit de tx terug en moet user opnieuw.
       if (freeUsed > 0) {
-        await tx.user.update({
-          where: { id: userId },
+        const updated = await tx.user.updateMany({
+          where: { id: userId, freeUpsellsRemaining: { gte: freeUsed } },
           data: { freeUpsellsRemaining: { decrement: freeUsed } },
         });
+        if (updated.count === 0) {
+          throw new Error("FREE_UPSELL_QUOTA_RACE");
+        }
       }
 
       // Deduct total upsell cost from balance (alleen het niet-gratis deel)
@@ -339,7 +346,17 @@ export async function createListing(formData: FormData) {
     }
 
     return newListing;
-  });
+    });
+  } catch (e) {
+    // Quota-race: een parallelle createListing claimde de gratis upsell-quota
+    // tussen onze read en write. User moet opnieuw proberen — bij retry
+    // ziet allocator de bijgewerkte freeUpsellsRemaining en rekent de upsell
+    // gewoon als betaald aan.
+    if (e instanceof Error && e.message === "FREE_UPSELL_QUOTA_RACE") {
+      return { error: "Je gratis homepage-spotlight is intussen gebruikt door een andere actie. Probeer opnieuw, de upsell wordt nu in rekening gebracht." };
+    }
+    throw e;
+  }
 
   // Award Ember for creating a listing
   const { logActivity } = await import("@/actions/activity");
