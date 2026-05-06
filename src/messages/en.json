@@ -1633,6 +1633,7 @@
     "expiresAt": "Expires on",
     "cancelledNotice": "Your subscription has been cancelled and will expire at the end of the current period.",
     "commissionRate": "Commission",
+    "commissionBaseTooltip": "Commission is charged on the item sale price, excluding shipping fees.",
     "activeAuctions": "Active auctions",
     "activeClaimsales": "Active claimsales",
     "activeListings": "Active listings",

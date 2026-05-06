@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sparkles, Zap, Crown, Building2, Check } from "lucide-react";
+import { Sparkles, Zap, Crown, Building2, Check, Info } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import {
   ACCOUNT_TIERS,
@@ -116,8 +116,12 @@ function TierCard({ tierKey, cycle, isCurrent, hasPendingEnterpriseRequest }: Ti
         : String(limits.maxItemsPerClaimsale),
   });
 
-  const features: { label: string; on: boolean }[] = [
-    { label: t("featureCommission", { rate: (tier.commissionRate * 100).toFixed(tier.commissionRate === 0 ? 0 : 1) }), on: true },
+  const features: { label: string; on: boolean; tooltip?: string }[] = [
+    {
+      label: t("featureCommission", { rate: (tier.commissionRate * 100).toFixed(tier.commissionRate === 0 ? 0 : 1) }),
+      on: true,
+      tooltip: t("commissionBaseTooltip"),
+    },
     { label: limitLine, on: true },
     { label: itemsLine, on: true },
   ];
@@ -209,7 +213,14 @@ function TierCard({ tierKey, cycle, isCurrent, hasPendingEnterpriseRequest }: Ti
         {features.map((f, idx) => (
           <li key={idx} className="flex items-start gap-2 text-foreground">
             <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
-            <span>{f.label}</span>
+            <span className="inline-flex items-center gap-1">
+              {f.label}
+              {f.tooltip && (
+                <span title={f.tooltip} aria-label={f.tooltip} className="inline-flex cursor-help">
+                  <Info className="h-3.5 w-3.5 text-muted-foreground/60" />
+                </span>
+              )}
+            </span>
           </li>
         ))}
       </ul>

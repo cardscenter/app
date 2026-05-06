@@ -1633,6 +1633,7 @@
     "expiresAt": "Verloopt op",
     "cancelledNotice": "Je abonnement is opgezegd en verloopt aan het einde van de huidige periode.",
     "commissionRate": "Commissie",
+    "commissionBaseTooltip": "Commissie wordt geheven over de verkoopprijs van de items, exclusief verzendkosten.",
     "activeAuctions": "Actieve veilingen",
     "activeClaimsales": "Actieve claimsales",
     "activeListings": "Actieve advertenties",

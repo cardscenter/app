@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Crown } from "lucide-react";
+import { Crown, Info } from "lucide-react";
 
 interface Subscription {
   id: string;
@@ -74,8 +74,11 @@ export async function CurrentSubscriptionCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-        <span>
+        <span className="inline-flex items-center gap-1">
           {t("commissionRate")}: <span className="font-medium text-foreground">{currentCommissionPct}%</span>
+          <span title={t("commissionBaseTooltip")} aria-label={t("commissionBaseTooltip")} className="inline-flex cursor-help">
+            <Info className="h-3.5 w-3.5 text-muted-foreground/70" />
+          </span>
         </span>
         {subscription && (
           <>
