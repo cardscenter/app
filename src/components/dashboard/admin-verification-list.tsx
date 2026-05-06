@@ -6,7 +6,9 @@ import { adminReviewVerification } from "@/actions/verification";
 
 interface VerificationRequest {
   id: string;
-  documentType: string;
+  type: string; // "ID" | "ADDRESS" — Fase 32
+  documentType: string | null;
+  addressDocumentType: string | null;
   frontImageUrl: string;
   backImageUrl: string | null;
   createdAt: Date;
@@ -15,8 +17,19 @@ interface VerificationRequest {
     displayName: string;
     email: string;
     createdAt: Date;
+    street?: string | null;
+    houseNumber?: string | null;
+    postalCode?: string | null;
+    city?: string | null;
   };
 }
+
+const ADDRESS_DOCUMENT_LABELS: Record<string, string> = {
+  TAX_LETTER: "Belastingdienst-brief",
+  UTILITY_BILL: "Energie-/waterrekening",
+  BANK_STATEMENT: "Bankafschrift",
+  MUNICIPAL_LETTER: "Gemeentebrief",
+};
 
 interface AdminVerificationListProps {
   requests: VerificationRequest[];
@@ -55,13 +68,24 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
     );
   }
 
-  const documentTypeLabel = (type: string) => {
-    switch (type) {
+  const documentTypeLabel = (request: VerificationRequest) => {
+    if (request.type === "ADDRESS" && request.addressDocumentType) {
+      return ADDRESS_DOCUMENT_LABELS[request.addressDocumentType] ?? request.addressDocumentType;
+    }
+    switch (request.documentType) {
       case "ID_CARD": return t("idCard");
       case "PASSPORT": return t("passport");
       case "DRIVERS_LICENSE": return t("driversLicense");
-      default: return type;
+      default: return request.documentType ?? "—";
     }
+  };
+
+  const formatAddress = (u: VerificationRequest["user"]) => {
+    const parts = [
+      u.street && u.houseNumber ? `${u.street} ${u.houseNumber}` : u.street,
+      u.postalCode && u.city ? `${u.postalCode} ${u.city}` : u.city,
+    ].filter(Boolean);
+    return parts.join(", ");
   };
 
   return (
@@ -79,11 +103,25 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
               <p className="text-sm text-muted-foreground">
                 {request.user.email}
               </p>
-              <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
-                <span>{documentTypeLabel(request.documentType)}</span>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                    request.type === "ADDRESS"
+                      ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300"
+                      : "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300"
+                  }`}
+                >
+                  {request.type === "ADDRESS" ? "Adres" : "ID"}
+                </span>
+                <span>{documentTypeLabel(request)}</span>
                 <span>{t("submittedOn")} {new Date(request.createdAt).toLocaleDateString("nl-NL")}</span>
                 <span>{t("memberSince")} {new Date(request.user.createdAt).toLocaleDateString("nl-NL")}</span>
               </div>
+              {request.type === "ADDRESS" && formatAddress(request.user) && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Profiel-adres: <span className="font-medium text-foreground">{formatAddress(request.user)}</span>
+                </p>
+              )}
             </div>
             <button
               onClick={() => setExpandedId(expandedId === request.id ? null : request.id)}

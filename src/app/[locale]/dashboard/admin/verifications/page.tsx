@@ -9,7 +9,17 @@ export default async function AdminVerificationsPage() {
     where: { status: "PENDING" },
     include: {
       user: {
-        select: { id: true, displayName: true, email: true, createdAt: true },
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+          createdAt: true,
+          // Fase 32: adres-velden meeleveren zodat admin profiel-adres ziet bij ADDRESS-type
+          street: true,
+          houseNumber: true,
+          postalCode: true,
+          city: true,
+        },
       },
     },
     orderBy: { createdAt: "asc" },
