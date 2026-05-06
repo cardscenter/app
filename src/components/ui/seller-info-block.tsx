@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { SellerLevelBadge } from "@/components/ui/seller-level-badge";
 import { StarRatingDisplay } from "@/components/ui/star-rating";
-import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { TrustBadges } from "@/components/ui/trust-badges";
 import {
   MapPin,
   ShoppingBag,
@@ -22,6 +22,8 @@ export type SellerInfo = {
   country: string | null;
   accountType: string;
   isVerified?: boolean;
+  isIbanVerified?: boolean;
+  isAddressVerified?: boolean;
   xp: number;
   avgRating: number;
   totalReviews: number;
@@ -87,11 +89,13 @@ export function SellerInfoBlock({ seller, showMapsLink = false }: SellerInfoBloc
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-foreground truncate flex items-center gap-1">
-              {seller.displayName}
-              {seller.isVerified && <VerifiedBadge size="sm" />}
-            </span>
+            <span className="font-semibold text-foreground truncate">{seller.displayName}</span>
             <TierBadge accountType={seller.accountType} />
+            <TrustBadges
+              isVerified={seller.isVerified}
+              isIbanVerified={seller.isIbanVerified}
+              isAddressVerified={seller.isAddressVerified}
+            />
           </div>
 
           <div className="flex items-center gap-3 mt-1 flex-wrap">

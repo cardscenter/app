@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { StarRatingDisplay } from "@/components/ui/star-rating";
 import { SellerLevelBadge } from "@/components/ui/seller-level-badge";
-import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { TrustBadges } from "@/components/ui/trust-badges";
 import { ShoppingBag, TrendingUp, Calendar, ThumbsUp, Crown, Zap } from "lucide-react";
 
 export type SellerStats = {
@@ -11,6 +11,8 @@ export type SellerStats = {
   avatarUrl: string | null;
   accountType: string;
   isVerified?: boolean;
+  isIbanVerified?: boolean;
+  isAddressVerified?: boolean;
   xp: number;
   avgRating: number;
   totalReviews: number;
@@ -67,7 +69,12 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-xl font-bold text-foreground">{stats.displayName}</h2>
-            {stats.isVerified && <VerifiedBadge />}
+            <TrustBadges
+              isVerified={stats.isVerified}
+              isIbanVerified={stats.isIbanVerified}
+              isAddressVerified={stats.isAddressVerified}
+              size="md"
+            />
             {stats.accountType === "PRO" && (
               <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-xs font-bold text-indigo-600 dark:text-indigo-400">
                 <Zap className="h-3 w-3" /> PRO
