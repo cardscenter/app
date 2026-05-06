@@ -20,6 +20,7 @@ import {
   Star,
   CreditCard,
   Ban,
+  Info,
 } from "lucide-react";
 import Image from "next/image";
 import { OpenDisputeForm } from "./open-dispute-form";
@@ -76,6 +77,11 @@ type PurchaseBundle = {
   sourceTitle: string | null;
   sourceImageUrl: string | null;
   items: BundleItem[];
+  // Fase 32: voor auction-bundles tonen we de buyer's premium apart in een
+  // tooltip naast totalCost, zodat koper begrijpt dat er bovenop de bundle-
+  // prijs (= bod) nog premium is afgeschreven via een aparte AUCTION_PREMIUM-
+  // transactie. Voor listing/claimsale-bundles is dit null.
+  auctionPremium: number | null;
 };
 
 // PENDING is een virtuele tab — toont auction-pending-payments i.p.v.
@@ -360,8 +366,17 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
               </div>
             </div>
           ) : (
-            <span className="text-sm font-bold text-foreground tabular-nums">
+            <span className="inline-flex items-center gap-1 text-sm font-bold text-foreground tabular-nums">
               &euro;{bundle.totalCost.toFixed(2)}
+              {bundle.auctionPremium !== null && bundle.auctionPremium > 0 && (
+                <span
+                  title={`Bovenop dit bedrag is €${bundle.auctionPremium.toFixed(2)} veilingkosten apart afgeschreven (totaal betaald: €${(bundle.totalCost + bundle.auctionPremium).toFixed(2)}). Zie /dashboard/saldo voor het AUCTION_PREMIUM-transactieoverzicht.`}
+                  aria-label="Veilingkosten reeds verrekend"
+                  className="inline-flex cursor-help"
+                >
+                  <Info className="h-3.5 w-3.5 text-muted-foreground/60" />
+                </span>
+              )}
             </span>
           )}
           <button

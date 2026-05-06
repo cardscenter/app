@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
+import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 
 // Groepeer items met dezelfde cardName + conditie tot één rij met aantal +
 // subtotaal. Voor stocked-buy ("5× Destined Rivals booster pack") en voor
@@ -241,6 +242,13 @@ export default async function MyPurchasesPage() {
       : (b.listingId || b.bundleListings.length > 0 || b.cardItems.length > 0)
         ? "listing" as const
         : "claimsale" as const,
+    // Fase 32: voor auction-bundles berekenen we de buyer's premium on-the-fly
+    // op basis van auction.finalPrice. Niet op schema opgeslagen — dat zou een
+    // migratie vereisen. Tooltip op /aankopen toont de splitsing zodat koper
+    // niet denkt dat bundle.totalCost het totaal-betaalde bedrag was.
+    auctionPremium: b.auctionId && b.auction?.finalPrice != null
+      ? Math.round(b.auction.finalPrice * AUCTION_BUYER_PREMIUM_RATE * 100) / 100
+      : null,
     // Titel: directe listing > auction > bundle-offer-titel >
     // listing afgeleid uit eerste cardItem (stocked-buy/partial-sale).
     sourceTitle: b.auction?.title
