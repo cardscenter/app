@@ -587,6 +587,7 @@ export async function respondToBundleOffer(
   // Voor SHIP-bundles: seller moet een shipping-method kiezen, server valideert
   // de isSigned-eis (buyer-toggle of bedrag/internationaal-regelwerk).
   let acceptedShippingMethodId: string | null = null;
+  let acceptedShippingPrice = 0;
   if (bp.paymentMode === "PLATFORM" && bp.deliveryMethod === "SHIP") {
     const parsed = acceptBundleOfferShippingSchema.safeParse({ bundleProposalId, shippingMethodId });
     if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -594,7 +595,7 @@ export async function respondToBundleOffer(
 
     const method = await prisma.sellerShippingMethod.findFirst({
       where: { id: parsed.data.shippingMethodId, sellerId: bp.sellerId, isActive: true },
-      select: { id: true, isTracked: true, isSigned: true, shippingType: true },
+      select: { id: true, isTracked: true, isSigned: true, shippingType: true, price: true },
     });
     if (!method) return { error: "Verzendmethode niet beschikbaar" };
     if (method.shippingType === "LETTER") {
@@ -612,7 +613,20 @@ export async function respondToBundleOffer(
       };
     }
     acceptedShippingMethodId = method.id;
+    acceptedShippingPrice = method.price;
   }
+
+  // Fase 32: splits totalAmount in items + shipping zodat commissie alleen
+  // over items wordt geheven via releaseEscrow's commissionableAmount.
+  // Buyer voert "totaalbedrag (incl. verzending)" in — voor SHIP-bundles is
+  // shipping de prijs van de gekozen SellerShippingMethod; voor PICKUP-
+  // bundles is shipping €0. Clamp itemsTotal op 0 als seller een methode
+  // koos die duurder is dan het bod (edge-case; seller had moeten weigeren).
+  const shippingCostForBundle = bp.deliveryMethod === "SHIP" ? acceptedShippingPrice : 0;
+  const itemsTotalForBundle = Math.max(
+    Math.round((totalAmount - shippingCostForBundle) * 100) / 100,
+    0,
+  );
 
   if (bp.paymentMode === "PLATFORM") {
     if (!buyer.street || !buyer.postalCode || !buyer.city) {
@@ -631,8 +645,8 @@ export async function respondToBundleOffer(
             orderNumber: generateOrderNumber(),
             buyerId: bp.buyerId,
             sellerId: bp.sellerId,
-            shippingCost: 0,
-            totalItemCost: totalAmount,
+            shippingCost: shippingCostForBundle,
+            totalItemCost: itemsTotalForBundle,
             totalCost: totalAmount,
             status: "PAID",
             shippingMethodId: acceptedShippingMethodId,
@@ -693,8 +707,8 @@ export async function respondToBundleOffer(
             orderNumber: generateOrderNumber(),
             buyerId: bp.buyerId,
             sellerId: bp.sellerId,
-            shippingCost: 0,
-            totalItemCost: totalAmount,
+            shippingCost: shippingCostForBundle,
+            totalItemCost: itemsTotalForBundle,
             totalCost: totalAmount,
             status: "PENDING",
             shippingMethodId: acceptedShippingMethodId,
@@ -741,6 +755,9 @@ export async function respondToBundleOffer(
           shippingCost: 0,
           totalItemCost: totalAmount,
           totalCost: totalAmount,
+          // EXTERNAL pickup: geen escrow, geen commissie — totalItemCost = totalAmount klopt
+          // (er is geen shipping-pad). Commissie wordt sowieso niet geheven want
+          // releaseEscrow wordt nooit aangeroepen voor EXTERNAL bundles.
           status: "PENDING",
           paymentMode: "EXTERNAL",
           deliveryMethod: "PICKUP",
