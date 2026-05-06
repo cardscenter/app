@@ -353,16 +353,19 @@ export async function escrowCredit(userId: string, amount: number, description: 
 //
 // `amount` = totaal bedrag dat uit heldBalance vrijkomt (items + verzending).
 // `commissionableAmount` = portie waarover commissie geheven wordt (alleen items).
-//   Default = `amount` voor backward-compat met legacy-callers waar shipping
-//   nooit in escrow zat. Nieuwe callers (Fase 28) geven beide expliciet.
+//   Default = werkelijk-vrijgekomen escrow (Fase 32: was `amount`; veranderd
+//   zodat shortfall-paden niet meer commissie-base krijgen dan er beschikbaar
+//   was). Nieuwe callers (Fase 28) geven beide expliciet.
+//
+// **Fase 32 shortfall-clamp**: als heldBalance < amount, dan wordt zowel de
+// escrow-decrement, de commissie-base als `sellerReceives` geclampt op de
+// werkelijk vrijgekomen pot. Voorheen kreeg seller `amount - commissie`
+// ongeacht de hold — dat was "geld uit het niets" bij data-corruptie.
 export async function releaseEscrow(userId: string, amount: number, description: string, relatedShippingBundleId?: string, commissionableAmount?: number) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("User not found");
 
   const commissionRate = getCommissionRate(user.accountType);
-  const commissionBase = commissionableAmount ?? amount;
-  const commissionAmount = Math.round(commissionBase * commissionRate * 100) / 100;
-  const sellerReceives = amount - commissionAmount;
 
   // Clamp escrow-decrement op heldBalance ≥ 0. Negatief escrow betekent dat
   // er meer is uitbetaald dan vastgehouden — een data-inconsistentie. We
@@ -370,9 +373,19 @@ export async function releaseEscrow(userId: string, amount: number, description:
   const safeEscrowDecrement = Math.min(amount, Math.max(user.heldBalance, 0));
   if (safeEscrowDecrement < amount) {
     console.error(
-      `[releaseEscrow] heldBalance shortfall for user ${userId}: trying to release €${amount.toFixed(2)} but only €${user.heldBalance.toFixed(2)} held. Bundle: ${relatedShippingBundleId ?? "n/a"}. Seller balance still credited fully.`,
+      `[releaseEscrow] heldBalance shortfall for user ${userId}: trying to release €${amount.toFixed(2)} but only €${user.heldBalance.toFixed(2)} held. Bundle: ${relatedShippingBundleId ?? "n/a"}. Seller credit clamped to actual hold (Fase 32).`,
     );
   }
+
+  // Fase 32: clamp sellerReceives + commission op werkelijk vrijgekomen
+  // escrow. Vóór deze fix kreeg seller `amount - commissie` ook bij een
+  // shortfall — dat is "geld uit het niets" want de heldBalance had die
+  // bedragen niet. Nu: commissie over min(commissionableAmount,
+  // actualReleased) en sellerReceives = actualReleased - commissie.
+  const actualReleased = safeEscrowDecrement;
+  const commissionBase = Math.min(commissionableAmount ?? actualReleased, actualReleased);
+  const commissionAmount = Math.round(commissionBase * commissionRate * 100) / 100;
+  const sellerReceives = Math.round((actualReleased - commissionAmount) * 100) / 100;
 
   const balanceBefore = user.balance;
   const balanceAfter = balanceBefore + sellerReceives;
