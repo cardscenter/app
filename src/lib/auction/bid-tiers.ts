@@ -22,6 +22,14 @@ export const VERIFIED_BID_THRESHOLD = 2000;
 // Gaat volledig naar het platform — seller is al beschermd via runner-up cascade.
 export const BID_FORFEIT_AMOUNT = 200;
 
+// Universele payment-failure-fee: 2,9% × bod, ALLE bedragen, geclampt op
+// User.balance. Stackt op BID_FORFEIT_AMOUNT (≥€2000). Voorbeeld €1000-bod:
+// €0 forfait + €29 fee = €29 boete. €2500-bod: €200 forfait + €72,50 fee.
+// Het 10%-commitment in reservedBalance dekt de fee altijd zolang user
+// niets uitgaf na winnen — clamp op `max(balance - forfeit, 0)` als safety.
+// Gaat 100% naar platform via Transaction.type = "BID_PAYMENT_FAILURE_FEE".
+export const PAYMENT_FAILURE_FEE_RATE = 0.029;
+
 // Strike-systeem: wanneer triggered we welke suspend?
 export const STRIKE_TEMP_SUSPEND_THRESHOLD = 2; // 2× wanbetaling → 30d suspend
 export const STRIKE_TEMP_SUSPEND_DAYS = 30;

@@ -21,6 +21,7 @@ import { publish, userChannel, listingChannel } from "@/lib/realtime";
 import {
   VERIFIED_BID_THRESHOLD,
   BID_FORFEIT_AMOUNT,
+  PAYMENT_FAILURE_FEE_RATE,
   STRIKE_TEMP_SUSPEND_THRESHOLD,
   STRIKE_TEMP_SUSPEND_DAYS,
   STRIKE_PERMANENT_THRESHOLD,
@@ -380,41 +381,62 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         data: { status: "PAYMENT_FAILED", paymentStatus: "PAYMENT_FAILED" },
       });
 
-      // Fase 29: borg-forfait + strike + auto-suspend voor wanbetaler
+      // Fase 29 + 32: borg-forfait (≥€2000) + universele 2,9%-fee + strike +
+      // auto-suspend voor wanbetaler. Beide deducts in één $transaction met
+      // sequentiële balance-tracking zodat de Transaction-rows correct zijn.
       const isHighBid = previousWinnerPrice >= VERIFIED_BID_THRESHOLD;
+      const wanbetaler = await prisma.user.findUnique({
+        where: { id: previousWinnerId },
+        select: { balance: true },
+      });
       let forfeitAmount = 0;
+      let feeAmount = 0;
 
-      if (isHighBid) {
-        const wanbetaler = await prisma.user.findUnique({
-          where: { id: previousWinnerId },
-          select: { balance: true },
-        });
-        if (wanbetaler) {
-          // Clamp op beschikbare balance (≥ 0). De 10%-reserve van finalPrice
-          // staat tijdens AWAITING_PAYMENT al vast — dat geeft een minimum
-          // buffer van 10% × €2000 = €200, dus de €200 forfeit past altijd
-          // mits de user geen reservering heeft uitgegeven na winnen.
-          forfeitAmount = Math.min(BID_FORFEIT_AMOUNT, Math.max(wanbetaler.balance, 0));
-          if (forfeitAmount > 0) {
-            const balanceAfter = wanbetaler.balance - forfeitAmount;
-            await prisma.$transaction([
-              prisma.user.update({
-                where: { id: previousWinnerId },
-                data: { balance: balanceAfter },
-              }),
-              prisma.transaction.create({
+      if (wanbetaler) {
+        const startBalance = Math.max(wanbetaler.balance, 0);
+        // Forfait eerst (€200 voor ≥€2000-bids), clamp op startBalance.
+        forfeitAmount = isHighBid
+          ? Math.min(BID_FORFEIT_AMOUNT, startBalance)
+          : 0;
+        const balanceAfterForfeit = wanbetaler.balance - forfeitAmount;
+        // Universele 2,9%-fee daarna (alle bedragen), clamp op resterend.
+        const feeRaw = Math.round(previousWinnerPrice * PAYMENT_FAILURE_FEE_RATE * 100) / 100;
+        feeAmount = Math.min(feeRaw, Math.max(balanceAfterForfeit, 0));
+        const balanceAfterFee = balanceAfterForfeit - feeAmount;
+
+        if (forfeitAmount > 0 || feeAmount > 0) {
+          await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+              where: { id: previousWinnerId },
+              data: { balance: balanceAfterFee },
+            });
+            if (forfeitAmount > 0) {
+              await tx.transaction.create({
                 data: {
                   userId: previousWinnerId,
                   type: "BID_DEPOSIT_FORFEIT",
                   amount: -forfeitAmount,
                   balanceBefore: wanbetaler.balance,
-                  balanceAfter,
+                  balanceAfter: balanceAfterForfeit,
                   description: `Borg verbeurd: niet betaald op veiling "${previousWinnerTitle}"`,
                   relatedAuctionId: auction.id,
                 },
-              }),
-            ]);
-          }
+              });
+            }
+            if (feeAmount > 0) {
+              await tx.transaction.create({
+                data: {
+                  userId: previousWinnerId,
+                  type: "BID_PAYMENT_FAILURE_FEE",
+                  amount: -feeAmount,
+                  balanceBefore: balanceAfterForfeit,
+                  balanceAfter: balanceAfterFee,
+                  description: `Veilingkosten 2,9% wegens niet-betaling: "${previousWinnerTitle}"`,
+                  relatedAuctionId: auction.id,
+                },
+              });
+            }
+          });
         }
       }
 
@@ -459,12 +481,15 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         await prisma.shippingBundle.delete({ where: { id: failedBundle.id } });
       }
 
-      const forfeitText = forfeitAmount > 0
-        ? ` Een borg van €${forfeitAmount.toFixed(2)} is verbeurd.`
+      const breakdownParts: string[] = [];
+      if (forfeitAmount > 0) breakdownParts.push(`borg €${forfeitAmount.toFixed(2)}`);
+      if (feeAmount > 0) breakdownParts.push(`veilingkosten €${feeAmount.toFixed(2)}`);
+      const breakdownText = breakdownParts.length > 0
+        ? ` Ingehouden: ${breakdownParts.join(" + ")} = €${(forfeitAmount + feeAmount).toFixed(2)}.`
         : "";
       const strikeText = ` Je staat nu op ${updatedUser.paymentFailureCount} wanbetaling${updatedUser.paymentFailureCount === 1 ? "" : "en"}.`;
       await createNotification(previousWinnerId, "AUCTION_WON", "Betaaltermijn verlopen",
-        `De betaaltermijn voor "${previousWinnerTitle}" (€${previousWinnerPrice.toFixed(2)}) is verlopen.${forfeitText}${strikeText}`,
+        `De betaaltermijn voor "${previousWinnerTitle}" (€${previousWinnerPrice.toFixed(2)}) is verlopen.${breakdownText}${strikeText}`,
         `/nl/veilingen/${auction.id}`);
       await createNotification(auction.sellerId, "ITEM_SOLD", "Betaling niet ontvangen",
         `De koper heeft "${previousWinnerTitle}" niet betaald binnen de termijn. De veiling is geannuleerd.`,
