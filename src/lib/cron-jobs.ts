@@ -864,7 +864,7 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         b.id,
       );
 
-      // Auction-bundles: 3% buyer's premium ook terugbetalen (Fase 31).
+      // Auction-bundles: buyer's premium ook terugbetalen (Fase 31).
       // Bundle ging niet door, dus de platform-fee hoort niet bij ons te
       // blijven. Voor listing/claimsale-bundles is geen premium afgeschreven.
       if (b.auctionId) {

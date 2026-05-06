@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import { Loader2, Check } from "lucide-react";
 import { updateBidConfirmationPreference } from "@/actions/profile";
+import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
+
+const PREMIUM_LABEL = `${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "").replace(".", ",")}%`;
 
 interface Props {
   currentValue: boolean;
@@ -41,7 +44,7 @@ export function BidConfirmationToggle({ currentValue }: Props) {
             Bevestiging vragen vóór elk veiling-bod
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            We tonen standaard bij je eerste bod op een veiling een overzicht met de totale kosten (bod + 3% veilingkosten + reserve). Zet je deze uit, dan plaatst je bod direct.
+            We tonen standaard bij je eerste bod op een veiling een overzicht met de totale kosten (bod + {PREMIUM_LABEL} veilingkosten + reserve). Zet je deze uit, dan plaatst je bod direct.
           </p>
         </div>
         {isPending && <Loader2 className="mt-1 h-4 w-4 animate-spin text-muted-foreground" />}

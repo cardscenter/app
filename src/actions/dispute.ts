@@ -405,7 +405,7 @@ export async function autoResolveDisputes() {
       `Geschil auto-opgelost: verkoper heeft niet gereageerd binnen ${SELLER_RESPONSE_DAYS} dagen`,
       bundle.id,
     );
-    // Auction-bundles: 3% buyer's premium ook terugbetalen (Fase 31).
+    // Auction-bundles: buyer's premium ook terugbetalen (Fase 31).
     if (bundle.auctionId) {
       await refundAuctionPremium(bundle.buyerId, bundle.auctionId);
     }
@@ -542,7 +542,7 @@ export async function adminResolveDispute(data: {
       `Beheerder: volledige terugbetaling aan koper`,
       bundle.id,
     );
-    // Auction-bundles: 3% buyer's premium ook terugbetalen bij admin-BUYER
+    // Auction-bundles: buyer's premium ook terugbetalen bij admin-BUYER
     // beslissing (volledige refund = bundle gaat niet door, Fase 31).
     if (bundle.auctionId) {
       await refundAuctionPremium(bundle.buyerId, bundle.auctionId);

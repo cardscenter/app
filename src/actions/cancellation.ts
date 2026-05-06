@@ -164,7 +164,7 @@ export async function respondToCancellation(
     bundle.id,
   );
 
-  // Auction-bundles: 3% buyer's premium ook terugbetalen (Fase 31).
+  // Auction-bundles: buyer's premium ook terugbetalen (Fase 31).
   // Wederzijds akkoord = bundle gaat niet door, dus de platform-fee hoort
   // niet bij ons te blijven. Idempotent — geen probleem als al gerefundeerd.
   if (bundle.auctionId) {

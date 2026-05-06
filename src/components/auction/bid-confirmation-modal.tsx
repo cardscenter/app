@@ -91,7 +91,7 @@ export function BidConfirmationModal({
         <div className="space-y-2.5 rounded-xl border border-border bg-muted/30 p-4 text-sm">
           <Row label={bidLabel} value={`€${fees.bid.toFixed(2)}`} />
           <Row
-            label={`Veilingkosten (${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(0)}%)`}
+            label={`Veilingkosten (${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "")}%)`}
             value={`€${fees.premium.toFixed(2)}`}
             muted
           />

@@ -14,10 +14,10 @@ export function getAvailableBalance(user: { balance: number; reservedBalance: nu
  * Calculate how much should be reserved for a bid amount (NOT a total!).
  *
  * **WAARSCHUWING — semantiek is misleidend (Fase 31)**: deze functie
- * accepteert het BOD (zonder fee) en berekent intern `total = bid + 3%
- * premium`, dan returnt `total × 10%`. De naam zegt "reserve voor een bid",
- * de implementatie doet impliciet de premium-expansion. Geef NOOIT een
- * vooraf-berekende total door — dan reken je dubbel.
+ * accepteert het BOD (zonder fee) en berekent intern `total = bid +
+ * buyer's premium`, dan returnt `total × 10%`. De naam zegt "reserve voor
+ * een bid", de implementatie doet impliciet de premium-expansion. Geef
+ * NOOIT een vooraf-berekende total door — dan reken je dubbel.
  *
  * Voorbeelden:
  *   calculateReserveAmount(1000)  // 1000 × 1.03 × 0.10 = 103.00 ✓

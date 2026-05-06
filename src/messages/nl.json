@@ -1653,7 +1653,7 @@
     "enterpriseOnRequest": "Op aanvraag",
     "breakEvenLabel": "Verdient zich terug vanaf €{amount} verkoop per maand",
     "breakEvenEnterprise": "Vanaf ±€{amount} verkoop per maand",
-    "auctionPremiumNote": "Op veilingen geldt ook 3% veilingkosten voor de koper",
+    "auctionPremiumNote": "Op veilingen geldt ook 2,9% veilingkosten voor de koper",
     "upgradeTo": "Upgrade naar {tier}",
     "downgradeTo": "Downgraden naar {tier}",
     "enterpriseRequestCta": "Aanvragen",

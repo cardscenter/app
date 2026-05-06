@@ -1653,7 +1653,7 @@
     "enterpriseOnRequest": "On request",
     "breakEvenLabel": "Pays for itself from €{amount} sales per month",
     "breakEvenEnterprise": "From ±€{amount} sales per month",
-    "auctionPremiumNote": "Auctions also include a 3% buyer's premium",
+    "auctionPremiumNote": "Auctions also include a 2.9% buyer's premium",
     "upgradeTo": "Upgrade to {tier}",
     "downgradeTo": "Downgrade to {tier}",
     "enterpriseRequestCta": "Request",

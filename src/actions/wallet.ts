@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { getCommissionRate } from "@/lib/subscription-tiers";
 import { logAdminAction } from "@/lib/admin-audit";
 import { publish, userChannel } from "@/lib/realtime";
+import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
+
+const PREMIUM_RATE_LABEL = `${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
 // Get current user's balance
 export async function getBalance(): Promise<number | null> {
@@ -169,7 +172,7 @@ export async function deductBalance(userId: string, amount: number, type: string
 }
 
 // Auction-specific: deduct buyer payment for an auction win, splitting the
-// total into a PURCHASE-leg (bid) and an AUCTION_PREMIUM-leg (3% buyer's
+// total into a PURCHASE-leg (bid) and an AUCTION_PREMIUM-leg (buyer's
 // premium, Fase 31). Both legs hit the buyer's balance; only the PURCHASE
 // portion ends up in seller-escrow via separate escrowCredit. The premium
 // goes to the platform as fee revenue.
@@ -216,7 +219,7 @@ export async function deductBidPayment(
         amount: -premiumAmount,
         balanceBefore: afterBid,
         balanceAfter: afterTotal,
-        description: `Veilingkosten 3%: ${description}`,
+        description: `Veilingkosten ${PREMIUM_RATE_LABEL}: ${description}`,
         relatedAuctionId,
       },
     }),
@@ -227,7 +230,7 @@ export async function deductBidPayment(
   return afterTotal;
 }
 
-// Refund the 3% buyer's premium for an auction (Fase 31). Aangeroepen
+// Refund the buyer's premium for an auction (Fase 31). Aangeroepen
 // vanuit volledige-refund-paden (auto-cancel-stale-paid, dispute met
 // BUYER-decision, respondToCancellation ACCEPT) wanneer een auction-bundle
 // helemaal teruggedraaid wordt. Premium ging via deductBidPayment naar
@@ -279,7 +282,7 @@ export async function refundAuctionPremium(buyerId: string, auctionId: string) {
         amount: refundAmount,
         balanceBefore,
         balanceAfter,
-        description: `Veilingkosten teruggestort: ${premiumTx.description.replace(/^Veilingkosten 3%: /, "")}`,
+        description: `Veilingkosten teruggestort: ${premiumTx.description.replace(/^Veilingkosten \d+(?:[.,]\d+)?%: /, "")}`,
         relatedAuctionId: auctionId,
       },
     }),

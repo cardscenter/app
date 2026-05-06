@@ -499,8 +499,8 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
     distinct: ["bidderId"],
   });
 
-  // Fase 31: 3% buyer's premium ook op Buy Now (alle paden — bid, BuyNow met
-  // bids, BuyNow zonder bids).
+  // Fase 31: buyer's premium ook op Buy Now (alle paden — bid, BuyNow met
+  // bids, BuyNow zonder bids). Rate-bron: AUCTION_BUYER_PREMIUM_RATE.
   const buyNowFees = calculateBidFees(auction.buyNowPrice);
 
   if (available >= buyNowFees.total) {
@@ -740,7 +740,7 @@ export async function finalizeAuction(auctionId: string) {
   const winner = await prisma.user.findUnique({ where: { id: highestBid.bidderId } });
   const totalCost = highestBid.amount;
 
-  // Fase 31: koper betaalt bid + 3% buyer's premium. Premium gaat naar
+  // Fase 31: koper betaalt bid + buyer's premium. Premium gaat naar
   // platform via deductBidPayment, escrow voor seller blijft het bid-deel.
   const bidFees = calculateBidFees(totalCost);
 
@@ -1053,7 +1053,7 @@ export async function completeAuctionPayment(auctionId: string) {
 
   // Fase 27.98 + 29 + 31: sync vóór de availableBalance-check. Het 10%-commitment
   // voor deze AWAITING_PAYMENT auction zit IN reservedBalance. Koper betaalt
-  // bid + 3% buyer's premium (Fase 31).
+  // bid + buyer's premium (Fase 31).
   const syncedReserved = await syncReservedBalance(session.user.id);
   const totalCost = auction.finalPrice ?? 0;
   const fees = calculateBidFees(totalCost);

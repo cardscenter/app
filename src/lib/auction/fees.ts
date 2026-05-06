@@ -1,6 +1,6 @@
-// Buyer's premium voor veilingen (Fase 31).
+// Buyer's premium voor veilingen (Fase 31, verlaagd in Fase 32).
 //
-// 3% wordt over elk winnend bod afgeschreven van de koper en gaat 100% naar
+// 2,9% wordt over elk winnend bod afgeschreven van de koper en gaat 100% naar
 // het platform via een aparte Transaction met type "AUCTION_PREMIUM". De
 // seller krijgt z'n volledige bod in escrow en wordt apart belast met z'n
 // eigen tier-commissie via releaseEscrow.
@@ -13,7 +13,7 @@
 // niet over `bid` alleen. Dat past bij wat de koper uiteindelijk moet kunnen
 // ophoesten als hij de veiling wint.
 
-export const AUCTION_BUYER_PREMIUM_RATE = 0.03;
+export const AUCTION_BUYER_PREMIUM_RATE = 0.029;
 
 export interface BidFees {
   bid: number;

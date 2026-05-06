@@ -6,7 +6,7 @@ import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 
 export function AuctionFeeExplainer() {
   const [open, setOpen] = useState(false);
-  const ratePct = (AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(0);
+  const ratePct = (AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "");
 
   return (
     <div className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs">
