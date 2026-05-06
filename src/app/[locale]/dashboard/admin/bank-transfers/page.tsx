@@ -27,6 +27,8 @@ export default async function BankTransfersPage({
           balance: true,
           bankTransferReference: true,
           accountType: true,
+          iban: true,
+          isIbanVerified: true,
         },
         take: 20,
         orderBy: { displayName: "asc" },
@@ -118,6 +120,8 @@ export default async function BankTransfersPage({
                       userId={u.id}
                       userName={u.displayName}
                       currentBalance={u.balance}
+                      userIban={u.iban}
+                      isIbanVerified={u.isIbanVerified}
                     />
                   </div>
                 </div>

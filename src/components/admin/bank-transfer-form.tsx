@@ -9,18 +9,27 @@ export function BankTransferForm({
   userId,
   userName,
   currentBalance,
+  userIban,
+  isIbanVerified,
 }: {
   userId: string;
   userName: string;
   currentBalance: number;
+  /** IBAN op profiel — voor IBAN-match (Fase 32). Null = user heeft nog geen IBAN ingevuld. */
+  userIban?: string | null;
+  /** True = IBAN al eerder geverifieerd → input niet meer tonen. */
+  isIbanVerified?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [senderIban, setSenderIban] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+
+  const showIbanField = !!userIban && !isIbanVerified;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,15 +41,20 @@ export function BankTransferForm({
       return;
     }
     startTransition(async () => {
-      const result = await confirmBankTransfer(userId, amt, note.trim() || undefined);
+      const result = await confirmBankTransfer(
+        userId,
+        amt,
+        note.trim() || undefined,
+        senderIban.trim() || undefined,
+      );
       if ("error" in result) {
         setError(result.error);
       } else {
-        setSuccess(
-          `Bevestigd. Nieuw saldo: €${result.newBalance.toFixed(2)}`
-        );
+        const ibanMsg = result.ibanVerified ? " — IBAN-match: rekeningnummer geverifieerd ✓" : "";
+        setSuccess(`Bevestigd. Nieuw saldo: €${result.newBalance.toFixed(2)}${ibanMsg}`);
         setAmount("");
         setNote("");
+        setSenderIban("");
         router.refresh();
       }
     });
@@ -84,6 +98,20 @@ export function BankTransferForm({
           className="flex-1 rounded-md border border-border bg-card px-2 py-1.5 text-sm"
         />
       </div>
+      {showIbanField && (
+        <div className="space-y-1">
+          <label className="text-[11px] text-muted-foreground">
+            IBAN-match (optioneel) — verifieert het rekeningnummer als het overeenkomt met het profiel-IBAN
+          </label>
+          <input
+            type="text"
+            placeholder="NL00BANK0000000000"
+            value={senderIban}
+            onChange={(e) => setSenderIban(e.target.value)}
+            className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm font-mono uppercase"
+          />
+        </div>
+      )}
       {error && <p className="text-xs text-rose-600">{error}</p>}
       {success && <p className="text-xs text-emerald-600">{success}</p>}
       <div className="flex justify-end gap-2">

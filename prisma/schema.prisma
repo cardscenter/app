@@ -37,9 +37,16 @@ model User {
   // Bank transfer
   bankTransferReference String? @unique // e.g. "atomicsnipz8729376290"
 
-  // Verification
-  isVerified           Boolean  @default(false)
-  verificationStatus   String   @default("NONE") // NONE | PENDING | APPROVED | REJECTED
+  // Verification (Fase 32 — uitgebreid van enkel ID naar 3 trust-types)
+  // ID = paspoort/ID/rijbewijs upload → admin review (gate voor bids ≥ €2000)
+  // IBAN = match tussen User.iban en gebruikte rekening bij bank-storting (auto via admin confirmBankTransfer)
+  // ADDRESS = officieel adres-document (belastingdienst/utility/bank/gemeente) → admin review (trust-signal)
+  isVerified                Boolean  @default(false)  // ID
+  isIbanVerified            Boolean  @default(false)  // Bank-rekening
+  isAddressVerified         Boolean  @default(false)  // Adres-document
+  verificationStatus        String   @default("NONE") // ID-status: NONE | PENDING | APPROVED | REJECTED
+  addressVerificationStatus String   @default("NONE") // ADDRESS-status: NONE | PENDING | APPROVED | REJECTED
+  // IBAN heeft geen aparte status — gaat automatisch via admin's bank-transfer confirm
 
   // Suspension (Fase 8). suspendedUntil null = niet opgeschort.
   // PERMANENT: suspendedUntil heeft geen einddatum-betekenis (datum ver in
@@ -1326,9 +1333,16 @@ model VerificationRequest {
   userId          String
   user            User      @relation(fields: [userId], references: [id])
 
-  documentType    String    // ID_CARD | PASSPORT | DRIVERS_LICENSE
+  // Fase 32: type bepaalt of dit een ID- of ADDRESS-aanvraag is.
+  // ID gebruikt documentType (ID_CARD/PASSPORT/DRIVERS_LICENSE).
+  // ADDRESS gebruikt addressDocumentType (TAX_LETTER/UTILITY_BILL/BANK_STATEMENT/MUNICIPAL_LETTER).
+  type            String    @default("ID") // ID | ADDRESS
+
+  documentType        String?   // ID_CARD | PASSPORT | DRIVERS_LICENSE  (alleen bij type=ID)
+  addressDocumentType String?   // TAX_LETTER | UTILITY_BILL | BANK_STATEMENT | MUNICIPAL_LETTER  (alleen bij type=ADDRESS)
+
   frontImageUrl   String
-  backImageUrl    String?   // Not needed for passport
+  backImageUrl    String?   // Not needed for passport / not used for ADDRESS
 
   status          String    @default("PENDING") // PENDING | APPROVED | REJECTED
   rejectReason    String?
@@ -1340,6 +1354,7 @@ model VerificationRequest {
 
   @@index([userId])
   @@index([status])
+  @@index([type])
 }
 
 // ============================================================

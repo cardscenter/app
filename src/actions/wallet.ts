@@ -6,6 +6,8 @@ import { getCommissionRate } from "@/lib/subscription-tiers";
 import { logAdminAction } from "@/lib/admin-audit";
 import { publish, userChannel } from "@/lib/realtime";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
+import { createNotification } from "@/actions/notification";
+import { normalizeIban } from "@/lib/validations/iban";
 
 const PREMIUM_RATE_LABEL = `${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
@@ -80,7 +82,17 @@ export async function adminDeposit(userId: string, amount: number, description?:
 }
 
 // Admin action: confirm a bank transfer deposit
-export async function confirmBankTransfer(userId: string, amount: number, adminNote?: string) {
+//
+// Fase 32: optioneel `senderIban` — als admin de IBAN invult waarmee de user
+// betaalde, vergelijken we die met `User.iban`. Bij match flippen we
+// `isIbanVerified=true` (trust-signal). Mismatch geeft geen fout — de storting
+// wordt sowieso bevestigd, alleen het IBAN-trust-badge blijft uit.
+export async function confirmBankTransfer(
+  userId: string,
+  amount: number,
+  adminNote?: string,
+  senderIban?: string,
+) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -99,10 +111,21 @@ export async function confirmBankTransfer(userId: string, amount: number, adminN
   const balanceBefore = user.balance;
   const balanceAfter = balanceBefore + amount;
 
+  // Fase 32: IBAN-match — alleen als admin een sender-IBAN invulde én user
+  // een eigen IBAN op profiel heeft staan. Genormaliseerd vergelijken
+  // (hoofdletters, geen spaties).
+  const ibanMatch =
+    senderIban && user.iban
+      ? normalizeIban(senderIban) === normalizeIban(user.iban)
+      : false;
+  const shouldFlipIbanVerified = ibanMatch && !user.isIbanVerified;
+
   await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
-      data: { balance: balanceAfter },
+      data: shouldFlipIbanVerified
+        ? { balance: balanceAfter, isIbanVerified: true }
+        : { balance: balanceAfter },
     }),
     prisma.transaction.create({
       data: {
@@ -128,12 +151,29 @@ export async function confirmBankTransfer(userId: string, amount: number, adminN
       adminNote: adminNote ?? null,
       userName: user.displayName,
       bankTransferReference: user.bankTransferReference,
+      senderIban: senderIban ?? null,
+      ibanMatch,
+      ibanVerifiedFlipped: shouldFlipIbanVerified,
     },
   });
 
-  publish(userChannel(userId), { type: "balance-changed", payload: {} });
+  // Fase 32: bij IBAN-flip ook een notificatie naar de user
+  if (shouldFlipIbanVerified) {
+    await createNotification(
+      userId,
+      "VERIFICATION_APPROVED",
+      "Rekeningnummer geverifieerd!",
+      "Je IBAN is geverifieerd via je laatste bankstorting. Het rekeningnummer-trust-badge is nu zichtbaar op je profiel.",
+      "/nl/dashboard/verificatie",
+    );
+  }
 
-  return { success: true, newBalance: balanceAfter };
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
+  if (shouldFlipIbanVerified) {
+    publish(userChannel(userId), { type: "verification-changed", payload: { status: "APPROVED" } });
+  }
+
+  return { success: true, newBalance: balanceAfter, ibanVerified: shouldFlipIbanVerified };
 }
 
 // Internal: deduct balance (used by auction/claimsale/listing purchases)
