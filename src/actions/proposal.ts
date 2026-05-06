@@ -7,7 +7,6 @@ import { createNotification } from "@/actions/notification";
 import { publishNewMessageForConversation } from "@/actions/message";
 import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
-import { checkAmountAllowed } from "@/lib/account-age";
 import { requireNotSuspended } from "@/lib/suspension";
 
 // Helper: bereken nieuwe listing-status na een items-status-flip.
@@ -98,8 +97,6 @@ export async function createPartialSaleProposal(input: {
 
   const buyer = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!buyer) return { error: "Koper niet gevonden" };
-  const ageCheck = checkAmountAllowed(buyer, input.totalAmount);
-  if (!ageCheck.allowed) return { error: ageCheck.error! };
 
   // Maximaal één PENDING (partial of full) per (conversation, proposer)
   const existingPending = await prisma.proposal.findFirst({
@@ -344,10 +341,6 @@ export async function respondToProposal(
   const amount = proposal.amount;
   const shippingCost = proposal.listing?.shippingCost ?? 0;
   const totalCost = amount + shippingCost;
-
-  // Account age check
-  const ageCheck = checkAmountAllowed(buyer, totalCost);
-  if (!ageCheck.allowed) return { error: ageCheck.error! };
 
   const availableBalance = buyer.balance - buyer.reservedBalance;
 

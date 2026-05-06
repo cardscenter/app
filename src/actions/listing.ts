@@ -9,7 +9,6 @@ import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
-import { checkAmountAllowed } from "@/lib/account-age";
 import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
 import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
@@ -461,10 +460,6 @@ export async function buyListing(
 
   const totalCost = listing.price + shippingCost;
 
-  // Account age restriction check
-  const ageCheck = checkAmountAllowed(buyer, totalCost);
-  if (!ageCheck.allowed) return { error: ageCheck.error! };
-
   const buyerAvailable = buyer.balance - buyer.reservedBalance;
   if (buyerAvailable < totalCost) {
     return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalCost.toFixed(2)}` };
@@ -641,9 +636,6 @@ async function buyListingStocked(args: {
   const itemSubtotal = (listing.price ?? 0) * qty;
   const totalCost = itemSubtotal + shippingCost;
 
-  // Account-age + balance
-  const ageCheck = checkAmountAllowed(buyer, totalCost);
-  if (!ageCheck.allowed) return { error: ageCheck.error! };
   const buyerAvailable = buyer.balance - buyer.reservedBalance;
   if (buyerAvailable < totalCost) {
     return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalCost.toFixed(2)}` };

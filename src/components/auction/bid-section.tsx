@@ -276,7 +276,7 @@ export function BidSection({
               {bidWarning}
             </p>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">
             {t.rich("termsAcceptanceNote", {
               link: (chunks) => (
                 <Link href="/veilingen/voorwaarden" className="underline hover:no-underline">

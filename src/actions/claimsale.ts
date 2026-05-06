@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { checkClaimsaleLimit } from "@/lib/account-limits";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
-import { checkAmountAllowed } from "@/lib/account-age";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
 import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
@@ -393,13 +392,6 @@ export async function claimItem(claimsaleItemId: string) {
   if (item.status !== "AVAILABLE") return { error: "Kaart is niet meer beschikbaar" };
   if (item.claimsale.status !== "LIVE") return { error: "Claimsale is niet actief" };
   if (item.claimsale.sellerId === userId) return { error: "Je kunt niet je eigen kaarten claimen" };
-
-  // Account-age cap: claiming reserves a financial commitment, so apply the
-  // same cap as direct purchases.
-  const buyer = await prisma.user.findUnique({ where: { id: userId } });
-  if (!buyer) return { error: "Gebruiker niet gevonden" };
-  const ageCheck = checkAmountAllowed(buyer, item.price);
-  if (!ageCheck.allowed) return { error: ageCheck.error! };
 
   // Check if already in user's cart
   const existingCartItem = await prisma.cartItem.findUnique({

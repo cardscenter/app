@@ -3,7 +3,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireNotSuspended } from "@/lib/suspension";
-import { checkAmountAllowed } from "@/lib/account-age";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { publishNewMessageForConversation } from "@/actions/message";
@@ -236,16 +235,6 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
   // Geen shippingMethodId-validatie meer bij offer-creation. Seller kiest die
   // bij accept; server forceert isSigned als requestInsuredShipping=true of
   // wanneer requiresSignedShipping(totalAmount, isInternational) true is.
-
-  // Account-age cap voor de buyer (relevant voor PLATFORM-flows waar geld
-  // van wallet weggaat; voor EXTERNAL geen platform-saldo nodig).
-  const isPlatformFlow = data.deliveryChoice === "SHIP" || data.deliveryChoice === "PICKUP_PLATFORM";
-  if (isPlatformFlow) {
-    const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
-    if (!buyer) return { error: "Koper niet gevonden" };
-    const ageCheck = checkAmountAllowed(buyer, data.totalAmount);
-    if (!ageCheck.allowed) return { error: ageCheck.error! };
-  }
 
   // Eén PENDING bundle-offer per (conversation, buyer) tegelijk om spam te beperken.
   const existing = await prisma.bundleProposal.findFirst({

@@ -13,7 +13,6 @@ import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
 import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
-import { checkAmountAllowed } from "@/lib/account-age";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
 import { bidPassesVerifiedGate, IP_OVERLAP_LOOKBACK_DAYS } from "@/lib/auction/bid-tiers";
@@ -276,11 +275,6 @@ export async function placeBid(auctionId: string, amount: number, deliveryChoice
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
-  // Account-age cap: a bid is a financial commitment up to `amount`, so cap on
-  // the bid amount itself (not just the reserve).
-  const ageCheck = checkAmountAllowed(user, amount);
-  if (!ageCheck.allowed) return { error: ageCheck.error! };
-
   // Fase 29: bids ≥ €2500 vereisen een geverifieerd account (tenzij admin
   // explicit business-vrijstelling heeft toegekend). Onder de drempel is
   // verificatie niet nodig.
@@ -473,10 +467,6 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
 
   const available = getAvailableBalance(user);
   const reserveNeeded = calculateReserveAmount(auction.buyNowPrice);
-
-  // Account-age cap geldt ook voor buyNow — financieel commitment van buyNowPrice
-  const ageCheck = checkAmountAllowed(user, auction.buyNowPrice);
-  if (!ageCheck.allowed) return { error: ageCheck.error! };
 
   // Fase 29: buyNowPrice ≥ €2500 vereist een geverifieerd account, ook bij
   // direct-koop. Anders kan iemand de verified-eis omzeilen door buyNow te

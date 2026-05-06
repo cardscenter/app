@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
-import { checkAmountAllowed } from "@/lib/account-age";
 import { expireClaimedItems, unclaimItem, closeClaimsaleIfDepleted } from "@/actions/claimsale";
 import { requireNotSuspended } from "@/lib/suspension";
 import { requiresSignedShipping, isUntrackedAllowed, LETTER_MAX_ITEMS } from "@/lib/shipping/tracked-threshold";
@@ -378,10 +377,6 @@ export async function checkout(shippingSelections?: Record<string, string>) {
     sellerShippingInfo.set(sellerId, { cost: shippingCost, methodId });
     totalNeeded += itemTotal + shippingCost;
   }
-
-  // Account age restriction check
-  const ageCheck = checkAmountAllowed(user, totalNeeded);
-  if (!ageCheck.allowed) return { error: ageCheck.error! };
 
   const availableBalance = user.balance - user.reservedBalance;
   if (availableBalance < totalNeeded) {

@@ -67,7 +67,6 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 - **Proposal payment-deadline** — chat-proposals met partial balance (>=40% maar <100%) krijgen ook 5 dagen via `Proposal.paymentDeadline`. Cron `api/cron/proposal-payment-deadline` zet PAYMENT_FAILED, listing terug op ACTIVE, PENDING bundle weg, beide partijen genotificeerd. Geen runner-up (proposals hebben geen bod-volgorde).
 - **Pending shipping-bundles** — bij AWAITING_PAYMENT (auction én listing-proposal) wordt direct een PENDING `ShippingBundle` aangemaakt via `src/lib/shipping-bundle.ts createPendingBundle()`. `completeAuctionPayment` / `completeProposalPayment` promoveren PENDING → PAID i.p.v. een tweede bundle aan te maken (auctionId/listingId zijn @unique). Address mag null zijn bij PENDING — wordt bij PAID-promotie ingevuld. Sales/purchases dashboards filteren PENDING uit hun lijsten; auction-pending heeft een eigen `pendingAuctions`-sectie op `/dashboard/verkopen`, listing-pending wordt afgehandeld via chat.
 - **Reserved balance** — `reservedBalance` on User tracks 40% of active bids. `availableBalance = balance - reservedBalance`. All purchase actions check available balance. Per auction: reserves 40% of max(highestBid, autobidMaxAmount). Released when outbid (no autobid) or auction ends.
-- **Account age restrictions** — config in `src/lib/account-age.ts`. 0-24h: max €50, 1-7d: max €200, 7+d unverified: max €500, verified: unlimited. Accounts before 2026-03-31 skip restrictions.
 - **Account verification** — ID/passport/driver's license upload → admin review → `isVerified` + `verificationStatus` on User. `VerificationRequest` model. Actions in `verification.ts`. Pages: `dashboard/verificatie/` (user), `dashboard/geschillen/admin/verificaties/` (admin). Verified badge: `components/ui/verified-badge.tsx`.
 - **Balance top-up** — Bank transfer with unique `bankTransferReference` per user (format: `[username][10digits]`, generated at registration, regenerated on username change). Admin confirms via `confirmBankTransfer()`. iDEAL: placeholder UI only.
 - **IBAN / bankgegevens** — `User.iban` + `User.accountHolderName` voor uitbetalingen. Validatie via `src/lib/validations/iban.ts`: 37 EU/EER/CH/UK landen met exacte lengte per land + ISO 13616 mod-97 checksum. 30-dagen anti-fraude cooldown bij IBAN-wijziging via `User.lastIbanChange` (eerste keer is gratis). UI op `/dashboard/profiel` (BankDetailsForm). Helpers: `normalizeIban`, `isValidIbanFormat`, `formatIbanForDisplay`, `maskIban`.
@@ -250,7 +249,6 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 | `upsell-config.ts` | Tier-based upsell pricing for listings (`UPSELL_PRICING`) and auctions (`AUCTION_UPSELL_PRICING`, higher rates) |
 | `auction/bid-increments.ts` | Min bid increment per price tier |
 | `balance-check.ts` | Available balance, reserve calculation (40%), per-auction reserve tracking |
-| `account-age.ts` | Account age tier restrictions (0-24h €50, 1-7d €200, 7+d €500, verified unlimited) |
 | `auction/autobid.ts` | Autobid resolution (with 40% reserve on each bid step) |
 | `shipping/countries.ts` | EU country list (code, name NL, name EN) |
 | `shipping/carriers.ts` | Carrier suggestions per country |
@@ -407,10 +405,9 @@ Bij een nieuwe write-action die door een gebruiker getriggerd wordt, voeg deze g
 2. `await requireNotSuspended(userId)` (Fase 8) — slaat over voor: payouts, dispute-respondes, markAsShipped
 3. Resource-check: bestaat het, ben ik geautoriseerd?
 4. State-check: is het in de juiste status?
-5. Account-age cap (`checkAmountAllowed` voor financiële commitments)
-6. Balance/saldo-check
-7. Race-safe write via `updateMany` met status-filter, of expliciete `prisma.$transaction`
-8. **Real-time `publish(...)` calls** (Fase 30) na succesvolle schrijfactie — kies juiste channel-type op basis van wat er verandert:
+5. Balance/saldo-check
+6. Race-safe write via `updateMany` met status-filter, of expliciete `prisma.$transaction`
+7. **Real-time `publish(...)` calls** (Fase 30) na succesvolle schrijfactie — kies juiste channel-type op basis van wat er verandert:
    - **Eigen-state events** (balance/cart/withdrawal/verification/suspension/notification) → `userChannel(userId)`
    - **Bundle/dispute** events die beide partijen raken → publish naar **buyer + seller user-channels**
    - **Publieke broadcasts** (auction/claimsale/listing status) → resource-channel (`auctionChannel`/`claimsaleChannel`/`listingChannel`)
