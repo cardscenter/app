@@ -189,10 +189,15 @@ function Row({
 }
 
 /** Subtiel pill-label voor percentages (2,9% / 10%) — neutrale stijl, niet
- *  prominent. Vervangt de oude `(2,9%)`-tussen-haakjes-notatie. */
+ *  prominent. Vervangt de oude `(2,9%)`-tussen-haakjes-notatie.
+ *
+ *  bg-card + border zorgt voor zichtbaar contrast in zowel light (op
+ *  bg-muted/30 container) als dark mode (waar bg-muted te dicht bij de
+ *  container-tone ligt). leading-none + py-1 lijnt hem netjes uit op de
+ *  text-baseline van het naastliggende label. */
 function PercentBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+    <span className="inline-flex items-center rounded-full border border-border/70 bg-card px-1.5 py-1 text-[10px] font-medium leading-none tabular-nums text-muted-foreground">
       {children}
     </span>
   );
