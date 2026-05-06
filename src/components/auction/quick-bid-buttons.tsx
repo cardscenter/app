@@ -1,8 +1,13 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { getMinimumIncrement, getMinimumNextBid } from "@/lib/auction/bid-increments";
 
+/**
+ * Drie chips onder de bid-input die de input vullen met een voorgesteld
+ * biedbedrag. Was vroeger "Bied \u20ACX"-knoppen die misleidend waren (lijken
+ * direct te biden); nu kleine chips met alleen het bedrag, secundair
+ * gestyled.
+ */
 export function QuickBidButtons({
   currentBid,
   startingBid,
@@ -12,12 +17,10 @@ export function QuickBidButtons({
   startingBid: number;
   onSelect: (amount: number) => void;
 }) {
-  const t = useTranslations("auction");
   const base = currentBid ?? 0;
   const minimumBid = base === 0 ? startingBid : getMinimumNextBid(base);
   const increment = getMinimumIncrement(base === 0 ? startingBid : base);
 
-  // Generate 3 quick bid options: minimum, +1 increment, +2 increments
   const options = [
     minimumBid,
     +(minimumBid + increment).toFixed(2),
@@ -25,15 +28,15 @@ export function QuickBidButtons({
   ];
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-1.5">
       {options.map((amount) => (
         <button
           key={amount}
           type="button"
           onClick={() => onSelect(amount)}
-          className="flex-1 rounded-xl border border-border/50 bg-card/50 px-3 py-2 text-sm font-medium text-foreground transition-all hover:border-primary hover:bg-primary-light/50 hover:text-primary dark:hover:bg-primary/10"
+          className="flex-1 rounded-lg border border-border/60 bg-transparent px-2.5 py-1.5 text-xs font-medium tabular-nums text-muted-foreground transition-all hover:border-primary hover:bg-primary/5 hover:text-foreground"
         >
-          {t("quickBid")} {"\u20AC"}{amount.toFixed(2)}
+          {"\u20AC"}{amount.toFixed(2)}
         </button>
       ))}
     </div>

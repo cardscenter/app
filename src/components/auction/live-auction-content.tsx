@@ -335,7 +335,6 @@ export function LiveAuctionContent({
           {/* Bid form */}
           {isActive && !isOwner && currentUserId && (
             <div className="mt-6 space-y-4">
-              <AuctionFeeExplainer />
               <BidSection
                 auctionId={auctionId}
                 currentBid={bidData.currentBid}
@@ -357,6 +356,9 @@ export function LiveAuctionContent({
                 deliveryMethod={deliveryMethod}
                 pickupCity={pickupCity}
               />
+              {/* Fase 32: fee-uitleg verplaatst van bovenaan naar onderaan
+                  zodat het secundair voelt — referentie-info, geen actie. */}
+              <AuctionFeeExplainer />
             </div>
           )}
 

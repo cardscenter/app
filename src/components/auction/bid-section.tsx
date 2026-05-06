@@ -64,7 +64,6 @@ export function BidSection({
   // → 10× available). Was 40% (2.5×) en daarna 15% (~6.7×) — we hebben de drempel
   // verlaagd zodat bidders met klein saldo ook in het middensegment kunnen meedoen.
   const maxBid = availableBalance !== undefined ? Math.floor((availableBalance / BID_RESERVE_RATE) * 100) / 100 : undefined;
-  const hasReservedFunds = (reservedBalance ?? 0) > 0;
 
   // Server geeft soms een error-code i.p.v. mensenlijke tekst (Fase 29).
   // Vertaal naar i18n; CTA-link wordt apart gerenderd voor verified-eis.
@@ -187,15 +186,6 @@ export function BidSection({
         </div>
       )}
 
-      {/* Quick bid buttons - hidden when highest bidder */}
-      {!isHighestBidder && (
-        <QuickBidButtons
-          currentBid={currentBid}
-          startingBid={startingBid}
-          onSelect={handleQuickBid}
-        />
-      )}
-
       {/* No balance: deposit prompt */}
       {!isHighestBidder && maxBid !== undefined && maxBid < minimumBid && (
         <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 p-4 text-sm space-y-2">
@@ -214,40 +204,17 @@ export function BidSection({
         </div>
       )}
 
-      {/* Balance info — only when user CAN bid */}
-      {!isHighestBidder && availableBalance !== undefined && maxBid !== undefined && maxBid >= minimumBid && (
-        <div className="glass-subtle rounded-xl p-3 text-sm space-y-2">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">{t("availableBalance")}</span>
-            <span className="font-medium text-foreground">
-              {"\u20AC"}{availableBalance.toFixed(2)}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">{t("maxBidAmount")}</span>
-            <span className="font-medium text-foreground">
-              {"\u20AC"}{maxBid.toFixed(2)}
-            </span>
-          </div>
-          {hasReservedFunds && (
-            <p className="text-xs text-muted-foreground">
-              {t("balanceReservedInfo", { amount: reservedBalance!.toFixed(2) })}
-            </p>
-          )}
-          {bidWarning && (
-            <p className="text-xs text-red-500 dark:text-red-400">
-              {bidWarning}
-            </p>
-          )}
-        </div>
-      )}
-
       {/* Bid form - hidden when highest bidder or no balance */}
       {!isHighestBidder && (maxBid === undefined || maxBid >= minimumBid) && (
         <form action={handleBid}>
-          <p className="text-xs text-muted-foreground mb-2">
-            {t("minimumBid")}: {"\u20AC"}{minimumBid.toFixed(2)}
-          </p>
+          {/* Min/Max op \u00E9\u00E9n regel boven de input \u2014 voormalig
+              balance-info-blok weg (saldo zichtbaar via header). Fase 32. */}
+          <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground tabular-nums">
+            <span>{t("minimumBid")}: {"\u20AC"}{minimumBid.toFixed(2)}</span>
+            {maxBid !== undefined && (
+              <span>{t("maxBidAmount")}: {"\u20AC"}{maxBid.toFixed(2)}</span>
+            )}
+          </div>
           <div className="flex gap-2">
             <div className="flex flex-1 items-center gap-1">
               <span className="text-muted-foreground">{"\u20AC"}</span>
@@ -277,6 +244,20 @@ export function BidSection({
               {t("placeBid")}
             </button>
           </div>
+          {/* Quick-bid chips: vullen alleen de input \u2014 secundair gestyled
+              zodat duidelijk is dat ze geen directe-bid-actie zijn. Fase 32. */}
+          <div className="mt-2">
+            <QuickBidButtons
+              currentBid={currentBid}
+              startingBid={startingBid}
+              onSelect={handleQuickBid}
+            />
+          </div>
+          {bidWarning && (
+            <p className="mt-2 text-xs text-red-500 dark:text-red-400">
+              {bidWarning}
+            </p>
+          )}
           <p className="mt-2 text-[11px] text-muted-foreground">
             {t.rich("termsAcceptanceNote", {
               link: (chunks) => (
