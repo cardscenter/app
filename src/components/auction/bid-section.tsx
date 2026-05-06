@@ -7,6 +7,7 @@ import { BID_RESERVE_RATE } from "@/lib/auction/bid-tiers";
 import { calculateBidFees } from "@/lib/auction/fees";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { Info } from "lucide-react";
 import { QuickBidButtons } from "@/components/auction/quick-bid-buttons";
 import { Link } from "@/i18n/navigation";
 import {
@@ -212,7 +213,18 @@ export function BidSection({
           <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground tabular-nums">
             <span>{t("minimumBid")}: {"\u20AC"}{minimumBid.toFixed(2)}</span>
             {maxBid !== undefined && (
-              <span>{t("maxBidAmount")}: {"\u20AC"}{maxBid.toFixed(2)}</span>
+              <span className="inline-flex items-center gap-1">
+                {t("maxBidAmount")}: {"\u20AC"}{maxBid.toFixed(2)}
+                {reservedBalance !== undefined && reservedBalance > 0 && (
+                  <span
+                    title={t("balanceReservedInfo", { amount: reservedBalance.toFixed(2) })}
+                    aria-label={t("balanceReservedInfo", { amount: reservedBalance.toFixed(2) })}
+                    className="inline-flex cursor-help"
+                  >
+                    <Info className="h-3 w-3 text-muted-foreground/60" />
+                  </span>
+                )}
+              </span>
             )}
           </div>
           <div className="flex gap-2">
