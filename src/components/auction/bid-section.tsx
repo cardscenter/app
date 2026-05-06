@@ -94,12 +94,18 @@ export function BidSection({
     }
   }
 
-  async function handleBid(formData: FormData) {
+  async function handleBid(e: React.FormEvent<HTMLFormElement>) {
+    // Fase 32: gebruik onSubmit + preventDefault i.p.v. <form action={...}>.
+    // React 19's form-action reset namelijk de form na de handler — dat
+    // maakte de input visueel terug-springen naar minimumBid (defaultValue)
+    // op het moment dat de bevestigings-modal opende, terwijl de gebruiker
+    // een hoger bedrag had ingevuld. Manuele FormData-extractie behoudt
+    // de input-waarde tot we expliciet inputRef.current.value = "" doen.
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     const amount = parseFloat(formData.get("bidAmount") as string);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
-    // Fase 31: toon modal bij eerste bod op deze veiling, tenzij user de
-    // preference globaal heeft uitgezet.
     const skipModal = skipBidConfirmation || hasConfirmedBidForAuction(auctionId);
     if (skipModal) {
       await submitBid(amount);
@@ -207,7 +213,7 @@ export function BidSection({
 
       {/* Bid form - hidden when highest bidder or no balance */}
       {!isHighestBidder && (maxBid === undefined || maxBid >= minimumBid) && (
-        <form action={handleBid}>
+        <form onSubmit={handleBid}>
           {/* Min/Max op \u00E9\u00E9n regel boven de input \u2014 voormalig
               balance-info-blok weg (saldo zichtbaar via header). Fase 32. */}
           <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground tabular-nums">

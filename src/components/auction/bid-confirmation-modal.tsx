@@ -118,7 +118,7 @@ export function BidConfirmationModal({
         <p className="mt-4 text-xs text-muted-foreground">
           {isBuyNow
             ? "Het volledige bedrag wordt nu afgeschreven van je saldo."
-            : "Het reserve-bedrag wordt vrijgegeven zodra je overboden wordt of de veiling eindigt. De veilingkosten betaal je alleen als je deze veiling wint."}
+            : "Word je overboden, dan komt de reserve direct vrij. Win je de veiling, dan wordt het volledige bedrag (bod + veilingkosten) automatisch afgeschreven van je saldo. Heb je dan onvoldoende saldo, dan krijg je 5 dagen om aan te vullen."}
         </p>
 
         {insufficient && (
