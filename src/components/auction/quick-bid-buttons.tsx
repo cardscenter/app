@@ -21,10 +21,17 @@ export function QuickBidButtons({
   const minimumBid = base === 0 ? startingBid : getMinimumNextBid(base);
   const increment = getMinimumIncrement(base === 0 ? startingBid : base);
 
+  // Eerste chip = exact minimumBid (zodat je het minimum-bedrag direct kunt
+  // bidden). Tweede en derde = ronde bedragen erboven, met een step die
+  // past bij het increment-niveau zodat de chips natuurlijke "biedhoogtes"
+  // tonen (€205 / €210 ipv €205,65 / €210,65).
+  const niceStep = increment <= 1 ? 1 : increment <= 5 ? 5 : 10;
+  const nextRound = Math.ceil((minimumBid + 0.01) / niceStep) * niceStep;
+
   const options = [
     minimumBid,
-    +(minimumBid + increment).toFixed(2),
-    +(minimumBid + increment * 2).toFixed(2),
+    nextRound,
+    nextRound + niceStep,
   ];
 
   return (
