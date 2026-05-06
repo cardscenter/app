@@ -91,7 +91,12 @@ export function BidConfirmationModal({
         <div className="space-y-2.5 rounded-xl border border-border bg-muted/30 p-4 text-sm">
           <Row label={bidLabel} value={`€${fees.bid.toFixed(2)}`} />
           <Row
-            label={`Veilingkosten (${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "")}%)`}
+            label={
+              <span className="inline-flex items-center gap-1.5">
+                Veilingkosten
+                <PercentBadge>{(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "").replace(".", ",")}%</PercentBadge>
+              </span>
+            }
             value={`€${fees.premium.toFixed(2)}`}
             muted
           />
@@ -103,7 +108,12 @@ export function BidConfirmationModal({
         {!isBuyNow && (
           <div className="mt-4 space-y-1.5 text-sm">
             <Row
-              label={`Reserve op je saldo (${(BID_RESERVE_RATE * 100).toFixed(0)}%)`}
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  Reserve op je saldo
+                  <PercentBadge>{(BID_RESERVE_RATE * 100).toFixed(0)}%</PercentBadge>
+                </span>
+              }
               value={`€${additionalReserveNeeded.toFixed(2)}`}
               muted
             />
@@ -158,14 +168,14 @@ function Row({
   bold,
   danger,
 }: {
-  label: string;
+  label: React.ReactNode;
   value: string;
   muted?: boolean;
   bold?: boolean;
   danger?: boolean;
 }) {
   return (
-    <div className="flex justify-between">
+    <div className="flex items-center justify-between gap-2">
       <span className={muted ? "text-muted-foreground" : "text-foreground"}>{label}</span>
       <span
         className={`tabular-nums ${
@@ -175,6 +185,16 @@ function Row({
         {value}
       </span>
     </div>
+  );
+}
+
+/** Subtiel pill-label voor percentages (2,9% / 10%) — neutrale stijl, niet
+ *  prominent. Vervangt de oude `(2,9%)`-tussen-haakjes-notatie. */
+function PercentBadge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+      {children}
+    </span>
   );
 }
 
