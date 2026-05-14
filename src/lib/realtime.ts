@@ -67,6 +67,22 @@ export type RealtimeEvent =
   | {
       type: "suspension-changed";
       payload: { suspended: boolean };
+    }
+  | {
+      type: "auction-runner-up-offered";
+      payload: { auctionId: string; auctionTitle: string; bidAmount: number; decisionDeadline: string };
+    }
+  | {
+      type: "auction-runner-up-decided";
+      payload: { auctionId: string; status: "ACCEPTED" | "DECLINED" | "EXPIRED" };
+    }
+  | {
+      type: "auction-started";
+      payload: { auctionId: string };
+    }
+  | {
+      type: "claimsale-started";
+      payload: { claimsaleId: string };
     };
 
 export function claimsaleChannel(claimsaleId: string): string {
