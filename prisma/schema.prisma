@@ -113,7 +113,9 @@ model User {
   country       String?  // ISO 3166-1 alpha-2: "NL", "DE", "BE", etc.
 
   // Shipping preferences
-  sellingCountries  String    @default("ALL_EU") // "NL_ONLY", "NL_BE" or "ALL_EU"
+  // Fase 33: "DOMESTIC_ONLY" | "DOMESTIC_AND_NEAR" | "ALL_EU".
+  // Legacy values "NL_ONLY"/"NL_BE" worden tijdens migratie gemapt naar DOMESTIC_ONLY/DOMESTIC_AND_NEAR.
+  sellingCountries  String    @default("DOMESTIC_AND_NEAR")
 
   // Registration preferences
   accountFocus      String?   // BUYING | SELLING | BOTH
@@ -127,13 +129,19 @@ model User {
   // anti-fraude redenen. Null = nog nooit gewijzigd, eerste keer is gratis.
   lastAddressChange  DateTime?
 
-  // Runner-up auction setting (max cascade hops when winners fail to pay)
-  maxRunnerUpAttempts Int @default(5)
+  // Runner-up auction setting (max cascade hops when winners fail to pay).
+  // Cap is 0..3 (4e bieder maximaal). Default 2 sinds Fase 33-followup.
+  maxRunnerUpAttempts Int @default(2)
 
   // Bank details for payouts (Fase 5)
   iban               String?
   accountHolderName  String?
   lastIbanChange     DateTime?
+
+  // E-mailverificatie (Fase 37). Gevuld zodra user de verify-link uit hun
+  // welkom-mail klikt — of automatisch bij Google-OAuth signup (Google-verified).
+  // Niet blokkerend voor functionaliteit — alleen visuele nudge via dashboard-banner.
+  emailVerifiedAt    DateTime?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -201,6 +209,20 @@ model User {
   // Enterprise-aanvragen (Fase 31)
   enterpriseRequests       EnterpriseRequest[] @relation("EnterpriseRequester")
   enterpriseRequestsReviewed EnterpriseRequest[] @relation("EnterpriseReviewer")
+
+  // Runner-up offer-flow (post-Fase-33): expliciete 72u accept/decline-window.
+  runnerUpOffersAsBidder AuctionRunnerUpOffer[] @relation("RunnerUpBidder")
+
+  // PendingPlatformFee — niet-inbare boetes/forfaits die bij volgende inkomst
+  // automatisch worden afgeroomd. Anti-griefing tegen "saldo leeg houden".
+  pendingPlatformFees PendingPlatformFee[]
+
+  // Auth-tokens (Fase 37) — password-reset & e-mailverificatie
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+
+  // Image moderation log
+  imageModerationLogs     ImageModerationLog[] @relation("ImageModerationLogUser")
 }
 
 // ============================================================
@@ -213,15 +235,23 @@ model SellerShippingMethod {
   sellerId    String
   seller      User     @relation(fields: [sellerId], references: [id])
 
-  carrier     String   // "POSTNL", "DHL", "DPD", etc.
-  serviceName String   // "Briefpost", "Brievenbuspakket", "Aangetekend", etc.
-  price       Float    // Price in EUR
-  countries   String   // JSON array of ISO country codes: ["NL","BE","DE"]
+  // Fase 33 (statisch systeem): service+zone identificeren een slot, basisprijs uit catalog.
+  // Eén slot per (sellerId, service, zone) — gegarandeerd via @@unique.
+  service     String?  // ShippingService: "MAILBOX_PARCEL" | "PARCEL_STANDARD" | "PARCEL_SIGNED". Null = legacy-rij vóór Fase 33.
+  zone        String?  // ShippingZone: "DOMESTIC" | "EU_NEAR" | "EU_FAR" | "EU_FAR_ISLAND". Null = legacy-rij.
+  priceOverride Float? // Seller-override binnen ±50% van basisprijs. Null = gebruik basePrice uit catalog.
 
-  shippingType String  @default("PARCEL") // LETTER | MAILBOX_PARCEL | PARCEL
-  isDefault   Boolean  @default(false) // System-created at registration, cannot be deleted
-  isTracked   Boolean  @default(false) // Has track & trace
-  isSigned    Boolean  @default(false) // Tracked + signature on delivery (aangetekend)
+  carrier     String   // "POSTNL", "DHL", "DPD", etc.
+
+  // Legacy-velden (Fase 33: nullable, niet meer gevuld voor nieuwe rijen, drop in fase-2 cleanup)
+  serviceName String?
+  price       Float?
+  countries   String?
+  shippingType String?
+  isDefault   Boolean  @default(false)
+  isTracked   Boolean  @default(false)
+  isSigned    Boolean  @default(false)
+
   isActive    Boolean  @default(true)
 
   createdAt   DateTime @default(now())
@@ -232,6 +262,7 @@ model SellerShippingMethod {
   auctionShippingMethods   AuctionShippingMethod[]
   shippingBundles          ShippingBundle[]
 
+  @@unique([sellerId, service, zone])
   @@index([sellerId])
 }
 
@@ -448,23 +479,28 @@ model Auction {
 
   // Timing
   duration      Int      // 3, 5, 7, or 14 (days)
+  // startTime is null voor legacy auctions die "live-from-creation" waren.
+  // Voor nieuwe auctions: het moment waarop de veiling van SCHEDULED naar
+  // ACTIVE flipt. Bij `startTime <= now + 5min` wordt status direct ACTIVE.
+  startTime     DateTime?
   endTime       DateTime
   extendedCount Int      @default(0) // Number of anti-snipe extensions
 
   // Status
-  status        String   @default("ACTIVE") // ACTIVE | ENDED_SOLD | ENDED_RESERVE_NOT_MET | ENDED_NO_BIDS | BOUGHT_NOW | CANCELLED | AWAITING_PAYMENT | PAYMENT_FAILED
+  status        String   @default("ACTIVE") // SCHEDULED | ACTIVE | ENDED_SOLD | ENDED_RESERVE_NOT_MET | ENDED_NO_BIDS | BOUGHT_NOW | CANCELLED | AWAITING_PAYMENT | PAYMENT_FAILED
   winnerId      String?
   finalPrice    Float?
 
   // Payment deadline (for winners with insufficient balance)
   paymentDeadline DateTime?  // 5 days after auction end to complete payment
-  paymentStatus   String?    // AWAITING_PAYMENT | PAID | PAYMENT_FAILED
+  paymentStatus   String?    // AWAITING_PAYMENT | AWAITING_RUNNER_UP_DECISION | PAID | PAYMENT_FAILED
 
-  // Runner-up rotation: when the current winner fails to pay, the cron tries
-  // the next-highest bidder (who is not in failedBidderIds and not the current
-  // winner). Capped by seller.maxRunnerUpAttempts.
+  // Runner-up rotation: when the current winner fails to pay, de cron biedt
+  // de veiling aan de volgende hoogste bieder (niet in failedBidderIds, niet
+  // de huidige winner). De runner-up krijgt 72u om te accepteren/weigeren.
+  // Capped op `seller.maxRunnerUpAttempts` (max 3 = top-4-bidders totaal).
   runnerUpEnabled  Boolean @default(true)
-  failedBidderIds  String  @default("[]") // JSON array of bidder userIds that already passed on payment
+  failedBidderIds  String  @default("[]") // JSON array van bidders die al gepasseerd zijn (wanbetaler + decliners + expired)
   runnerUpAttempts Int     @default(0)
 
   // Delivery (Fase 27.95): SHIP / PICKUP / BOTH. Voor PICKUP/BOTH wordt
@@ -484,11 +520,34 @@ model Auction {
   shippingMethods AuctionShippingMethod[]
   shippingBundle ShippingBundle?
   upsells       AuctionUpsell[]
+  labels        AuctionLabel[]
+  runnerUpOffers AuctionRunnerUpOffer[]
 
   @@index([sellerId])
   @@index([status])
   @@index([cardSetId])
   @@index([tcgdexId])
+  @@index([status, startTime]) // voor auction-activate cron-query
+}
+
+model AuctionLabel {
+  id        String   @id @default(cuid())
+
+  auctionId String
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  // GEEN_RESERVE | DIRECT_KOPEN | MOET_NU_WEG | HOT_ITEM | TOPSTAAT | ZELDZAAM | VERZAMELAARSSTUK | NIEUW_UIT_COLLECTIE
+  type      String
+
+  // ruby | amber | emerald | sky | violet | rose | indigo | slate | orange | teal
+  colorKey  String
+
+  // Snapshot van prijs op creatiemoment (bundle-tarief: 1=€0,99 / 2=€1,69)
+  cost      Float
+
+  createdAt DateTime @default(now())
+
+  @@index([auctionId])
 }
 
 model AuctionUpsell {
@@ -557,9 +616,17 @@ model Claimsale {
   coverImage    String?  // URL for claimsale thumbnail/cover
   shippingCost  Float
 
-  // Status: DRAFT (editable) → LIVE (immutable) → CLOSED
-  status        String   @default("DRAFT") // DRAFT | LIVE | CLOSED
+  // CARDS = volledige card-flow (card-selector, condities, variant, marktprijs)
+  // ITEMS = vrije velden (naam + omschrijving + eigen conditie-set, geen card-selector)
+  type          String   @default("CARDS") // CARDS | ITEMS
+
+  // Status: DRAFT (editable) → SCHEDULED → LIVE (immutable) → CLOSED
+  status        String   @default("DRAFT") // DRAFT | SCHEDULED | LIVE | CLOSED
   publishedAt   DateTime?
+
+  // Geplande start (max +5 dagen). null = legacy/direct-live. Bij SCHEDULED flipt
+  // de claimsale-activator-scheduler de status naar LIVE zodra startTime ≤ now.
+  startTime     DateTime?
 
   sellerId      String
   seller        User     @relation(fields: [sellerId], references: [id])
@@ -571,9 +638,50 @@ model Claimsale {
   conversations Conversation[]
   watchlistItems Watchlist[]
   shippingMethods ClaimsaleShippingMethod[]
+  upsells       ClaimsaleUpsell[]
+  labels        ClaimsaleLabel[]
 
   @@index([sellerId])
   @@index([status])
+  @@index([status, startTime]) // voor claimsale-activate cron-query
+}
+
+model ClaimsaleUpsell {
+  id          String    @id @default(cuid())
+
+  claimsaleId String
+  claimsale   Claimsale @relation(fields: [claimsaleId], references: [id], onDelete: Cascade)
+
+  type        String    // HOMEPAGE_SPOTLIGHT | CATEGORY_HIGHLIGHT | ITEM_PREVIEW
+  startsAt    DateTime  @default(now())
+  expiresAt   DateTime
+  dailyCost   Float
+  totalCost   Float
+
+  createdAt   DateTime  @default(now())
+
+  @@index([claimsaleId])
+  @@index([type, expiresAt])
+}
+
+model ClaimsaleLabel {
+  id          String    @id @default(cuid())
+
+  claimsaleId String
+  claimsale   Claimsale @relation(fields: [claimsaleId], references: [id], onDelete: Cascade)
+
+  // MOET_NU_WEG | HOT_ITEM | TOPSTAAT | ZELDZAAM | HOLO_FOIL | SNEL_VERZONDEN | NIEUW | OPRUIMING
+  type        String
+
+  // ruby | amber | emerald | sky | violet | rose | indigo | slate | orange | teal
+  colorKey    String
+
+  // Snapshot van prijs op creatiemoment (bundle-tarief: 1=€0,99 / 2=€1,69)
+  cost        Float
+
+  createdAt   DateTime  @default(now())
+
+  @@index([claimsaleId])
 }
 
 model ClaimsaleShippingMethod {
@@ -594,7 +702,8 @@ model ClaimsaleItem {
   condition    String   // "Near Mint", "Lightly Played", etc.
   price        Float
   reference    String?  // Card number / set reference (e.g. "#4", "SV1-199")
-  sellerNote   String?  // Seller's personal note (e.g. binder location, inventory code)
+  sellerNote   String?  // Korte referentie-tekst (max 30 tekens), getoond op de listing
+  itemDescription String? // Lange per-item omschrijving (alleen ITEMS-type claimsales)
   imageUrls    String   @default("[]") // JSON array of image URLs
   tcgdexId     String?  // Stable TCGdex card identifier, e.g. "base1-4"
 
@@ -613,6 +722,12 @@ model ClaimsaleItem {
   claimedAt    DateTime?
   claimedById  String?
   claimedBy    User?    @relation("ClaimedBy", fields: [claimedById], references: [id])
+
+  // Bij checkout-start zet `cart.checkout()` deze op now+5min zodat de
+  // expire-claims cron de items niet kan opruimen tijdens betalings-flow.
+  // Auto-expires na 5 min zodat een vastgelopen checkout items niet
+  // permanent blokkeert. Niet renewable bij herhaalde klik (anti-abuse).
+  checkoutLockExpiresAt DateTime?
 
   refundedAt   DateTime? // Set when seller refunds this item
 
@@ -1971,4 +2086,113 @@ model ListingCardItem {
 
   @@index([listingId, status])
   @@index([shippingBundleId])
+}
+
+// ============================================================
+// AUCTION RUNNER-UP OFFER (post-Fase-33)
+// ============================================================
+// Wanneer een veilingwinnaar de 5d-betaaltermijn mist, wordt de veiling NIET
+// meer automatisch doorgeschoven. In plaats daarvan krijgt de volgende hoogste
+// bieder een AuctionRunnerUpOffer met `status = AWAITING_DECISION` en 72u tijd
+// om te accepteren of weigeren. Tijdens dat window:
+//   - Auction.paymentStatus = "AWAITING_RUNNER_UP_DECISION"
+//   - Auction.winnerId / finalPrice zijn al gezet op de runner-up
+//   - GEEN PENDING-bundle, GEEN reserve op de runner-up (geen bid meer)
+//
+// Bij ACCEPT: PENDING-bundle aangemaakt, reserve via syncReservedBalance,
+// 5d-payment-deadline (zelfde flow als originele winnaar).
+// Bij DECLINE/EXPIRED: bidderId wordt aan failedBidderIds toegevoegd, volgende
+// kandidaat krijgt offer (of PAYMENT_FAILED als geen kandidaat meer of cap bereikt).
+model AuctionRunnerUpOffer {
+  id               String    @id @default(cuid())
+  auctionId        String
+  auction          Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  bidderId         String
+  bidder           User      @relation("RunnerUpBidder", fields: [bidderId], references: [id])
+  bidAmount        Float                                                  // het bod van destijds (zonder fee)
+  premiumAmount    Float                                                  // 2,9% × bidAmount, gesnapshot bij offer-creation
+  deliveryChoice   String?                                                // SHIP | PICKUP, gesnapshot uit bid
+  status           String    @default("AWAITING_DECISION")                // AWAITING_DECISION | ACCEPTED | DECLINED | EXPIRED
+  decisionDeadline DateTime                                               // createdAt + 72u
+  decidedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([auctionId, status])
+  @@index([bidderId, status])
+}
+
+// ============================================================
+// PENDING PLATFORM FEE (post-Fase-33)
+// ============================================================
+// Schuld-administratie voor niet-inbare boetes/forfaits (BID_DEPOSIT_FORFEIT
+// of BID_PAYMENT_FAILURE_FEE). Wordt FIFO afgeroomd bij elke balance-credit
+// (deposit, sale-payout, etc.) via wallet-helper `settlePendingFees`. Anti-
+// griefing: een wanbetaler kan z'n saldo niet meer leeg houden om de boete
+// te ontwijken — eerstvolgende inkomst betaalt de schuld af voordat het
+// daadwerkelijke saldo groeit.
+model PendingPlatformFee {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             String                          // BID_DEPOSIT_FORFEIT | BID_PAYMENT_FAILURE_FEE
+  amount           Float                           // Wat er nog open staat (positief, decreert bij settle)
+  originalAmount   Float                           // Wat het oorspronkelijk had moeten zijn (immutabel, voor audit)
+  description      String
+  relatedAuctionId String?
+  createdAt        DateTime  @default(now())
+  settledAt        DateTime?                       // null = nog open, gevuld = volledig betaald
+
+  @@index([userId, settledAt])
+}
+
+// ============================================================
+// AUTH TOKENS (Fase 37)
+// ============================================================
+// Tijdelijke, eenmalig-bruikbare tokens voor password-reset en e-mailverificatie.
+// Token-string is cryptografisch random (crypto.randomBytes), opgeslagen plaintext
+// omdat 'm verifiëren constant-time gebeurt en de TTL kort is (1u / 24u).
+// usedAt = gemarkeerd na succesvol gebruik zodat replay niet werkt.
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime                    // now + 1u
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime                    // now + 24u
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// Audit log voor Claude-vision content-moderation op upload.
+// Verdict-waarden: "safe" | "blocked" | "skipped_unavailable" | "skipped_no_key"
+// Context-waarden: "listing" | "auction" | "avatar" | "chat"
+model ImageModerationLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation("ImageModerationLogUser", fields: [userId], references: [id], onDelete: SetNull)
+  context   String
+  verdict   String
+  reason    String?
+  mimeType  String
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([verdict, createdAt])
 }
