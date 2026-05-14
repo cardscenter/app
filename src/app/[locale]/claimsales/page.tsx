@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ShoppingBag, Plus } from "lucide-react";
@@ -32,7 +33,7 @@ const CLAIMSALE_INCLUDE = {
   },
   _count: { select: { items: true } },
   items: {
-    where: { status: "AVAILABLE" as const },
+    where: { status: "AVAILABLE" },
     select: {
       id: true,
       cardName: true,
@@ -41,14 +42,14 @@ const CLAIMSALE_INCLUDE = {
       imageUrls: true,
       status: true,
     },
-    orderBy: { price: "desc" as const },
+    orderBy: { price: "desc" },
   },
   labels: { select: { type: true, colorKey: true } },
   upsells: {
     where: { expiresAt: { gt: new Date() } },
     select: { type: true, startsAt: true, expiresAt: true },
   },
-} as const;
+} satisfies Prisma.ClaimsaleInclude;
 
 const PAGE_SIZE = 40;
 
@@ -82,8 +83,8 @@ export default async function ClaimsalesPage({
   const filters = parseClaimsaleFilters(sp);
   const filterWhere = buildClaimsaleFilterWhere(filters);
 
-  const baseWhere = {
-    status: { in: ["LIVE", "SCHEDULED"] as const },
+  const baseWhere: Prisma.ClaimsaleWhereInput = {
+    status: { in: ["LIVE", "SCHEDULED"] },
     ...countryFilter,
     ...blockingFilter,
     ...filterWhere,
@@ -102,7 +103,7 @@ export default async function ClaimsalesPage({
   ];
 
   let totalCount: number;
-  let claimsales: Awaited<ReturnType<typeof prisma.claimsale.findMany>>;
+  let claimsales: Prisma.ClaimsaleGetPayload<{ include: typeof CLAIMSALE_INCLUDE }>[];
 
   // Strategie:
   //  - Als radius of itemCountMin actief: fetch tot 500, post-filter in JS,
