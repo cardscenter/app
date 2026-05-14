@@ -11,6 +11,7 @@ import {
 
 interface StepTimingProps {
   startDate: Date;
+  startTimeOfDay: string;
   onChange: (field: string, value: unknown) => void;
 }
 
@@ -26,14 +27,14 @@ function fromDateInputValue(value: string): Date {
   return new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
 }
 
-export function StepTiming({ startDate, onChange }: StepTimingProps) {
+export function StepTiming({ startDate, startTimeOfDay, onChange }: StepTimingProps) {
   const t = useTranslations("claimsale");
 
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   const maxDate = new Date(today.getTime() + MAX_SCHEDULE_DAYS_AHEAD * 24 * 60 * 60 * 1000);
 
-  const startTime = deriveClaimsaleStartTime(startDate);
+  const startTime = deriveClaimsaleStartTime(startDate, startTimeOfDay);
   const scheduled = isClaimsaleScheduled(startTime);
 
   return (
@@ -44,23 +45,39 @@ export function StepTiming({ startDate, onChange }: StepTimingProps) {
       </div>
       <p className="text-sm text-muted-foreground">{t("timingIntro")}</p>
 
-      <div>
-        <label htmlFor="cs-startDate" className="block text-sm font-medium text-foreground">
-          {t("startDateLabel")}
-        </label>
-        <input
-          id="cs-startDate"
-          type="date"
-          min={toDateInputValue(today)}
-          max={toDateInputValue(maxDate)}
-          value={toDateInputValue(startDate)}
-          onChange={(e) => {
-            if (e.target.value) onChange("startDate", fromDateInputValue(e.target.value));
-          }}
-          className="mt-1 block w-56 glass-input px-3 py-2.5 text-foreground"
-        />
-        <p className="mt-1 text-xs text-muted-foreground">{t("startDateHelp")}</p>
+      <div className="flex flex-wrap gap-4">
+        <div>
+          <label htmlFor="cs-startDate" className="block text-sm font-medium text-foreground">
+            {t("startDateLabel")}
+          </label>
+          <input
+            id="cs-startDate"
+            type="date"
+            min={toDateInputValue(today)}
+            max={toDateInputValue(maxDate)}
+            value={toDateInputValue(startDate)}
+            onChange={(e) => {
+              if (e.target.value) onChange("startDate", fromDateInputValue(e.target.value));
+            }}
+            className="mt-1 block w-56 glass-input px-3 py-2.5 text-foreground"
+          />
+        </div>
+        <div>
+          <label htmlFor="cs-startTime" className="block text-sm font-medium text-foreground">
+            {t("startTimeLabel")}
+            <span className="ml-2 text-xs font-normal text-muted-foreground">{t("nlTimeBadge")}</span>
+          </label>
+          <input
+            id="cs-startTime"
+            type="time"
+            step={60}
+            value={startTimeOfDay}
+            onChange={(e) => onChange("startTimeOfDay", e.target.value)}
+            className="mt-1 block w-32 glass-input px-3 py-2.5 text-foreground"
+          />
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground">{t("startDateHelp")}</p>
 
       <div
         className={`flex items-start gap-3 rounded-xl border p-4 text-sm ${

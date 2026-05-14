@@ -5,12 +5,13 @@ import { parseImageUrls } from "@/lib/upload";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
 import { ClaimsaleLabels, type ClaimsaleLabelData } from "./claimsale-labels";
+import { ClaimsalePreviewCarousel } from "./claimsale-preview-carousel";
 
-// Aantal thumbnails dat we maximaal renderen. Container is overflow-hidden,
-// dus op smal scherm wordt het einde clipped — bewust: 7 vult 1280px+ goed
-// en op smallere schermen valt "+N meer" buiten beeld maar dat is OK want
-// dezelfde info staat in de voortgang-bar erboven.
-const PREVIEW_THUMBNAILS = 7;
+// Standaard (gratis) preview-strip: 5 kaart-thumbnails — voor iedereen.
+const PREVIEW_THUMBNAILS = 5;
+// Geavanceerde Kaart-Preview-Rij (betaalde ITEM_PREVIEW-upsell): 2-rijs
+// carousel met maximaal 50 thumbnails.
+const ADVANCED_PREVIEW_MAX = 50;
 
 interface ClaimsaleItemPreview {
   id: string;
@@ -114,26 +115,26 @@ export function ClaimsaleListRow({
 
   const isScheduled = claimsale.status === "SCHEDULED";
 
-  // Preview-strip is een betaalde upsell (ITEM_PREVIEW) — alleen tonen als er
-  // een actieve upsell-rij van dat type loopt.
+  // Geavanceerde Kaart-Preview-Rij = betaalde ITEM_PREVIEW-upsell (2-rijs
+  // carousel, tot 50 kaarten). Zonder upsell tonen we de gratis 5-item strip.
   const now = Date.now();
-  const hasPreviewUpsell = (claimsale.upsells ?? []).some(
+  const hasAdvancedPreview = (claimsale.upsells ?? []).some(
     (u) =>
       u.type === "ITEM_PREVIEW" &&
       new Date(u.startsAt).getTime() <= now &&
       new Date(u.expiresAt).getTime() > now
   );
 
-  // Selecteer eerste 7 items met een afbeelding voor de preview-strip.
-  const previewItems = availableItems
+  // Alle AVAILABLE items met een afbeelding.
+  const imagedItems = availableItems
     .map((item) => {
       const urls = parseImageUrls(item.imageUrls);
       return urls.length > 0 ? { ...item, firstImage: urls[0] } : null;
     })
-    .filter((x): x is ClaimsaleItemPreview & { firstImage: string } => x !== null)
-    .slice(0, PREVIEW_THUMBNAILS);
+    .filter((x): x is ClaimsaleItemPreview & { firstImage: string } => x !== null);
 
-  // Aantal items zonder image dat we als "+X meer" tonen onder/naast de preview.
+  const carouselItems = imagedItems.slice(0, ADVANCED_PREVIEW_MAX);
+  const previewItems = imagedItems.slice(0, PREVIEW_THUMBNAILS);
   const remainingItems = availableCount - previewItems.length;
 
   return (
@@ -220,7 +221,19 @@ export function ClaimsaleListRow({
             flex-nowrap + overflow-hidden zodat brede schermen de volledige
             breedte vullen, smallere het einde clippen (info is in de
             voortgang-bar al gegeven). */}
-        {hasPreviewUpsell && previewItems.length > 0 && (
+        {/* Geavanceerde Kaart-Preview-Rij (betaald): 2-rijs carousel */}
+        {hasAdvancedPreview && carouselItems.length > 0 && (
+          <div className="hidden sm:block">
+            <ClaimsalePreviewCarousel
+              items={carouselItems}
+              claimsaleId={claimsale.id}
+              locale={locale}
+            />
+          </div>
+        )}
+
+        {/* Gratis standaard preview-strip — 5 kaarten, voor iedereen */}
+        {!hasAdvancedPreview && previewItems.length > 0 && (
           <div className="mt-3 hidden sm:flex flex-nowrap items-start gap-2 overflow-hidden">
             {previewItems.map((item) => (
               <Link

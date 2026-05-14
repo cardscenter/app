@@ -7,13 +7,13 @@ import { deductBalance } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
-import { enrichMethod, deriveListingShippingMethodIds } from "@/lib/shipping/static-methods";
-import { mailboxEligibleType } from "@/lib/listing-types";
+import { enrichMethod } from "@/lib/shipping/static-methods";
 import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
 import { deriveClaimsaleStartTime, isClaimsaleScheduled } from "@/lib/claimsale/timing";
 import {
   applyFreeUpsellsToCost,
   CLAIMSALE_UPSELL_TYPES_OFFERED,
+  CLAIMSALE_UPSELL_DURATION_DAYS,
   type ClaimsaleUpsellType,
 } from "@/lib/upsell-config";
 import {
@@ -77,6 +77,7 @@ export async function createClaimsale(formData: FormData) {
   const type = formData.get("type") === "ITEMS" ? "ITEMS" : "CARDS";
   const allowMailbox = formData.get("allowMailbox") === "true";
   const startDateRaw = formData.get("startDate") as string | null;
+  const startTimeOfDay = (formData.get("startTimeOfDay") as string | null) ?? undefined;
   const itemsJson = formData.get("items") as string;
   const upsellsRaw = formData.get("upsells");
   const labelsRaw = formData.get("labels");
@@ -117,7 +118,10 @@ export async function createClaimsale(formData: FormData) {
     }
   }
 
-  // ── Verzending (server-side derivation, mirror createAuction) ─────────
+  // ── Verzending (claimsale-specifieke derivation) ─────────────────────
+  // CARDS: brievenbuspakket (default, <€150) + aangetekend pakket. Géén
+  //        standaard pakket — kaarten passen makkelijk in een brievenbus.
+  // ITEMS: standaard pakket + aangetekend pakket. Géén brievenbus (te groot).
   const seller = await prisma.user.findUnique({
     where: { id: userId },
     select: { country: true, accountType: true, balance: true, reservedBalance: true, freeUpsellsRemaining: true },
@@ -126,36 +130,32 @@ export async function createClaimsale(formData: FormData) {
     return { error: "Vul eerst je land in op je profiel." };
   }
 
-  // Hoogste prijspunt voor mailbox-eligibility (<€150). CARDS-claimsales
-  // gedragen zich als multi-card listings; ITEMS sluiten mailbox uit.
   const allPrices = type === "CARDS" ? cardItems.map((i) => i.price) : productItems.map((i) => i.price);
   const maxItemPrice = allPrices.length > 0 ? Math.max(...allPrices) : null;
-  const shippingListingType = type === "CARDS" ? "MULTI_CARD" : "OTHER";
 
-  const derivedIds = await deriveListingShippingMethodIds({
-    prisma,
-    sellerId: userId,
-    allowMailbox,
-    listingType: shippingListingType,
-    price: maxItemPrice,
-    mailboxEligible: mailboxEligibleType,
+  // Brievenbus alleen voor CARDS, opt-in (default aan in de UI) én onder €150.
+  const mailboxOk =
+    type === "CARDS" && allowMailbox && (maxItemPrice === null || maxItemPrice < 150);
+
+  const allMethods = await prisma.sellerShippingMethod.findMany({
+    where: { sellerId: userId, isActive: true },
   });
-  if (derivedIds.length === 0) {
-    return {
-      error: "Configureer eerst je verzending via Dashboard → Verzending — er zijn geen actieve verzendmethoden.",
-    };
-  }
-  const methods = await prisma.sellerShippingMethod.findMany({
-    where: { id: { in: derivedIds }, sellerId: userId, isActive: true },
+  const eligibleMethods = allMethods.filter((m) => {
+    if (m.service === "PARCEL_SIGNED") return true; // altijd
+    if (m.service === "PARCEL_STANDARD") return type === "ITEMS"; // alleen ITEMS
+    if (m.service === "MAILBOX_PARCEL") return mailboxOk; // alleen CARDS <€150
+    return false;
   });
-  const methodSnapshots = methods
+  const methodSnapshots = eligibleMethods
     .map((m) => {
       const enriched = enrichMethod(m, seller.country!);
       return enriched ? { id: m.id, price: enriched.effectivePrice } : null;
     })
     .filter((s): s is { id: string; price: number } => s !== null);
   if (methodSnapshots.length === 0) {
-    return { error: "Geen geldige verzendmethodes beschikbaar." };
+    return {
+      error: "Configureer eerst je verzending via Dashboard → Verzending — er zijn geen geschikte verzendmethoden.",
+    };
   }
   // shippingCost-kolom = goedkoopste afgeleide methode (claimsale-card leest dit).
   const shippingCost = Math.min(...methodSnapshots.map((m) => m.price));
@@ -163,25 +163,28 @@ export async function createClaimsale(formData: FormData) {
   // ── Timing: direct LIVE of gepland (SCHEDULED) ───────────────────────
   const startDate = startDateRaw ? new Date(startDateRaw) : new Date();
   if (Number.isNaN(startDate.getTime())) return { error: "Ongeldige startdatum" };
-  const startTime = deriveClaimsaleStartTime(startDate);
+  const startTime = deriveClaimsaleStartTime(startDate, startTimeOfDay);
   const scheduled = isClaimsaleScheduled(startTime);
   const initialStatus = scheduled ? "SCHEDULED" : "LIVE";
 
-  // ── Upsells (3 types, vast dagtarief × dagen) ────────────────────────
+  // ── Upsells (3 types, flat-fee voor de hele claimsale-looptijd) ──────
   const accountType = seller.accountType ?? "FREE";
-  let upsellEntries: { type: ClaimsaleUpsellType; days: number }[] = [];
+  let upsellEntries: { type: ClaimsaleUpsellType }[] = [];
   let perEntryCosts: number[] = [];
   let totalUpsellCost = 0;
   let freeUsed = 0;
   if (typeof upsellsRaw === "string" && upsellsRaw.length > 0) {
     try {
-      const parsed = JSON.parse(upsellsRaw) as Array<{ type: string; days?: number }>;
+      const parsed = JSON.parse(upsellsRaw) as Array<{ type: string }>;
+      const seenUpsells = new Set<ClaimsaleUpsellType>();
       upsellEntries = parsed
         .filter((e) => CLAIMSALE_UPSELL_TYPES_OFFERED.includes(e.type as ClaimsaleUpsellType))
-        .map((e) => ({
-          type: e.type as ClaimsaleUpsellType,
-          days: Math.max(1, Math.min(30, Math.floor(e.days ?? 1))),
-        }));
+        .map((e) => ({ type: e.type as ClaimsaleUpsellType }))
+        .filter((e) => {
+          if (seenUpsells.has(e.type)) return false;
+          seenUpsells.add(e.type);
+          return true;
+        });
       const allocation = applyFreeUpsellsToCost(
         upsellEntries,
         accountType,
@@ -310,8 +313,9 @@ export async function createClaimsale(formData: FormData) {
           claimsaleId: cs.id,
           type: entry.type,
           startsAt: upsellStartsAt,
-          expiresAt: new Date(upsellStartsAt.getTime() + entry.days * DAY_MS),
-          dailyCost: entry.days > 0 ? cost / entry.days : 0,
+          // Flat-fee: loopt de hele claimsale, gecapt op 14 dagen.
+          expiresAt: new Date(upsellStartsAt.getTime() + CLAIMSALE_UPSELL_DURATION_DAYS * DAY_MS),
+          dailyCost: cost / CLAIMSALE_UPSELL_DURATION_DAYS,
           totalCost: cost,
         },
       });

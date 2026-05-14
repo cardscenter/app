@@ -26,9 +26,10 @@ export interface ClaimsaleItemDraft {
   itemImages: string[];
 }
 
+// Flat-fee model: een upsell is een eenmalige aankoop voor de hele claimsale-
+// looptijd (max 14 dagen). Geen dagen-keuze meer.
 export interface ClaimsaleUpsellEntry {
   type: ClaimsaleUpsellType;
-  days: number;
 }
 
 export interface ClaimsaleSelectedLabel {
@@ -44,6 +45,7 @@ export interface ClaimsaleFormState {
   items: ClaimsaleItemDraft[];
   allowMailbox: boolean;
   startDate: Date;
+  startTimeOfDay: string; // "HH:MM" NL-tijd
   upsells: ClaimsaleUpsellEntry[];
   labels: ClaimsaleSelectedLabel[];
 }

@@ -21,18 +21,29 @@ export function StepVerzending({
   onAllowMailboxChange,
 }: StepVerzendingProps) {
   const t = useTranslations("claimsale");
-  const ts = useTranslations("shipping");
 
-  // mailboxEligibleType() accepteert MULTI_CARD → mailbox-toggle zichtbaar voor
-  // kaarten-claimsales; ITEMS gedraagt zich als OTHER (geen brievenbus).
+  // CARDS: brievenbuspakket (standaard aan, <€150) + aangetekend pakket.
+  //        Standaard pakket is niet nodig — kaarten passen in een brievenbus.
+  // ITEMS: standaard pakket + aangetekend pakket. Geen brievenbus.
+  const filteredMethods = shippingMethods.filter((m) => {
+    if (m.service === "PARCEL_SIGNED") return true;
+    if (m.service === "PARCEL_STANDARD") return type === "ITEMS";
+    if (m.service === "MAILBOX_PARCEL") return type === "CARDS";
+    return false;
+  });
+
+  // listingType="MULTI_CARD" maakt de brievenbus-toggle zichtbaar voor CARDS;
+  // "OTHER" verbergt 'm voor ITEMS.
   const shippingListingType = type === "CARDS" ? "MULTI_CARD" : "OTHER";
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-foreground">{t("stepVerzending")}</h2>
-      <p className="text-sm text-muted-foreground">{ts("selectShippingMethodsHint")}</p>
+      <p className="text-sm text-muted-foreground">
+        {type === "CARDS" ? t("verzendingCardsHint") : t("verzendingItemsHint")}
+      </p>
       <ShippingMethodDisplay
-        methods={shippingMethods}
+        methods={filteredMethods}
         listingType={shippingListingType}
         price={maxItemPrice}
         allowMailbox={allowMailbox}

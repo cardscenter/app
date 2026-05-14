@@ -8,10 +8,12 @@ import { revalidatePath } from "next/cache";
 import {
   calculateClaimsaleUpsellCost,
   CLAIMSALE_UPSELL_TYPES_OFFERED,
+  CLAIMSALE_UPSELL_DURATION_DAYS,
   type ClaimsaleUpsellType,
 } from "@/lib/upsell-config";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const TERM_MS = CLAIMSALE_UPSELL_DURATION_DAYS * DAY_MS;
 
 // Post-publicatie promotie-beheer voor claimsales. Anders dan veilingen/listings
 // (waar upsells alleen bij aanmaken gezet worden) kan de seller hier op een
@@ -32,21 +34,16 @@ async function loadOwnedClaimsale(claimsaleId: string, userId: string) {
 }
 
 /**
- * Dagen bijkopen op een bestaande upsell. Volledig betaald — free-quota geldt
- * alleen op het aanmaak-moment.
+ * Een bestaande upsell verlengen met een nieuwe 14-daagse termijn tegen het
+ * vaste tarief. Volledig betaald — free-quota geldt alleen bij aanmaken.
  */
-export async function extendClaimsaleUpsell(upsellId: string, extraDays: number) {
+export async function extendClaimsaleUpsell(upsellId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
 
   const susp = await requireNotSuspended(userId);
   if ("error" in susp) return { error: susp.error };
-
-  const days = Math.floor(extraDays);
-  if (!Number.isFinite(days) || days < 1 || days > 30) {
-    return { error: "Kies tussen 1 en 30 extra dagen" };
-  }
 
   const upsell = await prisma.claimsaleUpsell.findUnique({ where: { id: upsellId } });
   if (!upsell) return { error: "Promotie niet gevonden" };
@@ -59,13 +56,13 @@ export async function extendClaimsaleUpsell(upsellId: string, extraDays: number)
     select: { accountType: true, balance: true, reservedBalance: true },
   });
   const accountType = seller?.accountType ?? "FREE";
-  const cost = calculateClaimsaleUpsellCost(upsell.type as ClaimsaleUpsellType, days, accountType);
+  const cost = calculateClaimsaleUpsellCost(upsell.type as ClaimsaleUpsellType, 0, accountType);
   const available = (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
   if (cost > available) return { error: "Onvoldoende saldo om te verlengen" };
 
   // Verleng vanaf de huidige expiresAt — of vanaf nu als 'ie al verlopen was.
   const base = upsell.expiresAt > new Date() ? upsell.expiresAt : new Date();
-  const newExpiresAt = new Date(base.getTime() + days * DAY_MS);
+  const newExpiresAt = new Date(base.getTime() + TERM_MS);
   const newTotalCost = Math.round((upsell.totalCost + cost) * 100) / 100;
   const totalDays = Math.max(
     1,
@@ -90,13 +87,10 @@ export async function extendClaimsaleUpsell(upsellId: string, extraDays: number)
 }
 
 /**
- * Een upsell-type toevoegen dat nog niet actief is op de claimsale.
+ * Een upsell-type toevoegen dat nog niet actief is op de claimsale. Vaste prijs,
+ * loopt 14 dagen.
  */
-export async function addClaimsaleUpsell(
-  claimsaleId: string,
-  type: string,
-  days: number
-) {
+export async function addClaimsaleUpsell(claimsaleId: string, type: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
@@ -108,10 +102,6 @@ export async function addClaimsaleUpsell(
     return { error: "Onbekend promotie-type" };
   }
   const upsellType = type as ClaimsaleUpsellType;
-  const d = Math.floor(days);
-  if (!Number.isFinite(d) || d < 1 || d > 30) {
-    return { error: "Kies tussen 1 en 30 dagen" };
-  }
 
   const owned = await loadOwnedClaimsale(claimsaleId, userId);
   if ("error" in owned) return owned;
@@ -129,7 +119,7 @@ export async function addClaimsaleUpsell(
     select: { accountType: true, balance: true, reservedBalance: true },
   });
   const accountType = seller?.accountType ?? "FREE";
-  const cost = calculateClaimsaleUpsellCost(upsellType, d, accountType);
+  const cost = calculateClaimsaleUpsellCost(upsellType, 0, accountType);
   const available = (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
   if (cost > available) return { error: "Onvoldoende saldo voor deze promotie" };
 
@@ -144,8 +134,8 @@ export async function addClaimsaleUpsell(
       claimsaleId,
       type: upsellType,
       startsAt,
-      expiresAt: new Date(startsAt.getTime() + d * DAY_MS),
-      dailyCost: Math.round((cost / d) * 100) / 100,
+      expiresAt: new Date(startsAt.getTime() + TERM_MS),
+      dailyCost: Math.round((cost / CLAIMSALE_UPSELL_DURATION_DAYS) * 100) / 100,
       totalCost: cost,
     },
   });

@@ -30,11 +30,13 @@ export const AUCTION_UPSELL_TYPES_OFFERED: UpsellType[] = [
   "CATEGORY_HIGHLIGHT",
 ];
 
-// Claimsale-upsells. Naast Spotlight + Categorie-uitlichting is er een derde
-// type: ITEM_PREVIEW = de 7-thumbnail-kaart-preview-strip op de /claimsales
-// lijst (voorheen gratis voor iedereen, nu een betaalde upsell). Claimsales
-// hebben geen vaste looptijd, dus de seller kiest puur een aantal dagen tegen
-// een vast dagtarief — niet gekoppeld aan een veiling-duur.
+// Claimsale-upsells (flat-fee model). Drie types: Spotlight, Categorie-
+// uitlichting en ITEM_PREVIEW = de "Geavanceerde Kaart-Preview-Rij" (2-rijs
+// carousel met max 50 kaarten op de listing). Anders dan listing/auction-
+// upsells is dit GEEN dagtarief: één eenmalige prijs voor de hele claimsale-
+// looptijd, gecapt op CLAIMSALE_UPSELL_DURATION_DAYS.
+//
+// Prijzen zijn baseline-schattingen — vóór productie afstemmen.
 export const CLAIMSALE_UPSELL_TYPES = [
   "HOMEPAGE_SPOTLIGHT",
   "CATEGORY_HIGHLIGHT",
@@ -42,16 +44,14 @@ export const CLAIMSALE_UPSELL_TYPES = [
 ] as const;
 export type ClaimsaleUpsellType = (typeof CLAIMSALE_UPSELL_TYPES)[number];
 
-export const CLAIMSALE_UPSELL_PRICING: Record<
-  ClaimsaleUpsellType,
-  { dailyCost: number; minDays: number; maxDays: number }
-> = {
-  HOMEPAGE_SPOTLIGHT: { dailyCost: 0.5, minDays: 1, maxDays: 30 },
-  CATEGORY_HIGHLIGHT: { dailyCost: 0.25, minDays: 1, maxDays: 30 },
-  // Baseline-schatting — schappelijk dagtarief voor de preview-strip. Vóór
-  // productie valideren met de productowner.
-  ITEM_PREVIEW: { dailyCost: 0.2, minDays: 1, maxDays: 30 },
-} as const;
+// Looptijd van een claimsale-upsell: de hele claimsale, gecapt op 14 dagen.
+export const CLAIMSALE_UPSELL_DURATION_DAYS = 14;
+
+export const CLAIMSALE_UPSELL_PRICING: Record<ClaimsaleUpsellType, { flatPrice: number }> = {
+  HOMEPAGE_SPOTLIGHT: { flatPrice: 2.99 },
+  CATEGORY_HIGHLIGHT: { flatPrice: 1.99 },
+  ITEM_PREVIEW: { flatPrice: 1.49 },
+};
 
 export const CLAIMSALE_UPSELL_TYPES_OFFERED: ClaimsaleUpsellType[] = [
   "HOMEPAGE_SPOTLIGHT",
@@ -59,13 +59,14 @@ export const CLAIMSALE_UPSELL_TYPES_OFFERED: ClaimsaleUpsellType[] = [
   "ITEM_PREVIEW",
 ];
 
+// Eenmalige prijs voor de hele claimsale-looptijd; `days` wordt genegeerd
+// (signatuur-compat met applyFreeUpsellsToCost).
 export function calculateClaimsaleUpsellCost(
   type: ClaimsaleUpsellType,
-  days: number,
+  _days: number,
   accountType: string
 ): number {
-  const config = CLAIMSALE_UPSELL_PRICING[type];
-  const baseCost = config.dailyCost * days;
+  const baseCost = CLAIMSALE_UPSELL_PRICING[type].flatPrice;
   const discount = getUpsellDiscount(accountType);
   return Math.round(baseCost * (1 - discount) * 100) / 100;
 }
@@ -103,7 +104,7 @@ export function calculateAuctionUpsellCost(
 // Pure functie: geen DB-mutaties. Caller moet `freeUsed` zelf decrementen
 // op `User.freeUpsellsRemaining` na een succesvolle creatie.
 export function applyFreeUpsellsToCost(
-  entries: { type: UpsellType | ClaimsaleUpsellType; days: number }[],
+  entries: { type: UpsellType | ClaimsaleUpsellType; days?: number }[],
   accountType: string,
   freeUpsellsRemaining: number,
   context: "listing" | "auction" | "claimsale"
@@ -125,7 +126,7 @@ export function applyFreeUpsellsToCost(
     }
     // calc is een van drie functies met overlappende-maar-niet-identieke
     // type-unions; de runtime-keys zijn altijd geldig voor de gekozen context.
-    return calc(entry.type as UpsellType & ClaimsaleUpsellType, entry.days, accountType);
+    return calc(entry.type as UpsellType & ClaimsaleUpsellType, entry.days ?? 0, accountType);
   });
 
   const total = Math.round(perEntry.reduce((s, c) => s + c, 0) * 100) / 100;

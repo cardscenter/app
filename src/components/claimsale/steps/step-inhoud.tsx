@@ -162,13 +162,19 @@ export function StepInhoud({ type, items, maxItems, onItemsChange }: StepInhoudP
         </button>
       </div>
 
-      {items.map((item, idx) => {
+      {/* Nieuwste item bovenaan, maar stabiele nummering: #1 = eerst toegevoegd.
+          De `items`-array blijft in toevoeg-volgorde; we renderen 'm omgekeerd
+          en nummeren op de oorspronkelijke index. */}
+      {items
+        .map((item, idx) => ({ item, number: idx + 1 }))
+        .reverse()
+        .map(({ item, number }) => {
         const hasReverse = item.tcgdex?.variants?.includes("reverse") ?? false;
         const marktprijs = marktprijsFor(item);
         return (
           <div key={item.id} className="glass-subtle rounded-2xl p-4">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">#{idx + 1}</span>
+              <span className="text-sm font-medium text-muted-foreground">#{number}</span>
               <div className="flex items-center gap-3">
                 <DuplicateButton
                   onDuplicate={(count) => duplicateItem(item, count)}

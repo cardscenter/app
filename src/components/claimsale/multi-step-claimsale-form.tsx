@@ -41,8 +41,11 @@ function initialState(): ClaimsaleFormState {
     title: "",
     description: "",
     items: [makeEmptyCardItem()],
-    allowMailbox: false,
+    // CARDS: brievenbuspakket standaard aan (kaarten passen makkelijk in een
+    // brievenbus). ITEMS: niet van toepassing.
+    allowMailbox: true,
     startDate: d,
+    startTimeOfDay: "09:00",
     upsells: [],
     labels: [],
   };
@@ -94,6 +97,8 @@ export function MultiStepClaimsaleForm({
       type: next,
       // Items wissen — CARDS- en ITEMS-velden verschillen te veel om te behouden.
       items: [next === "CARDS" ? makeEmptyCardItem() : makeEmptyProductItem()],
+      // Brievenbuspakket is alleen voor CARDS — bij ITEMS uit, bij CARDS default aan.
+      allowMailbox: next === "CARDS",
       labels: [],
     }));
   };
@@ -120,6 +125,7 @@ export function MultiStepClaimsaleForm({
     formData.set("type", form.type);
     formData.set("allowMailbox", String(form.allowMailbox));
     formData.set("startDate", form.startDate.toISOString());
+    formData.set("startTimeOfDay", form.startTimeOfDay);
 
     const itemsPayload = itemsWithPrice.map((i, idx) => {
       if (form.type === "CARDS") {
@@ -244,7 +250,11 @@ export function MultiStepClaimsaleForm({
           </section>
 
           <section data-section="timing" className="glass rounded-2xl p-6 scroll-mt-32">
-            <StepTiming startDate={form.startDate} onChange={updateField} />
+            <StepTiming
+              startDate={form.startDate}
+              startTimeOfDay={form.startTimeOfDay}
+              onChange={updateField}
+            />
           </section>
         </div>
 

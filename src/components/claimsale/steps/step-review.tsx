@@ -71,7 +71,7 @@ function itemDisplayName(item: ClaimsaleItemDraft, type: string, idx: number): s
 const UPSELL_LABEL: Record<string, string> = {
   HOMEPAGE_SPOTLIGHT: "Homepage Spotlight",
   CATEGORY_HIGHLIGHT: "Categorie-uitlichting",
-  ITEM_PREVIEW: "Kaart-preview-rij",
+  ITEM_PREVIEW: "Geavanceerde Kaart-Preview-Rij",
 };
 
 export function ClaimsalePreview({
@@ -87,7 +87,7 @@ export function ClaimsalePreview({
   const [current, setCurrent] = useState(0);
   const [lightbox, setLightbox] = useState(false);
 
-  const startTime = deriveClaimsaleStartTime(form.startDate);
+  const startTime = deriveClaimsaleStartTime(form.startDate, form.startTimeOfDay);
   const scheduled = isClaimsaleScheduled(startTime);
 
   // Galerij = cover + alle item-afbeeldingen (gededupliceerd).
@@ -362,7 +362,7 @@ function PromotionCostBlock({
   if (upsells.length === 0 && labels.length === 0) return null;
 
   const allocation = applyFreeUpsellsToCost(
-    upsells.map((u) => ({ type: u.type, days: u.days })),
+    upsells.map((u) => ({ type: u.type })),
     accountType,
     freeUpsellsRemaining,
     "claimsale"
@@ -382,9 +382,7 @@ function PromotionCostBlock({
             <li key={`${u.type}-${i}`} className="flex items-baseline justify-between gap-3 py-2 first:pt-0">
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-foreground">{UPSELL_LABEL[u.type] ?? u.type}</div>
-                <div className="text-xs text-muted-foreground">
-                  {u.days} {u.days === 1 ? "dag" : "dagen"}
-                </div>
+                <div className="text-xs text-muted-foreground">Eenmalig — hele claimsale-looptijd</div>
               </div>
               <span
                 className={`font-medium ${isFree ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}

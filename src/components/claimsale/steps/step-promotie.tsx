@@ -10,7 +10,6 @@ import {
   type ClaimsaleUpsellType,
 } from "@/lib/upsell-config";
 import { getUpsellDiscount } from "@/lib/subscription-tiers";
-import { Slider } from "@/components/ui/slider";
 import {
   availableClaimsaleLabelsFor,
   calculateClaimsaleLabelCost,
@@ -42,8 +41,8 @@ const UPSELL_LABELS: Record<ClaimsaleUpsellType, { label: string; desc: string }
     desc: "Je claimsale staat in de 'Gesponsord'-rij op de claimsales-pagina.",
   },
   ITEM_PREVIEW: {
-    label: "Kaart-preview-rij",
-    desc: "Toon een strip met kaart-thumbnails onder je claimsale in de lijst.",
+    label: "Geavanceerde Kaart-Preview-Rij",
+    desc: "Toon 2 rijen kaart-thumbnails (tot 50 kaarten) als carousel onder je claimsale in de lijst.",
   },
 };
 
@@ -84,16 +83,12 @@ export function StepPromotie({
     if (existing) {
       onUpsellsChange(upsells.filter((u) => u.type !== type));
     } else {
-      onUpsellsChange([...upsells, { type, days: 7 }]);
+      onUpsellsChange([...upsells, { type }]);
     }
   };
 
-  const updateDays = (type: ClaimsaleUpsellType, days: number) => {
-    onUpsellsChange(upsells.map((u) => (u.type === type ? { ...u, days } : u)));
-  };
-
   const allocation = applyFreeUpsellsToCost(
-    upsells.map((u) => ({ type: u.type, days: u.days })),
+    upsells.map((u) => ({ type: u.type })),
     accountType,
     freeUpsellsRemaining,
     "claimsale"
@@ -114,78 +109,50 @@ export function StepPromotie({
         {CLAIMSALE_UPSELL_TYPES_OFFERED.map((type) => {
           const Icon = UPSELL_ICONS[type];
           const meta = UPSELL_LABELS[type];
-          const config = CLAIMSALE_UPSELL_PRICING[type];
+          const flatPrice = CLAIMSALE_UPSELL_PRICING[type].flatPrice * (1 - discount);
           const idx = upsells.findIndex((u) => u.type === type);
-          const active = idx >= 0 ? upsells[idx] : null;
-          const dailyCost = config.dailyCost * (1 - discount);
+          const active = idx >= 0;
           const entryCost = idx >= 0 ? allocation.perEntry[idx] : 0;
-          const isFree = idx >= 0 && entryCost === 0 && type === "HOMEPAGE_SPOTLIGHT";
+          const isFree = active && entryCost === 0 && type === "HOMEPAGE_SPOTLIGHT";
 
           return (
-            <div
+            <button
               key={type}
-              className={`rounded-2xl border-2 p-4 transition-all ${
+              type="button"
+              onClick={() => toggleUpsell(type)}
+              className={`flex w-full items-start gap-3 rounded-2xl border-2 p-4 text-left transition-all ${
                 active ? "border-primary bg-primary/5" : "border-border bg-card"
               }`}
             >
-              <button
-                type="button"
-                onClick={() => toggleUpsell(type)}
-                className="flex w-full items-start gap-3 text-left"
-              >
-                <div className={`rounded-lg p-2 ${active ? "bg-primary/10" : "bg-muted"}`}>
-                  <Icon className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`} />
+              <div className={`rounded-lg p-2 ${active ? "bg-primary/10" : "bg-muted"}`}>
+                <Icon className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`} />
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-foreground">{meta.label}</span>
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    tot {UPSELL_CTR[type]}× meer klikken
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-foreground">{meta.label}</span>
-                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                      tot {UPSELL_CTR[type]}× meer klikken
+                <div className="mt-0.5 text-xs text-muted-foreground">{meta.desc}</div>
+                <div className="mt-2">
+                  {isFree ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Gift className="h-3.5 w-3.5" />
+                      Gratis (gratis quota)
                     </span>
-                  </div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">{meta.desc}</div>
-                  <div className="mt-1 text-sm font-semibold text-primary">
-                    &euro;{dailyCost.toFixed(2)} per dag
-                  </div>
-                </div>
-                <input type="checkbox" checked={!!active} readOnly className="mt-1 h-4 w-4 accent-primary" />
-              </button>
-
-              {active && (
-                <div className="mt-4 space-y-3 border-t border-border/50 pt-4">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">
-                      {t("promotieForDays", { days: active.days })}
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                      &euro;{flatPrice.toFixed(2)} (eenmalig)
                     </span>
-                    {isFree ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                        <Gift className="h-3 w-3" />
-                        Gratis
-                      </span>
-                    ) : (
-                      <span className="text-sm font-semibold text-foreground">
-                        &euro;{entryCost.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                  <Slider
-                    value={[active.days]}
-                    min={1}
-                    max={30}
-                    step={1}
-                    onValueChange={(v) => {
-                      if (Array.isArray(v) && typeof v[0] === "number") {
-                        updateDays(type, Math.max(1, Math.min(30, v[0])));
-                      }
-                    }}
-                  />
-                  <div className="flex justify-between text-[11px] text-muted-foreground">
-                    <span>1 dag</span>
-                    <span>30 dagen</span>
-                  </div>
+                  )}
+                  <span className="ml-2 text-[11px] text-muted-foreground">
+                    geldt de hele claimsale (max 14 dagen)
+                  </span>
                 </div>
-              )}
-            </div>
+              </div>
+              <input type="checkbox" checked={active} readOnly className="mt-1 h-4 w-4 accent-primary" />
+            </button>
           );
         })}
 
@@ -262,8 +229,6 @@ function LabelsBlock({
   const isFull = labels.length >= MAX_LABELS_PER_CLAIMSALE;
   const cost = calculateClaimsaleLabelCost(labels.length);
 
-  // Stale-state-fix: bij type-wissel of conditie-mutatie labels filteren die
-  // niet meer beschikbaar zijn.
   useEffect(() => {
     const validTypes = new Set(availability.filter((a) => a.available).map((a) => a.type));
     if (labels.some((l) => !validTypes.has(l.type))) {

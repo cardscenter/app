@@ -18,19 +18,21 @@ import {
 export { combineDateAndTimeNL, formatNLDateTime, SCHEDULED_THRESHOLD_MS, MAX_SCHEDULE_DAYS_AHEAD };
 
 /**
- * Vaste start-wandkloktijd voor geplande claimsales. Anders dan veilingen
- * (waar de seller een eindtijd kiest) heeft een claimsale geen tijd-van-dag-
- * keuze nodig — een vaste ochtenduur houdt de UI simpel: één date-picker.
+ * Default start-wandkloktijd wanneer de seller (nog) geen tijd koos.
  */
-export const CLAIMSALE_START_HOUR = "09:00";
+export const CLAIMSALE_DEFAULT_START_HOUR = "09:00";
 
 /**
- * Zet de gekozen kalenderdatum om naar een echte UTC-Date op CLAIMSALE_START_HOUR
- * NL-tijd. Vandaag gekozen → 09:00 vandaag (kan in het verleden liggen →
- * instant LIVE). Toekomstige datum → SCHEDULED.
+ * Zet de gekozen kalenderdatum + HH:MM-tijd om naar een echte UTC-Date in
+ * NL-tijd. Tijd in het verleden → instant LIVE, toekomstige tijd → SCHEDULED.
+ * `startTimeOfDay` leeg/ongeldig → terugval op CLAIMSALE_DEFAULT_START_HOUR.
  */
-export function deriveClaimsaleStartTime(startDate: Date): Date {
-  return combineDateAndTimeNL(startDate, CLAIMSALE_START_HOUR);
+export function deriveClaimsaleStartTime(startDate: Date, startTimeOfDay?: string): Date {
+  const hhmm =
+    startTimeOfDay && /^\d{2}:\d{2}$/.test(startTimeOfDay)
+      ? startTimeOfDay
+      : CLAIMSALE_DEFAULT_START_HOUR;
+  return combineDateAndTimeNL(startDate, hhmm);
 }
 
 /**

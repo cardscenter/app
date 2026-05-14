@@ -33,7 +33,7 @@ function Row({
 export function ClaimsaleFormSummary({ form }: Props) {
   const t = useTranslations("claimsale");
 
-  const startTime = deriveClaimsaleStartTime(form.startDate);
+  const startTime = deriveClaimsaleStartTime(form.startDate, form.startTimeOfDay);
   const scheduled = isClaimsaleScheduled(startTime);
 
   const prices = form.items
