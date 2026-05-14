@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { ImageIcon, X, Layers, Package } from "lucide-react";
 import type { ClaimsaleType } from "../wizard-types";
+import { CLAIMSALE_DESCRIPTION_MAX } from "../wizard-types";
 
 interface StepBasisProps {
   type: ClaimsaleType;
@@ -121,9 +122,13 @@ export function StepBasis({
               id="cs-description"
               rows={3}
               value={description}
-              onChange={(e) => onChange("description", e.target.value)}
+              maxLength={CLAIMSALE_DESCRIPTION_MAX}
+              onChange={(e) => onChange("description", e.target.value.slice(0, CLAIMSALE_DESCRIPTION_MAX))}
               className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
             />
+            <p className="mt-1 text-right text-xs text-muted-foreground">
+              {description.length}/{CLAIMSALE_DESCRIPTION_MAX}
+            </p>
           </div>
         </div>
       </div>

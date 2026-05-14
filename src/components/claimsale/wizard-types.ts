@@ -4,6 +4,10 @@ import type { ClaimsaleLabelType, LabelColor } from "@/lib/claimsale/labels";
 
 export type ClaimsaleType = "CARDS" | "ITEMS";
 
+// Max lengte van de claimsale-beschrijving. Ruim genoeg voor een paar
+// alinea's, maar bewust geen volledige A4.
+export const CLAIMSALE_DESCRIPTION_MAX = 1000;
+
 // Eén item-draft draagt zowel CARDS- als ITEMS-velden. Welke velden relevant
 // zijn hangt af van ClaimsaleFormState.type — bij type-wissel wordt de items-
 // array geleegd zodat er geen stale velden meereizen.

@@ -132,6 +132,7 @@ export default async function ClaimsaleDetailPage({
         {claimsale.status === "LIVE" ? (
           <LiveClaimsaleItems
             claimsaleId={claimsale.id}
+            claimsaleType={claimsale.type}
             initialItems={claimsale.items.map((item) => ({
               id: item.id,
               cardName: item.cardName,
@@ -139,6 +140,9 @@ export default async function ClaimsaleDetailPage({
               price: item.price,
               status: item.status,
               imageUrls: item.imageUrls,
+              reference: item.reference,
+              sellerNote: item.sellerNote,
+              itemDescription: item.itemDescription,
               cardSet: item.cardSet ? {
                 name: item.cardSet.name,
                 series: {
@@ -154,6 +158,7 @@ export default async function ClaimsaleDetailPage({
         ) : (
           <ClaimsaleItemsFilter
             claimsaleId={claimsale.id}
+            claimsaleType={claimsale.type}
             items={claimsale.items.map((item) => ({
               id: item.id,
               cardName: item.cardName,
@@ -161,6 +166,9 @@ export default async function ClaimsaleDetailPage({
               price: item.price,
               status: item.status,
               imageUrls: item.imageUrls,
+              reference: item.reference,
+              sellerNote: item.sellerNote,
+              itemDescription: item.itemDescription,
               cardSet: item.cardSet ? {
                 name: item.cardSet.name,
                 series: {

@@ -10,6 +10,7 @@ import { requireNotSuspended } from "@/lib/suspension";
 import { enrichMethod } from "@/lib/shipping/static-methods";
 import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
 import { deriveClaimsaleStartTime, isClaimsaleScheduled } from "@/lib/claimsale/timing";
+import { CLAIMSALE_DESCRIPTION_MAX } from "@/components/claimsale/wizard-types";
 import {
   applyFreeUpsellsToCost,
   CLAIMSALE_UPSELL_TYPES_OFFERED,
@@ -83,6 +84,9 @@ export async function createClaimsale(formData: FormData) {
   const labelsRaw = formData.get("labels");
 
   if (!title || title.length < 3) return { error: "Titel is te kort" };
+  if (description && description.length > CLAIMSALE_DESCRIPTION_MAX) {
+    return { error: `Beschrijving mag maximaal ${CLAIMSALE_DESCRIPTION_MAX} tekens zijn` };
+  }
 
   // ── Items parsen + valideren (vorm afhankelijk van type) ──────────────
   type CardItem = z.infer<typeof claimsaleCardItemSchema>;
@@ -797,6 +801,13 @@ export async function claimAllItems(claimsaleId: string) {
     return updated.count;
   });
 
+  // Real-time: items uit de markt + cart-count update voor de user.
+  publish(claimsaleChannel(claimsaleId), {
+    type: "claimsale-item-claimed",
+    payload: { claimsaleId, itemId: itemIds[0], status: "CLAIMED" },
+  });
+  await publishCartCount(userId);
+
   return {
     success: true,
     claimedCount: itemsToClaim.length,
@@ -889,6 +900,13 @@ export async function updateClaimsaleItem(
     return { error: "Item is niet meer beschikbaar voor bewerken" };
   }
 
+  // Real-time: andere viewers zien de bewerking direct (fetchStatus haalt de
+  // nieuwe prijs/naam/conditie op).
+  publish(claimsaleChannel(item.claimsaleId), {
+    type: "claimsale-item-claimed",
+    payload: { claimsaleId: item.claimsaleId, itemId, status: "AVAILABLE" },
+  });
+
   return { success: true };
 }
 
@@ -920,6 +938,12 @@ export async function deleteClaimsaleItem(itemId: string) {
   ]);
 
   await closeClaimsaleIfDepleted(item.claimsaleId);
+
+  // Real-time: item verdwijnt direct uit de lijst bij andere viewers.
+  publish(claimsaleChannel(item.claimsaleId), {
+    type: "claimsale-item-claimed",
+    payload: { claimsaleId: item.claimsaleId, itemId, status: "DELETED" },
+  });
 
   return { success: true };
 }
@@ -997,6 +1021,12 @@ export async function addClaimsaleItem(
       ...(data.cardSetId ? { cardSetId: data.cardSetId } : {}),
       ...(data.reference ? { reference: data.reference } : {}),
     },
+  });
+
+  // Real-time: nieuw item verschijnt direct bij andere viewers.
+  publish(claimsaleChannel(claimsaleId), {
+    type: "claimsale-item-claimed",
+    payload: { claimsaleId, itemId: item.id, status: "AVAILABLE" },
   });
 
   return { success: true, itemId: item.id };

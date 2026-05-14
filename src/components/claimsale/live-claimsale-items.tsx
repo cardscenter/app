@@ -24,6 +24,7 @@ interface StatusResponse {
 
 interface LiveClaimsaleItemsProps {
   claimsaleId: string;
+  claimsaleType: string;
   initialItems: ClaimsaleItem[];
   isOwner: boolean;
   isLive: boolean;
@@ -32,6 +33,7 @@ interface LiveClaimsaleItemsProps {
 
 export function LiveClaimsaleItems({
   claimsaleId,
+  claimsaleType,
   initialItems,
   isOwner,
   isLive,
@@ -90,6 +92,9 @@ export function LiveClaimsaleItems({
               price: apiItem.price,
               status: apiItem.status,
               imageUrls: apiItem.imageUrls,
+              reference: null,
+              sellerNote: null,
+              itemDescription: null,
               cardSet: null,
               buyer: null,
             });
@@ -140,6 +145,7 @@ export function LiveClaimsaleItems({
     <ClaimsaleItemsFilter
       items={items}
       claimsaleId={claimsaleId}
+      claimsaleType={claimsaleType}
       isOwner={isOwner}
       isLive={isLive}
       hasSession={hasSession}

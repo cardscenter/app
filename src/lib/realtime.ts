@@ -34,7 +34,7 @@ export type RealtimeEvent =
     }
   | {
       type: "claimsale-item-claimed";
-      payload: { claimsaleId: string; itemId: string; status: "CLAIMED" | "SOLD" | "AVAILABLE" };
+      payload: { claimsaleId: string; itemId: string; status: "CLAIMED" | "SOLD" | "AVAILABLE" | "DELETED" };
     }
   | {
       type: "auction-ended";

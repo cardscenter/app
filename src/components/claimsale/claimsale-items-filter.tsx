@@ -21,6 +21,9 @@ export interface ClaimsaleItem {
   price: number;
   status: string;
   imageUrls: string | null;
+  reference: string | null;
+  sellerNote: string | null;
+  itemDescription: string | null;
   cardSet: {
     name: string;
     series: {
@@ -33,6 +36,7 @@ export interface ClaimsaleItem {
 interface ClaimsaleItemsFilterProps {
   items: ClaimsaleItem[];
   claimsaleId: string;
+  claimsaleType: string;
   isOwner: boolean;
   isLive: boolean;
   hasSession: boolean;
@@ -43,12 +47,15 @@ type SortKey = "name" | "price_asc" | "price_desc" | "condition";
 export function ClaimsaleItemsFilter({
   items,
   claimsaleId,
+  claimsaleType,
   isOwner,
   isLive,
   hasSession,
 }: ClaimsaleItemsFilterProps) {
   const t = useTranslations("claimsale");
   const ts = useTranslations("search");
+  const isItems = claimsaleType === "ITEMS";
+  const nameLabel = isItems ? t("itemNameLabel") : t("cardName");
 
   const [search, setSearch] = useState("");
   const [conditionFilter, setConditionFilter] = useState("");
@@ -313,7 +320,18 @@ export function ClaimsaleItemsFilter({
                   </h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {item.condition}
+                    {item.reference ? ` · #${item.reference}` : ""}
                   </p>
+                  {item.itemDescription && (
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                      {item.itemDescription}
+                    </p>
+                  )}
+                  {item.sellerNote && (
+                    <p className="mt-1 text-xs italic text-muted-foreground/80">
+                      {item.sellerNote}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-end justify-between mt-2">
                   <span className="text-lg font-bold text-foreground">
@@ -380,7 +398,7 @@ export function ClaimsaleItemsFilter({
                 Foto
               </th>
               <th className="px-3 py-3 text-left font-medium text-muted-foreground">
-                {t("cardName")}
+                {nameLabel}
               </th>
               <th className="px-3 py-3 text-left font-medium text-muted-foreground">
                 {t("condition")}
@@ -480,7 +498,22 @@ export function ClaimsaleItemsFilter({
                     </div>
                   </td>
                   <td className="px-3 py-2 font-medium text-foreground">
-                    {item.cardName}
+                    <div>{item.cardName}</div>
+                    {item.reference && (
+                      <div className="text-xs font-normal text-muted-foreground/80">
+                        #{item.reference}
+                      </div>
+                    )}
+                    {item.itemDescription && (
+                      <div className="mt-0.5 max-w-md text-xs font-normal text-muted-foreground line-clamp-2 whitespace-pre-wrap">
+                        {item.itemDescription}
+                      </div>
+                    )}
+                    {item.sellerNote && (
+                      <div className="mt-0.5 text-xs font-normal italic text-muted-foreground/80">
+                        {item.sellerNote}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">
                     {item.condition}
