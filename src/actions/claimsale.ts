@@ -120,8 +120,10 @@ export async function createClaimsale(formData: FormData) {
 
   // ── Verzending (claimsale-specifieke derivation) ─────────────────────
   // CARDS: brievenbuspakket (default, <€150) + aangetekend pakket. Géén
-  //        standaard pakket — kaarten passen makkelijk in een brievenbus.
-  // ITEMS: standaard pakket + aangetekend pakket. Géén brievenbus (te groot).
+  //        standaard pakket in het binnenland (kaarten gaan door de bus),
+  //        maar naar buurland / overige EU blijft standaard pakket wel
+  //        beschikbaar (geen brievenbuspost cross-border).
+  // ITEMS: standaard pakket + aangetekend pakket in alle zones. Géén brievenbus.
   const seller = await prisma.user.findUnique({
     where: { id: userId },
     select: { country: true, accountType: true, balance: true, reservedBalance: true, freeUpsellsRemaining: true },
@@ -141,8 +143,9 @@ export async function createClaimsale(formData: FormData) {
     where: { sellerId: userId, isActive: true },
   });
   const eligibleMethods = allMethods.filter((m) => {
-    if (m.service === "PARCEL_SIGNED") return true; // altijd
-    if (m.service === "PARCEL_STANDARD") return type === "ITEMS"; // alleen ITEMS
+    if (m.service === "PARCEL_SIGNED") return true; // altijd, alle zones
+    // STANDARD: ITEMS overal; CARDS alleen cross-border (niet binnenland).
+    if (m.service === "PARCEL_STANDARD") return type === "ITEMS" || m.zone !== "DOMESTIC";
     if (m.service === "MAILBOX_PARCEL") return mailboxOk; // alleen CARDS <€150
     return false;
   });

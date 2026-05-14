@@ -809,6 +809,7 @@
     "stepVerzending": "Shipping",
     "verzendingCardsHint": "Cards ship as a mailbox parcel by default — cheap and fits through the letterbox. From €150 a signed parcel is required.",
     "verzendingItemsHint": "Items ship as a standard or signed parcel.",
+    "mailboxHintCards": "On by default for cards — cards fit through the letterbox. Not available from €150.",
     "startTimeLabel": "Start time",
     "nlTimeBadge": "🕒 NL time",
     "stepPromotie": "Promotion",

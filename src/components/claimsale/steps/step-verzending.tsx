@@ -22,12 +22,14 @@ export function StepVerzending({
 }: StepVerzendingProps) {
   const t = useTranslations("claimsale");
 
-  // CARDS: brievenbuspakket (standaard aan, <€150) + aangetekend pakket.
-  //        Standaard pakket is niet nodig — kaarten passen in een brievenbus.
-  // ITEMS: standaard pakket + aangetekend pakket. Geen brievenbus.
+  // CARDS: brievenbuspakket (standaard aan, <€150) + aangetekend pakket. In
+  //        het binnenland geen standaard pakket — kaarten gaan door de bus.
+  //        Naar buurland / overige EU blijft standaard pakket wel beschikbaar
+  //        (daar bestaat geen brievenbuspost).
+  // ITEMS: standaard pakket + aangetekend pakket in alle zones. Geen brievenbus.
   const filteredMethods = shippingMethods.filter((m) => {
     if (m.service === "PARCEL_SIGNED") return true;
-    if (m.service === "PARCEL_STANDARD") return type === "ITEMS";
+    if (m.service === "PARCEL_STANDARD") return type === "ITEMS" || m.zone !== "DOMESTIC";
     if (m.service === "MAILBOX_PARCEL") return type === "CARDS";
     return false;
   });
@@ -48,6 +50,7 @@ export function StepVerzending({
         price={maxItemPrice}
         allowMailbox={allowMailbox}
         onAllowMailboxChange={onAllowMailboxChange}
+        mailboxHint={type === "CARDS" ? t("mailboxHintCards") : undefined}
       />
     </div>
   );

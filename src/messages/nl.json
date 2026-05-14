@@ -809,6 +809,7 @@
     "stepVerzending": "Verzending",
     "verzendingCardsHint": "Kaarten gaan standaard als brievenbuspakket — goedkoop en past door de bus. Vanaf €150 is een aangetekend pakket verplicht.",
     "verzendingItemsHint": "Items worden verzonden als standaard of aangetekend pakket.",
+    "mailboxHintCards": "Staat standaard aan voor kaarten — kaarten passen door de brievenbus. Niet beschikbaar vanaf €150.",
     "startTimeLabel": "Starttijd",
     "nlTimeBadge": "🕒 NL-tijd",
     "stepPromotie": "Promotie",
