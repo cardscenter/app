@@ -7,7 +7,7 @@ import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { expireClaimedItems, unclaimItem, closeClaimsaleIfDepleted } from "@/actions/claimsale";
 import { requireNotSuspended } from "@/lib/suspension";
-import { requiresSignedShipping, isUntrackedAllowed, LETTER_MAX_ITEMS } from "@/lib/shipping/tracked-threshold";
+import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
 import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
 
 async function publishCartCount(userId: string) {
@@ -46,12 +46,9 @@ export async function getCartCount(): Promise<number> {
 export type CartShippingMethod = {
   id: string;
   carrier: string;
-  serviceName: string;
-  price: number;
-  countries: string[];
-  shippingType: string;
-  isTracked: boolean;
-  isSigned: boolean;
+  service: string; // ShippingService: MAILBOX_PARCEL | PARCEL_STANDARD | PARCEL_SIGNED
+  zone: string;    // ShippingZone: DOMESTIC | EU_NEAR | EU_FAR
+  price: number;   // snapshot
 };
 
 export type CartSellerGroup = {
@@ -128,22 +125,17 @@ export async function getCart(): Promise<CartSellerGroup[]> {
       sellerMethodMaps.set(sellerId, []);
     }
 
-    // Collect shipping methods from this claimsale
+    // Collect shipping methods from this claimsale (Fase 33: alleen rijen met service+zone).
     const claimsaleMethods = new Map<string, CartShippingMethod>();
     for (const csm of ci.claimsaleItem.claimsale.shippingMethods) {
-      let countries: string[] = [];
-      try {
-        countries = JSON.parse(csm.shippingMethod.countries);
-      } catch { /* ignore */ }
+      const sm = csm.shippingMethod;
+      if (!sm.service || !sm.zone || !sm.isActive) continue;
       claimsaleMethods.set(csm.shippingMethodId, {
         id: csm.shippingMethodId,
-        carrier: csm.shippingMethod.carrier,
-        serviceName: csm.shippingMethod.serviceName,
-        price: csm.price, // snapshot price
-        countries,
-        shippingType: csm.shippingMethod.shippingType,
-        isTracked: csm.shippingMethod.isTracked,
-        isSigned: csm.shippingMethod.isSigned,
+        carrier: sm.carrier,
+        service: sm.service,
+        zone: sm.zone,
+        price: csm.price, // snapshot price uit join-tabel
       });
     }
     if (claimsaleMethods.size > 0) {
@@ -160,9 +152,19 @@ export async function getCart(): Promise<CartSellerGroup[]> {
     }
 
     const claimedAt = ci.claimsaleItem.claimedAt?.toISOString() ?? null;
-    const expiresAt = ci.claimsaleItem.claimedAt
-      ? new Date(ci.claimsaleItem.claimedAt.getTime() + CLAIM_DURATION_MS).toISOString()
-      : null;
+    // Visible deadline = max(claim-cutoff, checkout-lock). Bij actieve lock
+    // (during checkout) staan items in feite gemarkeerd-vastgezet, dus de
+    // timer mag de werkelijke server-side deadline weerspiegelen.
+    let expiresAt: string | null = null;
+    if (ci.claimsaleItem.claimedAt) {
+      const claimCutoff = new Date(
+        ci.claimsaleItem.claimedAt.getTime() + CLAIM_DURATION_MS,
+      );
+      const lockExpiry = ci.claimsaleItem.checkoutLockExpiresAt;
+      const effective =
+        lockExpiry && lockExpiry > claimCutoff ? lockExpiry : claimCutoff;
+      expiresAt = effective.toISOString();
+    }
 
     group.items.push({
       cartItemId: ci.id,
@@ -242,7 +244,38 @@ export async function checkout(shippingSelections?: Record<string, string>) {
 
   if (cartItems.length === 0) return { error: "Winkelwagen is leeg" };
 
-  // Expire stale claims before checkout
+  // Lock de items die deze user gaat afrekenen 5 minuten lang tegen de
+  // expire-claims sweep — anders kan de cron midden in de checkout-flow
+  // items naar AVAILABLE flippen waardoor de gebruiker een "items niet
+  // beschikbaar"-error krijgt voor items die hij net had geselecteerd.
+  //
+  // STRICT ONE-SHOT per claim-cycle: lock kan alleen worden gezet als
+  // `checkoutLockExpiresAt` nog null is. Zodra de lock een keer is gezet
+  // (zelfs als 'ie verlopen is) kan deze user 'm niet opnieuw zetten —
+  // pas wanneer het item een nieuwe claim-cycle ingaat (status flip naar
+  // AVAILABLE → opnieuw geclaimd) wordt de lock-state gereset naar null.
+  //
+  // Dit dicht de oneindige-renew-exploit waarbij een user elke 5 min op
+  // afrekenen kan klikken om items voor altijd vast te houden.
+  //
+  // SAFETY-FLOOR op claimedAt: items waar de basis 15-min claim-cycle al
+  // is verstreken, krijgen geen lock — ze zijn al de facto verlopen en
+  // de cron mag ze in de volgende tick opruimen.
+  const lockNow = new Date();
+  const checkoutLockExpiresAt = new Date(lockNow.getTime() + 5 * 60 * 1000);
+  const claimCutoffFloor = new Date(lockNow.getTime() - 15 * 60 * 1000);
+  await prisma.claimsaleItem.updateMany({
+    where: {
+      claimedById: session.user.id,
+      status: "CLAIMED",
+      checkoutLockExpiresAt: null, // one-shot
+      claimedAt: { gte: claimCutoffFloor },
+    },
+    data: { checkoutLockExpiresAt },
+  });
+
+  // Expire stale claims before checkout — onze net-gelockte items worden
+  // hier overgeslagen door de checkoutLockExpiresAt-OR clause.
   await expireClaimedItems();
 
   // Re-fetch to get updated statuses after expiration
@@ -311,66 +344,41 @@ export async function checkout(shippingSelections?: Record<string, string>) {
   for (const [sellerId, items] of sellerGroups) {
     const itemTotal = items.reduce((sum, ci) => sum + ci.claimsaleItem.price, 0);
 
-    // Check if there's already a paid bundle for this buyer-seller pair
-    const existingBundle = await prisma.shippingBundle.findFirst({
-      where: {
-        buyerId: session.user.id,
-        sellerId,
-        status: "PAID",
-      },
-    });
-
+    // Elke checkout is een aparte bestelling — geen merge met bestaande
+    // bundles (ook niet met eerdere marktplaats-/veiling-aankopen van
+    // dezelfde verkoper). Bundeling gebeurt alleen BINNEN één checkout:
+    // de sellerGroups-loop maakt al één bundle per verkoper.
     let shippingCost = 0;
     let methodId: string | null = null;
 
-    if (!existingBundle) {
-      // Determine shipping cost: new method system or legacy fallback
-      const selectedMethodId = shippingSelections?.[sellerId];
-      if (selectedMethodId) {
-        // Find the method's snapshotted price from any of this seller's claimsales
-        const firstItem = items[0];
-        const csm = firstItem.claimsaleItem.claimsale.shippingMethods.find(
-          (m) => m.shippingMethodId === selectedMethodId
-        );
-        shippingCost = csm ? csm.price : 0;
-        methodId = selectedMethodId;
-      } else {
-        // Legacy fallback: use claimsale's flat shippingCost
-        shippingCost = items[0].claimsaleItem.claimsale.shippingCost;
-      }
+    // Determine shipping cost: new method system or legacy fallback
+    const selectedMethodId = shippingSelections?.[sellerId];
+    if (selectedMethodId) {
+      // Find the method's snapshotted price from any of this seller's claimsales
+      const firstItem = items[0];
+      const csm = firstItem.claimsaleItem.claimsale.shippingMethods.find(
+        (m) => m.shippingMethodId === selectedMethodId
+      );
+      shippingCost = csm ? csm.price : 0;
+      methodId = selectedMethodId;
+    } else {
+      // Legacy fallback: use claimsale's flat shippingCost
+      shippingCost = items[0].claimsaleItem.claimsale.shippingCost;
     }
 
-    // Signed shipping enforcement
+    // Signed shipping enforcement (Fase 33: alleen op orderwaarde, niet op zone).
+    // Fase 33 v2: MAILBOX_PARCEL niet toegestaan ≥€150 (anti-fraude).
     if (methodId) {
-      const seller = await prisma.user.findUnique({
-        where: { id: sellerId },
-        select: { country: true },
-      });
-      const isInternational = seller?.country !== user.country;
-
       const method = await prisma.sellerShippingMethod.findUnique({
         where: { id: methodId },
-        select: { isSigned: true, isTracked: true, shippingType: true },
+        select: { service: true },
       });
 
-      // Letter mail item count check
-      if (method?.shippingType === "LETTER" && items.length > LETTER_MAX_ITEMS) {
-        return { error: `Briefpost kan maximaal ${LETTER_MAX_ITEMS} kaarten bevatten. Kies een andere verzendmethode voor ${items.length} items.` };
+      if (itemTotal >= 150 && method?.service === "MAILBOX_PARCEL") {
+        return { error: "Brievenbuspakket niet toegestaan voor bestellingen boven €150" };
       }
-
-      // Briefpost check: untracked not allowed above €25
-      if (method && !method.isTracked && !isUntrackedAllowed(itemTotal)) {
-        return { error: "Briefpost is niet beschikbaar voor bestellingen boven €25. Kies een verzendmethode met tracking." };
-      }
-
-      // Signed shipping check
-      if (requiresSignedShipping(itemTotal, isInternational)) {
-        if (method && !method.isSigned) {
-          const reason = isInternational
-            ? "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen"
-            : `Aangetekende verzending is verplicht voor bestellingen boven €150`;
-          return { error: reason };
-        }
+      if (requiresSignedShipping(itemTotal) && method?.service !== "PARCEL_SIGNED") {
+        return { error: "Aangetekende verzending is verplicht voor bestellingen boven €150" };
       }
     }
 
@@ -390,34 +398,25 @@ export async function checkout(shippingSelections?: Record<string, string>) {
   for (const [sellerId, items] of sellerGroups) {
     const { cost: shippingCost, methodId: shippingMethodId } = sellerShippingInfo.get(sellerId)!;
 
-    // Find or create shipping bundle (PAID because payment is instant via wallet)
-    let bundle = await prisma.shippingBundle.findFirst({
-      where: {
+    // Nieuwe bundle per checkout (PAID — betaling is direct via wallet).
+    // Bewust geen findFirst-hergebruik: elke bestelling is een losse aankoop.
+    const bundle = await prisma.shippingBundle.create({
+      data: {
+        orderNumber: generateOrderNumber(),
         buyerId: session.user.id,
         sellerId,
+        shippingCost,
+        totalItemCost: 0,
+        totalCost: shippingCost,
         status: "PAID",
+        shippingMethodId: shippingMethodId,
+        buyerStreet: user.street,
+        buyerHouseNumber: user.houseNumber,
+        buyerPostalCode: user.postalCode,
+        buyerCity: user.city,
+        buyerCountry: user.country,
       },
     });
-
-    if (!bundle) {
-      bundle = await prisma.shippingBundle.create({
-        data: {
-          orderNumber: generateOrderNumber(),
-          buyerId: session.user.id,
-          sellerId,
-          shippingCost,
-          totalItemCost: 0,
-          totalCost: shippingCost,
-          status: "PAID",
-          shippingMethodId: shippingMethodId,
-          buyerStreet: user.street,
-          buyerHouseNumber: user.houseNumber,
-          buyerPostalCode: user.postalCode,
-          buyerCity: user.city,
-          buyerCountry: user.country,
-        },
-      });
-    }
 
     for (const ci of items) {
       // Atomically move from CLAIMED to SOLD (race condition protection)
