@@ -251,93 +251,110 @@ export async function createClaimsale(formData: FormData) {
 
   // Upsell startsAt: LIVE → nu, SCHEDULED → claimsale-startTime.
   const upsellStartsAt = scheduled ? startTime : new Date();
+  const upsellExpiresAt = new Date(
+    upsellStartsAt.getTime() + CLAIMSALE_UPSELL_DURATION_DAYS * DAY_MS
+  );
+
+  // cardSetId-resolutie VÓÓR de transactie — dit zijn DB-reads en die mogen
+  // niet binnen de interactive transaction draaien (P2028: transaction expired).
+  const itemCreateData =
+    type === "CARDS"
+      ? await Promise.all(
+          cardItems.map(async (item) => {
+            const autoCardSetId =
+              item.tcgdexId && !item.cardSetId
+                ? await resolveLocalCardSetId(item.tcgdexId)
+                : null;
+            return {
+              cardName: item.cardName || "Kaart",
+              ...(item.cardSetId
+                ? { cardSetId: item.cardSetId }
+                : autoCardSetId
+                  ? { cardSetId: autoCardSetId }
+                  : {}),
+              ...(item.cardNumber ? { reference: item.cardNumber } : {}),
+              ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
+              ...(item.tcgdexId ? { tcgdexId: item.tcgdexId } : {}),
+              condition: item.condition,
+              price: item.price,
+              imageUrls: JSON.stringify(item.imageUrls ?? []),
+            };
+          })
+        )
+      : productItems.map((item) => ({
+          cardName: item.cardName,
+          ...(item.itemDescription ? { itemDescription: item.itemDescription } : {}),
+          ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
+          condition: item.condition,
+          price: item.price,
+          imageUrls: JSON.stringify(item.imageUrls),
+        }));
+
+  const perLabelCost =
+    parsedLabels.length > 0 ? labelsCost / parsedLabels.length : 0;
 
   // ── Atomic create: claimsale + items + shipping + upsells + labels ───
-  const claimsale = await prisma.$transaction(async (tx) => {
-    const cs = await tx.claimsale.create({
-      data: {
-        title,
-        description,
-        coverImage,
-        type,
-        shippingCost,
-        sellerId: userId,
-        status: initialStatus,
-        startTime,
-        publishedAt: startTime,
-        items: {
-          create:
-            type === "CARDS"
-              ? await Promise.all(
-                  cardItems.map(async (item) => {
-                    const autoCardSetId =
-                      item.tcgdexId && !item.cardSetId
-                        ? await resolveLocalCardSetId(item.tcgdexId)
-                        : null;
-                    return {
-                      cardName: item.cardName || "Kaart",
-                      ...(item.cardSetId
-                        ? { cardSetId: item.cardSetId }
-                        : autoCardSetId
-                          ? { cardSetId: autoCardSetId }
-                          : {}),
-                      ...(item.cardNumber ? { reference: item.cardNumber } : {}),
-                      ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
-                      ...(item.tcgdexId ? { tcgdexId: item.tcgdexId } : {}),
-                      condition: item.condition,
-                      price: item.price,
-                      imageUrls: JSON.stringify(item.imageUrls ?? []),
-                    };
-                  })
-                )
-              : productItems.map((item) => ({
-                  cardName: item.cardName,
-                  ...(item.itemDescription ? { itemDescription: item.itemDescription } : {}),
-                  ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
-                  condition: item.condition,
-                  price: item.price,
-                  imageUrls: JSON.stringify(item.imageUrls),
-                })),
-        },
-      },
-    });
-
-    for (const m of methodSnapshots) {
-      await tx.claimsaleShippingMethod.create({
-        data: { claimsaleId: cs.id, shippingMethodId: m.id, price: m.price },
-      });
-    }
-
-    for (let i = 0; i < upsellEntries.length; i++) {
-      const entry = upsellEntries[i];
-      const cost = perEntryCosts[i] ?? 0;
-      await tx.claimsaleUpsell.create({
+  // Puur writes — alle reads zijn hierboven al gedaan. createMany i.p.v.
+  // loops scheelt DB-roundtrips. Ruimere timeout als safety-margin voor
+  // grote claimsales (tot ~50 items) op SQLite.
+  const claimsale = await prisma.$transaction(
+    async (tx) => {
+      const cs = await tx.claimsale.create({
         data: {
-          claimsaleId: cs.id,
-          type: entry.type,
-          startsAt: upsellStartsAt,
-          // Flat-fee: loopt de hele claimsale, gecapt op 14 dagen.
-          expiresAt: new Date(upsellStartsAt.getTime() + CLAIMSALE_UPSELL_DURATION_DAYS * DAY_MS),
-          dailyCost: cost / CLAIMSALE_UPSELL_DURATION_DAYS,
-          totalCost: cost,
+          title,
+          description,
+          coverImage,
+          type,
+          shippingCost,
+          sellerId: userId,
+          status: initialStatus,
+          startTime,
+          publishedAt: startTime,
+          items: { create: itemCreateData },
         },
       });
-    }
 
-    if (parsedLabels.length > 0) {
-      const perLabelCost = labelsCost / parsedLabels.length;
-      await tx.claimsaleLabel.createMany({
-        data: parsedLabels.map((l) => ({
-          claimsaleId: cs.id,
-          type: l.type,
-          colorKey: l.colorKey,
-          cost: Math.round(perLabelCost * 100) / 100,
-        })),
-      });
-    }
+      if (methodSnapshots.length > 0) {
+        await tx.claimsaleShippingMethod.createMany({
+          data: methodSnapshots.map((m) => ({
+            claimsaleId: cs.id,
+            shippingMethodId: m.id,
+            price: m.price,
+          })),
+        });
+      }
 
-    return cs;
-  });
+      if (upsellEntries.length > 0) {
+        await tx.claimsaleUpsell.createMany({
+          data: upsellEntries.map((entry, i) => {
+            const cost = perEntryCosts[i] ?? 0;
+            return {
+              claimsaleId: cs.id,
+              type: entry.type,
+              startsAt: upsellStartsAt,
+              expiresAt: upsellExpiresAt,
+              dailyCost: cost / CLAIMSALE_UPSELL_DURATION_DAYS,
+              totalCost: cost,
+            };
+          }),
+        });
+      }
+
+      if (parsedLabels.length > 0) {
+        await tx.claimsaleLabel.createMany({
+          data: parsedLabels.map((l) => ({
+            claimsaleId: cs.id,
+            type: l.type,
+            colorKey: l.colorKey,
+            cost: Math.round(perLabelCost * 100) / 100,
+          })),
+        });
+      }
+
+      return cs;
+    },
+    { timeout: 20000 }
+  );
 
   // Balance-deduct voor upsells + labels samen (na de create, mirror createAuction).
   if (totalPromotionCost > 0) {
