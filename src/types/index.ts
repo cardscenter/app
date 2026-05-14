@@ -8,6 +8,16 @@ export const CARD_CONDITIONS = [
 ] as const;
 export type CardCondition = (typeof CARD_CONDITIONS)[number];
 
+// Conditie-set voor ITEMS-type claimsales (sealed products, accessoires, etc.) —
+// kaart-condities (Near Mint etc.) zijn niet logisch voor niet-kaart-items.
+export const ITEM_CONDITIONS = [
+  "Nieuw",
+  "Als nieuw",
+  "Gebruikt",
+  "Geopend",
+] as const;
+export type ItemCondition = (typeof ITEM_CONDITIONS)[number];
+
 export const AUCTION_TYPES = [
   "SINGLE_CARD",
   "MULTI_CARD",
