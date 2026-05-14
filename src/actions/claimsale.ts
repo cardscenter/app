@@ -3,11 +3,28 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkClaimsaleLimit } from "@/lib/account-limits";
-import { deductBalance, escrowCredit } from "@/actions/wallet";
+import { deductBalance } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
+import { enrichMethod, deriveListingShippingMethodIds } from "@/lib/shipping/static-methods";
+import { mailboxEligibleType } from "@/lib/listing-types";
 import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
+import { deriveClaimsaleStartTime, isClaimsaleScheduled } from "@/lib/claimsale/timing";
+import {
+  applyFreeUpsellsToCost,
+  CLAIMSALE_UPSELL_TYPES_OFFERED,
+  type ClaimsaleUpsellType,
+} from "@/lib/upsell-config";
+import {
+  availableClaimsaleLabelsFor,
+  calculateClaimsaleLabelCost,
+  isValidClaimsaleLabelType,
+  isValidLabelColor,
+  MAX_LABELS_PER_CLAIMSALE,
+  type ClaimsaleLabelType,
+  type LabelColor,
+} from "@/lib/claimsale/labels";
 
 async function publishCartCount(userId: string) {
   const count = await prisma.cartItem.count({ where: { userId } });
@@ -16,10 +33,11 @@ async function publishCartCount(userId: string) {
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-const claimsaleItemSchema = z.object({
+// CARDS-type: volledige card-flow met card-selector + kaart-condities + variant.
+const claimsaleCardItemSchema = z.object({
   cardName: z.string(),
   cardNumber: z.string().optional(),
-  sellerNote: z.string().optional(),
+  sellerNote: z.string().max(30).optional(),
   cardSetId: z.string().optional(),
   tcgdexId: z.string().optional(),
   condition: z.string().min(1),
@@ -27,123 +45,331 @@ const claimsaleItemSchema = z.object({
   imageUrls: z.array(z.string()).optional().default([]),
 });
 
+// ITEMS-type: vrije velden, geen card-selector. Afbeelding verplicht (geen
+// catalogus-fallback mogelijk zonder gekoppelde kaart).
+const claimsaleProductItemSchema = z.object({
+  cardName: z.string().min(1, "Itemnaam is verplicht"),
+  itemDescription: z.string().optional(),
+  sellerNote: z.string().max(30).optional(),
+  condition: z.string().min(1),
+  price: z.coerce.number().min(0.01),
+  imageUrls: z.array(z.string()).min(1, "Upload minimaal één afbeelding per item"),
+});
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export async function createClaimsale(formData: FormData) {
   const session = await auth();
-  if (session?.user?.id) {
-    const susp = await requireNotSuspended(session.user.id);
-    if ("error" in susp) return { error: susp.error };
-  }
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
+
+  const susp = await requireNotSuspended(userId);
+  if ("error" in susp) return { error: susp.error };
+
+  const limit = await checkClaimsaleLimit(userId);
+  if (!limit.allowed) {
+    return { error: `Je hebt het maximum aantal actieve claimsales bereikt (${limit.max})` };
+  }
 
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) || null;
   const coverImage = (formData.get("coverImage") as string) || null;
-  const shippingCostRaw = formData.get("shippingCost") as string | null;
-  const shippingCost = shippingCostRaw ? parseFloat(shippingCostRaw) : 0;
+  const type = formData.get("type") === "ITEMS" ? "ITEMS" : "CARDS";
+  const allowMailbox = formData.get("allowMailbox") === "true";
+  const startDateRaw = formData.get("startDate") as string | null;
   const itemsJson = formData.get("items") as string;
-  const shippingMethodIdsJson = formData.get("shippingMethodIds") as string | null;
+  const upsellsRaw = formData.get("upsells");
+  const labelsRaw = formData.get("labels");
 
   if (!title || title.length < 3) return { error: "Titel is te kort" };
-  if (isNaN(shippingCost) || shippingCost < 0) return { error: "Ongeldige verzendkosten" };
 
-  // Require at least one shipping method
-  if (!shippingMethodIdsJson || JSON.parse(shippingMethodIdsJson).length === 0) {
-    return { error: "Selecteer minimaal één verzendmethode" };
-  }
-
-  let items: z.infer<typeof claimsaleItemSchema>[];
+  // ── Items parsen + valideren (vorm afhankelijk van type) ──────────────
+  type CardItem = z.infer<typeof claimsaleCardItemSchema>;
+  type ProductItem = z.infer<typeof claimsaleProductItemSchema>;
+  let cardItems: CardItem[] = [];
+  let productItems: ProductItem[] = [];
   try {
-    items = JSON.parse(itemsJson);
-    if (!Array.isArray(items) || items.length === 0) throw new Error();
-    items.forEach((item) => claimsaleItemSchema.parse(item));
-  } catch {
-    return { error: "Voeg minimaal één kaart toe" };
+    const parsed = JSON.parse(itemsJson);
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error();
+    if (type === "CARDS") {
+      cardItems = parsed.map((i) => claimsaleCardItemSchema.parse(i));
+    } else {
+      productItems = parsed.map((i) => claimsaleProductItemSchema.parse(i));
+    }
+  } catch (err) {
+    if (err instanceof z.ZodError) return { error: err.issues[0].message };
+    return { error: type === "CARDS" ? "Voeg minimaal één kaart toe" : "Voeg minimaal één item toe" };
   }
 
-  // Check limits
-  const limit = await checkClaimsaleLimit(session.user.id);
-  if (items.length > limit.maxItems) {
-    return { error: `Maximum ${limit.maxItems} kaarten per claimsale` };
+  const itemCount = type === "CARDS" ? cardItems.length : productItems.length;
+  if (itemCount > limit.maxItems) {
+    return { error: `Maximum ${limit.maxItems} items per claimsale` };
   }
 
-  // Parse shipping method IDs
-  let shippingMethodIds: string[] = [];
-  if (shippingMethodIdsJson) {
-    try {
-      shippingMethodIds = JSON.parse(shippingMethodIdsJson);
-    } catch { /* ignore */ }
-  }
-
-  // Validate: must have at least one non-LETTER method
-  if (shippingMethodIds.length > 0) {
-    const selectedMethods = await prisma.sellerShippingMethod.findMany({
-      where: { id: { in: shippingMethodIds } },
-      select: { shippingType: true },
-    });
-    const hasNonLetter = selectedMethods.some((m) => m.shippingType !== "LETTER");
-    if (!hasNonLetter) {
-      return { error: "Je moet naast briefpost minimaal één pakket- of brievenbuspakket-optie aanbieden." };
+  // Afbeelding-fallback-guard voor CARDS: een item zonder eigen upload moet
+  // minstens een gekoppelde kaart (tcgdexId) hebben zodat we de catalogus-
+  // afbeelding kunnen tonen. ITEMS dwingt upload al af via zod (.min(1)).
+  if (type === "CARDS") {
+    for (const item of cardItems) {
+      if ((item.imageUrls?.length ?? 0) === 0 && !item.tcgdexId) {
+        return { error: "Upload een afbeelding of kies een kaart bij elk item" };
+      }
     }
   }
 
-  // Lookup shipping methods for price snapshots
-  let methodSnapshots: { id: string; price: number }[] = [];
-  if (shippingMethodIds.length > 0) {
-    const methods = await prisma.sellerShippingMethod.findMany({
-      where: { id: { in: shippingMethodIds }, sellerId: userId },
-    });
-    methodSnapshots = methods.map((m) => ({ id: m.id, price: m.price }));
+  // ── Verzending (server-side derivation, mirror createAuction) ─────────
+  const seller = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { country: true, accountType: true, balance: true, reservedBalance: true, freeUpsellsRemaining: true },
+  });
+  if (!seller?.country) {
+    return { error: "Vul eerst je land in op je profiel." };
   }
 
+  // Hoogste prijspunt voor mailbox-eligibility (<€150). CARDS-claimsales
+  // gedragen zich als multi-card listings; ITEMS sluiten mailbox uit.
+  const allPrices = type === "CARDS" ? cardItems.map((i) => i.price) : productItems.map((i) => i.price);
+  const maxItemPrice = allPrices.length > 0 ? Math.max(...allPrices) : null;
+  const shippingListingType = type === "CARDS" ? "MULTI_CARD" : "OTHER";
+
+  const derivedIds = await deriveListingShippingMethodIds({
+    prisma,
+    sellerId: userId,
+    allowMailbox,
+    listingType: shippingListingType,
+    price: maxItemPrice,
+    mailboxEligible: mailboxEligibleType,
+  });
+  if (derivedIds.length === 0) {
+    return {
+      error: "Configureer eerst je verzending via Dashboard → Verzending — er zijn geen actieve verzendmethoden.",
+    };
+  }
+  const methods = await prisma.sellerShippingMethod.findMany({
+    where: { id: { in: derivedIds }, sellerId: userId, isActive: true },
+  });
+  const methodSnapshots = methods
+    .map((m) => {
+      const enriched = enrichMethod(m, seller.country!);
+      return enriched ? { id: m.id, price: enriched.effectivePrice } : null;
+    })
+    .filter((s): s is { id: string; price: number } => s !== null);
+  if (methodSnapshots.length === 0) {
+    return { error: "Geen geldige verzendmethodes beschikbaar." };
+  }
+  // shippingCost-kolom = goedkoopste afgeleide methode (claimsale-card leest dit).
+  const shippingCost = Math.min(...methodSnapshots.map((m) => m.price));
+
+  // ── Timing: direct LIVE of gepland (SCHEDULED) ───────────────────────
+  const startDate = startDateRaw ? new Date(startDateRaw) : new Date();
+  if (Number.isNaN(startDate.getTime())) return { error: "Ongeldige startdatum" };
+  const startTime = deriveClaimsaleStartTime(startDate);
+  const scheduled = isClaimsaleScheduled(startTime);
+  const initialStatus = scheduled ? "SCHEDULED" : "LIVE";
+
+  // ── Upsells (3 types, vast dagtarief × dagen) ────────────────────────
+  const accountType = seller.accountType ?? "FREE";
+  let upsellEntries: { type: ClaimsaleUpsellType; days: number }[] = [];
+  let perEntryCosts: number[] = [];
+  let totalUpsellCost = 0;
+  let freeUsed = 0;
+  if (typeof upsellsRaw === "string" && upsellsRaw.length > 0) {
+    try {
+      const parsed = JSON.parse(upsellsRaw) as Array<{ type: string; days?: number }>;
+      upsellEntries = parsed
+        .filter((e) => CLAIMSALE_UPSELL_TYPES_OFFERED.includes(e.type as ClaimsaleUpsellType))
+        .map((e) => ({
+          type: e.type as ClaimsaleUpsellType,
+          days: Math.max(1, Math.min(30, Math.floor(e.days ?? 1))),
+        }));
+      const allocation = applyFreeUpsellsToCost(
+        upsellEntries,
+        accountType,
+        seller.freeUpsellsRemaining ?? 0,
+        "claimsale"
+      );
+      perEntryCosts = allocation.perEntry;
+      totalUpsellCost = allocation.total;
+      freeUsed = allocation.freeUsed;
+    } catch {
+      upsellEntries = [];
+    }
+  }
+
+  // ── Labels (max 2, anti-tamper availability-hercheck) ────────────────
+  let parsedLabels: { type: ClaimsaleLabelType; colorKey: LabelColor }[] = [];
+  let labelsCost = 0;
+  if (typeof labelsRaw === "string" && labelsRaw.length > 0) {
+    try {
+      const raw = JSON.parse(labelsRaw) as Array<{ type: string; colorKey: string }>;
+      const cleaned = raw
+        .filter(
+          (l) =>
+            typeof l?.type === "string" &&
+            typeof l?.colorKey === "string" &&
+            isValidClaimsaleLabelType(l.type) &&
+            isValidLabelColor(l.colorKey)
+        )
+        .slice(0, MAX_LABELS_PER_CLAIMSALE) as { type: ClaimsaleLabelType; colorKey: LabelColor }[];
+
+      const hasMintItem =
+        type === "CARDS" &&
+        cardItems.some((i) => i.condition === "Near Mint" || i.condition === "Mint");
+      const availability = availableClaimsaleLabelsFor({ claimsaleType: type, hasMintItem });
+      const availSet = new Set(availability.filter((a) => a.available).map((a) => a.type));
+      for (const l of cleaned) {
+        if (!availSet.has(l.type)) {
+          return { error: `Label "${l.type}" is niet beschikbaar voor deze claimsale` };
+        }
+      }
+      const seen = new Set<ClaimsaleLabelType>();
+      parsedLabels = cleaned.filter((l) => {
+        if (seen.has(l.type)) return false;
+        seen.add(l.type);
+        return true;
+      });
+      labelsCost = calculateClaimsaleLabelCost(parsedLabels.length);
+    } catch {
+      parsedLabels = [];
+    }
+  }
+
+  // Balance-check op upsells + labels samen.
+  const totalPromotionCost = totalUpsellCost + labelsCost;
+  if (totalPromotionCost > 0) {
+    const availableBalance = (seller.balance ?? 0) - (seller.reservedBalance ?? 0);
+    if (totalPromotionCost > availableBalance) {
+      return { error: "Onvoldoende saldo voor promotie-opties" };
+    }
+  }
+
+  // Upsell startsAt: LIVE → nu, SCHEDULED → claimsale-startTime.
+  const upsellStartsAt = scheduled ? startTime : new Date();
+
+  // ── Atomic create: claimsale + items + shipping + upsells + labels ───
   const claimsale = await prisma.$transaction(async (tx) => {
     const cs = await tx.claimsale.create({
       data: {
         title,
         description,
         coverImage,
+        type,
         shippingCost,
         sellerId: userId,
-        status: "DRAFT",
+        status: initialStatus,
+        startTime,
+        publishedAt: startTime,
         items: {
-          create: await Promise.all(items.map(async (item) => {
-            const autoCardSetId = item.tcgdexId && !item.cardSetId
-              ? await resolveLocalCardSetId(item.tcgdexId)
-              : null;
-            return {
-              cardName: item.cardName || "Kaart",
-              ...(item.cardSetId
-                ? { cardSetId: item.cardSetId }
-                : autoCardSetId
-                  ? { cardSetId: autoCardSetId }
-                  : {}),
-              ...(item.cardNumber ? { reference: item.cardNumber } : {}),
-              ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
-              ...(item.tcgdexId ? { tcgdexId: item.tcgdexId } : {}),
-              condition: item.condition,
-              price: item.price,
-              imageUrls: JSON.stringify(item.imageUrls ?? []),
-            };
-          })),
+          create:
+            type === "CARDS"
+              ? await Promise.all(
+                  cardItems.map(async (item) => {
+                    const autoCardSetId =
+                      item.tcgdexId && !item.cardSetId
+                        ? await resolveLocalCardSetId(item.tcgdexId)
+                        : null;
+                    return {
+                      cardName: item.cardName || "Kaart",
+                      ...(item.cardSetId
+                        ? { cardSetId: item.cardSetId }
+                        : autoCardSetId
+                          ? { cardSetId: autoCardSetId }
+                          : {}),
+                      ...(item.cardNumber ? { reference: item.cardNumber } : {}),
+                      ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
+                      ...(item.tcgdexId ? { tcgdexId: item.tcgdexId } : {}),
+                      condition: item.condition,
+                      price: item.price,
+                      imageUrls: JSON.stringify(item.imageUrls ?? []),
+                    };
+                  })
+                )
+              : productItems.map((item) => ({
+                  cardName: item.cardName,
+                  ...(item.itemDescription ? { itemDescription: item.itemDescription } : {}),
+                  ...(item.sellerNote ? { sellerNote: item.sellerNote } : {}),
+                  condition: item.condition,
+                  price: item.price,
+                  imageUrls: JSON.stringify(item.imageUrls),
+                })),
         },
       },
     });
 
-    // Create shipping method links
     for (const m of methodSnapshots) {
       await tx.claimsaleShippingMethod.create({
+        data: { claimsaleId: cs.id, shippingMethodId: m.id, price: m.price },
+      });
+    }
+
+    for (let i = 0; i < upsellEntries.length; i++) {
+      const entry = upsellEntries[i];
+      const cost = perEntryCosts[i] ?? 0;
+      await tx.claimsaleUpsell.create({
         data: {
           claimsaleId: cs.id,
-          shippingMethodId: m.id,
-          price: m.price,
+          type: entry.type,
+          startsAt: upsellStartsAt,
+          expiresAt: new Date(upsellStartsAt.getTime() + entry.days * DAY_MS),
+          dailyCost: entry.days > 0 ? cost / entry.days : 0,
+          totalCost: cost,
         },
+      });
+    }
+
+    if (parsedLabels.length > 0) {
+      const perLabelCost = labelsCost / parsedLabels.length;
+      await tx.claimsaleLabel.createMany({
+        data: parsedLabels.map((l) => ({
+          claimsaleId: cs.id,
+          type: l.type,
+          colorKey: l.colorKey,
+          cost: Math.round(perLabelCost * 100) / 100,
+        })),
       });
     }
 
     return cs;
   });
 
-  redirect(`/nl/claimsales/${claimsale.id}`);
+  // Balance-deduct voor upsells + labels samen (na de create, mirror createAuction).
+  if (totalPromotionCost > 0) {
+    await deductBalance(
+      userId,
+      totalPromotionCost,
+      "UPSELL",
+      `Promotie-opties claimsale: ${title}`,
+      claimsale.id
+    );
+  }
+
+  // Race-safe free-upsell quota-decrement.
+  if (freeUsed > 0) {
+    const updated = await prisma.user.updateMany({
+      where: { id: userId, freeUpsellsRemaining: { gte: freeUsed } },
+      data: { freeUpsellsRemaining: { decrement: freeUsed } },
+    });
+    if (updated.count === 0) {
+      console.warn(
+        `[createClaimsale] Free-upsell quota race for user ${userId}: claimed ${freeUsed} but quota was depleted.`
+      );
+    }
+  }
+
+  // Ember voor het aanmaken van een claimsale.
+  const { logActivity } = await import("@/actions/activity");
+  logActivity(userId, "CREATE_LISTING", { claimsaleId: claimsale.id });
+
+  // SCHEDULED: bump de activator-scheduler zodat 'ie op startTime flipt.
+  if (initialStatus === "SCHEDULED") {
+    import("@/lib/claimsale-activator-scheduler")
+      .then(({ scheduleNextClaimsaleActivation }) =>
+        scheduleNextClaimsaleActivation("create-claimsale")
+      )
+      .catch((err) => console.error("[createClaimsale] activator bump failed", err));
+  }
+
+  return { success: true, claimsaleId: claimsale.id };
 }
 
 export async function publishClaimsale(claimsaleId: string) {
@@ -291,9 +517,16 @@ export async function expireClaimedItems(claimsaleId?: string) {
   const now = new Date();
   const cutoff = new Date(now.getTime() - CLAIM_DURATION_MS);
 
+  // Skip items met een actieve checkout-lock — die staan momenteel in
+  // betalings-flow en mogen niet midden-flight worden opgeruimd. Lock
+  // verloopt na 5 min zodat vastgelopen checkouts niet permanent blokkeren.
   const where = {
     status: "CLAIMED",
     claimedAt: { lt: cutoff },
+    OR: [
+      { checkoutLockExpiresAt: null },
+      { checkoutLockExpiresAt: { lt: now } },
+    ],
     ...(claimsaleId ? { claimsaleId } : {}),
   };
 
@@ -319,11 +552,18 @@ export async function expireClaimedItems(claimsaleId?: string) {
     distinct: ["userId"],
   });
 
-  // Reset items to AVAILABLE and delete associated cart items in transaction
+  // Reset items to AVAILABLE and delete associated cart items in transaction.
+  // checkoutLockExpiresAt op null zetten zodat een volgende claimer een
+  // nieuwe one-shot lock kan zetten bij hun checkout.
   await prisma.$transaction([
     prisma.claimsaleItem.updateMany({
       where: { id: { in: expiredIds } },
-      data: { status: "AVAILABLE", claimedAt: null, claimedById: null },
+      data: {
+        status: "AVAILABLE",
+        claimedAt: null,
+        claimedById: null,
+        checkoutLockExpiresAt: null,
+      },
     }),
     prisma.cartItem.deleteMany({
       where: { claimsaleItemId: { in: expiredIds } },
@@ -404,10 +644,18 @@ export async function claimItem(claimsaleItemId: string) {
 
   try {
     await prisma.$transaction(async (tx) => {
-      // Atomically claim the item (race condition protection)
+      // Atomically claim the item (race condition protection). Reset
+      // checkoutLockExpiresAt: defensief, voor het geval een eerdere
+      // claim-cycle de lock niet had opgeruimd. Nieuwe claimer krijgt
+      // bij z'n checkout een verse one-shot lock.
       const updated = await tx.claimsaleItem.updateMany({
         where: { id: claimsaleItemId, status: "AVAILABLE" },
-        data: { status: "CLAIMED", claimedAt: now, claimedById: userId },
+        data: {
+          status: "CLAIMED",
+          claimedAt: now,
+          claimedById: userId,
+          checkoutLockExpiresAt: null,
+        },
       });
 
       if (updated.count === 0) {
@@ -488,10 +736,16 @@ export async function claimAllItems(claimsaleId: string) {
   const itemIds = itemsToClaim.map((i) => i.id);
 
   await prisma.$transaction(async (tx) => {
-    // Atomically claim all items
+    // Atomically claim all items. Reset checkoutLockExpiresAt defensief
+    // (zie claimItem voor uitleg).
     const updated = await tx.claimsaleItem.updateMany({
       where: { id: { in: itemIds }, status: "AVAILABLE" },
-      data: { status: "CLAIMED", claimedAt: now, claimedById: userId },
+      data: {
+        status: "CLAIMED",
+        claimedAt: now,
+        claimedById: userId,
+        checkoutLockExpiresAt: null,
+      },
     });
 
     // Reset ALL existing claim timers for this user (items not in this batch)
@@ -546,7 +800,12 @@ export async function unclaimItem(claimsaleItemId: string) {
   await prisma.$transaction([
     prisma.claimsaleItem.update({
       where: { id: claimsaleItemId },
-      data: { status: "AVAILABLE", claimedAt: null, claimedById: null },
+      data: {
+        status: "AVAILABLE",
+        claimedAt: null,
+        claimedById: null,
+        checkoutLockExpiresAt: null,
+      },
     }),
     prisma.cartItem.deleteMany({
       where: { userId, claimsaleItemId },
