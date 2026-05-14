@@ -119,11 +119,15 @@ export async function createClaimsale(formData: FormData) {
   }
 
   // ── Verzending (claimsale-specifieke derivation) ─────────────────────
-  // CARDS: brievenbuspakket (default, <€150) + aangetekend pakket. Géén
-  //        standaard pakket in het binnenland (kaarten gaan door de bus),
-  //        maar naar buurland / overige EU blijft standaard pakket wel
-  //        beschikbaar (geen brievenbuspost cross-border).
+  // CARDS: brievenbuspakket (default aan) + aangetekend pakket. Géén standaard
+  //        pakket in het binnenland (kaarten gaan door de bus), maar naar
+  //        buurland / overige EU blijft standaard pakket wel beschikbaar.
   // ITEMS: standaard pakket + aangetekend pakket in alle zones. Géén brievenbus.
+  //
+  // De €150-grens voor brievenbus geldt PER BESTELLING en wordt bij het
+  // afrekenen gecontroleerd (ShippingMethodPicker) — niet hier op item-niveau,
+  // want een claimsale kan losse dure kaarten bevatten zonder dat een
+  // individuele bestelling boven €150 uitkomt.
   const seller = await prisma.user.findUnique({
     where: { id: userId },
     select: { country: true, accountType: true, balance: true, reservedBalance: true, freeUpsellsRemaining: true },
@@ -132,12 +136,8 @@ export async function createClaimsale(formData: FormData) {
     return { error: "Vul eerst je land in op je profiel." };
   }
 
-  const allPrices = type === "CARDS" ? cardItems.map((i) => i.price) : productItems.map((i) => i.price);
-  const maxItemPrice = allPrices.length > 0 ? Math.max(...allPrices) : null;
-
-  // Brievenbus alleen voor CARDS, opt-in (default aan in de UI) én onder €150.
-  const mailboxOk =
-    type === "CARDS" && allowMailbox && (maxItemPrice === null || maxItemPrice < 150);
+  // Brievenbus alleen voor CARDS, opt-in (default aan in de UI).
+  const mailboxOk = type === "CARDS" && allowMailbox;
 
   const allMethods = await prisma.sellerShippingMethod.findMany({
     where: { sellerId: userId, isActive: true },
@@ -146,7 +146,7 @@ export async function createClaimsale(formData: FormData) {
     if (m.service === "PARCEL_SIGNED") return true; // altijd, alle zones
     // STANDARD: ITEMS overal; CARDS alleen cross-border (niet binnenland).
     if (m.service === "PARCEL_STANDARD") return type === "ITEMS" || m.zone !== "DOMESTIC";
-    if (m.service === "MAILBOX_PARCEL") return mailboxOk; // alleen CARDS <€150
+    if (m.service === "MAILBOX_PARCEL") return mailboxOk; // alleen CARDS
     return false;
   });
   const methodSnapshots = eligibleMethods

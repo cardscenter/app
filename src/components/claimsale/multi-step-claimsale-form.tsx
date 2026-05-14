@@ -106,7 +106,6 @@ export function MultiStepClaimsaleForm({
   const prices = form.items
     .map((i) => parseFloat(i.price))
     .filter((p) => !Number.isNaN(p) && p > 0);
-  const maxItemPrice = prices.length > 0 ? Math.max(...prices) : null;
   const hasMintItem =
     form.type === "CARDS" &&
     form.items.some((i) => i.condition === "Near Mint" || i.condition === "Mint");
@@ -229,7 +228,6 @@ export function MultiStepClaimsaleForm({
             <StepVerzending
               type={form.type}
               shippingMethods={shippingMethods}
-              maxItemPrice={maxItemPrice}
               allowMailbox={form.allowMailbox}
               onAllowMailboxChange={(next) => updateField("allowMailbox", next)}
             />

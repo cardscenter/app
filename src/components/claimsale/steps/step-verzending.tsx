@@ -8,7 +8,6 @@ import type { ClaimsaleType } from "../wizard-types";
 interface StepVerzendingProps {
   type: ClaimsaleType;
   shippingMethods: EnrichedShippingMethod[];
-  maxItemPrice: number | null;
   allowMailbox: boolean;
   onAllowMailboxChange: (next: boolean) => void;
 }
@@ -16,7 +15,6 @@ interface StepVerzendingProps {
 export function StepVerzending({
   type,
   shippingMethods,
-  maxItemPrice,
   allowMailbox,
   onAllowMailboxChange,
 }: StepVerzendingProps) {
@@ -44,10 +42,13 @@ export function StepVerzending({
       <p className="text-sm text-muted-foreground">
         {type === "CARDS" ? t("verzendingCardsHint") : t("verzendingItemsHint")}
       </p>
+      {/* price={null}: bij het aanmaken blokkeren we brievenbus niet op
+          item-prijs. De €150-grens geldt per bestelling en wordt bij het
+          afrekenen gecontroleerd. */}
       <ShippingMethodDisplay
         methods={filteredMethods}
         listingType={shippingListingType}
-        price={maxItemPrice}
+        price={null}
         allowMailbox={allowMailbox}
         onAllowMailboxChange={onAllowMailboxChange}
         mailboxHint={type === "CARDS" ? t("mailboxHintCards") : undefined}

@@ -13,6 +13,10 @@ import {
   Tag,
   Banknote,
   LayoutGrid,
+  Megaphone,
+  Mailbox,
+  Package,
+  ShieldCheck,
 } from "lucide-react";
 import {
   deriveClaimsaleStartTime,
@@ -22,6 +26,7 @@ import {
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
 import { calculateClaimsaleLabelCost } from "@/lib/claimsale/labels";
 import { CLAIMSALE_LABEL_TEXT_NL } from "../claimsale-labels";
+import { ClaimsaleLabels } from "../claimsale-labels";
 import type { ClaimsaleFormState, ClaimsaleItemDraft } from "../wizard-types";
 
 interface ClaimsalePreviewProps {
@@ -54,6 +59,23 @@ function SectionCard({
   );
 }
 
+function InfoRow({
+  label,
+  children,
+  emphasize,
+}: {
+  label: string;
+  children: React.ReactNode;
+  emphasize?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-[140px_1fr] gap-3 text-sm">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className={emphasize ? "font-semibold text-foreground" : "text-foreground"}>{children}</dd>
+    </div>
+  );
+}
+
 function itemDisplayImage(item: ClaimsaleItemDraft, type: string): string | null {
   if (type === "CARDS") {
     return item.frontImage ?? item.tcgdex?.imageUrl ?? null;
@@ -72,6 +94,12 @@ const UPSELL_LABEL: Record<string, string> = {
   HOMEPAGE_SPOTLIGHT: "Homepage Spotlight",
   CATEGORY_HIGHLIGHT: "Categorie-uitlichting",
   ITEM_PREVIEW: "Geavanceerde Kaart-Preview-Rij",
+};
+
+const SHIPPING_SERVICE_META: Record<string, { icon: typeof Mailbox; label: string }> = {
+  MAILBOX_PARCEL: { icon: Mailbox, label: "Brievenbuspakket" },
+  PARCEL_STANDARD: { icon: Package, label: "Standaard pakket" },
+  PARCEL_SIGNED: { icon: ShieldCheck, label: "Aangetekend pakket" },
 };
 
 export function ClaimsalePreview({
@@ -93,10 +121,9 @@ export function ClaimsalePreview({
   // Galerij = cover + alle item-afbeeldingen (gededupliceerd).
   const galleryImages = Array.from(
     new Set(
-      [
-        form.coverImage,
-        ...form.items.map((i) => itemDisplayImage(i, form.type)),
-      ].filter((u): u is string => !!u)
+      [form.coverImage, ...form.items.map((i) => itemDisplayImage(i, form.type))].filter(
+        (u): u is string => !!u
+      )
     )
   );
 
@@ -105,6 +132,22 @@ export function ClaimsalePreview({
     .filter((p) => !Number.isNaN(p) && p > 0);
   const minPrice = prices.length > 0 ? Math.min(...prices) : null;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : null;
+  const priceRange =
+    minPrice === null
+      ? "—"
+      : minPrice === maxPrice
+        ? `€${minPrice.toFixed(2)}`
+        : `€${minPrice!.toFixed(2)} – €${maxPrice!.toFixed(2)}`;
+
+  // Welke verzendservices gelden er — gespiegeld aan de createClaimsale-derivation.
+  const shippingServices =
+    form.type === "CARDS"
+      ? [
+          ...(form.allowMailbox ? (["MAILBOX_PARCEL"] as const) : []),
+          "PARCEL_STANDARD",
+          "PARCEL_SIGNED",
+        ]
+      : (["PARCEL_STANDARD", "PARCEL_SIGNED"] as const);
 
   function prev() {
     setCurrent((c) => (c === 0 ? galleryImages.length - 1 : c - 1));
@@ -115,6 +158,7 @@ export function ClaimsalePreview({
 
   return (
     <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+      {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-4">
         <button
           type="button"
@@ -136,6 +180,7 @@ export function ClaimsalePreview({
       )}
 
       <div className="space-y-5">
+        {/* Top: galerij + identiteit */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           {/* Galerij */}
           <div className="space-y-3">
@@ -207,26 +252,33 @@ export function ClaimsalePreview({
                 {form.type === "CARDS" ? t("typeCards") : t("typeItems")}
               </span>
               <h1 className="mt-2 text-2xl font-bold text-foreground">
-                {form.title || <span className="italic text-muted-foreground">{t("titlePlaceholder")}</span>}
+                {form.title || (
+                  <span className="italic text-muted-foreground">{t("titlePlaceholder")}</span>
+                )}
               </h1>
+              {form.labels.length > 0 && (
+                <ClaimsaleLabels
+                  labels={form.labels}
+                  size="md"
+                  className="mt-2"
+                />
+              )}
             </div>
+
+            <SectionCard icon={Banknote} title={t("reviewPriceRange")}>
+              <p className="text-lg font-bold text-foreground">
+                {priceRange}
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  ({form.items.length} {form.items.length === 1 ? "item" : "items"})
+                </span>
+              </p>
+            </SectionCard>
+
             {form.description && (
               <SectionCard icon={Tag} title={t("description")}>
                 <p className="whitespace-pre-wrap text-sm text-foreground">{form.description}</p>
               </SectionCard>
             )}
-            <SectionCard icon={Banknote} title={t("reviewPriceRange")}>
-              <p className="text-sm text-foreground">
-                {minPrice === null
-                  ? "—"
-                  : minPrice === maxPrice
-                    ? `€${minPrice.toFixed(2)}`
-                    : `€${minPrice!.toFixed(2)} – €${maxPrice!.toFixed(2)}`}
-                <span className="ml-2 text-xs text-muted-foreground">
-                  ({form.items.length} {form.items.length === 1 ? "item" : "items"})
-                </span>
-              </p>
-            </SectionCard>
           </div>
         </div>
 
@@ -236,9 +288,11 @@ export function ClaimsalePreview({
             {form.items.map((item, idx) => {
               const img = itemDisplayImage(item, form.type);
               return (
-                <li key={item.id} className="flex items-center gap-3 py-2 first:pt-0">
-                  <span className="w-6 shrink-0 text-xs font-medium text-muted-foreground">#{idx + 1}</span>
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                <li key={item.id} className="flex items-center gap-3 py-2.5 first:pt-0">
+                  <span className="w-7 shrink-0 text-xs font-medium text-muted-foreground">
+                    #{idx + 1}
+                  </span>
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={img} alt="" className="h-full w-full object-cover" />
@@ -252,6 +306,11 @@ export function ClaimsalePreview({
                       {item.condition}
                       {item.sellerNote ? ` · ${item.sellerNote}` : ""}
                     </div>
+                    {form.type === "ITEMS" && item.itemDescription && (
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground/80">
+                        {item.itemDescription}
+                      </div>
+                    )}
                   </div>
                   <span className="shrink-0 text-sm font-semibold text-foreground">
                     {item.price ? `€${parseFloat(item.price).toFixed(2)}` : "—"}
@@ -264,8 +323,23 @@ export function ClaimsalePreview({
 
         {/* Verzending */}
         <SectionCard icon={Truck} title={t("stepVerzending")}>
-          <p className="text-sm text-foreground">
-            {form.allowMailbox ? t("reviewMailboxAllowed") : t("reviewMailboxNotAllowed")}
+          <div className="flex flex-wrap gap-2">
+            {shippingServices.map((service) => {
+              const meta = SHIPPING_SERVICE_META[service];
+              const Icon = meta.icon;
+              return (
+                <span
+                  key={service}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-foreground"
+                >
+                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  {meta.label}
+                </span>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            {form.type === "CARDS" ? t("verzendingCardsHint") : t("verzendingItemsHint")}
           </p>
         </SectionCard>
 
@@ -280,12 +354,16 @@ export function ClaimsalePreview({
           >
             <Clock
               className={`mt-0.5 h-4 w-4 shrink-0 ${
-                scheduled ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+                scheduled
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-emerald-600 dark:text-emerald-400"
               }`}
             />
             <p
               className={
-                scheduled ? "text-amber-800 dark:text-amber-300" : "text-emerald-800 dark:text-emerald-300"
+                scheduled
+                  ? "text-amber-800 dark:text-amber-300"
+                  : "text-emerald-800 dark:text-emerald-300"
               }
             >
               {scheduled
@@ -295,7 +373,25 @@ export function ClaimsalePreview({
           </div>
         </SectionCard>
 
-        {/* Promotie-kosten */}
+        {/* Promotie — alleen tonen als er iets gekozen is */}
+        {(form.upsells.length > 0 || form.labels.length > 0) && (
+          <SectionCard icon={Megaphone} title={t("stepPromotie")}>
+            <dl className="space-y-2">
+              {form.upsells.length > 0 && (
+                <InfoRow label={t("reviewPromotionUpsells")}>
+                  {form.upsells.map((u) => UPSELL_LABEL[u.type] ?? u.type).join(" · ")}
+                </InfoRow>
+              )}
+              {form.labels.length > 0 && (
+                <InfoRow label={t("reviewPromotionLabels")}>
+                  <ClaimsaleLabels labels={form.labels} size="sm" />
+                </InfoRow>
+              )}
+            </dl>
+          </SectionCard>
+        )}
+
+        {/* Te betalen kosten */}
         <PromotionCostBlock
           upsells={form.upsells}
           labels={form.labels}
@@ -325,6 +421,7 @@ export function ClaimsalePreview({
         </div>
       </div>
 
+      {/* Lightbox */}
       {lightbox && galleryImages.length > 0 && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
@@ -341,6 +438,30 @@ export function ClaimsalePreview({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={galleryImages[current]} alt="" className="h-full w-full object-contain" />
           </div>
+          {galleryImages.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prev();
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white transition-colors hover:bg-white/20"
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  next();
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white transition-colors hover:bg-white/20"
+              >
+                <ChevronRight className="h-8 w-8" />
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -379,10 +500,15 @@ function PromotionCostBlock({
           const cost = allocation.perEntry[i] ?? 0;
           const isFree = cost === 0;
           return (
-            <li key={`${u.type}-${i}`} className="flex items-baseline justify-between gap-3 py-2 first:pt-0">
+            <li
+              key={`${u.type}-${i}`}
+              className="flex items-baseline justify-between gap-3 py-2 first:pt-0"
+            >
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-foreground">{UPSELL_LABEL[u.type] ?? u.type}</div>
-                <div className="text-xs text-muted-foreground">Eenmalig — hele claimsale-looptijd</div>
+                <div className="text-xs text-muted-foreground">
+                  Eenmalig — hele claimsale-looptijd
+                </div>
               </div>
               <span
                 className={`font-medium ${isFree ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}
