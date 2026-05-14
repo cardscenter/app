@@ -13,6 +13,10 @@ import { getSellerOtherItems } from "@/lib/recommendations";
 import { SellerInfoBlock } from "@/components/ui/seller-info-block";
 import { getSellerInfo } from "@/lib/seller-info";
 import { PageContainer } from "@/components/layout/page-container";
+import { ClaimsaleLabels } from "@/components/claimsale/claimsale-labels";
+import { ClaimsalePromotionManager } from "@/components/claimsale/claimsale-promotion-manager";
+import { Clock } from "lucide-react";
+import { formatNLDateTime } from "@/lib/claimsale/timing";
 
 export default async function ClaimsaleDetailPage({
   params,
@@ -27,12 +31,17 @@ export default async function ClaimsaleDetailPage({
     where: { id: claimsaleId },
     include: {
       seller: { select: { displayName: true } },
+      labels: { select: { type: true, colorKey: true } },
+      upsells: {
+        where: { expiresAt: { gt: new Date() } },
+        select: { id: true, type: true, startsAt: true, expiresAt: true, totalCost: true },
+      },
       items: {
         include: {
           cardSet: { include: { series: { include: { category: true } } } },
           buyer: { select: { displayName: true } },
         },
-        orderBy: { cardName: "asc" },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -40,6 +49,7 @@ export default async function ClaimsaleDetailPage({
   if (!claimsale) notFound();
 
   const isOwner = session?.user?.id === claimsale.sellerId;
+  const isScheduled = claimsale.status === "SCHEDULED";
   const availableCount = claimsale.items.filter((i) => i.status === "AVAILABLE" || i.status === "CLAIMED").length;
   const tCarousel = await getTranslations("carousel");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
@@ -61,6 +71,9 @@ export default async function ClaimsaleDetailPage({
           <h1 className="text-2xl font-bold text-foreground">
             {claimsale.title}
           </h1>
+          {claimsale.labels.length > 0 && (
+            <ClaimsaleLabels labels={claimsale.labels} size="md" className="mt-2" />
+          )}
           <p className="mt-1 text-sm text-muted-foreground">
             {claimsale.seller.displayName} · {availableCount}/{claimsale.items.length} {t("available").toLowerCase()} · {t("shippingCost")}: €{claimsale.shippingCost.toFixed(2)}
           </p>
@@ -73,6 +86,15 @@ export default async function ClaimsaleDetailPage({
         ) : null}
       </div>
 
+      {isScheduled && claimsale.startTime && (
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-indigo-300 bg-indigo-50 p-3 text-sm dark:border-indigo-800/50 dark:bg-indigo-950/20">
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+          <p className="text-indigo-800 dark:text-indigo-300">
+            {t("scheduledStartHint", { date: formatNLDateTime(claimsale.startTime) })}
+          </p>
+        </div>
+      )}
+
       {claimsale.description && (
         <p className="mt-4 whitespace-pre-wrap text-muted-foreground">
           {claimsale.description}
@@ -82,6 +104,21 @@ export default async function ClaimsaleDetailPage({
       <div className="mt-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
         {t("shippingNote")}
       </div>
+
+      {isOwner && (isScheduled || claimsale.status === "LIVE") && (
+        <div className="mt-4">
+          <ClaimsalePromotionManager
+            claimsaleId={claimsale.id}
+            upsells={claimsale.upsells.map((u) => ({
+              id: u.id,
+              type: u.type,
+              startsAt: u.startsAt.toISOString(),
+              expiresAt: u.expiresAt.toISOString(),
+              totalCost: u.totalCost,
+            }))}
+          />
+        </div>
+      )}
 
       {/* Seller info */}
       {sellerInfo && (
