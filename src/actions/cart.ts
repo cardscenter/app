@@ -211,7 +211,14 @@ export async function getCart(): Promise<CartSellerGroup[]> {
 }
 
 // shippingSelections: Record<sellerId, shippingMethodId> — chosen method per seller
-export async function checkout(shippingSelections?: Record<string, string>) {
+// mergeIntoBundles:    Record<sellerId, existingBundleId> — voeg items toe aan
+//                      een bestaande claimsale-bundle ipv een nieuwe maken
+//                      (bespaart verzendkosten). Server hercheckt of de bundle
+//                      nog combinable is.
+export async function checkout(
+  shippingSelections?: Record<string, string>,
+  mergeIntoBundles?: Record<string, string>
+) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -337,6 +344,41 @@ export async function checkout(shippingSelections?: Record<string, string>) {
     sellerGroups.get(sellerId)!.push(ci);
   }
 
+  // Verifieer merge-keuzes upfront: bundle moet bestaan, van deze koper-
+  // verkoper zijn, PAID + unlocked, en puur een claimsale-bundle (geen
+  // listing/auction/proposal). Falen vóór side-effects.
+  const mergeVerified = new Map<string, string>(); // sellerId → bundleId
+  if (mergeIntoBundles) {
+    for (const [sellerId, bundleId] of Object.entries(mergeIntoBundles)) {
+      if (!sellerGroups.has(sellerId)) continue;
+      const b = await prisma.shippingBundle.findUnique({
+        where: { id: bundleId },
+        select: {
+          id: true, sellerId: true, buyerId: true, status: true,
+          lockedForPackingAt: true, paymentMode: true, deliveryMethod: true,
+          listingId: true, auctionId: true, bundleProposalId: true,
+        },
+      });
+      if (!b || b.sellerId !== sellerId || b.buyerId !== session.user.id) {
+        return { error: "Ongeldige bestelling-merge gekozen — vernieuw de pagina." };
+      }
+      const stillCombinable =
+        b.status === "PAID" &&
+        b.lockedForPackingAt === null &&
+        b.paymentMode === "PLATFORM" &&
+        b.deliveryMethod === "SHIP" &&
+        b.listingId === null &&
+        b.auctionId === null &&
+        b.bundleProposalId === null;
+      if (!stillCombinable) {
+        return {
+          error: "De vorige bestelling kan niet meer worden uitgebreid (verkoper is begonnen met inpakken). Vernieuw de winkelwagen.",
+        };
+      }
+      mergeVerified.set(sellerId, bundleId);
+    }
+  }
+
   // Calculate total cost needed
   let totalNeeded = 0;
   const sellerShippingInfo = new Map<string, { cost: number; methodId: string | null }>();
@@ -344,41 +386,43 @@ export async function checkout(shippingSelections?: Record<string, string>) {
   for (const [sellerId, items] of sellerGroups) {
     const itemTotal = items.reduce((sum, ci) => sum + ci.claimsaleItem.price, 0);
 
-    // Elke checkout is een aparte bestelling — geen merge met bestaande
-    // bundles (ook niet met eerdere marktplaats-/veiling-aankopen van
-    // dezelfde verkoper). Bundeling gebeurt alleen BINNEN één checkout:
-    // de sellerGroups-loop maakt al één bundle per verkoper.
     let shippingCost = 0;
     let methodId: string | null = null;
 
-    // Determine shipping cost: new method system or legacy fallback
-    const selectedMethodId = shippingSelections?.[sellerId];
-    if (selectedMethodId) {
-      // Find the method's snapshotted price from any of this seller's claimsales
-      const firstItem = items[0];
-      const csm = firstItem.claimsaleItem.claimsale.shippingMethods.find(
-        (m) => m.shippingMethodId === selectedMethodId
-      );
-      shippingCost = csm ? csm.price : 0;
-      methodId = selectedMethodId;
+    if (mergeVerified.has(sellerId)) {
+      // Merge in bestaande bundle: verzendkosten zijn al betaald in die order.
+      // Methode + signed-eis zijn op de oorspronkelijke order al gevalideerd.
+      // Geen extra check hier nodig.
     } else {
-      // Legacy fallback: use claimsale's flat shippingCost
-      shippingCost = items[0].claimsaleItem.claimsale.shippingCost;
-    }
-
-    // Signed shipping enforcement (Fase 33: alleen op orderwaarde, niet op zone).
-    // Fase 33 v2: MAILBOX_PARCEL niet toegestaan ≥€150 (anti-fraude).
-    if (methodId) {
-      const method = await prisma.sellerShippingMethod.findUnique({
-        where: { id: methodId },
-        select: { service: true },
-      });
-
-      if (itemTotal >= 150 && method?.service === "MAILBOX_PARCEL") {
-        return { error: "Brievenbuspakket niet toegestaan voor bestellingen boven €150" };
+      // Determine shipping cost: new method system or legacy fallback
+      const selectedMethodId = shippingSelections?.[sellerId];
+      if (selectedMethodId) {
+        // Find the method's snapshotted price from any of this seller's claimsales
+        const firstItem = items[0];
+        const csm = firstItem.claimsaleItem.claimsale.shippingMethods.find(
+          (m) => m.shippingMethodId === selectedMethodId
+        );
+        shippingCost = csm ? csm.price : 0;
+        methodId = selectedMethodId;
+      } else {
+        // Legacy fallback: use claimsale's flat shippingCost
+        shippingCost = items[0].claimsaleItem.claimsale.shippingCost;
       }
-      if (requiresSignedShipping(itemTotal) && method?.service !== "PARCEL_SIGNED") {
-        return { error: "Aangetekende verzending is verplicht voor bestellingen boven €150" };
+
+      // Signed shipping enforcement (Fase 33: alleen op orderwaarde, niet op zone).
+      // Fase 33 v2: MAILBOX_PARCEL niet toegestaan ≥€150 (anti-fraude).
+      if (methodId) {
+        const method = await prisma.sellerShippingMethod.findUnique({
+          where: { id: methodId },
+          select: { service: true },
+        });
+
+        if (itemTotal >= 150 && method?.service === "MAILBOX_PARCEL") {
+          return { error: "Brievenbuspakket niet toegestaan voor bestellingen boven €150" };
+        }
+        if (requiresSignedShipping(itemTotal) && method?.service !== "PARCEL_SIGNED") {
+          return { error: "Aangetekende verzending is verplicht voor bestellingen boven €150" };
+        }
       }
     }
 
@@ -397,26 +441,51 @@ export async function checkout(shippingSelections?: Record<string, string>) {
 
   for (const [sellerId, items] of sellerGroups) {
     const { cost: shippingCost, methodId: shippingMethodId } = sellerShippingInfo.get(sellerId)!;
+    const mergeBundleId = mergeVerified.get(sellerId);
+    const appendedThisSeller: { name: string; price: number }[] = [];
 
-    // Nieuwe bundle per checkout (PAID — betaling is direct via wallet).
-    // Bewust geen findFirst-hergebruik: elke bestelling is een losse aankoop.
-    const bundle = await prisma.shippingBundle.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        buyerId: session.user.id,
-        sellerId,
-        shippingCost,
-        totalItemCost: 0,
-        totalCost: shippingCost,
-        status: "PAID",
-        shippingMethodId: shippingMethodId,
-        buyerStreet: user.street,
-        buyerHouseNumber: user.houseNumber,
-        buyerPostalCode: user.postalCode,
-        buyerCity: user.city,
-        buyerCountry: user.country,
-      },
-    });
+    let bundle;
+    if (mergeBundleId) {
+      // Race-safe claim van de bestaande bundle: filter op nog steeds
+      // unlocked + PAID. Increment van 0 is een no-op write die wel de
+      // WHERE-filter triggert + updatedAt bumpt. Faalt 'ie, dan is de
+      // bundle in de tussentijd gelockt/verzonden.
+      const claim = await prisma.shippingBundle.updateMany({
+        where: {
+          id: mergeBundleId,
+          sellerId,
+          buyerId: session.user.id,
+          status: "PAID",
+          lockedForPackingAt: null,
+        },
+        data: { totalItemCost: { increment: 0 } },
+      });
+      if (claim.count === 0) {
+        return {
+          error: "De vorige bestelling kan niet meer worden uitgebreid (verkoper is begonnen met inpakken). Vernieuw de winkelwagen.",
+        };
+      }
+      bundle = await prisma.shippingBundle.findUniqueOrThrow({ where: { id: mergeBundleId } });
+    } else {
+      // Nieuwe bundle per checkout (PAID — betaling is direct via wallet).
+      bundle = await prisma.shippingBundle.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          buyerId: session.user.id,
+          sellerId,
+          shippingCost,
+          totalItemCost: 0,
+          totalCost: shippingCost,
+          status: "PAID",
+          shippingMethodId: shippingMethodId,
+          buyerStreet: user.street,
+          buyerHouseNumber: user.houseNumber,
+          buyerPostalCode: user.postalCode,
+          buyerCity: user.city,
+          buyerCountry: user.country,
+        },
+      });
+    }
 
     for (const ci of items) {
       // Atomically move from CLAIMED to SOLD (race condition protection)
@@ -493,11 +562,34 @@ export async function checkout(shippingSelections?: Record<string, string>) {
         },
       });
 
+      appendedThisSeller.push({ name: ci.claimsaleItem.cardName, price: ci.claimsaleItem.price });
       claimedCount++;
     }
 
-    // Notify seller about new order
-    if (claimedCount > 0) {
+    // Bij merge: schrijf een append-event naar de tijdlijn en stuur een
+    // "uitgebreid"-notificatie ipv "nieuwe bestelling". Zo ziet de verkoper
+    // direct dat z'n lopende order is uitgebreid en wat erbij is gekomen.
+    if (mergeBundleId && appendedThisSeller.length > 0) {
+      const existing = bundle.appendHistory ? JSON.parse(bundle.appendHistory) as unknown[] : [];
+      existing.push({
+        at: new Date().toISOString(),
+        itemNames: appendedThisSeller.map((i) => i.name),
+        itemCount: appendedThisSeller.length,
+        itemTotal: appendedThisSeller.reduce((sum, i) => sum + i.price, 0),
+      });
+      await prisma.shippingBundle.update({
+        where: { id: bundle.id },
+        data: { appendHistory: JSON.stringify(existing) },
+      });
+
+      await createNotification(
+        sellerId,
+        "ORDER_PAID",
+        "Bestelling uitgebreid",
+        `${appendedThisSeller.length} extra ${appendedThisSeller.length === 1 ? "item" : "items"} toegevoegd aan bestelling ${bundle.orderNumber}.`,
+        "/dashboard/verkopen"
+      );
+    } else if (appendedThisSeller.length > 0) {
       await createNotification(
         sellerId,
         "ORDER_PAID",

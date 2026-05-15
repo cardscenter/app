@@ -88,6 +88,9 @@ export async function markAsShipped(
       trackingUrl,
       shippingProofUrls: proofUrls && proofUrls.length > 0 ? JSON.stringify(proofUrls) : null,
       shippedAt: new Date(),
+      // Defensive lock: ook als seller niet expliciet vergrendelde, is een
+      // verzonden bundle per definitie niet meer uit te breiden.
+      lockedForPackingAt: bundle.lockedForPackingAt ?? new Date(),
     },
   });
 
@@ -101,6 +104,38 @@ export async function markAsShipped(
   );
 
   publishBundleChanged(bundle.buyerId, bundle.sellerId, bundleId, "SHIPPED");
+
+  return { success: true };
+}
+
+/**
+ * Seller-only: vergrendel een PAID-bundle zodat een koper bij een volgende
+ * claimsale-checkout geen items meer kan toevoegen. Bedoeld om te klikken
+ * vóór je begint met inpakken. markAsShipped doet dit auto, dus alleen
+ * relevant in de window tussen "klaar voor inpakken" en "verzonden".
+ *
+ * Race-safe via conditional updateMany. Dubbel-klikken is geen probleem —
+ * tweede klik retourneert success met dezelfde lock-timestamp.
+ */
+export async function lockBundleForPacking(bundleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const bundle = await prisma.shippingBundle.findUnique({
+    where: { id: bundleId },
+    select: { sellerId: true, status: true, lockedForPackingAt: true, buyerId: true },
+  });
+  if (!bundle) return { error: "Bestelling niet gevonden" };
+  if (bundle.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (bundle.status !== "PAID") return { error: "Alleen PAID-bestellingen kunnen vergrendeld worden" };
+  if (bundle.lockedForPackingAt !== null) return { success: true }; // idempotent
+
+  await prisma.shippingBundle.updateMany({
+    where: { id: bundleId, lockedForPackingAt: null, status: "PAID" },
+    data: { lockedForPackingAt: new Date() },
+  });
+
+  publishBundleChanged(bundle.buyerId, bundle.sellerId, bundleId, "PAID");
 
   return { success: true };
 }

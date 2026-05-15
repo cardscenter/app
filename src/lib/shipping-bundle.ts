@@ -1,6 +1,65 @@
 import { prisma } from "@/lib/prisma";
 import { generateOrderNumber } from "@/lib/order-number";
 
+export interface CombinableBundle {
+  id: string;
+  orderNumber: string;
+  totalCost: number;
+  shippingCost: number;
+  itemCount: number;
+  createdAt: Date;
+}
+
+/**
+ * Per verkoper de bestaande claimsale-bundle waar de koper bij een volgende
+ * claimsale-checkout items aan kan toevoegen. Voorwaarden:
+ *   - PAID, geen lockedForPackingAt
+ *   - puur claimsale (geen listingId/auctionId/bundleProposalId)
+ *   - PLATFORM-escrow + SHIP-delivery (geen pickup/EXTERNAL)
+ * Levert max één bundle per verkoper op (de oudste, zodat een lopende
+ * bestelling z'n verzendkosten "houdt").
+ */
+export async function getCombinableClaimsaleBundles(
+  buyerId: string
+): Promise<Record<string, CombinableBundle>> {
+  const bundles = await prisma.shippingBundle.findMany({
+    where: {
+      buyerId,
+      status: "PAID",
+      lockedForPackingAt: null,
+      listingId: null,
+      auctionId: null,
+      bundleProposalId: null,
+      paymentMode: "PLATFORM",
+      deliveryMethod: "SHIP",
+    },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      orderNumber: true,
+      sellerId: true,
+      totalCost: true,
+      shippingCost: true,
+      createdAt: true,
+      _count: { select: { items: true } },
+    },
+  });
+
+  const out: Record<string, CombinableBundle> = {};
+  for (const b of bundles) {
+    if (out[b.sellerId]) continue; // first (oldest) wins
+    out[b.sellerId] = {
+      id: b.id,
+      orderNumber: b.orderNumber,
+      totalCost: b.totalCost,
+      shippingCost: b.shippingCost,
+      itemCount: b._count.items,
+      createdAt: b.createdAt,
+    };
+  }
+  return out;
+}
+
 interface BuyerAddress {
   street?: string | null;
   houseNumber?: string | null;
