@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { SalesContent } from "@/components/dashboard/sales-content";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
+import { CancelledAuctionsSection, type CancelledAuctionData } from "@/components/dashboard/cancelled-auctions-section";
 
 // Idem als in /aankopen: groepeer items met dezelfde cardName + conditie
 // tot één rij met aantal + subtotaal.
@@ -17,6 +18,18 @@ type RawItem = {
   sellerNote: string | null;
   refundedAt: string | null;
 };
+
+type AppendEvent = { at: string; itemNames: string[]; itemCount: number; itemTotal: number };
+
+function parseAppendHistory(json: string | null): AppendEvent[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as AppendEvent[]) : [];
+  } catch {
+    return [];
+  }
+}
 function groupBundleItems(items: RawItem[]) {
   const groups = new Map<string, RawItem & { quantity: number; subtotal: number }>();
   for (const it of items) {
@@ -32,9 +45,14 @@ function groupBundleItems(items: RawItem[]) {
   return Array.from(groups.values());
 }
 
-export default async function MySalesPage() {
+export default async function MySalesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("sales");
   const userId = session.user.id;
 
@@ -58,7 +76,7 @@ export default async function MySalesPage() {
     orderBy: { createdAt: "desc" },
     include: {
       buyer: { select: { id: true, displayName: true, firstName: true, lastName: true } },
-      shippingMethod: { select: { carrier: true, serviceName: true } },
+      shippingMethod: { select: { carrier: true, service: true, serviceName: true } },
       items: {
         orderBy: { createdAt: "asc" },
         select: {
@@ -213,8 +231,8 @@ export default async function MySalesPage() {
     totalItemCost: b.totalItemCost,
     totalCost: b.totalCost,
     shippingMethodCarrier: b.shippingMethod?.carrier ?? null,
-    shippingMethodService: b.shippingMethod?.serviceName ?? null,
-    shippingMethodIsTracked: b.shippingMethod?.isTracked ?? true,
+    shippingMethodService: b.shippingMethod?.service ?? b.shippingMethod?.serviceName ?? null,
+    shippingMethodIsTracked: true,
     deliveryMethod: b.deliveryMethod,
     paymentMode: b.paymentMode,
     trackingUrl: b.trackingUrl,
@@ -223,6 +241,8 @@ export default async function MySalesPage() {
     refundedAmount: b.refundedAmount ?? 0,
     refundEvents: refundEventsByBundle.get(b.id) ?? [],
     pickupScheduleStatus: b.pickupSchedule?.status ?? null,
+    lockedForPackingAt: b.lockedForPackingAt?.toISOString() ?? null,
+    appendEvents: parseAppendHistory(b.appendHistory),
     createdAt: b.createdAt.toISOString(),
     sourceType: b.auctionId
       ? "auction" as const
@@ -320,6 +340,67 @@ export default async function MySalesPage() {
     createdAt: a.updatedAt.toISOString(),
   }));
 
+  // Cancelled auctions (PAYMENT_FAILED) — runner-up rotatie uitgeput of niemand accepteerde.
+  const cancelledAuctionsRaw = await prisma.auction.findMany({
+    where: { sellerId: userId, paymentStatus: "PAYMENT_FAILED" },
+    orderBy: { updatedAt: "desc" },
+    take: 30,
+    include: {
+      runnerUpOffers: {
+        orderBy: { createdAt: "asc" },
+        include: { bidder: { select: { displayName: true } } },
+      },
+    },
+  });
+  const originalWinnerIds = cancelledAuctionsRaw
+    .map((a) => {
+      try {
+        const failed = JSON.parse(a.failedBidderIds || "[]") as string[];
+        return failed[0] ?? null;
+      } catch {
+        return null;
+      }
+    })
+    .filter((id): id is string => Boolean(id));
+  const originalWinners = originalWinnerIds.length > 0
+    ? await prisma.user.findMany({
+        where: { id: { in: originalWinnerIds } },
+        select: { id: true, displayName: true },
+      })
+    : [];
+  const originalWinnerMap = new Map(originalWinners.map((u) => [u.id, u.displayName]));
+
+  const cancelledAuctions: CancelledAuctionData[] = cancelledAuctionsRaw.map((a) => {
+    let firstFailedId: string | null = null;
+    try {
+      const failed = JSON.parse(a.failedBidderIds || "[]") as string[];
+      firstFailedId = failed[0] ?? null;
+    } catch {}
+    const originalWinnerLabel = firstFailedId
+      ? (originalWinnerMap.get(firstFailedId) ?? "Onbekende bieder")
+      : "Onbekende bieder";
+    return {
+      id: a.id,
+      title: a.title,
+      imageUrl: (() => {
+        if (!a.imageUrls) return null;
+        try { const urls = JSON.parse(a.imageUrls); return urls[0] ?? null; } catch { return null; }
+      })(),
+      originalWinnerLabel,
+      originalFinalPrice: a.finalPrice ?? 0,
+      paymentMissedAt: a.runnerUpOffers[0]?.createdAt.toISOString() ?? null,
+      finalStatus: "PAYMENT_FAILED" as const,
+      runnerUpOffers: a.runnerUpOffers.map((o, idx) => ({
+        id: o.id,
+        bidderLabel: o.bidder.displayName ?? `Bieder ${idx + 2}`,
+        bidAmount: o.bidAmount,
+        status: o.status as "AWAITING_DECISION" | "ACCEPTED" | "DECLINED" | "EXPIRED",
+        createdAt: o.createdAt.toISOString(),
+        decidedAt: o.decidedAt?.toISOString() ?? null,
+      })),
+    };
+  });
+
   // Summary stats
   const completedBundles = serialized.filter((b) => b.status === "COMPLETED");
   const stats = {
@@ -329,7 +410,7 @@ export default async function MySalesPage() {
     pendingShipments: serialized.filter((b) => b.status === "PAID").length,
   };
 
-  const hasContent = serialized.length > 0 || pendingAuctions.length > 0;
+  const hasContent = serialized.length > 0 || pendingAuctions.length > 0 || cancelledAuctions.length > 0;
 
   return (
     <div>
@@ -343,6 +424,7 @@ export default async function MySalesPage() {
       ) : (
         <>
           <ActivePickupsSection pickups={sellerActivePickups} />
+          <CancelledAuctionsSection auctions={cancelledAuctions} perspective="seller" />
           <SalesContent bundles={serialized} stats={stats} pendingAuctions={pendingAuctions} currentUserId={userId} />
         </>
       )}

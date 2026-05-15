@@ -48,7 +48,14 @@
       "refundRow": "Refund",
       "refundHistoryTitle": "Refund history",
       "refundBundle": "Additional refund on bundle",
-      "refundTotal": "Total refunded"
+      "refundTotal": "Total refunded",
+      "lockTitle": "Ready to pack?",
+      "lockDescription": "Lock this order before you start packing. After that, the buyer can no longer add items to it.",
+      "lockButton": "Lock for packing",
+      "lockSuccess": "Order locked — buyer can no longer add items.",
+      "lockedAt": "Locked for packing on {date}",
+      "appendHistoryTitle": "Added by the buyer",
+      "appendEntry": "{count, plural, =1 {1 item} other {{count} items}} added (€{total})"
     }
   },
   "topbar": {

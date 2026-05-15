@@ -48,7 +48,14 @@
       "refundRow": "Refund",
       "refundHistoryTitle": "Refund-historie",
       "refundBundle": "Aanvullende refund op bundle",
-      "refundTotal": "Totaal terugbetaald"
+      "refundTotal": "Totaal terugbetaald",
+      "lockTitle": "Klaar om in te pakken?",
+      "lockDescription": "Vergrendel deze bestelling vóór je begint met inpakken. Daarna kan de koper er geen extra items meer aan toevoegen.",
+      "lockButton": "Vergrendel voor inpakken",
+      "lockSuccess": "Bestelling vergrendeld — koper kan geen items meer toevoegen.",
+      "lockedAt": "Vergrendeld voor inpakken op {date}",
+      "appendHistoryTitle": "Toegevoegd door de koper",
+      "appendEntry": "{count, plural, =1 {1 item} other {{count} items}} toegevoegd (€{total})"
     }
   },
   "topbar": {

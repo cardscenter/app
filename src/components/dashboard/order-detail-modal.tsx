@@ -1,11 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { X, Printer, Package, MapPin, Check, Ban, RotateCcw, Truck, ExternalLink } from "lucide-react";
+import { X, Printer, Package, MapPin, Check, Ban, RotateCcw, Truck, ExternalLink, Lock, Plus } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import Image from "next/image";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
 import { SellerRefundForm } from "./seller-refund-form";
+import { lockBundleForPacking } from "@/actions/purchase";
 
 type SortKey = "default" | "name" | "condition" | "priceHigh" | "priceLow" | "reference" | "refundStatus";
 
@@ -225,6 +228,13 @@ type RefundEvent = {
   reason: string | null;
 };
 
+export type AppendEvent = {
+  at: string; // ISO
+  itemNames: string[];
+  itemCount: number;
+  itemTotal: number;
+};
+
 type OrderData = {
   bundleId: string;
   orderNumber: string;
@@ -246,6 +256,8 @@ type OrderData = {
   refundedAmount: number;
   refundEvents: RefundEvent[];
   pickupScheduleStatus: string | null;
+  lockedForPackingAt: string | null;
+  appendEvents: AppendEvent[];
   items: BundleItem[];
   buyerName?: string;
   buyerFirstName?: string | null;
@@ -270,7 +282,9 @@ export function OrderDetailModal({
   const t = useTranslations(namespace);
   const tc = useTranslations("common");
   const printRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [locking, setLocking] = useState(false);
 
   const date = new Date(order.createdAt);
   const formattedDate = date.toLocaleDateString("nl-NL", {
@@ -340,6 +354,18 @@ export function OrderDetailModal({
   // opgehaald in de page-query op buyer-side description-prefix. Reason is
   // optioneel (uit description-suffix).
   const netTotal = Math.max(0, order.totalCost - order.refundedAmount);
+
+  async function handleLock() {
+    setLocking(true);
+    const result = await lockBundleForPacking(order.bundleId);
+    if (result?.error) {
+      toast.error(result.error);
+    } else {
+      toast.success(tc("orderDetail.lockSuccess"));
+      router.refresh();
+    }
+    setLocking(false);
+  }
 
   function handlePrint() {
     const content = printRef.current;
@@ -497,6 +523,69 @@ export function OrderDetailModal({
 
         {/* Status timeline */}
         <OrderTimeline order={order} />
+
+        {/* Inpak-lock + append-history (claimsale-merge). Alleen op claimsale-
+            bundles, alleen voor seller, alleen wanneer relevant. */}
+        {isSeller && order.sourceType === "claimsale" && (
+          <>
+            {order.status === "PAID" && !order.lockedForPackingAt && (
+              <div className="mb-4 flex flex-col gap-3 rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-950/30 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-2">
+                  <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                      {tc("orderDetail.lockTitle")}
+                    </p>
+                    <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                      {tc("orderDetail.lockDescription")}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLock}
+                  disabled={locking}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-60 dark:bg-amber-700 dark:hover:bg-amber-600"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  {tc("orderDetail.lockButton")}
+                </button>
+              </div>
+            )}
+            {order.lockedForPackingAt && order.status === "PAID" && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-300/60 bg-slate-50 p-3 text-sm dark:border-slate-700/60 dark:bg-slate-900/40">
+                <Lock className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" />
+                <span className="text-slate-700 dark:text-slate-200">
+                  {tc("orderDetail.lockedAt", { date: new Date(order.lockedForPackingAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}
+                </span>
+              </div>
+            )}
+            {order.appendEvents.length > 0 && (
+              <div className="mb-4 rounded-xl border border-border bg-card p-4">
+                <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <Plus className="h-4 w-4 text-primary" />
+                  {tc("orderDetail.appendHistoryTitle")}
+                </p>
+                <ul className="space-y-2">
+                  {order.appendEvents.map((ev, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-xs">
+                      <span className="mt-0.5 inline-flex shrink-0 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                        {new Date(ev.at).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <div className="text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          {tc("orderDetail.appendEntry", { count: ev.itemCount, total: ev.itemTotal.toFixed(2) })}
+                        </span>
+                        {ev.itemNames.length > 0 && (
+                          <span className="ml-1">— {ev.itemNames.slice(0, 4).join(", ")}{ev.itemNames.length > 4 ? ` +${ev.itemNames.length - 4}` : ""}</span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Shipping address (seller view) */}
         {hasAddress && (

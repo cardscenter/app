@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { PurchasesContent } from "@/components/dashboard/purchases-content";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
+import { ActiveRunnerUpOffersSection } from "@/components/dashboard/active-runner-up-offers-section";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 
 // Groepeer items met dezelfde cardName + conditie tot één rij met aantal +
@@ -20,6 +21,18 @@ type RawItem = {
   sellerNote: string | null;
   refundedAt: string | null;
 };
+
+type AppendEvent = { at: string; itemNames: string[]; itemCount: number; itemTotal: number };
+
+function parseAppendHistory(json: string | null): AppendEvent[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as AppendEvent[]) : [];
+  } catch {
+    return [];
+  }
+}
 function groupBundleItems(items: RawItem[]) {
   const groups = new Map<string, RawItem & { quantity: number; subtotal: number }>();
   for (const it of items) {
@@ -37,9 +50,14 @@ function groupBundleItems(items: RawItem[]) {
   return Array.from(groups.values());
 }
 
-export default async function MyPurchasesPage() {
+export default async function MyPurchasesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("purchases");
   const userId = session.user.id;
 
@@ -236,6 +254,8 @@ export default async function MyPurchasesPage() {
     refundedAmount: b.refundedAmount ?? 0,
     refundEvents: refundEventsByBundle.get(b.id) ?? [],
     pickupScheduleStatus: b.pickupSchedule?.status ?? null,
+    lockedForPackingAt: b.lockedForPackingAt?.toISOString() ?? null,
+    appendEvents: parseAppendHistory(b.appendHistory),
     createdAt: b.createdAt.toISOString(),
     sourceType: b.auctionId
       ? "auction" as const
@@ -321,6 +341,8 @@ export default async function MyPurchasesPage() {
       <h1 className="text-2xl font-bold text-foreground">
         {t("title")}
       </h1>
+
+      <ActiveRunnerUpOffersSection />
 
       {serialized.length === 0 && pendingAuctions.length === 0 ? (
         <p className="mt-8 text-sm text-muted-foreground">
