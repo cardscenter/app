@@ -7,6 +7,7 @@ import { isUserSuspended } from "@/lib/suspension";
 import { maskIban, formatIbanForDisplay } from "@/lib/validations/iban";
 import { UserActionBar } from "@/components/admin/user-action-bar";
 import { BidDepositExemptionToggle } from "@/components/admin/bid-deposit-exemption-toggle";
+import { ReserveBreakdownCard } from "@/components/admin/reserve-breakdown-card";
 
 const USER_DETAIL_SELECT = {
   id: true, displayName: true, email: true, firstName: true, lastName: true,
@@ -140,7 +141,7 @@ export default async function AdminUserDetailPage({
       {/* Tab content */}
       <section className="rounded-xl border border-border bg-card p-5 shadow-card">
         {tab === "profile" && <ProfileTab user={user} />}
-        {tab === "wallet" && <WalletTab userId={user.id} balance={user.balance} held={user.heldBalance} reserved={user.reservedBalance} />}
+        {tab === "wallet" && <WalletTab userId={user.id} userName={user.displayName} balance={user.balance} held={user.heldBalance} reserved={user.reservedBalance} />}
         {tab === "sales" && <SalesTab userId={user.id} />}
         {tab === "purchases" && <PurchasesTab userId={user.id} />}
         {tab === "disputes" && <DisputesTab userId={user.id} />}
@@ -245,7 +246,7 @@ function ProfileTab({ user }: { user: UserDetailPayload }) {
   );
 }
 
-async function WalletTab({ userId, balance, held, reserved }: { userId: string; balance: number; held: number; reserved: number }) {
+async function WalletTab({ userId, userName, balance, held, reserved }: { userId: string; userName: string; balance: number; held: number; reserved: number }) {
   const transactions = await prisma.transaction.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
@@ -260,6 +261,8 @@ async function WalletTab({ userId, balance, held, reserved }: { userId: string; 
         <KPI label="Held (escrow)" value={`€${held.toFixed(2)}`} />
         <KPI label="Reserved" value={`€${reserved.toFixed(2)}`} />
       </div>
+
+      <ReserveBreakdownCard userId={userId} userName={userName} />
       <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">
         Laatste 100 transacties
       </h3>

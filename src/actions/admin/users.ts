@@ -1,9 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { logAdminAction } from "@/lib/admin-audit";
 import { createNotification } from "@/actions/notification";
+import { syncReservedBalance } from "@/lib/balance-check";
 
 export async function resetIbanCooldown(userId: string) {
   const { adminId } = await requireAdmin();
@@ -131,4 +133,46 @@ export async function setBidDepositExemption(
   );
 
   return { success: true };
+}
+
+/**
+ * Forceer de reservedBalance van een user op de live-herberekening.
+ *
+ * Bedoeld voor admin-troubleshooting: als de DB-waarde uit de pas loopt met de
+ * werkelijke active bids + AWAITING_PAYMENT-winners (bv. door een legacy-
+ * rekenfout of een edge-case die we niet hebben afgevangen) kan een admin
+ * deze knop drukken om het op te lossen zonder een Prisma-script te draaien.
+ *
+ * Veilig: roept gewoon `syncReservedBalance` aan dat onder de motorkap
+ * `recalculateTotalReserved` doet (zelfde logica als de bid-flow zelf).
+ */
+export async function syncUserReservedBalance(userId: string) {
+  const { adminId } = await requireAdmin();
+
+  const before = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { displayName: true, reservedBalance: true },
+  });
+  if (!before) return { error: "Gebruiker niet gevonden" };
+
+  const newReserved = await syncReservedBalance(userId);
+  const previousReserved = before.reservedBalance;
+  const delta = Math.round((newReserved - previousReserved) * 100) / 100;
+
+  await logAdminAction({
+    adminId,
+    action: "SYNC_RESERVED_BALANCE",
+    targetType: "USER",
+    targetId: userId,
+    metadata: {
+      userName: before.displayName,
+      previousReserved,
+      newReserved,
+      delta,
+    },
+  });
+
+  revalidatePath(`/dashboard/admin/users/${userId}`);
+
+  return { success: true, previousReserved, newReserved, delta };
 }

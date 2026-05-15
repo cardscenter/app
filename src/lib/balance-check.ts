@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { BID_RESERVE_RATE } from "@/lib/auction/bid-tiers";
 import { getMinimumNextBid } from "@/lib/auction/bid-increments";
 import { calculateBidTotalFromBid } from "@/lib/auction/fees";
+import { publish, userChannel } from "@/lib/realtime";
 
 /**
  * Calculate the available balance (what the user can actually spend/bid with).
@@ -202,6 +203,12 @@ export async function recalculateTotalReserved(userId: string): Promise<number> 
 /**
  * Sync the user's reservedBalance field with the actual calculated value.
  * Use this as a safety check or after complex operations.
+ *
+ * Publishet altijd een `balance-changed`-event op de user-channel — daardoor
+ * hoeven callers dit zelf niet meer te doen en is "reserve verandert →
+ * header-saldo updatet live" universeel gegarandeerd voor elk pad
+ * (placeBid, autobid-trigger, cancelAutoBid, finalizeAuction, runner-up-flow,
+ * auto-cancel cron, admin sync-knop, ...).
  */
 export async function syncReservedBalance(userId: string): Promise<number> {
   const calculated = await recalculateTotalReserved(userId);
@@ -209,5 +216,143 @@ export async function syncReservedBalance(userId: string): Promise<number> {
     where: { id: userId },
     data: { reservedBalance: calculated },
   });
+  // Fire-and-forget — geen await, kost niets als er geen subscribers zijn.
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
   return calculated;
+}
+
+/** Detail-rij voor admin-uitleg: één lopende veiling die geld vasthoudt. */
+export interface ReserveBreakdownRow {
+  auctionId: string;
+  title: string;
+  /** "highest-bidder" | "autobid-armed" | "awaiting-payment" */
+  reason: "highest-bidder" | "autobid-armed" | "awaiting-payment";
+  /** Het bedrag waarover gereserveerd wordt (bod of finalPrice). */
+  baseAmount: number;
+  /** Berekende reserve (10% × base × 1,029). */
+  reserveAmount: number;
+}
+
+/** Breakdown van de reservedBalance per actieve veiling — voor de admin-UI.
+ *  Returnt zowel de live-berekende totaal als de DB-waarde + de individuele
+ *  rijen, zodat admins direct kunnen zien WAAROM geld vastgehouden wordt
+ *  (en of de DB synchroon loopt met de werkelijke biedingen). */
+export async function getReserveBreakdown(userId: string): Promise<{
+  dbReserved: number;
+  liveReserved: number;
+  drift: number;
+  rows: ReserveBreakdownRow[];
+}> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { reservedBalance: true },
+  });
+
+  // Spiegel van recalculateTotalReserved-query, maar met titel + bid-detail
+  const eligible = await prisma.auction.findMany({
+    where: {
+      OR: [
+        { status: "ACTIVE", bids: { some: { bidderId: userId } } },
+        { paymentStatus: "AWAITING_PAYMENT", winnerId: userId },
+      ],
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      paymentStatus: true,
+      winnerId: true,
+      finalPrice: true,
+      currentBid: true,
+      startingBid: true,
+      bids: {
+        orderBy: { amount: "desc" },
+        take: 1,
+        select: { bidderId: true, amount: true },
+      },
+    },
+  });
+
+  if (eligible.length === 0) {
+    return { dbReserved: user?.reservedBalance ?? 0, liveReserved: 0, drift: (user?.reservedBalance ?? 0), rows: [] };
+  }
+
+  const auctionIds = eligible.map((a) => a.id);
+  const userBids = await prisma.auctionBid.findMany({
+    where: { bidderId: userId, auctionId: { in: auctionIds } },
+    orderBy: { amount: "desc" },
+    select: { auctionId: true, amount: true },
+  });
+  const userHighestBidByAuction = new Map<string, number>();
+  for (const b of userBids) {
+    if (!userHighestBidByAuction.has(b.auctionId)) {
+      userHighestBidByAuction.set(b.auctionId, b.amount);
+    }
+  }
+
+  const activeAutoBids = await prisma.autoBid.findMany({
+    where: { userId, isActive: true, auctionId: { in: auctionIds } },
+    select: { auctionId: true, maxAmount: true },
+  });
+  const autoMaxByAuction = new Map<string, number>();
+  for (const ab of activeAutoBids) autoMaxByAuction.set(ab.auctionId, ab.maxAmount);
+
+  const rows: ReserveBreakdownRow[] = [];
+  let liveTotal = 0;
+
+  for (const a of eligible) {
+    if (a.paymentStatus === "AWAITING_PAYMENT" && a.winnerId === userId) {
+      const reserve = calculateReserveAmount(a.finalPrice ?? 0);
+      if (reserve > 0) {
+        rows.push({
+          auctionId: a.id,
+          title: a.title,
+          reason: "awaiting-payment",
+          baseAmount: a.finalPrice ?? 0,
+          reserveAmount: reserve,
+        });
+        liveTotal += reserve;
+      }
+      continue;
+    }
+
+    const isHighestBidder = a.bids[0]?.bidderId === userId;
+    const userBid = userHighestBidByAuction.get(a.id) ?? 0;
+    const autoMax = autoMaxByAuction.get(a.id) ?? 0;
+    const currentTopAmount = a.bids[0]?.amount ?? a.currentBid ?? a.startingBid;
+    const minNextBid = getMinimumNextBid(currentTopAmount);
+    const autoCanTrigger = autoMax >= minNextBid;
+
+    if (isHighestBidder) {
+      const effectiveAutoMax = autoCanTrigger ? autoMax : 0;
+      const base = Math.max(userBid, effectiveAutoMax);
+      const reserve = calculateReserveAmount(base);
+      if (reserve > 0) {
+        rows.push({
+          auctionId: a.id,
+          title: a.title,
+          reason: "highest-bidder",
+          baseAmount: base,
+          reserveAmount: reserve,
+        });
+        liveTotal += reserve;
+      }
+    } else if (autoCanTrigger) {
+      const reserve = calculateReserveAmount(autoMax);
+      if (reserve > 0) {
+        rows.push({
+          auctionId: a.id,
+          title: a.title,
+          reason: "autobid-armed",
+          baseAmount: autoMax,
+          reserveAmount: reserve,
+        });
+        liveTotal += reserve;
+      }
+    }
+  }
+
+  liveTotal = Math.round(liveTotal * 100) / 100;
+  const db = user?.reservedBalance ?? 0;
+  return { dbReserved: db, liveReserved: liveTotal, drift: Math.round((db - liveTotal) * 100) / 100, rows };
 }

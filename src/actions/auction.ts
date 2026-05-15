@@ -1197,9 +1197,15 @@ export async function setAutoBid(auctionId: string, maxAmount: number, deliveryC
   });
 
   if (!highestBid || highestBid.bidderId !== session.user.id) {
-    // Place a minimum bid to start the autobid process
+    // Place a minimum bid to start the autobid process — placeBid sync't reserve
     const bidResult = await placeBid(auctionId, minimumBid);
     if (bidResult?.error) return bidResult;
+  } else {
+    // User is al hoogste bieder — geen nieuwe bid nodig, MAAR de reserve moet
+    // wel herrekend worden omdat het maxAmount nu mogelijk hoger ligt dan z'n
+    // huidige bid (reserve gaat over max(userBid, autoMax)). syncReservedBalance
+    // publisht zelf 'balance-changed' naar de user-channel.
+    await syncReservedBalance(session.user.id);
   }
 
   return { success: true };

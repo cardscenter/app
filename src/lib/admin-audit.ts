@@ -21,6 +21,7 @@ export type AdminAction =
   | "BULK_REMOVE_CLAIMSALES"
   | "RESET_IBAN_COOLDOWN"
   | "FORCE_USERNAME_RESET"
+  | "SYNC_RESERVED_BALANCE"
   // Fase 29 — veiling-binding + anti-shill
   | "BID_IP_OVERLAP"
   | "SYSTEM_AUTO_SUSPEND"
