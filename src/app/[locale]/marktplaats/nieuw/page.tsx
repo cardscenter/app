@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { MultiStepListingForm } from "@/components/listing/multi-step-listing-form";
 import { PageContainer } from "@/components/layout/page-container";
 import { getSellerShippingMethods } from "@/actions/shipping-method";
+import { getEuNearNeighbors } from "@/lib/shipping/zones";
 
 export default async function NieuwListingPage({
   params,
@@ -30,11 +31,12 @@ export default async function NieuwListingPage({
   // Get user balance, account type, and city (for pickup-listings auto-fill)
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { balance: true, accountType: true, city: true, freeUpsellsRemaining: true },
+    select: { balance: true, accountType: true, city: true, country: true, freeUpsellsRemaining: true },
   });
 
   // Get seller's shipping methods (Fase 33: enriched met basePrice/effectivePrice)
   const shippingMethods = await getSellerShippingMethods();
+  const neighbors = user?.country ? getEuNearNeighbors(user.country) : [];
 
   return (
     <PageContainer width="default" className="py-8">
@@ -46,6 +48,8 @@ export default async function NieuwListingPage({
         freeUpsellsRemaining={user?.freeUpsellsRemaining ?? 0}
         userCity={user?.city ?? null}
         shippingMethods={shippingMethods}
+        originCountry={user?.country ?? null}
+        neighbors={neighbors}
       />
     </PageContainer>
   );

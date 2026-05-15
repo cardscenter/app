@@ -10,6 +10,8 @@ interface StepVerzendingProps {
   shippingMethods: EnrichedShippingMethod[];
   allowMailbox: boolean;
   onAllowMailboxChange: (next: boolean) => void;
+  originCountry?: string | null;
+  neighbors?: string[];
 }
 
 export function StepVerzending({
@@ -17,6 +19,8 @@ export function StepVerzending({
   shippingMethods,
   allowMailbox,
   onAllowMailboxChange,
+  originCountry = null,
+  neighbors = [],
 }: StepVerzendingProps) {
   const t = useTranslations("claimsale");
 
@@ -52,6 +56,8 @@ export function StepVerzending({
         allowMailbox={allowMailbox}
         onAllowMailboxChange={onAllowMailboxChange}
         mailboxHint={type === "CARDS" ? t("mailboxHintCards") : undefined}
+        originCountry={originCountry}
+        neighbors={neighbors}
       />
     </div>
   );

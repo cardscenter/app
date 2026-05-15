@@ -4,6 +4,15 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createListingSchema } from "@/lib/validations/listing";
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
+import {
+  availableLabelsFor,
+  calculateLabelCost,
+  isValidLabelColor,
+  isValidLabelType,
+  MAX_LABELS_PER_LISTING,
+  type LabelColor,
+  type LabelType,
+} from "@/lib/listing/labels";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
@@ -74,6 +83,10 @@ export async function createListing(formData: FormData) {
   const data = result.data;
   const userId = session.user.id;
 
+  // Labels gaan buiten zod-schema om (apart parsen + valideren), zelfde patroon
+  // als createAuction. Server-side hercheck van availability is anti-tamper.
+  const labelsRaw = formData.get("labels");
+
   // Parse upsells and calculate total cost
   let upsellEntries: { type: UpsellType; days: number }[] = [];
   let totalUpsellCost = 0;
@@ -113,10 +126,60 @@ export async function createListing(formData: FormData) {
     perEntryCosts = allocation.perEntry;
     totalUpsellCost = allocation.total;
     freeUsed = allocation.freeUsed;
+  }
 
+  // Parse + valideer labels (max 2 per listing, conditional availability,
+  // bundle-prijs 1=€0,99 / 2=€1,69). Anti-tamper hercheck.
+  let parsedLabels: { type: LabelType; colorKey: LabelColor }[] = [];
+  let labelsCost = 0;
+  if (typeof labelsRaw === "string" && labelsRaw.length > 0) {
+    try {
+      const rawLabels = JSON.parse(labelsRaw) as Array<{ type: string; colorKey: string }>;
+      const cleaned = rawLabels
+        .filter(
+          (l) =>
+            typeof l?.type === "string" &&
+            typeof l?.colorKey === "string" &&
+            isValidLabelType(l.type) &&
+            isValidLabelColor(l.colorKey),
+        )
+        .slice(0, MAX_LABELS_PER_LISTING) as {
+        type: LabelType;
+        colorKey: LabelColor;
+      }[];
+
+      const availability = availableLabelsFor({
+        condition: data.condition ?? null,
+        listingType: data.listingType,
+      });
+      const availSet = new Set(
+        availability.filter((a) => a.available).map((a) => a.type),
+      );
+      for (const l of cleaned) {
+        if (!availSet.has(l.type)) {
+          return { error: `Label "${l.type}" is niet beschikbaar voor deze advertentie` };
+        }
+      }
+
+      const seen = new Set<LabelType>();
+      parsedLabels = cleaned.filter((l) => {
+        if (seen.has(l.type)) return false;
+        seen.add(l.type);
+        return true;
+      });
+
+      labelsCost = calculateLabelCost(parsedLabels.length);
+    } catch {
+      parsedLabels = [];
+    }
+  }
+
+  // Combined balance-check (upsells + labels in één keer)
+  const totalPromotionCost = totalUpsellCost + labelsCost;
+  if (totalPromotionCost > 0) {
     const availableBalance = user.balance - user.reservedBalance;
-    if (availableBalance < totalUpsellCost) {
-      return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalUpsellCost.toFixed(2)}, beschikbaar: €${availableBalance.toFixed(2)}` };
+    if (availableBalance < totalPromotionCost) {
+      return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalPromotionCost.toFixed(2)}, beschikbaar: €${availableBalance.toFixed(2)}` };
     }
   }
 
@@ -271,7 +334,7 @@ export async function createListing(formData: FormData) {
       }
     }
 
-    // Create upsell records and deduct balance
+    // Create upsell records
     if (upsellEntries.length > 0) {
       const now = new Date();
 
@@ -292,11 +355,7 @@ export async function createListing(formData: FormData) {
         });
       }
 
-      // Race-safe quota-decrement (audit-fix Fase 31). De allocator-snapshot
-      // werd buiten de tx gelezen; tussen de read en deze update kan een
-      // parallelle createListing dezelfde quota geclaimd hebben. Conditional
-      // updateMany zorgt dat we ALLEEN decrementeren als het quota nog
-      // beschikbaar is — anders gooit de tx terug en moet user opnieuw.
+      // Race-safe quota-decrement (audit-fix Fase 31).
       if (freeUsed > 0) {
         const updated = await tx.user.updateMany({
           where: { id: userId, freeUpsellsRemaining: { gte: freeUsed } },
@@ -306,29 +365,49 @@ export async function createListing(formData: FormData) {
           throw new Error("FREE_UPSELL_QUOTA_RACE");
         }
       }
+    }
 
-      // Deduct total upsell cost from balance (alleen het niet-gratis deel)
-      if (totalUpsellCost > 0) {
-        const balanceBefore = user.balance;
-        const balanceAfter = balanceBefore - totalUpsellCost;
+    // Create label-records (max 2, bundle-cost al berekend).
+    if (parsedLabels.length > 0) {
+      const perLabelCost = labelsCost / parsedLabels.length;
+      await tx.listingLabel.createMany({
+        data: parsedLabels.map((l) => ({
+          listingId: newListing.id,
+          type: l.type,
+          colorKey: l.colorKey,
+          cost: Math.round(perLabelCost * 100) / 100,
+        })),
+      });
+    }
 
-        await tx.user.update({
-          where: { id: userId },
-          data: { balance: balanceAfter },
-        });
+    // Eén balance-deduct voor upsells + labels samen — minder Transaction-rijen.
+    if (totalPromotionCost > 0) {
+      const balanceBefore = user.balance;
+      const balanceAfter = balanceBefore - totalPromotionCost;
 
-        await tx.transaction.create({
-          data: {
-            userId,
-            type: "FEE",
-            amount: -totalUpsellCost,
-            balanceBefore,
-            balanceAfter,
-            description: `Promotiekosten advertentie: ${upsellEntries.map((e) => e.type).join(", ")}`,
-            relatedListingId: newListing.id,
-          },
-        });
-      }
+      await tx.user.update({
+        where: { id: userId },
+        data: { balance: balanceAfter },
+      });
+
+      const description = (() => {
+        const parts: string[] = [];
+        if (upsellEntries.length > 0) parts.push(upsellEntries.map((e) => e.type).join(", "));
+        if (parsedLabels.length > 0) parts.push(`${parsedLabels.length} label${parsedLabels.length === 1 ? "" : "s"}`);
+        return `Promotiekosten advertentie: ${parts.join(" + ")}`;
+      })();
+
+      await tx.transaction.create({
+        data: {
+          userId,
+          type: "FEE",
+          amount: -totalPromotionCost,
+          balanceBefore,
+          balanceAfter,
+          description,
+          relatedListingId: newListing.id,
+        },
+      });
     }
 
     return newListing;

@@ -87,9 +87,13 @@ interface MultiStepAuctionFormProps {
   freeUpsellsRemaining?: number;
   userCity?: string | null;
   maxRunnerUpAttempts?: number;
+  /** Seller's eigen land (ISO 3166-1 alpha-2) — voor de DOMESTIC-vlag in zone-headers. */
+  originCountry?: string | null;
+  /** EU_NEAR buurland-codes — voor vlaggen in zone-headers. */
+  neighbors?: string[];
 }
 
-export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType, freeUpsellsRemaining = 0, userCity = null, maxRunnerUpAttempts = 2 }: MultiStepAuctionFormProps) {
+export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType, freeUpsellsRemaining = 0, userCity = null, maxRunnerUpAttempts = 2, originCountry = null, neighbors = [] }: MultiStepAuctionFormProps) {
   const t = useTranslations("auction");
   const ts = useTranslations("shipping");
   const router = useRouter();
@@ -318,6 +322,8 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
                   price={form.buyNowPrice ?? form.startingBid}
                   allowMailbox={form.allowMailbox}
                   onAllowMailboxChange={(next) => updateField("allowMailbox", next)}
+                  originCountry={originCountry}
+                  neighbors={neighbors}
                 />
               </div>
             )}

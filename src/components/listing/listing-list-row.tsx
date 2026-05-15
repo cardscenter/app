@@ -5,6 +5,7 @@ import { parseImageUrls } from "@/lib/upload";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
+import { ListingLabels, type ListingLabelData } from "@/components/listing/listing-labels";
 
 const TYPE_LABELS_NL: Record<string, string> = {
   SINGLE_CARD: "Enkele kaart",
@@ -43,6 +44,7 @@ interface ListingListRowProps {
       country?: string | null;
     };
     availableStock?: number;
+    labels?: ListingLabelData[];
   };
   locale: string;
   buyer?: { country: string | null; postalCode: string | null } | null;
@@ -275,6 +277,10 @@ export function ListingListRow({
             <p className="mt-2 hidden sm:block text-sm text-muted-foreground line-clamp-2">
               {description}
             </p>
+          )}
+
+          {listing.labels && listing.labels.length > 0 && (
+            <ListingLabels labels={listing.labels} size="sm" className="mt-2" />
           )}
         </Link>
 

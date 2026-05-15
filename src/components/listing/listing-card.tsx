@@ -3,6 +3,7 @@ import Link from "next/link";
 import { parseImageUrls } from "@/lib/upload";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
+import { ListingLabels, type ListingLabelData } from "@/components/listing/listing-labels";
 
 interface ListingUpsellInfo {
   type: string;
@@ -32,6 +33,7 @@ interface ListingCardProps {
       country?: string | null;
     };
     upsells?: ListingUpsellInfo[];
+    labels?: ListingLabelData[];
     // Voor stocked SEALED_PRODUCT/OTHER (Fase 27.36): aantal AVAILABLE rijen.
     // Toont "X stuks beschikbaar"-badge wanneer > 1. Optioneel — caller kan
     // het overslaan als hij de count niet heeft gequery'd.
@@ -124,6 +126,9 @@ export function ListingCard({ listing, locale, buyer, isSponsored = false }: Lis
           <h3 className="font-semibold text-sm sm:text-base text-foreground line-clamp-2 sm:line-clamp-1">{listing.title}</h3>
           {subtitle && (
             <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground line-clamp-1">{subtitle}</p>
+          )}
+          {listing.labels && listing.labels.length > 0 && (
+            <ListingLabels labels={listing.labels} size="sm" className="mt-2" />
           )}
         </div>
 

@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { MultiStepAuctionForm } from "@/components/auction/multi-step-auction-form";
 import { PageContainer } from "@/components/layout/page-container";
 import { getSellerShippingMethods } from "@/actions/shipping-method";
+import { getEuNearNeighbors } from "@/lib/shipping/zones";
 
 export default async function NewAuctionPage({
   params,
@@ -27,6 +28,7 @@ export default async function NewAuctionPage({
       reservedBalance: true,
       accountType: true,
       city: true,
+      country: true,
       freeUpsellsRemaining: true,
       maxRunnerUpAttempts: true,
     },
@@ -34,6 +36,7 @@ export default async function NewAuctionPage({
 
   // Get seller's shipping methods (Fase 33: enriched)
   const shippingMethods = await getSellerShippingMethods();
+  const neighbors = user?.country ? getEuNearNeighbors(user.country) : [];
 
   return (
     <PageContainer width="default" className="py-8">
@@ -48,6 +51,8 @@ export default async function NewAuctionPage({
           freeUpsellsRemaining={user?.freeUpsellsRemaining ?? 0}
           userCity={user?.city ?? null}
           maxRunnerUpAttempts={user?.maxRunnerUpAttempts ?? 2}
+          originCountry={user?.country ?? null}
+          neighbors={neighbors}
         />
       </div>
     </PageContainer>

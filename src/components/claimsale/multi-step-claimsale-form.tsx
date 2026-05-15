@@ -30,6 +30,10 @@ interface MultiStepClaimsaleFormProps {
   userBalance: number;
   accountType: string;
   freeUpsellsRemaining?: number;
+  /** Seller's eigen land (ISO 3166-1 alpha-2) — voor de DOMESTIC-vlag in zone-headers. */
+  originCountry?: string | null;
+  /** EU_NEAR buurland-codes — voor vlaggen in zone-headers. */
+  neighbors?: string[];
 }
 
 function initialState(): ClaimsaleFormState {
@@ -57,6 +61,8 @@ export function MultiStepClaimsaleForm({
   userBalance,
   accountType,
   freeUpsellsRemaining = 0,
+  originCountry = null,
+  neighbors = [],
 }: MultiStepClaimsaleFormProps) {
   const t = useTranslations("claimsale");
   const router = useRouter();
@@ -230,6 +236,8 @@ export function MultiStepClaimsaleForm({
               shippingMethods={shippingMethods}
               allowMailbox={form.allowMailbox}
               onAllowMailboxChange={(next) => updateField("allowMailbox", next)}
+              originCountry={originCountry}
+              neighbors={neighbors}
             />
           </section>
 

@@ -857,6 +857,7 @@ model Listing {
   conversations  Conversation[]
   watchlistItems Watchlist[]
   upsells        ListingUpsell[]
+  labels         ListingLabel[]
   shippingMethods ListingShippingMethod[]
   shippingBundle ShippingBundle?
   proposals      Proposal[]
@@ -869,6 +870,26 @@ model Listing {
   @@index([cardSetId])
   @@index([listingType])
   @@index([tcgdexId])
+}
+
+model ListingLabel {
+  id        String   @id @default(cuid())
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  // MOET_NU_WEG | HOT_ITEM | TOPSTAAT | ZELDZAAM | HOLO_FOIL | SNEL_VERZONDEN | COMPLETE_SET
+  type      String
+
+  // ruby | amber | emerald | sky | violet | rose | indigo | slate | orange | teal
+  colorKey  String
+
+  // Snapshot van prijs op creatiemoment (bundle-tarief: 1=€0,99 / 2=€1,69)
+  cost      Float
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
 }
 
 model ListingShippingMethod {

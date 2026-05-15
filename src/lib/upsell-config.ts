@@ -30,6 +30,15 @@ export const AUCTION_UPSELL_TYPES_OFFERED: UpsellType[] = [
   "CATEGORY_HIGHLIGHT",
 ];
 
+// Listings (marktplaats) gebruiken hetzelfde patroon als auctions sinds de
+// Fase-36-uniformisatie: Spotlight + Category Highlight + label-systeem.
+// URGENT_LABEL is uitgefaseerd ten gunste van de configureerbare labels
+// (src/lib/listing/labels.ts).
+export const LISTING_UPSELL_TYPES_OFFERED: UpsellType[] = [
+  "HOMEPAGE_SPOTLIGHT",
+  "CATEGORY_HIGHLIGHT",
+];
+
 // Claimsale-upsells (flat-fee model). Drie types: Spotlight, Categorie-
 // uitlichting en ITEM_PREVIEW = de "Geavanceerde Kaart-Preview-Rij" (2-rijs
 // carousel met max 50 kaarten op de listing). Anders dan listing/auction-

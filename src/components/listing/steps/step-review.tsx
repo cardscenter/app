@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap, AlertCircle, Tag } from "lucide-react";
 import { calculateUpsellCost } from "@/lib/upsell-config";
+import { calculateLabelCost, type LabelColor, type LabelType } from "@/lib/listing/labels";
+import { ListingLabels } from "@/components/listing/listing-labels";
 import { CarrierLogo } from "@/components/ui/carrier-logo";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
 import type { EnrichedShippingMethod } from "@/components/ui/shipping-method-selector";
@@ -12,6 +14,11 @@ import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType } fr
 interface UpsellEntry {
   type: UpsellType;
   days: number;
+}
+
+interface SelectedLabel {
+  type: LabelType;
+  colorKey: LabelColor;
 }
 
 interface FormData {
@@ -34,6 +41,7 @@ interface FormData {
   packageSize: PackageSize | "";
   packageCount: number;
   upsells: UpsellEntry[];
+  labels?: SelectedLabel[];
 }
 
 interface ListingPreviewProps {
@@ -71,6 +79,8 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
     (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, accountType),
     0
   );
+  const labelsCost = calculateLabelCost(form.labels?.length ?? 0);
+  const totalPromotionCost = totalUpsellCost + labelsCost;
 
   const hasUrgent = form.upsells.some((u) => u.type === "URGENT_LABEL");
   const hasSpotlight = form.upsells.some((u) => u.type === "HOMEPAGE_SPOTLIGHT");
@@ -237,6 +247,11 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
               <span className="mt-1 inline-block text-sm text-primary">
                 {t("previewYou")}
               </span>
+              {form.labels && form.labels.length > 0 && (
+                <div className="mt-2">
+                  <ListingLabels labels={form.labels} size="md" />
+                </div>
+              )}
             </div>
           </div>
 
@@ -345,27 +360,38 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
         </div>
       </div>
 
-      {/* Upsells cost overview (not part of the real listing page, but important info for the seller) */}
-      {form.upsells.length > 0 && (
+      {/* Promotie-kosten overzicht — upsells + labels gecombineerd */}
+      {(form.upsells.length > 0 || (form.labels && form.labels.length > 0)) && (
         <div className="mt-8 glass rounded-2xl p-4 space-y-3">
           <h3 className="text-sm font-semibold text-foreground">{t("reviewUpsells")}</h3>
-          <div className="flex flex-wrap gap-2">
-            {form.upsells.map((entry) => {
-              const Icon = UPSELL_ICONS[entry.type];
-              const cost = calculateUpsellCost(entry.type, entry.days, accountType);
-              return (
-                <div key={entry.type} className="flex items-center gap-2 glass-subtle rounded-lg px-3 py-2 text-sm">
-                  <Icon className="h-4 w-4 text-primary" />
-                  <span className="text-foreground">{t(UPSELL_KEYS[entry.type])}</span>
-                  <span className="text-muted-foreground">({entry.days}d)</span>
-                  <span className="font-semibold text-foreground">&euro;{cost.toFixed(2)}</span>
-                </div>
-              );
-            })}
-          </div>
+          {form.upsells.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {form.upsells.map((entry) => {
+                const Icon = UPSELL_ICONS[entry.type];
+                const cost = calculateUpsellCost(entry.type, entry.days, accountType);
+                return (
+                  <div key={entry.type} className="flex items-center gap-2 glass-subtle rounded-lg px-3 py-2 text-sm">
+                    <Icon className="h-4 w-4 text-primary" />
+                    <span className="text-foreground">{t(UPSELL_KEYS[entry.type])}</span>
+                    <span className="text-muted-foreground">({entry.days}d)</span>
+                    <span className="font-semibold text-foreground">€{cost.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {form.labels && form.labels.length > 0 && (
+            <div className="flex items-center gap-2 glass-subtle rounded-lg px-3 py-2 text-sm">
+              <Tag className="h-4 w-4 text-primary" />
+              <span className="text-foreground">
+                {form.labels.length} {form.labels.length === 1 ? "label" : "labels"}
+              </span>
+              <span className="font-semibold text-foreground">€{labelsCost.toFixed(2)}</span>
+            </div>
+          )}
           <div className="border-t border-border/50 pt-2 flex justify-between text-sm">
             <span className="text-muted-foreground">{t("upsellTotal")}</span>
-            <span className="font-bold text-foreground">&euro;{totalUpsellCost.toFixed(2)}</span>
+            <span className="font-bold text-foreground">€{totalPromotionCost.toFixed(2)}</span>
           </div>
           <p className="text-xs text-muted-foreground">{t("upsellDeductNotice")}</p>
         </div>

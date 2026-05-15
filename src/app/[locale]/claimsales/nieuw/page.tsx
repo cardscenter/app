@@ -6,6 +6,7 @@ import { checkClaimsaleLimit } from "@/lib/account-limits";
 import { MultiStepClaimsaleForm } from "@/components/claimsale/multi-step-claimsale-form";
 import { PageContainer } from "@/components/layout/page-container";
 import { getSellerShippingMethods } from "@/actions/shipping-method";
+import { getEuNearNeighbors } from "@/lib/shipping/zones";
 
 export default async function NewClaimsalePage({
   params,
@@ -25,11 +26,13 @@ export default async function NewClaimsalePage({
       balance: true,
       reservedBalance: true,
       accountType: true,
+      country: true,
       freeUpsellsRemaining: true,
     },
   });
 
   const shippingMethods = await getSellerShippingMethods();
+  const neighbors = user?.country ? getEuNearNeighbors(user.country) : [];
 
   return (
     <PageContainer width="default" className="py-8">
@@ -41,6 +44,8 @@ export default async function NewClaimsalePage({
           userBalance={(user?.balance ?? 0) - (user?.reservedBalance ?? 0)}
           accountType={user?.accountType ?? "FREE"}
           freeUpsellsRemaining={user?.freeUpsellsRemaining ?? 0}
+          originCountry={user?.country ?? null}
+          neighbors={neighbors}
         />
       </div>
     </PageContainer>
