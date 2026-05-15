@@ -158,12 +158,16 @@ export default async function AdminAuditPage({
                   {e.createdAt.toLocaleString("nl-NL")}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <Link
-                    href={`/dashboard/admin/users/${e.admin.id}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {e.admin.displayName}
-                  </Link>
+                  {e.admin ? (
+                    <Link
+                      href={`/dashboard/admin/users/${e.admin.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {e.admin.displayName}
+                    </Link>
+                  ) : (
+                    <span className="text-xs italic text-muted-foreground">systeem</span>
+                  )}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{e.action}</code>

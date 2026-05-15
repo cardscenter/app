@@ -276,6 +276,7 @@ export async function confirmPickup(input: { shippingBundleId: string; code: str
     include: {
       pickupSchedule: true,
       bundleListings: { select: { listingId: true } },
+      bundleProposal: { select: { conversationId: true } },
     },
   });
   if (!bundle) return { error: "Bestelling niet gevonden" };
@@ -405,6 +406,7 @@ export async function confirmExternalPickup(shippingBundleId: string) {
     include: {
       pickupSchedule: { select: { id: true } },
       bundleListings: { select: { listingId: true } },
+      bundleProposal: { select: { conversationId: true } },
     },
   });
   if (!bundle) return { error: "Bestelling niet gevonden" };

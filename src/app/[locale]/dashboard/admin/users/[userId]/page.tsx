@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft, ShieldCheck, Ban, AlertCircle } from "lucide-react";
@@ -6,6 +7,24 @@ import { isUserSuspended } from "@/lib/suspension";
 import { maskIban, formatIbanForDisplay } from "@/lib/validations/iban";
 import { UserActionBar } from "@/components/admin/user-action-bar";
 import { BidDepositExemptionToggle } from "@/components/admin/bid-deposit-exemption-toggle";
+
+const USER_DETAIL_SELECT = {
+  id: true, displayName: true, email: true, firstName: true, lastName: true,
+  bio: true, avatarUrl: true, accountType: true, accountKind: true,
+  companyName: true, vatNumber: true, cocNumber: true,
+  isVerified: true, verificationStatus: true,
+  balance: true, heldBalance: true, reservedBalance: true,
+  emberBalance: true, bonusXP: true, loginStreak: true,
+  bankTransferReference: true, iban: true, accountHolderName: true,
+  lastIbanChange: true, lastUsernameChange: true,
+  suspendedUntil: true, suspensionType: true, suspensionReason: true, suspensionAdminId: true,
+  street: true, houseNumber: true, postalCode: true, city: true, country: true,
+  sellingCountries: true, maxRunnerUpAttempts: true,
+  paymentFailureCount: true, paymentFailureLastAt: true, isBusinessBidExempt: true,
+  lastLoginIp: true, lastLoginIpAt: true,
+  createdAt: true, updatedAt: true,
+} satisfies Prisma.UserSelect;
+type UserDetailPayload = Prisma.UserGetPayload<{ select: typeof USER_DETAIL_SELECT }>;
 
 const TABS = [
   { key: "profile", label: "Profiel" },
@@ -36,51 +55,7 @@ export default async function AdminUserDetailPage({
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      id: true,
-      displayName: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      bio: true,
-      avatarUrl: true,
-      accountType: true,
-      accountKind: true,
-      companyName: true,
-      vatNumber: true,
-      cocNumber: true,
-      isVerified: true,
-      verificationStatus: true,
-      balance: true,
-      heldBalance: true,
-      reservedBalance: true,
-      emberBalance: true,
-      bonusXP: true,
-      loginStreak: true,
-      bankTransferReference: true,
-      iban: true,
-      accountHolderName: true,
-      lastIbanChange: true,
-      lastUsernameChange: true,
-      suspendedUntil: true,
-      suspensionType: true,
-      suspensionReason: true,
-      suspensionAdminId: true,
-      street: true,
-      houseNumber: true,
-      postalCode: true,
-      city: true,
-      country: true,
-      sellingCountries: true,
-      maxRunnerUpAttempts: true,
-      paymentFailureCount: true,
-      paymentFailureLastAt: true,
-      isBusinessBidExempt: true,
-      lastLoginIp: true,
-      lastLoginIpAt: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: USER_DETAIL_SELECT,
   });
 
   if (!user) notFound();
@@ -191,7 +166,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function ProfileTab({ user }: { user: NonNullable<Awaited<ReturnType<typeof prisma.user.findUnique>>> & { iban?: string | null } }) {
+function ProfileTab({ user }: { user: UserDetailPayload }) {
   return (
     <dl className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
       <Field label="ID" value={<code className="text-xs">{user.id}</code>} />
@@ -334,7 +309,7 @@ async function SalesTab({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
       <SimpleList title={`Veilingen (${auctions.length})`} items={auctions.map((a) => ({ id: a.id, primary: a.title, secondary: `${a.status} · €${(a.currentBid ?? a.startingBid).toFixed(2)}`, when: a.createdAt }))} />
-      <SimpleList title={`Listings (${listings.length})`} items={listings.map((l) => ({ id: l.id, primary: l.title, secondary: `${l.status} · €${l.price.toFixed(2)}`, when: l.createdAt }))} />
+      <SimpleList title={`Listings (${listings.length})`} items={listings.map((l) => ({ id: l.id, primary: l.title, secondary: `${l.status} · €${(l.price ?? 0).toFixed(2)}`, when: l.createdAt }))} />
       <SimpleList title={`Claimsales (${claimsales.length})`} items={claimsales.map((c) => ({ id: c.id, primary: c.title, secondary: `${c.status} · ${c._count.items} items`, when: c.createdAt }))} />
     </div>
   );
@@ -440,7 +415,7 @@ async function SuspensionsTab({ userId }: { userId: string }) {
         try { meta = e.metadata ? JSON.parse(e.metadata) : {}; } catch { /* */ }
         return {
           id: e.id,
-          primary: `${e.action} door ${e.admin.displayName}`,
+          primary: `${e.action} door ${e.admin?.displayName ?? "systeem"}`,
           secondary: e.action === "SUSPEND_USER" ? `${meta.type ?? ""}${meta.days ? ` · ${meta.days} dagen` : ""}${meta.reason ? ` · ${meta.reason}` : ""}` : "",
           when: e.createdAt,
         };
@@ -500,7 +475,7 @@ async function AuditTab({ userId }: { userId: string }) {
       title={`Admin-acties op deze user (${entries.length})`}
       items={entries.map((e) => ({
         id: e.id,
-        primary: `${e.action} door ${e.admin.displayName}`,
+        primary: `${e.action} door ${e.admin?.displayName ?? "systeem"}`,
         secondary: e.metadata ?? "",
         when: e.createdAt,
       }))}

@@ -651,6 +651,10 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
   if (!auction.buyNowPrice) return { error: "Direct kopen is niet beschikbaar" };
   if (auction.sellerId === session.user.id) return { error: "Je kunt niet je eigen veiling kopen" };
 
+  // Pak de prijs als lokale const zodat de narrowing door async closures
+  // (prisma.$transaction(async (tx) => ...)) heen blijft staan.
+  const buyNowPrice = auction.buyNowPrice;
+
   // Delivery-keuze (Fase 27.95): voor BOTH moet koper kiezen, voor SHIP/PICKUP
   // wordt de auction-deliveryMethod gebruikt.
   let chosenDelivery: "SHIP" | "PICKUP";
@@ -780,14 +784,14 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
         data: {
           status: "BOUGHT_NOW",
           winnerId: session.user.id,
-          finalPrice: auction.buyNowPrice,
+          finalPrice: buyNowPrice,
           paymentStatus: "AWAITING_PAYMENT",
           paymentDeadline,
         },
       });
 
       await tx.auctionBid.create({
-        data: { auctionId, bidderId: session.user.id, amount: auction.buyNowPrice },
+        data: { auctionId, bidderId: session.user.id, amount: buyNowPrice },
       });
 
       // Pre-create PENDING ShippingBundle (Fase 27.93). Inline omdat
@@ -799,8 +803,8 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
           buyerId: session.user.id,
           sellerId: auction.sellerId,
           shippingCost: 0,
-          totalItemCost: auction.buyNowPrice,
-          totalCost: auction.buyNowPrice,
+          totalItemCost: buyNowPrice,
+          totalCost: buyNowPrice,
           status: "PENDING",
           auctionId,
           deliveryMethod: chosenDelivery,

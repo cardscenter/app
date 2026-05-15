@@ -38,7 +38,7 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
     startTransition(async () => {
       const res = await suspendUser(userId, fd);
       if ("error" in res) {
-        setError(res.error);
+        setError(res.error ?? null);
       } else {
         setSuspendOpen(false);
         setReason("");

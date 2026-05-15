@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap, AlertCircl
 import { calculateUpsellCost } from "@/lib/upsell-config";
 import { CarrierLogo } from "@/components/ui/carrier-logo";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
-import type { SellerShippingMethod } from "@prisma/client";
+import type { EnrichedShippingMethod } from "@/components/ui/shipping-method-selector";
 import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType } from "@/types";
 
 interface UpsellEntry {
@@ -40,7 +40,7 @@ interface ListingPreviewProps {
   form: FormData;
   accountType: string;
   selectedShippingMethods: string[];
-  shippingMethods: SellerShippingMethod[];
+  shippingMethods: EnrichedShippingMethod[];
   /** Openstaande verplichte velden — als niet leeg, wordt publish geblokkeerd. */
   missingRequirements?: { key: string; messageKey: string }[];
   onBack: () => void;
@@ -313,9 +313,9 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
                       <div key={m.id} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <CarrierLogo carrierId={m.carrier} size={16} />
-                          <span>{carrierName} — {m.serviceName}</span>
+                          <span>{carrierName} — {m.service}</span>
                         </div>
-                        <span className="font-medium text-foreground">€{m.price.toFixed(2)}</span>
+                        <span className="font-medium text-foreground">€{m.effectivePrice.toFixed(2)}</span>
                       </div>
                     );
                   })}

@@ -128,7 +128,7 @@ export function buildClaimsaleFilterWhere(
   }
 
   if (filters.verifiedOnly) {
-    where.seller = { ...(where.seller ?? {}), isVerified: true };
+    where.seller = { isVerified: true };
   }
 
   if (filters.since !== "all") {

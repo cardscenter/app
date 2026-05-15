@@ -77,7 +77,7 @@ export function BuyNowButton({
         1,
         deliveryChoice as DeliveryChoice
       );
-      if (result.error) {
+      if ("error" in result && result.error) {
         setError(result.error);
         setShowConfirmModal(false);
         setSubmitted(false);

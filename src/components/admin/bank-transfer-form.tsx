@@ -48,7 +48,7 @@ export function BankTransferForm({
         senderIban.trim() || undefined,
       );
       if ("error" in result) {
-        setError(result.error);
+        setError(result.error ?? null);
       } else {
         const ibanMsg = result.ibanVerified ? " — IBAN-match: rekeningnummer geverifieerd ✓" : "";
         setSuccess(`Bevestigd. Nieuw saldo: €${result.newBalance.toFixed(2)}${ibanMsg}`);

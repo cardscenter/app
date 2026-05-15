@@ -35,7 +35,7 @@ export function BidDepositExemptionToggle({ userId, userName, currentlyExempt }:
     startTransition(async () => {
       const res = await setBidDepositExemption(userId, !currentlyExempt, reason.trim());
       if ("error" in res) {
-        setError(res.error);
+        setError(res.error ?? null);
         return;
       }
       setOpen(false);

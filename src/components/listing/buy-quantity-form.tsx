@@ -86,7 +86,7 @@ export function BuyQuantityForm({
         quantity,
         deliveryChoice as DeliveryChoice
       );
-      if (result.error) {
+      if ("error" in result && result.error) {
         // Fout: modal sluiten, melding inline + toast, lock vrijgeven zodat
         // de buyer kan corrigeren (bv. saldo aanvullen) en opnieuw proberen.
         setError(result.error);

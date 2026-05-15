@@ -38,11 +38,11 @@ export function AuctionOwnerActions({ auctionId, bidCount, status, variant = "pa
     setError(null);
     startTransition(async () => {
       const result = await cancelAuction(auctionId);
-      if (result?.error) {
-        setError(result.error);
+      if (result && "error" in result) {
+        setError(result.error ?? null);
         return;
       }
-      const refunded = result?.refundedAmount ?? 0;
+      const refunded = result && "refundedAmount" in result ? result.refundedAmount : 0;
       if (refunded > 0) {
         toast.success("Veiling geannuleerd", {
           description: `€${refunded.toFixed(2).replace(".", ",")} promotie-kosten teruggestort op je saldo.`,

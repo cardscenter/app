@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
@@ -138,19 +139,22 @@ export default async function AuctionsPage({
 
   const orderBy = getOrderBy(sort);
 
+  const AUCTION_INCLUDE = {
+    seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+    _count: { select: { bids: true } },
+    labels: { select: { type: true, colorKey: true } },
+  } satisfies Prisma.AuctionInclude;
+  type AuctionPayload = Prisma.AuctionGetPayload<{ include: typeof AUCTION_INCLUDE }>;
+
   let totalCount: number;
-  let auctions: Awaited<ReturnType<typeof prisma.auction.findMany>>;
+  let auctions: AuctionPayload[];
 
   if (useRadiusPostFilter) {
     const candidates = await prisma.auction.findMany({
       where: baseWhere,
-      ...(orderBy ? { orderBy } : { orderBy: { createdAt: "desc" as const } }),
+      orderBy: orderBy ?? { createdAt: "desc" as const },
       take: 500,
-      include: {
-        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
-        _count: { select: { bids: true } },
-        labels: { select: { type: true, colorKey: true } },
-      },
+      include: AUCTION_INCLUDE,
     });
     const filtered = candidates.filter((a) => {
       const km = distanceKm({
@@ -172,14 +176,10 @@ export default async function AuctionsPage({
     const safePage = Math.min(currentPage, totalPages);
     auctions = await prisma.auction.findMany({
       where: baseWhere,
-      ...(orderBy ? { orderBy } : { orderBy: { createdAt: "desc" as const } }),
+      orderBy: orderBy ?? { createdAt: "desc" as const },
       skip: (safePage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: {
-        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
-        _count: { select: { bids: true } },
-        labels: { select: { type: true, colorKey: true } },
-      },
+      include: AUCTION_INCLUDE,
     });
   }
 

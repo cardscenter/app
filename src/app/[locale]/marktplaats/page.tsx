@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { ListingCard } from "@/components/listing/listing-card";
 import { ListingListRow } from "@/components/listing/listing-list-row";
@@ -123,32 +124,35 @@ export default async function MarktplaatsPage({
   const useRadiusPostFilter =
     filters.radius !== null && buyerLocation?.postalCode && buyerCountry;
 
+  const LISTING_INCLUDE = {
+    seller: {
+      select: {
+        displayName: true,
+        isVerified: true,
+        city: true,
+        postalCode: true,
+        country: true,
+      },
+    },
+    upsells: {
+      where: { expiresAt: { gt: now } },
+      select: { type: true, expiresAt: true },
+    },
+    _count: {
+      select: { cardItemRows: { where: { status: "AVAILABLE" } } },
+    },
+  } satisfies Prisma.ListingInclude;
+  type ListingPayload = Prisma.ListingGetPayload<{ include: typeof LISTING_INCLUDE }>;
+
   let totalCount: number;
-  let listings: Awaited<ReturnType<typeof prisma.listing.findMany>>;
+  let listings: ListingPayload[];
 
   if (useRadiusPostFilter) {
     const candidates = await prisma.listing.findMany({
       where: baseWhere,
       orderBy,
       take: 500,
-      include: {
-        seller: {
-          select: {
-            displayName: true,
-            isVerified: true,
-            city: true,
-            postalCode: true,
-            country: true,
-          },
-        },
-        upsells: {
-          where: { expiresAt: { gt: now } },
-          select: { type: true, expiresAt: true },
-        },
-        _count: {
-          select: { cardItemRows: { where: { status: "AVAILABLE" } } },
-        },
-      },
+      include: LISTING_INCLUDE,
     });
     const filtered = candidates.filter((l) => {
       const km = distanceKm({
@@ -173,24 +177,7 @@ export default async function MarktplaatsPage({
       orderBy,
       skip: (safePage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: {
-        seller: {
-          select: {
-            displayName: true,
-            isVerified: true,
-            city: true,
-            postalCode: true,
-            country: true,
-          },
-        },
-        upsells: {
-          where: { expiresAt: { gt: now } },
-          select: { type: true, expiresAt: true },
-        },
-        _count: {
-          select: { cardItemRows: { where: { status: "AVAILABLE" } } },
-        },
-      },
+      include: LISTING_INCLUDE,
     });
   }
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));

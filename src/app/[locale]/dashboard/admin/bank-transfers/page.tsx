@@ -157,7 +157,7 @@ export default async function BankTransfersPage({
                     <span className="text-muted-foreground">{r.createdAt.toLocaleString("nl-NL")}</span>
                   </div>
                   <p className="mt-1 text-muted-foreground">
-                    {userName || r.targetId} ← {r.admin.displayName}
+                    {userName || r.targetId} ← {r.admin?.displayName ?? "systeem"}
                   </p>
                 </div>
               );

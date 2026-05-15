@@ -3,7 +3,9 @@ import postcodesNL from "./data/postcodes-nl.json";
 type CoordTable = Record<string, [number, number]>;
 
 const COORD_TABLES: Record<string, CoordTable> = {
-  NL: postcodesNL as CoordTable,
+  // JSON komt binnen als Record<string, number[]> — cast via unknown omdat TS
+  // niet weet dat alle entries exact lengte 2 hebben.
+  NL: postcodesNL as unknown as CoordTable,
 };
 
 const EARTH_RADIUS_KM = 6371;

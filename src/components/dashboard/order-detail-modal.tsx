@@ -411,19 +411,22 @@ export function OrderDetailModal({
           </div>
           {/* Compact status-regel — vervangt de Cardmarket-stijl tijdlijn op papier */}
           <div className="status">
-            {buildTimelineSteps(order).map((step, i, arr) => (
-              <span key={step.key}>
-                {step.state === "complete" || step.state === "current" ? (
-                  <strong>{step.label}</strong>
-                ) : step.state === "danger" ? (
-                  <span style={{ color: "#b91c1c" }}>{step.label}</span>
-                ) : (
-                  <span style={{ color: "#999" }}>{step.label}</span>
-                )}
-                {step.date && ` ${formatShortDate(step.date)}`}
-                {i < arr.length - 1 && " · "}
-              </span>
-            ))}
+            {buildTimelineSteps(order).map((step, i, arr) => {
+              const label = timelineLabel(step, tc);
+              return (
+                <span key={step.key}>
+                  {step.state === "complete" || step.state === "current" ? (
+                    <strong>{label}</strong>
+                  ) : step.state === "danger" ? (
+                    <span style={{ color: "#b91c1c" }}>{label}</span>
+                  ) : (
+                    <span style={{ color: "#999" }}>{label}</span>
+                  )}
+                  {step.date && ` ${formatShortDate(step.date)}`}
+                  {i < arr.length - 1 && " · "}
+                </span>
+              );
+            })}
           </div>
           {hasAddress && (<>
             <h2>Verzendadres</h2>

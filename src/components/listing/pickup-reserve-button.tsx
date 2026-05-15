@@ -37,7 +37,7 @@ export function PickupReserveButton({ listingId, listingTitle, price, available 
     setConfirmed(true);
     startTransition(async () => {
       const result = await buyListing(listingId, undefined, quantity, "PICKUP_EXTERNAL");
-      if (result.error) {
+      if ("error" in result && result.error) {
         setError(result.error);
         setConfirmed(false);
         toast.error(result.error);

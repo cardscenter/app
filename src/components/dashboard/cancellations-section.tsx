@@ -14,9 +14,10 @@ interface BundleStub {
 interface CancellationsSectionProps {
   currentUserId: string;
   paidBundles: BundleStub[];
+  userRole: "buyer" | "seller";
 }
 
-export function CancellationsSection({ currentUserId, paidBundles }: CancellationsSectionProps) {
+export function CancellationsSection({ currentUserId, paidBundles, userRole }: CancellationsSectionProps) {
   const t = useTranslations("cancellation");
 
   if (paidBundles.length === 0) return null;
@@ -44,6 +45,7 @@ export function CancellationsSection({ currentUserId, paidBundles }: Cancellatio
               bundleId={b.id}
               currentUserId={currentUserId}
               bundleStatus={b.status}
+              userRole={userRole}
             />
           </li>
         ))}

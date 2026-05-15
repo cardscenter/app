@@ -64,7 +64,7 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

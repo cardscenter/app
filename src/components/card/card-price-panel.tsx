@@ -158,7 +158,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants }: Pr
                     fontSize: 12,
                   }}
                   labelFormatter={(v) => new Date(v).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
-                  formatter={(v: number) => [`€${v.toFixed(2)}`, active.label]}
+                  formatter={((v: number) => [`€${v.toFixed(2)}`, active.label]) as never}
                 />
                 <Area
                   type="monotone"
@@ -205,7 +205,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants }: Pr
                     background: "var(--popover)",
                     fontSize: 12,
                   }}
-                  formatter={(v: number) => [`€${v.toFixed(2)}`, "Gemiddelde"]}
+                  formatter={((v: number) => [`€${v.toFixed(2)}`, "Gemiddelde"]) as never}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {[0, 1, 2].map((i) => (

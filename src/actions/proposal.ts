@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { publishNewMessageForConversation } from "@/actions/message";
@@ -12,7 +13,7 @@ import { requireNotSuspended } from "@/lib/suspension";
 // Helper: bereken nieuwe listing-status na een items-status-flip.
 // SOLD als geen items meer AVAILABLE/RESERVED, anders PARTIALLY_SOLD.
 async function recomputeListingStatusAfterPartialSale(
-  tx: { listingCardItem: { count: (args: unknown) => Promise<number> }; listing: { update: (args: unknown) => Promise<unknown> } },
+  tx: Prisma.TransactionClient,
   listingId: string
 ) {
   const remaining = await tx.listingCardItem.count({
