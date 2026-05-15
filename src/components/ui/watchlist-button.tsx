@@ -18,7 +18,12 @@ export function WatchlistButton({ auctionId, claimsaleId, listingId, initialWatc
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  async function handleToggle() {
+  async function handleToggle(e: React.MouseEvent<HTMLButtonElement>) {
+    // De button kan in een nested <Link> staan (bv. op auction-card); zonder
+    // preventDefault navigeert die mee. stopPropagation voorkomt dat bubble-
+    // handlers op parent-Links de click oppakken.
+    e.preventDefault();
+    e.stopPropagation();
     setLoading(true);
     const target = auctionId
       ? { auctionId }
@@ -34,13 +39,20 @@ export function WatchlistButton({ auctionId, claimsaleId, listingId, initialWatc
     setLoading(false);
   }
 
+  // Veilingen landen op de Live Hub; listings + claimsales landen op de
+  // Volglijst (zelfde watchlist-tabel onder de motorkap, maar twee verschillende
+  // pagina's in het dashboard). Tooltip past zich aan zodat de gebruiker weet
+  // waar het ding naartoe gaat.
+  const destination = auctionId ? "Live Hub" : "Volglijst";
+
   return (
     <motion.button
+      type="button"
       onClick={handleToggle}
       disabled={loading}
       whileTap={{ scale: 0.9 }}
       className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
-      title={watched ? "Verwijderen van volglijst" : "Toevoegen aan volglijst"}
+      title={watched ? `Verwijderen van ${destination}` : `Toevoegen aan ${destination}`}
     >
       <motion.div
         animate={{

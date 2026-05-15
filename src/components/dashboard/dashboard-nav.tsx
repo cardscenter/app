@@ -34,7 +34,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-type NavItem = { href: string; labelKey: string; icon: typeof LayoutDashboard; comingSoon?: boolean };
+type NavItem = {
+  href: string;
+  labelKey: string;
+  icon: typeof LayoutDashboard;
+  comingSoon?: boolean;
+  /** Toon een pulserend rood "Live"-bolletje achter de label (Live Hub). */
+  liveIndicator?: boolean;
+};
 
 // A group with `labelKey` collapses behind a chevron-button header. Without
 // `labelKey` the items render as plain top/bottom links (used for Overzicht +
@@ -132,7 +139,7 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
         id: "activity",
         labelKey: "sectionActivity",
         items: [
-          { href: "/dashboard/biedingen", labelKey: "myBids", icon: HandCoins },
+          { href: "/dashboard/biedingen", labelKey: "myBids", icon: HandCoins, liveIndicator: true },
           { href: "/dashboard/volglijst", labelKey: "myWatchlist", icon: Heart },
           { href: "/dashboard/meldingen", labelKey: "myNotifications", icon: Bell },
         ],
@@ -317,8 +324,24 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`}
       >
-        <Icon className="h-4 w-4 shrink-0" />
-        {t(item.labelKey)}
+        {item.liveIndicator ? (
+          // Live-bolletje vervangt het icoon voor de Live Hub. Wordt gehouden
+          // op dezelfde 4×4-slot zodat de label-uitlijning gelijk loopt met
+          // andere nav-items in dezelfde groep.
+          <span
+            className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center"
+            aria-label="Live"
+          >
+            <span
+              className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-rose-500 opacity-75"
+              aria-hidden="true"
+            />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500" />
+          </span>
+        ) : (
+          <Icon className="h-4 w-4 shrink-0" />
+        )}
+        <span className="flex-1 truncate">{t(item.labelKey)}</span>
       </Link>
     );
   }

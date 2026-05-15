@@ -296,7 +296,13 @@ export default async function AuctionsPage({
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [@media(min-width:1600px)]:grid-cols-5">
                 {auctions.map((auction) => (
-                  <AuctionCard key={auction.id} auction={auction} buyer={buyerLocation} />
+                  <AuctionCard
+                    key={auction.id}
+                    auction={auction}
+                    buyer={buyerLocation}
+                    initialWatched={watchlistIds.has(auction.id)}
+                    showWatchlist={!!session?.user?.id}
+                  />
                 ))}
               </div>
               <Pagination

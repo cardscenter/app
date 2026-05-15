@@ -4,6 +4,7 @@ import { Clock, Gavel } from "lucide-react";
 import Image from "next/image";
 import { parseImageUrls } from "@/lib/upload";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
+import { WatchlistButton } from "@/components/ui/watchlist-button";
 import { AuctionLabels, type AuctionLabelData } from "@/components/auction/auction-labels";
 
 // Drempel waarboven een veiling als "hot" gemarkeerd wordt met een 🔥-emoji
@@ -46,9 +47,14 @@ interface AuctionCardProps {
   auction: AuctionCardData;
   sponsored?: boolean;
   buyer?: { country: string | null; postalCode: string | null } | null;
+  /** Toon hartje-knop bovenaan de image om de veiling toe te voegen aan de
+   *  Live Hub (= watchlist). Default off zodat bestaande callers niet stuk
+   *  gaan; callers met session-context geven `initialWatched` mee. */
+  initialWatched?: boolean;
+  showWatchlist?: boolean;
 }
 
-export function AuctionCard({ auction, sponsored, buyer }: AuctionCardProps) {
+export function AuctionCard({ auction, sponsored, buyer, initialWatched = false, showWatchlist = false }: AuctionCardProps) {
   const t = useTranslations("auction");
 
   const images = auction.imageUrls ? parseImageUrls(auction.imageUrls) : [];
@@ -86,6 +92,16 @@ export function AuctionCard({ auction, sponsored, buyer }: AuctionCardProps) {
             <CountdownPill endTime={auction.endTime} />
           )}
         </div>
+
+        {/* Live Hub tracker — hartje top-left, klikbaar zonder dat de Link
+            mee-navigeert (preventDefault zit op de button). */}
+        {showWatchlist && (
+          <div className="absolute left-1.5 top-1.5 sm:left-2 sm:top-2">
+            <div className="rounded-full bg-background/90 p-0.5 shadow-md backdrop-blur">
+              <WatchlistButton auctionId={auction.id} initialWatched={initialWatched} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Card body */}
