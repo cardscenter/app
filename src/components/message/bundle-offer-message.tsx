@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/navigation";
 import { Package, Check, X, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
 import {
   respondToBundleOffer,
@@ -288,7 +289,13 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                 )}
                 {visible.length === 0 ? (
                   <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-                    {t("acceptShipping.noMethods")}
+                    {t.rich("acceptShipping.noMethods", {
+                      link: (chunks) => (
+                        <Link href="/dashboard/verzending" className="font-medium underline-offset-2 hover:underline">
+                          {chunks}
+                        </Link>
+                      ),
+                    })}
                   </p>
                 ) : (
                   <div className="space-y-2">

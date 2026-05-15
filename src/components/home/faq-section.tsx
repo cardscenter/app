@@ -1,11 +1,15 @@
 import { useTranslations } from "next-intl";
 import { HelpCircle, ChevronDown, MessageSquare } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { AnimatedSection } from "@/components/home/animated-section";
 
 // Support-mailto fallback tot /contact-route bestaat (Fase 36 follow-up).
 const SUPPORT_EMAIL = "support@cardscenter.nl";
 
-const FAQ_KEYS = [
+// Per FAQ-antwoord optioneel een dashboard-pad waar de inline <link>...</link>
+// in de i18n-string naar wijst. Niet alle antwoorden hebben een link; voor
+// items zonder linkPath rendert t.rich gewoon de plain string.
+const FAQ_KEYS: ReadonlyArray<{ qKey: string; aKey: string; linkHref?: string }> = [
   { qKey: "faqQ1", aKey: "faqA1" },
   { qKey: "faqQ2", aKey: "faqA2" },
   { qKey: "faqQ3", aKey: "faqA3" },
@@ -15,11 +19,11 @@ const FAQ_KEYS = [
   { qKey: "faqQ7", aKey: "faqA7" },
   { qKey: "faqQ8", aKey: "faqA8" },
   { qKey: "faqQ9", aKey: "faqA9" },
-  { qKey: "faqQ10", aKey: "faqA10" },
-  { qKey: "faqQ11", aKey: "faqA11" },
-  { qKey: "faqQ12", aKey: "faqA12" },
+  { qKey: "faqQ10", aKey: "faqA10", linkHref: "/dashboard/saldo" },
+  { qKey: "faqQ11", aKey: "faqA11", linkHref: "/dashboard/uitbetalingen" },
+  { qKey: "faqQ12", aKey: "faqA12", linkHref: "/dashboard/verzending" },
   { qKey: "faqQ13", aKey: "faqA13" },
-] as const;
+];
 
 export function FaqSection({ bgClass = "bg-background" }: { bgClass?: string }) {
   const t = useTranslations("home");
@@ -54,7 +58,17 @@ export function FaqSection({ bgClass = "bg-background" }: { bgClass?: string }) 
                   <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
                 </summary>
                 <div className="border-t border-border px-5 py-4">
-                  <p className="text-sm leading-relaxed text-muted-foreground">{t(faq.aKey)}</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {faq.linkHref
+                      ? t.rich(faq.aKey, {
+                          link: (chunks) => (
+                            <Link href={faq.linkHref!} className="font-medium text-primary underline-offset-2 hover:underline">
+                              {chunks}
+                            </Link>
+                          ),
+                        })
+                      : t(faq.aKey)}
+                  </p>
                 </div>
               </details>
             ))}
