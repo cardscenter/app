@@ -949,6 +949,20 @@ model ShippingBundle {
   // afwees). Mutual-akkoord-cancels hebben dit veld leeg.
   autoExpiredAt DateTime?
 
+  // Inpak-vergrendeling (claimsale-merge): zolang dit veld leeg is mag een
+  // koper bij een volgende claimsale-checkout items aan deze bundle toevoegen
+  // (mits het ook een claimsale-bundle is). Seller flipt 'm met de
+  // "Vergrendel voor inpakken"-knop in /dashboard/verkopen, of automatisch
+  // bij markAsShipped / pakbon-print. Tegen silent-appends terwijl seller
+  // de bestelling al aan het inpakken is.
+  lockedForPackingAt DateTime?
+
+  // Audit-log van merge-events: JSON-array van entries
+  // `[{ at: ISO, itemNames: string[], itemCount: number, itemTotal: number }]`.
+  // Niet bedoeld voor query — alleen rendering in order-detail-tijdlijn zodat
+  // seller in één oogopslag ziet dat er items zijn bijgekomen, en wanneer.
+  appendHistory String?
+
   // Status (Fase 27): PENDING | PAID | SCHEDULED | SHIPPED | COMPLETED | CANCELLED | DISPUTED.
   // SCHEDULED = pickup-moment vastgelegd, wacht op code-confirm. Voor EXTERNAL-bundles:
   // PENDING (RESERVED-fase) → SCHEDULED (na pickup-lock) → COMPLETED. PAID/SHIPPED wordt
