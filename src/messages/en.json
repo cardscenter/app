@@ -1961,7 +1961,13 @@
     "cancel": "Cancel",
     "availableBalance": "Available balance: €{amount}",
     "insufficientBalance": "Insufficient balance",
-    "topUpBalance": "Top up balance"
+    "topUpBalance": "Top up balance",
+    "combineWithPrevious": "Previous order with this seller",
+    "mergeAddToExisting": "Add to order {orderNumber}",
+    "mergeSavesShipping": "Save shipping — included in the same shipment",
+    "mergeNewSeparateOrder": "New separate order",
+    "mergeNewSeparateDesc": "Separate shipment with its own shipping cost",
+    "mergeNoExtraShipping": "Included in previous order"
   },
   "shipping": {
     "addressTitle": "Shipping Address",

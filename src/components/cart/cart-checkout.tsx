@@ -1,22 +1,28 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { checkout } from "@/actions/cart";
 import { toast } from "sonner";
 import { ShoppingCart, AlertTriangle } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { PaymentMethodModal } from "@/components/checkout/payment-method-modal";
 
+// Aantal minuten dat de checkout-lock op claimsale-items staat — moet matchen
+// met de waarde in src/actions/cart.ts checkout(). Als je daar de TTL wijzigt,
+// pas hier ook aan voor een correcte UI-melding.
+const CHECKOUT_LOCK_MINUTES = 5;
+
 interface CartCheckoutProps {
   totalCost: number;
   shippingSelections: Record<string, string>;
+  mergeIntoBundles: Record<string, string>;
   hasAddress: boolean;
   requiresMethodSelection: boolean;
   availableBalance: number;
 }
 
-export function CartCheckout({ totalCost, shippingSelections, hasAddress, requiresMethodSelection, availableBalance }: CartCheckoutProps) {
+export function CartCheckout({ totalCost, shippingSelections, mergeIntoBundles, hasAddress, requiresMethodSelection, availableBalance }: CartCheckoutProps) {
   const t = useTranslations("cart");
   const ts = useTranslations("shipping");
   const [loading, setLoading] = useState(false);
@@ -25,9 +31,20 @@ export function CartCheckout({ totalCost, shippingSelections, hasAddress, requir
 
   const allMethodsSelected = !requiresMethodSelection || Object.keys(shippingSelections).length > 0;
 
+  // Pauzeer / hervat de countdown-timers op cart-item-rows. Bij modal-open
+  // pauzeren ("vastgezet" tot betaling klaar is), bij cancel/close hervatten.
+  // Eventuele subscribers (CartItemRow) listen op deze events.
+  useEffect(() => {
+    if (showPaymentModal) {
+      window.dispatchEvent(new CustomEvent("cart-checkout-locked"));
+    } else {
+      window.dispatchEvent(new CustomEvent("cart-checkout-unlocked"));
+    }
+  }, [showPaymentModal]);
+
   async function handleCheckout() {
     setLoading(true);
-    const result = await checkout(shippingSelections);
+    const result = await checkout(shippingSelections, mergeIntoBundles);
 
     if (result?.error === "NO_ADDRESS") {
       toast.error(ts("addressRequired"));
@@ -81,6 +98,7 @@ export function CartCheckout({ totalCost, shippingSelections, hasAddress, requir
           onConfirm={handleCheckout}
           onCancel={() => setShowPaymentModal(false)}
           loading={loading}
+          checkoutLockMinutes={CHECKOUT_LOCK_MINUTES}
         />
       )}
 

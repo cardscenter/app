@@ -1961,7 +1961,13 @@
     "cancel": "Annuleren",
     "availableBalance": "Beschikbaar saldo: €{amount}",
     "insufficientBalance": "Onvoldoende saldo",
-    "topUpBalance": "Saldo opwaarderen"
+    "topUpBalance": "Saldo opwaarderen",
+    "combineWithPrevious": "Eerdere bestelling bij deze verkoper",
+    "mergeAddToExisting": "Voeg toe aan bestelling {orderNumber}",
+    "mergeSavesShipping": "Bespaar verzendkosten — gaat mee in dezelfde zending",
+    "mergeNewSeparateOrder": "Nieuwe aparte bestelling",
+    "mergeNewSeparateDesc": "Aparte zending met eigen verzendkosten",
+    "mergeNoExtraShipping": "Inbegrepen in vorige bestelling"
   },
   "shipping": {
     "addressTitle": "Verzendadres",

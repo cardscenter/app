@@ -3,24 +3,33 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Info } from "lucide-react";
+import { Info, Package } from "lucide-react";
 import type { CartSellerGroup } from "@/actions/cart";
 import { CartItemRow } from "@/components/cart/cart-item-row";
 import { CartCheckout } from "@/components/cart/cart-checkout";
 import { ShippingMethodPicker } from "@/components/checkout/shipping-method-picker";
 import { useRealtime } from "@/components/providers/realtime-provider";
+import type { CombinableBundle } from "@/lib/shipping-bundle";
 
 interface CartContentProps {
   groups: CartSellerGroup[];
   buyerCountry: string | null;
   hasAddress: boolean;
   availableBalance: number;
+  combinableBundles: Record<string, CombinableBundle>;
 }
 
-export function CartContent({ groups, buyerCountry, hasAddress, availableBalance }: CartContentProps) {
+export function CartContent({ groups, buyerCountry, hasAddress, availableBalance, combinableBundles }: CartContentProps) {
   const t = useTranslations("cart");
   const router = useRouter();
   const [shippingSelections, setShippingSelections] = useState<Record<string, string>>({});
+  // Per-seller keuze: true = voeg toe aan bestaande bundle, false = nieuwe
+  // aparte bestelling. Default true (merge bespaart verzendkosten).
+  const [mergeChoices, setMergeChoices] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const sellerId of Object.keys(combinableBundles)) init[sellerId] = true;
+    return init;
+  });
   const { subscribe } = useRealtime();
 
   // Real-time: bij cart-changed event (15-min expiry, andere checkout)
@@ -35,11 +44,15 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
     setShippingSelections((prev) => ({ ...prev, [sellerId]: methodId }));
   };
 
+  const setMerge = (sellerId: string, merge: boolean) => {
+    setMergeChoices((prev) => ({ ...prev, [sellerId]: merge }));
+  };
+
   // Calculate totals — exclude DELETED and expired items
   const { grandTotal, groupTotals, requiresMethodSelection } = useMemo(() => {
     let total = 0;
     let needsSelection = false;
-    const totals = new Map<string, { itemTotal: number; shippingCost: number; groupTotal: number }>();
+    const totals = new Map<string, { itemTotal: number; shippingCost: number; groupTotal: number; merged: boolean }>();
 
     for (const group of groups) {
       // Only count CLAIMED items (active claims, not deleted/sold/expired)
@@ -50,8 +63,10 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
       });
       const itemTotal = activeItems.reduce((sum, i) => sum + i.price, 0);
 
+      const merged = !!(combinableBundles[group.sellerId] && mergeChoices[group.sellerId]);
+
       let shippingCost = 0;
-      if (activeItems.length > 0) {
+      if (activeItems.length > 0 && !merged) {
         if (group.shippingMethods.length > 0) {
           const selectedId = shippingSelections[group.sellerId];
           const selectedMethod = group.shippingMethods.find((m) => m.id === selectedId);
@@ -66,12 +81,12 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
       }
 
       const groupTotal = itemTotal + shippingCost;
-      totals.set(group.sellerId, { itemTotal, shippingCost, groupTotal });
+      totals.set(group.sellerId, { itemTotal, shippingCost, groupTotal, merged });
       total += groupTotal;
     }
 
     return { grandTotal: total, groupTotals: totals, requiresMethodSelection: needsSelection };
-  }, [groups, shippingSelections]);
+  }, [groups, shippingSelections, mergeChoices, combinableBundles]);
 
   return (
     <div className="mt-6 space-y-6">
@@ -117,8 +132,49 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
               ))}
             </div>
 
-            {/* Shipping method picker */}
-            {group.shippingMethods.length > 0 && buyerCountry && (
+            {/* Merge-keuze: voeg toe aan vorige bestelling vs nieuwe aparte bestelling.
+                Alleen tonen als er een combinable bundle is bij deze verkoper. */}
+            {combinableBundles[group.sellerId] && (
+              <div className="border-t border-border bg-muted/30 px-5 py-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <Package className="h-3.5 w-3.5 text-primary" />
+                  {t("combineWithPrevious")}
+                </p>
+                <div className="space-y-1.5">
+                  <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input
+                      type="radio"
+                      name={`merge-${group.sellerId}`}
+                      checked={mergeChoices[group.sellerId] === true}
+                      onChange={() => setMerge(group.sellerId, true)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-foreground">
+                        {t("mergeAddToExisting", { orderNumber: combinableBundles[group.sellerId].orderNumber })}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{t("mergeSavesShipping")}</div>
+                    </div>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input
+                      type="radio"
+                      name={`merge-${group.sellerId}`}
+                      checked={mergeChoices[group.sellerId] === false}
+                      onChange={() => setMerge(group.sellerId, false)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-foreground">{t("mergeNewSeparateOrder")}</div>
+                      <div className="text-xs text-muted-foreground">{t("mergeNewSeparateDesc")}</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Shipping method picker — verborgen wanneer er gemerged wordt */}
+            {!totals.merged && group.shippingMethods.length > 0 && buyerCountry && (
               <div className="border-t border-border px-5 py-3">
                 <ShippingMethodPicker
                   methods={group.shippingMethods}
@@ -142,7 +198,7 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{t("shipping")}</span>
                 <span className="font-medium text-foreground">
-                  &euro;{totals.shippingCost.toFixed(2)}
+                  {totals.merged ? t("mergeNoExtraShipping") : `€${totals.shippingCost.toFixed(2)}`}
                 </span>
               </div>
               <div className="mt-1 flex justify-between border-t border-border pt-1 text-sm">
@@ -206,6 +262,11 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
         <CartCheckout
           totalCost={grandTotal}
           shippingSelections={shippingSelections}
+          mergeIntoBundles={Object.fromEntries(
+            Object.entries(combinableBundles)
+              .filter(([sellerId]) => mergeChoices[sellerId])
+              .map(([sellerId, bundle]) => [sellerId, bundle.id])
+          )}
           hasAddress={hasAddress}
           requiresMethodSelection={requiresMethodSelection}
           availableBalance={availableBalance}

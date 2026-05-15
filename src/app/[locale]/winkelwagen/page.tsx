@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { getCart } from "@/actions/cart";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCombinableClaimsaleBundles } from "@/lib/shipping-bundle";
 import { redirect } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 import { CartContent } from "@/components/cart/cart-content";
@@ -9,13 +10,19 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Link } from "@/i18n/navigation";
 import { PageContainer } from "@/components/layout/page-container";
 
-export default async function CartPage() {
+export default async function CartPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user) redirect(`/${locale}/login`);
 
   const t = await getTranslations("cart");
   const tBreadcrumbs = await getTranslations("breadcrumbs");
   const groups = await getCart();
+  const combinableBundles = await getCombinableClaimsaleBundles(session.user.id);
 
   // Get buyer address + balance info
   const user = await prisma.user.findUnique({
@@ -60,6 +67,7 @@ export default async function CartPage() {
           buyerCountry={buyerCountry}
           hasAddress={hasAddress}
           availableBalance={availableBalance}
+          combinableBundles={combinableBundles}
         />
       )}
     </PageContainer>
