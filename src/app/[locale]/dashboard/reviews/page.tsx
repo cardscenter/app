@@ -5,9 +5,14 @@ import { getSellerStats, getSellerReviews } from "@/actions/review";
 import { SellerReputationCard } from "@/components/ui/seller-reputation-card";
 import { ReviewList } from "@/components/ui/review-list";
 
-export default async function DashboardReviewsPage() {
+export default async function DashboardReviewsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
 
   const t = await getTranslations("reputation");
   const tCommon = await getTranslations("common");

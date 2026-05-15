@@ -41,9 +41,13 @@ interface ListingCardProps {
   /** Buyer's land + postcode voor distance-display. Null als niet ingelogd of
    *  profiel onvolledig — dan toont de card alleen de plaats zonder afstand. */
   buyer?: { country: string | null; postalCode: string | null } | null;
+  /** Visueel signaal dat deze card sponsored is (CATEGORY_HIGHLIGHT-upsell).
+   *  Geeft amber border + "Gesponsord"-pill zodat het onderscheid duidelijk is
+   *  wanneer een sponsored listing tussen organische listings is gepushed. */
+  isSponsored?: boolean;
 }
 
-export function ListingCard({ listing, locale, buyer }: ListingCardProps) {
+export function ListingCard({ listing, locale, buyer, isSponsored = false }: ListingCardProps) {
   const images = parseImageUrls(listing.imageUrls);
   const firstImage = images[0];
 
@@ -68,10 +72,19 @@ export function ListingCard({ listing, locale, buyer }: ListingCardProps) {
   return (
     <Link
       href={`/${locale}/marktplaats/${listing.id}`}
-      className={`group glass overflow-hidden rounded-2xl transition-all hover:scale-[1.01] hover:shadow-lg flex flex-row sm:flex-col ${
+      className={`group glass relative overflow-hidden rounded-2xl transition-all hover:scale-[1.01] hover:shadow-lg flex flex-row sm:flex-col ${
         hasSpotlight ? "ring-2 ring-yellow-400/50 shadow-yellow-400/10" : ""
-      } ${hasHighlight ? "bg-primary/[0.02]" : ""}`}
+      } ${hasHighlight ? "bg-primary/[0.02]" : ""} ${
+        isSponsored
+          ? "border border-amber-300 bg-amber-50/40 dark:border-amber-800/60 dark:bg-amber-950/10"
+          : ""
+      }`}
     >
+      {isSponsored && (
+        <span className="absolute right-2 top-2 z-10 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow">
+          {locale === "en" ? "Sponsored" : "Gesponsord"}
+        </span>
+      )}
       {/* Image — mobile: fixed size, desktop: aspect-square with fill */}
       <div className="shrink-0 sm:relative sm:w-full sm:aspect-square bg-muted flex items-center justify-center">
         {firstImage ? (

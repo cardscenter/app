@@ -1,22 +1,28 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Clock, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { AuctionCard } from "@/components/auction/auction-card";
+import { AuctionListRow } from "@/components/auction/auction-list-row";
 import { SponsoredAuctionRow } from "@/components/auction/sponsored-row";
 import { Pagination } from "@/components/ui/pagination";
 import { AuctionCreatedToast } from "@/components/auction/auction-created-toast";
 import { AuctionSortBar } from "@/components/auction/auction-sort-bar";
+import { AuctionViewToggle } from "@/components/auction/auction-view-toggle";
+import { VeilingenFilterSidebar } from "@/components/auction/veilingen-filter-sidebar";
+import { VeilingenMobileFilters } from "@/components/auction/veilingen-mobile-filters";
 import { getBuyerLocation, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { auth } from "@/lib/auth";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 import { PageContainer } from "@/components/layout/page-container";
+import { parseAuctionFilters, buildAuctionFilterWhere } from "@/lib/auction-filters";
+import { distanceKm } from "@/lib/distance";
 
 const PAGE_SIZE = 40;
 
 type SortOption = "newest" | "ending" | "highest" | "bids";
 
-// Seeded shuffle — same seed produces same order (consistent per day)
+// Seeded shuffle — same seed produces same order (consistent per day).
 function seededShuffle<T>(arr: T[], seed: number): T[] {
   const a = [...arr];
   let s = seed;
@@ -29,19 +35,28 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
 }
 
 function getOrderBy(sort: SortOption) {
-  // Tier-based search-boost (Fase 31): tier-key altijd SECONDARY zodat de
-  // gekozen sort dominant blijft. Tier-boost grijpt alleen bij ties.
+  // Tier-based search-boost: tier-key is altijd SECONDARY.
   const tierBoost = { seller: { tierRank: "desc" as const } };
+  // Status-asc als PRIMARY: 'ACTIVE' sorteert alfabetisch vóór 'SCHEDULED',
+  // dus lopende veilingen komen altijd boven geplande in elke sort-modus.
+  const statusFirst = { status: "asc" as const };
   switch (sort) {
     case "ending":
-      return [{ endTime: "asc" as const }, tierBoost];
+      return [statusFirst, { endTime: "asc" as const }, tierBoost];
     case "highest":
-      return [{ currentBid: "desc" as const }, tierBoost];
+      // currentBid blijft null tot het eerste echte bod; nulls: 'last' zorgt
+      // dat veilingen zonder bod (incl. SCHEDULED) onderaan komen — een
+      // startbod telt niet als bod voor deze sort.
+      return [
+        statusFirst,
+        { currentBid: { sort: "desc" as const, nulls: "last" as const } },
+        tierBoost,
+      ];
     case "bids":
-      return undefined; // handled in JS — tier-boost daar later
+      return undefined; // handled in JS — daar passen we de status-prioriteit ook toe
     case "newest":
     default:
-      return [{ createdAt: "desc" as const }, tierBoost];
+      return [statusFirst, { createdAt: "desc" as const }, tierBoost];
   }
 }
 
@@ -50,84 +65,139 @@ export default async function AuctionsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ page?: string; sort?: string; seed?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale } = await params;
-  const { page: pageParam, sort: sortParam, seed: seedParam } = await searchParams;
-  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-  const sort = (["newest", "ending", "highest", "bids"].includes(sortParam ?? "")
-    ? sortParam
+  const sp = await searchParams;
+
+  const pageRaw = typeof sp.page === "string" ? sp.page : undefined;
+  const sortRaw = typeof sp.sort === "string" ? sp.sort : undefined;
+  const seedRaw = typeof sp.seed === "string" ? sp.seed : undefined;
+
+  const currentPage = Math.max(1, parseInt(pageRaw ?? "1", 10) || 1);
+  const sort = (["newest", "ending", "highest", "bids"].includes(sortRaw ?? "")
+    ? sortRaw
     : "newest") as SortOption;
-  // Random seed generated on first visit, preserved across sort/page changes
-  const seed = parseInt(seedParam || "0", 10) || Math.floor(Math.random() * 2147483647);
+  const seed =
+    parseInt(seedRaw ?? "0", 10) || Math.floor(Math.random() * 2147483647);
 
   const t = await getTranslations("auction");
   const tc = await getTranslations("common");
 
   const now = new Date();
 
-  // Filter by buyer's country + buyer-location voor distance-display per card.
+  // Buyer-location → distance + country-filter.
   const buyerLocation = await getBuyerLocation();
   const buyerCountry = buyerLocation?.country ?? null;
   const countryFilter = getSellerCountryFilter(buyerCountry);
 
-  // Fase 7: hide auctions from sellers I've blocked + sellers who blocked me.
+  // Hide auctions from blocked sellers (both directions).
   const session = await auth();
   const blockedIds = await getBlockedUserIds(session?.user?.id);
   const sellerFilter = sellerNotInBlockedFilter(blockedIds);
   const blockingFilter = sellerFilter ? { sellerId: sellerFilter } : {};
 
-  // Fetch all sponsored auctions and shuffle for fairness
+  // Filter-state uit URL parsen + Prisma-where bouwen.
+  const filters = parseAuctionFilters(sp);
+  const filterWhere = buildAuctionFilterWhere(filters);
+
+  // Sponsored-auctions (CATEGORY_HIGHLIGHT actief) — niet gefilterd.
   const sponsoredRaw = await prisma.auction.findMany({
     where: {
       status: "ACTIVE",
       ...countryFilter,
       ...blockingFilter,
       upsells: {
-        some: {
-          type: "CATEGORY_HIGHLIGHT",
-          expiresAt: { gt: now },
-        },
+        some: { type: "CATEGORY_HIGHLIGHT", expiresAt: { gt: now } },
       },
     },
     include: {
       seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
       _count: { select: { bids: true } },
+      labels: { select: { type: true, colorKey: true } },
     },
   });
   const sponsoredAuctions = seededShuffle(sponsoredRaw, seed);
-
-  // Single sponsored row — up to 6 items (component reveals progressively per breakpoint)
   const sponsoredTop = sponsoredAuctions.slice(0, 6);
+  const sponsoredIds = sponsoredAuctions.map((a) => a.id);
 
-  // Count ALL active auctions (sponsored included in main grid now)
-  const totalCount = await prisma.auction.count({
-    where: { status: "ACTIVE", ...countryFilter, ...blockingFilter },
-  });
+  // Combineer filters voor de hoofdlijst. ACTIVE + SCHEDULED — geplande
+  // veilingen tonen we ook in de resultaten, maar altijd achteraan via
+  // status-asc orderBy (zie getOrderBy).
+  const baseWhere = {
+    status: { in: ["ACTIVE", "SCHEDULED"] as string[] },
+    ...countryFilter,
+    ...blockingFilter,
+    ...filterWhere,
+    ...(sponsoredIds.length > 0 ? { id: { notIn: sponsoredIds } } : {}),
+  };
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  // Radius-filter: SQLite kan geen haversine, dus post-filter in JS.
+  const useRadiusPostFilter =
+    filters.radius !== null && buyerLocation?.postalCode && buyerCountry;
 
-  // Fetch paginated auctions (including sponsored ones)
   const orderBy = getOrderBy(sort);
-  let auctions = await prisma.auction.findMany({
-    where: { status: "ACTIVE", ...countryFilter, ...blockingFilter },
-    ...(orderBy ? { orderBy } : { orderBy: { createdAt: "desc" } }),
-    skip: (page - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
-    include: {
-      seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
-      _count: { select: { bids: true } },
-    },
-  });
 
-  // Sort by most bids in JS (Prisma can't order by _count directly)
-  if (sort === "bids") {
-    auctions = auctions.sort((a, b) => (b._count.bids ?? 0) - (a._count.bids ?? 0));
+  let totalCount: number;
+  let auctions: Awaited<ReturnType<typeof prisma.auction.findMany>>;
+
+  if (useRadiusPostFilter) {
+    const candidates = await prisma.auction.findMany({
+      where: baseWhere,
+      ...(orderBy ? { orderBy } : { orderBy: { createdAt: "desc" as const } }),
+      take: 500,
+      include: {
+        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+        _count: { select: { bids: true } },
+        labels: { select: { type: true, colorKey: true } },
+      },
+    });
+    const filtered = candidates.filter((a) => {
+      const km = distanceKm({
+        buyerCountry,
+        buyerPostalCode: buyerLocation!.postalCode,
+        sellerCountry: a.seller.country,
+        sellerPostalCode: a.seller.postalCode,
+      });
+      if (km === null) return false;
+      return km <= filters.radius!;
+    });
+    totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    auctions = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  } else {
+    totalCount = await prisma.auction.count({ where: baseWhere });
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    auctions = await prisma.auction.findMany({
+      where: baseWhere,
+      ...(orderBy ? { orderBy } : { orderBy: { createdAt: "desc" as const } }),
+      skip: (safePage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: {
+        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+        _count: { select: { bids: true } },
+        labels: { select: { type: true, colorKey: true } },
+      },
+    });
   }
 
-  // For "ending" sort: push expired auctions to the end
-  if (sort === "ending") {
+  // Sort by most bids in JS (Prisma kan niet by _count ordeneren).
+  // Primary: status (ACTIVE < SCHEDULED) zodat geplande veilingen achteraan
+  // komen. Secondary: bid-count desc.
+  if (sort === "bids") {
     auctions = auctions.sort((a, b) => {
+      if (a.status !== b.status) return a.status.localeCompare(b.status);
+      return (b._count?.bids ?? 0) - (a._count?.bids ?? 0);
+    });
+  }
+  if (sort === "ending") {
+    // DB-sort heeft status-asc als primary al gedaan. Hier alleen binnen
+    // ACTIVE: verlopen pushen we naar achter (zonder SCHEDULED door elkaar
+    // te halen — die staan dan al achter ACTIVE-verlopen).
+    auctions = auctions.sort((a, b) => {
+      if (a.status !== b.status) return a.status.localeCompare(b.status);
       const aEnd = new Date(a.endTime).getTime();
       const bEnd = new Date(b.endTime).getTime();
       const nowMs = now.getTime();
@@ -138,7 +208,35 @@ export default async function AuctionsPage({
     });
   }
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
   const hasAuctions = auctions.length > 0;
+
+  // Watchlist-IDs voor de huidige user — batch-load voor de hartjes-knop.
+  let watchlistIds = new Set<string>();
+  if (session?.user?.id && auctions.length > 0) {
+    const watched = await prisma.watchlist.findMany({
+      where: {
+        userId: session.user.id,
+        auctionId: { in: auctions.map((a) => a.id) },
+      },
+      select: { auctionId: true },
+    });
+    watchlistIds = new Set(
+      watched.map((w) => w.auctionId).filter(Boolean) as string[],
+    );
+  }
+
+  const buyerHasPostcode = !!buyerLocation?.postalCode;
+
+  // Bouw extraParams voor pagination — alle filter-params behouden.
+  const extraParams: Record<string, string> = { seed: String(seed) };
+  if (sort !== "newest") extraParams.sort = sort;
+  Object.entries(sp).forEach(([k, v]) => {
+    if (k === "page" || k === "seed" || k === "sort") return;
+    const value = Array.isArray(v) ? v[0] : v;
+    if (value) extraParams[k] = value;
+  });
 
   return (
     <PageContainer width="wide" className="py-8">
@@ -146,9 +244,7 @@ export default async function AuctionsPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {tc("auctions")}
-          </h1>
+          <h1 className="text-2xl font-bold text-foreground">{tc("auctions")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t("activeCount", { count: totalCount })}
           </p>
@@ -162,51 +258,80 @@ export default async function AuctionsPage({
         </Link>
       </div>
 
-      {/* Sort bar */}
-      <div className="mt-6">
-        <AuctionSortBar currentSort={sort} seed={seed} />
+      {/* Two-column layout: filter-sidebar + main content */}
+      <div className="mt-6 flex gap-6">
+        <VeilingenFilterSidebar buyerHasPostcode={buyerHasPostcode} />
+
+        <div className="min-w-0 flex-1">
+          {/* Toolbar: mobile-filter + view-toggle + sort */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <VeilingenMobileFilters buyerHasPostcode={buyerHasPostcode} />
+            <AuctionViewToggle />
+            <div className="ml-auto">
+              <AuctionSortBar currentSort={sort} seed={seed} />
+            </div>
+          </div>
+
+          {/* Sponsored row — alleen op pagina 1 zonder actieve filters */}
+          {safePage === 1 && (
+            <SponsoredAuctionRow
+              auctions={sponsoredTop}
+              title={t("sponsored")}
+              tooltip={t("sponsoredTooltip")}
+              buyer={buyerLocation}
+            />
+          )}
+
+          {!hasAuctions ? (
+            <div className="rounded-2xl border border-border bg-card p-12 text-center">
+              <p className="text-muted-foreground">{tc("noResults")}</p>
+              <Link
+                href="/veilingen/nieuw"
+                className="mt-4 inline-block text-sm font-medium text-primary hover:text-primary-hover transition-colors"
+              >
+                {t("createTitle")} &rarr;
+              </Link>
+            </div>
+          ) : filters.view === "grid" ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [@media(min-width:1600px)]:grid-cols-5">
+                {auctions.map((auction) => (
+                  <AuctionCard key={auction.id} auction={auction} buyer={buyerLocation} />
+                ))}
+              </div>
+              <Pagination
+                currentPage={safePage}
+                totalPages={totalPages}
+                baseUrl="/veilingen"
+                locale={locale}
+                extraParams={extraParams}
+              />
+            </>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {auctions.map((auction) => (
+                  <AuctionListRow
+                    key={auction.id}
+                    auction={auction}
+                    locale={locale}
+                    buyer={buyerLocation}
+                    initialWatched={watchlistIds.has(auction.id)}
+                    showWatchlist={!!session?.user?.id}
+                  />
+                ))}
+              </div>
+              <Pagination
+                currentPage={safePage}
+                totalPages={totalPages}
+                baseUrl="/veilingen"
+                locale={locale}
+                extraParams={extraParams}
+              />
+            </>
+          )}
+        </div>
       </div>
-
-      {!hasAuctions ? (
-        <div className="mt-16 flex flex-col items-center justify-center">
-          <div className="rounded-full bg-secondary p-4">
-            <Clock className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <p className="mt-4 text-sm text-muted-foreground">{tc("noResults")}</p>
-          <Link
-            href="/veilingen/nieuw"
-            className="mt-4 text-sm font-medium text-primary hover:text-primary-hover transition-colors"
-          >
-            {t("createTitle")} &rarr;
-          </Link>
-        </div>
-      ) : (
-        <div className="mt-8">
-          {/* Sponsored row */}
-          <SponsoredAuctionRow
-            auctions={sponsoredTop}
-            title={t("sponsored")}
-            tooltip={t("sponsoredTooltip")}
-            buyer={buyerLocation}
-          />
-
-          {/* Main grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 [@media(min-width:1600px)]:grid-cols-6">
-            {auctions.map((auction) => (
-              <AuctionCard key={auction.id} auction={auction} buyer={buyerLocation} />
-            ))}
-          </div>
-
-          {/* Pagination */}
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            baseUrl="/veilingen"
-            locale={locale}
-            extraParams={{ seed: String(seed), ...(sort !== "newest" ? { sort } : {}) }}
-          />
-        </div>
-      )}
     </PageContainer>
   );
 }

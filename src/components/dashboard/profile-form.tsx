@@ -134,7 +134,7 @@ export function ProfileForm({ user }: { user: User }) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/jpeg,image/png,image/webp"
             onChange={handleAvatarSelect}
             className="hidden"
           />

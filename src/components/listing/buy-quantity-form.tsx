@@ -12,9 +12,8 @@ import { PaymentMethodModal } from "@/components/checkout/payment-method-modal";
 interface ShippingMethodOption {
   id: string;
   carrier: string;
-  serviceName: string;
+  service: string; // ShippingService
   price: number;
-  isSigned: boolean;
 }
 
 interface Props {
@@ -161,8 +160,8 @@ export function BuyQuantityForm({
           >
             {shippingMethods.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.carrier} {m.serviceName} — €{m.price.toFixed(2)}
-                {m.isSigned ? " (aangetekend)" : ""}
+                {m.carrier} {m.service} — €{m.price.toFixed(2)}
+                {m.service === "PARCEL_SIGNED" ? " (aangetekend)" : ""}
               </option>
             ))}
           </select>
@@ -250,7 +249,7 @@ export function BuyQuantityForm({
                 </div>
               ) : (
                 <div className="flex items-center justify-between text-muted-foreground">
-                  <span>{t("shippingCost")}{selectedMethod ? ` — ${selectedMethod.carrier} ${selectedMethod.serviceName}` : ""}</span>
+                  <span>{t("shippingCost")}{selectedMethod ? ` — ${selectedMethod.carrier} ${selectedMethod.service}` : ""}</span>
                   <span className="tabular-nums">
                     {freeShipping ? t("freeShipping") : `€${shippingCost.toFixed(2)}`}
                   </span>

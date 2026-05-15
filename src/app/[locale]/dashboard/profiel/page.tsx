@@ -8,7 +8,9 @@ import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
 import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
 import { ShopSlugForm } from "@/components/dashboard/shop-slug-form";
 import { BidConfirmationToggle } from "@/components/dashboard/bid-confirmation-toggle";
-import { SellingCountriesToggle } from "@/components/dashboard/selling-countries-toggle";
+import { SellingScopeToggle } from "@/components/dashboard/selling-scope-toggle";
+import { normalizeSellingScope } from "@/lib/shipping/static-methods";
+import { getEuNearNeighbors } from "@/lib/shipping/zones";
 import { SessionProvider } from "next-auth/react";
 import { Link } from "@/i18n/navigation";
 import {
@@ -36,9 +38,14 @@ import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
 import type { ReactNode } from "react";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("dashboard");
   const tp = await getTranslations("profile");
 
@@ -212,13 +219,19 @@ export default async function ProfilePage() {
       )}
 
       {/* SECTIE 5 — Verzendgebied */}
-      <Section
-        icon={<Truck className="size-5" />}
-        title="Verzendgebied"
-        description="Naar welke landen verzend je. Kopers buiten je verzendgebied zien je items niet."
-      >
-        <SellingCountriesToggle current={user.sellingCountries} />
-      </Section>
+      {user.country && (
+        <Section
+          icon={<Truck className="size-5" />}
+          title="Verzendgebied"
+          description="Naar welke landen verzend je. Kopers buiten je verzendgebied zien je items niet."
+        >
+          <SellingScopeToggle
+            current={normalizeSellingScope(user.sellingCountries)}
+            originCountry={user.country}
+            neighbors={getEuNearNeighbors(user.country)}
+          />
+        </Section>
+      )}
 
       {/* SECTIE 6 — Bankgegevens */}
       <Section

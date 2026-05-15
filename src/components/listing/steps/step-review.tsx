@@ -7,7 +7,7 @@ import { calculateUpsellCost } from "@/lib/upsell-config";
 import { CarrierLogo } from "@/components/ui/carrier-logo";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
 import type { SellerShippingMethod } from "@prisma/client";
-import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType, CardItemEntry } from "@/types";
+import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType } from "@/types";
 
 interface UpsellEntry {
   type: UpsellType;
@@ -23,8 +23,6 @@ interface FormData {
   cardSetId: string;
   selectedSeries: string;
   condition: string;
-  cardItems: CardItemEntry[];
-  estimatedCardCount: number | null;
   productType: string;
   itemCategory: string;
   pricingType: string;
@@ -255,18 +253,6 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
                 <div>
                   <p className="text-muted-foreground">{t("condition")}</p>
                   <p className="font-medium text-foreground">{form.condition}</p>
-                </div>
-              )}
-              {form.listingType === "MULTI_CARD" && form.cardItems.length > 0 && (
-                <div>
-                  <p className="text-muted-foreground">{t("cardName")}en</p>
-                  <p className="font-medium text-foreground">{form.cardItems.length} kaarten</p>
-                </div>
-              )}
-              {form.listingType === "COLLECTION" && form.estimatedCardCount && (
-                <div>
-                  <p className="text-muted-foreground">{t("estimatedCardCount")}</p>
-                  <p className="font-medium text-foreground">{form.estimatedCardCount}</p>
                 </div>
               )}
               {form.listingType === "SEALED_PRODUCT" && form.productType && (

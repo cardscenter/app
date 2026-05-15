@@ -4,23 +4,32 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { ShippingMethodsManager } from "@/components/dashboard/shipping-methods-manager";
-import { SellingCountriesToggle } from "@/components/dashboard/selling-countries-toggle";
+import { SellingScopeToggle } from "@/components/dashboard/selling-scope-toggle";
+import { getSellerShippingMethods } from "@/actions/shipping-method";
+import { normalizeSellingScope } from "@/lib/shipping/static-methods";
+import { getCarriersForCountry } from "@/lib/shipping/carriers";
+import { getEuNearNeighbors } from "@/lib/shipping/zones";
 
-export default async function ShippingPage() {
+export default async function ShippingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user) redirect(`/${locale}/login`);
 
   const t = await getTranslations("shipping");
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id! },
   });
-  if (!user) redirect("/login");
+  if (!user) redirect(`/${locale}/login`);
 
-  const methods = await prisma.sellerShippingMethod.findMany({
-    where: { sellerId: user.id },
-    orderBy: { createdAt: "asc" },
-  });
+  const enrichedMethods = await getSellerShippingMethods();
+  const scope = normalizeSellingScope(user.sellingCountries);
+  const availableCarriers = user.country ? getCarriersForCountry(user.country) : [];
+  const neighbors = user.country ? getEuNearNeighbors(user.country) : [];
 
   return (
     <div className="space-y-8">
@@ -33,21 +42,33 @@ export default async function ShippingPage() {
         </div>
       </section>
 
-      {/* Selling countries section */}
-      <section>
-        <h2 className="text-lg font-semibold text-foreground">{t("sellingCountriesTitle")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("sellingCountriesDescription")}</p>
-        <div className="mt-4">
-          <SellingCountriesToggle current={user.sellingCountries} />
-        </div>
-      </section>
+      {/* Selling scope section */}
+      {user.country && (
+        <section>
+          <h2 className="text-lg font-semibold text-foreground">{t("sellingCountriesTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("sellingCountriesDescription")}</p>
+          <div className="mt-4">
+            <SellingScopeToggle
+              current={scope}
+              originCountry={user.country}
+              neighbors={neighbors}
+            />
+          </div>
+        </section>
+      )}
 
-      {/* Shipping methods section */}
+      {/* Static shipping methods section */}
       <section>
         <h2 className="text-lg font-semibold text-foreground">{t("methodsTitle")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("methodsDescription")}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("staticIntro")}</p>
         <div className="mt-4">
-          <ShippingMethodsManager methods={methods} />
+          <ShippingMethodsManager
+            methods={enrichedMethods}
+            availableCarriers={availableCarriers}
+            hasCountry={!!user.country}
+            neighbors={neighbors}
+            scope={scope}
+          />
         </div>
       </section>
     </div>

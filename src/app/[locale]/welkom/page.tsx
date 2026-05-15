@@ -12,10 +12,15 @@ import {
   PartyPopper,
 } from "lucide-react";
 
-export default async function WelcomePage() {
+export default async function WelcomePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
   if (!session?.user) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
   return <WelcomeContent name={session.user?.name ?? ""} />;

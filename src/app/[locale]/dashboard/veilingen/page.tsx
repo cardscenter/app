@@ -56,17 +56,23 @@ export default async function MyAuctionsPage({
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     auction.status === "ACTIVE"
                       ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                      : auction.status === "SCHEDULED"
+                      ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
                       : auction.status === "ENDED_SOLD" || auction.status === "BOUGHT_NOW"
                       ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
                       : "bg-muted text-muted-foreground"
                   }`}>
-                    {auction.status}
+                    {auction.status === "SCHEDULED" ? ta("auctionScheduledBadge") : auction.status}
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
                   <span>{ta("currentBid")}: €{(auction.currentBid ?? auction.startingBid).toFixed(2)}</span>
                   <span>{auction._count.bids} biedingen</span>
-                  <span>{new Date(auction.endTime).toLocaleDateString("nl-NL")}</span>
+                  {auction.status === "SCHEDULED" && auction.startTime ? (
+                    <span>{ta("startsAt")}: {new Date(auction.startTime).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" })}</span>
+                  ) : (
+                    <span>{new Date(auction.endTime).toLocaleDateString("nl-NL")}</span>
+                  )}
                 </div>
               </Link>
               {/* Owner-actie (Fase 27.88): annuleer-knop alleen voor ACTIVE

@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { CreditCard, Layers, Archive, Package, Sparkles } from "lucide-react";
+import { RectangleVertical, Layers, Archive, Package, Sparkles } from "lucide-react";
 import type { ListingType } from "@/types";
 
-const TYPE_OPTIONS: { value: ListingType; icon: typeof CreditCard }[] = [
-  { value: "SINGLE_CARD", icon: CreditCard },
+const TYPE_OPTIONS: { value: ListingType; icon: typeof RectangleVertical }[] = [
+  { value: "SINGLE_CARD", icon: RectangleVertical },
   { value: "MULTI_CARD", icon: Layers },
   { value: "COLLECTION", icon: Archive },
   { value: "SEALED_PRODUCT", icon: Package },

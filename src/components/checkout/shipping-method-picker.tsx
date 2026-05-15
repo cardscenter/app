@@ -8,10 +8,8 @@ import {
   requiresSignedShipping,
   recommendsSignedShipping,
   SIGNED_REQUIRED_THRESHOLD,
-  isUntrackedAllowed,
-  UNTRACKED_MAX_ORDER_VALUE,
-  LETTER_MAX_ITEMS,
 } from "@/lib/shipping/tracked-threshold";
+import { zoneFor } from "@/lib/shipping/zones";
 
 interface ShippingMethodPickerProps {
   methods: CartShippingMethod[];
@@ -23,53 +21,33 @@ interface ShippingMethodPickerProps {
   onChange: (methodId: string) => void;
 }
 
+/** Verzendmethode-picker (Fase 33). Filtert op zone-match seller↔buyer + signed-eis ≥€150. */
 export function ShippingMethodPicker({
   methods,
   buyerCountry,
   sellerCountry,
   itemTotal = 0,
-  itemCount = 1,
   selected,
   onChange,
 }: ShippingMethodPickerProps) {
   const ts = useTranslations("shipping");
 
-  const isInternational = !!sellerCountry && sellerCountry !== buyerCountry;
-  const signedRequired = requiresSignedShipping(itemTotal, isInternational);
+  const computedZone = sellerCountry ? zoneFor(sellerCountry, buyerCountry) : null;
+  const signedRequired = requiresSignedShipping(itemTotal);
   const signedRecommended = !signedRequired && recommendsSignedShipping(itemTotal);
-  const untrackedAllowed = isUntrackedAllowed(itemTotal);
 
-  const letterExceedsByCount = itemCount > LETTER_MAX_ITEMS;
+  // Filter op zone-match
+  let available = computedZone
+    ? methods.filter((m) => m.zone === computedZone)
+    : methods;
 
-  // Filter methods available for buyer's country
-  let available = methods.filter(
-    (m) => m.countries.length === 0 || m.countries.includes(buyerCountry)
-  );
-
-  // Filter out LETTER methods if too many items
-  if (letterExceedsByCount) {
-    available = available.filter((m) => m.shippingType !== "LETTER");
-  }
-
-  // If untracked not allowed (>= €25), filter out untracked methods
-  if (!untrackedAllowed) {
-    const trackedMethods = available.filter((m) => m.isTracked);
-    if (trackedMethods.length > 0) {
-      available = trackedMethods;
-    }
-  }
-
-  // If signed is required, only show signed methods
+  // Bij ≥€150: alleen SIGNED tonen, MAILBOX_PARCEL altijd uitsluiten
+  // (defensief — server zou dit ook weigeren).
   if (signedRequired) {
-    const signedMethods = available.filter((m) => m.isSigned);
-    if (signedMethods.length > 0) {
-      available = signedMethods;
-    }
+    available = available.filter((m) => m.service !== "MAILBOX_PARCEL");
+    const signedMethods = available.filter((m) => m.service === "PARCEL_SIGNED");
+    if (signedMethods.length > 0) available = signedMethods;
   }
-
-  // Check if user selected an untracked method (for warning)
-  const selectedMethod = available.find((m) => m.id === selected);
-  const showBriefpostWarning = untrackedAllowed && selectedMethod && !selectedMethod.isTracked;
 
   if (available.length === 0) {
     return (
@@ -83,39 +61,16 @@ export function ShippingMethodPicker({
     <div className="space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{ts("chooseShippingMethod")}</p>
 
-      {/* Signed shipping notices */}
       {signedRequired && (
         <div className="flex items-start gap-2 rounded-lg bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>
-            {isInternational
-              ? ts("signedRequiredInternational")
-              : ts("signedRequiredThreshold", { amount: SIGNED_REQUIRED_THRESHOLD })}
-          </span>
+          <span>{ts("signedRequiredThreshold", { amount: SIGNED_REQUIRED_THRESHOLD })}</span>
         </div>
       )}
       {signedRecommended && (
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
           <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{ts("signedRecommended")}</span>
-        </div>
-      )}
-      {letterExceedsByCount && (
-        <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-2.5 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{ts("letterNotAvailable", { count: itemCount, max: LETTER_MAX_ITEMS })}</span>
-        </div>
-      )}
-      {!untrackedAllowed && (
-        <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-2.5 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{ts("briefpostNotAllowed", { amount: UNTRACKED_MAX_ORDER_VALUE })}</span>
-        </div>
-      )}
-      {showBriefpostWarning && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{ts("briefpostWarning")}</span>
         </div>
       )}
 
@@ -138,17 +93,19 @@ export function ShippingMethodPicker({
           <CarrierLogo carrierId={method.carrier} size={32} className="shrink-0 rounded" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <span className="font-medium">{method.carrier} — {method.serviceName}</span>
+              <span className="font-medium">
+                {method.carrier} — {ts(`service.${method.service}`)}
+              </span>
               <span className="font-semibold whitespace-nowrap">&euro;{method.price.toFixed(2)}</span>
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              {method.isSigned && (
+              {method.service === "PARCEL_SIGNED" && (
                 <span className="inline-flex items-center gap-0.5 text-xs text-purple-600 dark:text-purple-400">
                   <ShieldCheck className="h-3 w-3" />
                   {ts("signed")}
                 </span>
               )}
-              {method.isTracked && !method.isSigned && (
+              {method.service !== "PARCEL_SIGNED" && (
                 <span className="inline-flex items-center gap-0.5 text-xs text-amber-600 dark:text-amber-400">
                   <Shield className="h-3 w-3" />
                   {ts("tracked")}

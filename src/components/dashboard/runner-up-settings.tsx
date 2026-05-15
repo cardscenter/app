@@ -43,14 +43,16 @@ export function RunnerUpSettings({ current }: RunnerUpSettingsProps) {
       <div className="flex items-center gap-3">
         <input
           type="range"
-          min={1}
-          max={10}
+          min={0}
+          max={3}
           step={1}
           value={value}
           onChange={(e) => setValue(parseInt(e.target.value))}
           className="flex-1 accent-primary"
         />
-        <span className="w-10 text-center text-sm font-semibold text-foreground">{value}</span>
+        <span className="w-10 text-center text-sm font-semibold text-foreground">
+          {value === 0 ? t("runnerUpDisabledLabel") : value}
+        </span>
       </div>
 
       <button

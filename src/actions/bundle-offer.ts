@@ -16,6 +16,7 @@ import {
   MAX_COUNTER_DEPTH,
 } from "@/lib/bundle-offer-config";
 import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
+import { enrichMethod } from "@/lib/shipping/static-methods";
 import type { Prisma } from "@prisma/client";
 
 // Helper-shape voor bp.listings na include
@@ -574,7 +575,8 @@ export async function respondToBundleOffer(
   const totalAmount = bp.totalAmount;
 
   // Voor SHIP-bundles: seller moet een shipping-method kiezen, server valideert
-  // de isSigned-eis (buyer-toggle of bedrag/internationaal-regelwerk).
+  // de SIGNED-eis (buyer-toggle of orderwaarde ≥€150).
+  // Fase 33: alle methodes zijn getracked + ≠LETTER, dus alleen SIGNED-check.
   let acceptedShippingMethodId: string | null = null;
   let acceptedShippingPrice = 0;
   if (bp.paymentMode === "PLATFORM" && bp.deliveryMethod === "SHIP") {
@@ -584,25 +586,25 @@ export async function respondToBundleOffer(
 
     const method = await prisma.sellerShippingMethod.findFirst({
       where: { id: parsed.data.shippingMethodId, sellerId: bp.sellerId, isActive: true },
-      select: { id: true, isTracked: true, isSigned: true, shippingType: true, price: true },
     });
     if (!method) return { error: "Verzendmethode niet beschikbaar" };
-    if (method.shippingType === "LETTER") {
-      return { error: "Briefpost is niet toegestaan voor bundels — kies een pakket-methode" };
-    }
 
     const seller = await prisma.user.findUnique({ where: { id: bp.sellerId }, select: { country: true } });
-    const isInternational = seller?.country !== buyer.country;
-    const mustBeSigned = bp.requestInsuredShipping || requiresSignedShipping(totalAmount, isInternational);
-    if (mustBeSigned && !method.isSigned) {
+    if (!seller?.country) return { error: "Verkoper heeft geen land ingesteld" };
+
+    const enriched = enrichMethod(method, seller.country);
+    if (!enriched) return { error: "Verzendmethode niet beschikbaar" };
+
+    const mustBeSigned = bp.requestInsuredShipping || requiresSignedShipping(totalAmount);
+    if (mustBeSigned && enriched.service !== "PARCEL_SIGNED") {
       return {
         error: bp.requestInsuredShipping
           ? "De koper heeft verzekerd verzonden gevraagd — kies een aangetekende methode."
-          : `Voor bundels >€150 of internationaal is aangetekende verzending verplicht.`,
+          : "Voor bundels >€150 is aangetekende verzending verplicht.",
       };
     }
     acceptedShippingMethodId = method.id;
-    acceptedShippingPrice = method.price;
+    acceptedShippingPrice = enriched.effectivePrice;
   }
 
   // Fase 32: splits totalAmount in items + shipping zodat commissie alleen

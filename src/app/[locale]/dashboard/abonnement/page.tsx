@@ -6,9 +6,14 @@ import { getTierConfig } from "@/lib/subscription-tiers";
 import { TierGrid } from "@/components/subscription/tier-grid";
 import { CurrentSubscriptionCard } from "@/components/subscription/current-subscription-card";
 
-export default async function SubscriptionPage() {
+export default async function SubscriptionPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("subscription");
 
   const user = await prisma.user.findUnique({

@@ -6,9 +6,14 @@ import { ENTERPRISE_MIN_MONTHLY_REVENUE } from "@/lib/subscription-tiers";
 import { EnterpriseRequestForm } from "@/components/subscription/enterprise-request-form";
 import { Link } from "@/i18n/navigation";
 
-export default async function EnterpriseAanvraagPage() {
+export default async function EnterpriseAanvraagPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },

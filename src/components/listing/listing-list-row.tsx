@@ -48,6 +48,8 @@ interface ListingListRowProps {
   buyer?: { country: string | null; postalCode: string | null } | null;
   initialWatched?: boolean;
   showWatchlist?: boolean;
+  /** Sponsored-flag (CATEGORY_HIGHLIGHT). Amber border + pill in de header. */
+  isSponsored?: boolean;
 }
 
 function stripHtml(s: string): string {
@@ -147,6 +149,7 @@ export function ListingListRow({
   buyer,
   initialWatched = false,
   showWatchlist = true,
+  isSponsored = false,
 }: ListingListRowProps) {
   const images = parseImageUrls(listing.imageUrls);
   const firstImage = images[0];
@@ -176,7 +179,18 @@ export function ListingListRow({
         : null;
 
   return (
-    <article className="group flex flex-row gap-3 sm:gap-5 rounded-2xl border border-border bg-card p-3 sm:p-4 shadow-card transition-shadow hover:shadow-card-hover">
+    <article
+      className={`group relative flex flex-row gap-3 sm:gap-5 rounded-2xl border p-3 sm:p-4 shadow-card transition-shadow hover:shadow-card-hover ${
+        isSponsored
+          ? "border-amber-300 bg-amber-50/40 dark:border-amber-800/60 dark:bg-amber-950/10"
+          : "border-border bg-card"
+      }`}
+    >
+      {isSponsored && (
+        <span className="absolute right-3 top-3 z-10 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow">
+          {locale === "en" ? "Sponsored" : "Gesponsord"}
+        </span>
+      )}
       {/* IMAGE — met watchlist-overlay op mobile */}
       <div className="relative shrink-0">
         <Link

@@ -76,7 +76,7 @@ export function ListingForm({ seriesList }: { seriesList: SeriesWithSets[] }) {
       <div>
         <label className="block text-sm font-medium text-foreground mb-2">{t("photos")}</label>
         <input type="hidden" name="imageUrls" value={JSON.stringify(images)} />
-        <ImageUploader images={images} onChange={setImages} maxImages={10} />
+        <ImageUploader images={images} onChange={setImages} maxImages={10} context="listing" />
       </div>
 
       {/* Description */}

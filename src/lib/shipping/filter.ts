@@ -1,5 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { COUNTRY_CODES } from "./countries";
+import { zoneFor } from "./zones";
+import { normalizeSellingScope } from "./static-methods";
 
 export async function getBuyerCountry(): Promise<string | null> {
   const location = await getBuyerLocation();
@@ -25,13 +28,57 @@ export async function getBuyerLocation(): Promise<{
   return { country: user.country ?? null, postalCode: user.postalCode ?? null };
 }
 
+/** Filter sellers op basis van buyer-country + seller's selling-scope (Fase 33).
+ *
+ *  Logica per seller-country relatief tot buyer-country:
+ *  - DOMESTIC (zelfde land): altijd zichtbaar
+ *  - EU_NEAR: zichtbaar bij scope DOMESTIC_AND_NEAR of ALL_EU
+ *  - EU_FAR: zichtbaar bij scope ALL_EU
+ *
+ *  We pre-computeren per buyer-country welke seller-countries in welke zone vallen,
+ *  en bouwen een Prisma OR-where op basis daarvan. Sellers met `country = null` worden
+ *  uitgesloten (kunnen niet verzenden zonder origin).
+ */
 export function getSellerCountryFilter(buyerCountry: string | null) {
-  // NL buyers or unauthenticated visitors: show everything
-  if (!buyerCountry || buyerCountry === "NL") return {};
-  // BE buyers: filter out NL_ONLY sellers (NL_BE and ALL_EU both include BE)
-  if (buyerCountry === "BE") {
-    return { seller: { sellingCountries: { not: "NL_ONLY" } } };
+  if (!buyerCountry || !COUNTRY_CODES.includes(buyerCountry)) return {};
+
+  const domesticOrigins: string[] = [];
+  const nearOrigins: string[] = [];
+  const farOrigins: string[] = [];
+
+  for (const sellerCountry of COUNTRY_CODES) {
+    const zone = zoneFor(sellerCountry, buyerCountry);
+    if (zone === "DOMESTIC") domesticOrigins.push(sellerCountry);
+    else if (zone === "EU_NEAR") nearOrigins.push(sellerCountry);
+    else if (zone === "EU_FAR") farOrigins.push(sellerCountry);
   }
-  // Other EU buyers: only show ALL_EU sellers
-  return { seller: { sellingCountries: "ALL_EU" } };
+
+  // Legacy + nieuwe scope-waardes: legacy NL_BE telt als DOMESTIC_AND_NEAR, NL_ONLY als DOMESTIC_ONLY.
+  const allScopes = ["DOMESTIC_ONLY", "DOMESTIC_AND_NEAR", "ALL_EU", "NL_ONLY", "NL_BE"];
+  const scopesIncludingNear = allScopes.filter(
+    (s) => normalizeSellingScope(s) !== "DOMESTIC_ONLY",
+  );
+  const scopesIncludingFar = allScopes.filter(
+    (s) => normalizeSellingScope(s) === "ALL_EU",
+  );
+
+  return {
+    seller: {
+      OR: [
+        { country: { in: domesticOrigins } },
+        {
+          AND: [
+            { country: { in: nearOrigins } },
+            { sellingCountries: { in: scopesIncludingNear } },
+          ],
+        },
+        {
+          AND: [
+            { country: { in: farOrigins } },
+            { sellingCountries: { in: scopesIncludingFar } },
+          ],
+        },
+      ],
+    },
+  };
 }

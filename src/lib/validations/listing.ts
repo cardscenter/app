@@ -21,9 +21,6 @@ export const createListingSchema = z.object({
   cardName: z.string().optional(),
   cardSetId: z.string().optional(),
   tcgdexId: z.string().optional(),
-  cardItems: z.string().optional(), // JSON array for MULTI_CARD
-  estimatedCardCount: z.coerce.number().int().min(1).optional(),
-  conditionRange: z.string().optional(),
   productType: z.enum(SEALED_PRODUCT_TYPES).optional(),
   itemCategory: z.string().optional(),
 
@@ -42,14 +39,13 @@ export const createListingSchema = z.object({
   packageSize: z.enum(PACKAGE_SIZES).optional(),
   packageCount: z.coerce.number().int().min(1).max(10).default(1),
 
-  // Shipping methods
-  shippingMethodIds: z.string().optional(), // JSON array of shipping method IDs
+  // Brievenbuspakket opt-in (Fase 33 v2). Server leidt shippingMethodIds af
+  // uit dit veld + seller's actieve slots: STANDARD+SIGNED altijd, MAILBOX
+  // alleen als allowMailbox=true + type-eligible + price < €150.
+  allowMailbox: z.coerce.boolean().default(false),
 
   // Upsells
   upsells: z.string().optional(), // JSON array of {type, days}
-
-  // Partial-sale toggle (Fase 27.13). Alleen relevant voor MULTI_CARD.
-  allowPartialSale: z.coerce.boolean().default(false),
 
   // Voorraad (Fase 27.23) — alleen relevant voor SEALED_PRODUCT en OTHER.
   // Validatie checkt min 1, max 999 (sanity).
@@ -81,29 +77,9 @@ export const createListingSchema = z.object({
     }
   }
 
-  // Shipping-method (Fase 27.81): voor SHIP/BOTH listings moet minstens één
-  // SellerShippingMethod gekozen zijn. Anders kan een koper niet checkout-en.
-  if (data.deliveryMethod === "SHIP" || data.deliveryMethod === "BOTH") {
-    let methodIds: unknown = null;
-    if (data.shippingMethodIds) {
-      try {
-        methodIds = JSON.parse(data.shippingMethodIds);
-      } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Ongeldige verzendmethode-gegevens",
-          path: ["shippingMethodIds"],
-        });
-      }
-    }
-    if (!Array.isArray(methodIds) || methodIds.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Kies minstens één verzendmethode",
-        path: ["shippingMethodIds"],
-      });
-    }
-  }
+  // Verzendmethoden worden server-side afgeleid (deriveListingShippingMethodIds).
+  // Geen schema-validatie nodig; de action checkt zelf of de seller actieve
+  // slots heeft voor SHIP/BOTH-listings.
 
   // Koop-opties (Fase 27.76): voor FIXED listings moet minstens één van
   // Direct Kopen of Biedingen aan staan. Anders kan niemand iets — dood
@@ -114,17 +90,6 @@ export const createListingSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: "Bij vaste prijs: sta minstens Direct Kopen of biedingen toe",
       path: ["allowDirectBuy"],
-    });
-  }
-
-  // allowPartialSale alleen relevant voor MULTI_CARD (Fase 27.80). Voor
-  // andere types werd het silently false gezet — nu expliciete error zodat
-  // de UI/API geen verwarrende state stuurt.
-  if (data.allowPartialSale && data.listingType !== "MULTI_CARD") {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Gedeeltelijke verkoop is alleen mogelijk voor 'Meerdere losse kaarten'",
-      path: ["allowPartialSale"],
     });
   }
 
@@ -147,28 +112,8 @@ export const createListingSchema = z.object({
     }
   }
 
-  // MULTI_CARD requires cardItems
-  if (data.listingType === "MULTI_CARD") {
-    if (!data.cardItems) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Voeg minimaal één kaart toe", path: ["cardItems"] });
-    } else {
-      try {
-        const items = JSON.parse(data.cardItems);
-        if (!Array.isArray(items) || items.length === 0) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Voeg minimaal één kaart toe", path: ["cardItems"] });
-        }
-      } catch {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ongeldige kaartgegevens", path: ["cardItems"] });
-      }
-    }
-  }
-
-  // COLLECTION requires estimatedCardCount
-  if (data.listingType === "COLLECTION") {
-    if (!data.estimatedCardCount || data.estimatedCardCount < 1) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Geschat aantal kaarten is verplicht", path: ["estimatedCardCount"] });
-    }
-  }
+  // MULTI_CARD + COLLECTION hebben geen extra verplichte velden meer
+  // (Fase 33 v2): kaartlijst / collectie-info hoort in de beschrijving.
 
   // SEALED_PRODUCT requires productType
   if (data.listingType === "SEALED_PRODUCT") {

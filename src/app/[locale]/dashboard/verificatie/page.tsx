@@ -10,9 +10,14 @@ import { Link } from "@/i18n/navigation";
 
 type Status = "NONE" | "PENDING" | "APPROVED" | "REJECTED";
 
-export default async function VerificationPage() {
+export default async function VerificationPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("verification");
 
   const status = await getVerificationStatus();

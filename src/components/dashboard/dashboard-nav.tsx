@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { signOut } from "next-auth/react";
 import { AdminNav } from "@/components/admin/admin-nav";
 import {
@@ -29,12 +29,21 @@ import {
   LogOut,
   Ban,
   Shield,
+  HandCoins,
+  Banknote,
+  ChevronDown,
 } from "lucide-react";
 
-interface NavSection {
-  label: string;
-  items: { href: string; labelKey: string; icon: typeof LayoutDashboard }[];
-}
+type NavItem = { href: string; labelKey: string; icon: typeof LayoutDashboard; comingSoon?: boolean };
+
+// A group with `labelKey` collapses behind a chevron-button header. Without
+// `labelKey` the items render as plain top/bottom links (used for Overzicht +
+// Personalisatie/Geschillen).
+type NavGroup = {
+  id: string;
+  labelKey?: string;
+  items: NavItem[];
+};
 
 interface LevelInfo {
   name: string;
@@ -52,11 +61,13 @@ type DashboardNavProps = {
   adminPendingCounts?: { disputes?: number; verifications?: number; withdrawals?: number; buybacks?: number; reports?: number; sellerWarnings?: number; enterpriseRequests?: number };
 };
 
+const OPEN_STATE_STORAGE_KEY = "dashboard-nav-open";
+
 // Thin wrapper: decides which nav to render based on path + admin status.
 // Splitting the swap from the inner component avoids React reconciliation
-// confusion (the inner DashboardNavInner has 7 hooks, AdminNav has 3 — keeping
-// them as siblings instead of a parent-with-early-return makes hook-counts
-// stable per fiber).
+// confusion (the inner DashboardNavInner has many hooks, AdminNav has 3 —
+// keeping them as siblings instead of a parent-with-early-return makes
+// hook-counts stable per fiber).
 export function DashboardNav(props: DashboardNavProps) {
   const pathname = usePathname();
   if (props.accountType === "ADMIN" && pathname.startsWith("/dashboard/admin")) {
@@ -83,85 +94,144 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
 
   function handleLogoutClick() {
     if (confirmLogout) {
-      // Second click — actually sign out
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
       signOut({ callbackUrl: "/" });
       return;
     }
-    // First click — arm confirmation, auto-revert after 4 seconds
     setConfirmLogout(true);
     confirmTimerRef.current = setTimeout(() => setConfirmLogout(false), 4000);
   }
 
-  const sections: NavSection[] = [
-    {
-      label: "sectionOverview",
-      items: [
-        { href: "/dashboard", labelKey: "title", icon: LayoutDashboard },
-        { href: "/dashboard/statistieken", labelKey: "myStatistics", icon: BarChart3 },
-      ],
-    },
-    {
-      label: "sectionSales",
-      items: [
-        { href: "/dashboard/veilingen", labelKey: "myAuctions", icon: Gavel },
-        { href: "/dashboard/claimsales", labelKey: "myClaimsales", icon: Tag },
-        { href: "/dashboard/marktplaats", labelKey: "myListings", icon: Store },
-        { href: "/dashboard/verkopen", labelKey: "mySales", icon: Package },
-      ],
-    },
-    {
-      label: "sectionBuying",
-      items: [
-        { href: "/dashboard/aankopen", labelKey: "myPurchases", icon: ShoppingBag },
-        { href: "/dashboard/biedingen", labelKey: "myBids", icon: Gavel },
-        { href: "/dashboard/volglijst", labelKey: "myWatchlist", icon: Heart },
-      ],
-    },
-    {
-      label: "sectionTrading",
-      items: [
-        { href: "/dashboard/saldo", labelKey: "myBalance", icon: Wallet },
-        { href: "/dashboard/uitbetalingen", labelKey: "myWithdrawals", icon: Wallet },
-        { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
-        { href: "/dashboard/inkoop", labelKey: "myBuyback", icon: ArrowDownToLine },
-      ],
-    },
-    {
-      label: "sectionAccount",
-      items: [
-        { href: "/dashboard/profiel", labelKey: "profile", icon: User },
-        { href: "/dashboard/abonnement", labelKey: "mySubscription", icon: CreditCard },
-        { href: "/dashboard/verificatie", labelKey: "myVerification", icon: ShieldCheck },
-        { href: "/dashboard/reviews", labelKey: "myReviews", icon: Star },
-        { href: "/dashboard/meldingen", labelKey: "myNotifications", icon: Bell },
-        { href: "/dashboard/blokkeerlijst", labelKey: "myBlockedList", icon: Ban },
-      ],
-    },
-    {
-      label: "sectionPersonalization",
-      items: [
-        { href: "/customization", labelKey: "personalization", icon: Paintbrush },
-      ],
-    },
-    {
-      label: "sectionDisputes",
-      items: [
-        { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
-      ],
-    },
-    // Admin Panel staat NIET meer in de sections — wordt onder de nav als
-    // eigen knop gerenderd (zoals de logout-button), zie `adminPanelButton`.
-  ];
+  const groups: NavGroup[] = useMemo(
+    () => [
+      {
+        id: "overview",
+        items: [
+          { href: "/dashboard", labelKey: "title", icon: LayoutDashboard },
+          { href: "/dashboard/statistieken", labelKey: "myStatistics", icon: BarChart3 },
+        ],
+      },
+      {
+        id: "offer",
+        labelKey: "sectionOffer",
+        items: [
+          { href: "/dashboard/veilingen", labelKey: "myAuctions", icon: Gavel },
+          { href: "/dashboard/marktplaats", labelKey: "myListings", icon: Store },
+          { href: "/dashboard/claimsales", labelKey: "myClaimsales", icon: Tag },
+        ],
+      },
+      {
+        id: "orders",
+        labelKey: "sectionOrders",
+        items: [
+          { href: "/dashboard/aankopen", labelKey: "myPurchases", icon: ShoppingBag },
+          { href: "/dashboard/verkopen", labelKey: "mySales", icon: Package },
+        ],
+      },
+      {
+        id: "activity",
+        labelKey: "sectionActivity",
+        items: [
+          { href: "/dashboard/biedingen", labelKey: "myBids", icon: HandCoins },
+          { href: "/dashboard/volglijst", labelKey: "myWatchlist", icon: Heart },
+          { href: "/dashboard/meldingen", labelKey: "myNotifications", icon: Bell },
+        ],
+      },
+      {
+        id: "wallet",
+        labelKey: "sectionWallet",
+        items: [
+          { href: "/dashboard/saldo", labelKey: "myBalance", icon: Wallet },
+          { href: "/dashboard/uitbetalingen", labelKey: "myWithdrawals", icon: Banknote },
+          { href: "/dashboard/inkoop", labelKey: "myBuyback", icon: ArrowDownToLine },
+        ],
+      },
+      {
+        id: "account",
+        labelKey: "sectionAccount",
+        items: [
+          { href: "/dashboard/profiel", labelKey: "profile", icon: User },
+          { href: "/dashboard/verificatie", labelKey: "myVerification", icon: ShieldCheck },
+          { href: "/dashboard/abonnement", labelKey: "mySubscription", icon: CreditCard },
+          { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
+          { href: "/dashboard/reviews", labelKey: "myReviews", icon: Star },
+          { href: "/dashboard/blokkeerlijst", labelKey: "myBlockedList", icon: Ban },
+        ],
+      },
+      {
+        id: "extras",
+        items: [
+          { href: "/customization", labelKey: "personalization", icon: Paintbrush, comingSoon: true },
+          { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
+        ],
+      },
+    ],
+    []
+  );
+
+  function isActive(href: string) {
+    return pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
+  }
+
+  // Which collapsible group contains the active route? That one is always open.
+  const activeGroupId = useMemo(() => {
+    return groups.find((g) => g.labelKey && g.items.some((item) => isActive(item.href)))?.id;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, groups]);
+
+  // "offer" en "orders" zijn de meest-gebruikte secties — die staan altijd
+  // open na een refresh, tenzij de user ze expliciet inklapt (localStorage).
+  // De actieve sectie wordt áltijd geforceerd open, ook als user 'm gesloten
+  // had — anders zien ze hun huidige page-link niet.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = { offer: true, orders: true };
+    if (activeGroupId) initial[activeGroupId] = true;
+    return initial;
+  });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(OPEN_STATE_STORAGE_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw) as Record<string, boolean>;
+        setOpenSections((prev) => {
+          // stored overschrijft defaults zodat user-close-keuze persist
+          const merged = { ...prev, ...stored };
+          if (activeGroupId) merged[activeGroupId] = true;
+          return merged;
+        });
+      }
+    } catch {
+      // ignore — corrupt JSON of geen localStorage
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Force the active section open on navigation.
+  useEffect(() => {
+    if (activeGroupId) {
+      setOpenSections((prev) => (prev[activeGroupId] ? prev : { ...prev, [activeGroupId]: true }));
+    }
+  }, [activeGroupId]);
+
+  function toggleSection(id: string) {
+    setOpenSections((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        localStorage.setItem(OPEN_STATE_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
+
+  // Active item for mobile compact-bar header
+  const allItems = groups.flatMap((g) => g.items);
+  const activeItem = allItems.find((item) => isActive(item.href)) ?? allItems[0];
+  const ActiveIcon = activeItem.icon;
 
   const isLevelActive = pathname === "/dashboard/level";
-
-  // Find current active item for mobile header
-  const allItems = sections.flatMap((s) => s.items);
-  const activeItem = allItems.find(
-    (item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"))
-  ) ?? allItems[0];
-  const ActiveIcon = activeItem.icon;
 
   const levelCard = level && (
     <Link
@@ -215,32 +285,78 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
     </Link>
   ) : null;
 
-  const navLinks = sections.map((section) => (
-    <div key={section.label}>
-      <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-        {t(section.label)}
-      </p>
-      {section.items.map((item) => {
-        const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-              isActive
-                ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {t(item.labelKey)}
-          </Link>
-        );
-      })}
-    </div>
-  ));
+  function renderItem(item: NavItem) {
+    const Icon = item.icon;
+
+    if (item.comingSoon) {
+      return (
+        <div
+          key={item.href}
+          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground/60 cursor-not-allowed"
+          aria-disabled="true"
+          title="Binnenkort beschikbaar"
+        >
+          <Icon className="h-4 w-4 shrink-0" />
+          <span className="flex-1 truncate">{t(item.labelKey)}</span>
+          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+            Soon
+          </span>
+        </div>
+      );
+    }
+
+    const active = isActive(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setMobileOpen(false)}
+        className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+          active
+            ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        {t(item.labelKey)}
+      </Link>
+    );
+  }
+
+  const navLinks = groups.map((group, idx) => {
+    if (!group.labelKey) {
+      // Flat group — no header, no collapse. Add a small top divider when it's
+      // a bottom-block (the "extras" group after the collapsible groups).
+      const isBottomFlat = idx > 0 && groups[idx - 1].labelKey != null;
+      return (
+        <div key={group.id} className={isBottomFlat ? "mt-2 border-t border-border pt-2 space-y-0.5" : "space-y-0.5"}>
+          {group.items.map(renderItem)}
+        </div>
+      );
+    }
+
+    const isOpen = !!openSections[group.id];
+    const groupHasActive = group.items.some((item) => isActive(item.href));
+
+    return (
+      <div key={group.id} className="mt-1">
+        <button
+          type="button"
+          onClick={() => toggleSection(group.id)}
+          className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+            groupHasActive ? "text-foreground" : "text-muted-foreground/70 hover:text-foreground"
+          }`}
+          aria-expanded={isOpen}
+        >
+          <span>{t(group.labelKey)}</span>
+          <ChevronDown
+            className={`h-3.5 w-3.5 shrink-0 transition-transform duration-150 ${isOpen ? "" : "-rotate-90"}`}
+          />
+        </button>
+        {isOpen && <div className="mt-0.5 space-y-0.5">{group.items.map(renderItem)}</div>}
+      </div>
+    );
+  });
 
   return (
     <>
@@ -263,7 +379,7 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
 
         {mobileOpen && (
           <>
-            <div className="glass-nav mt-2 rounded-xl p-2 space-y-1">
+            <div className="glass-nav mt-2 rounded-xl p-2 space-y-0.5">
               {levelCard && <div className="mb-2">{levelCard}</div>}
               {navLinks}
             </div>

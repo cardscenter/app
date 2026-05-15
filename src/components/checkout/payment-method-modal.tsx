@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Wallet, CreditCard, X, ArrowUpCircle } from "lucide-react";
+import { Wallet, CreditCard, X, ArrowUpCircle, ShieldCheck } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { ReactNode } from "react";
 
@@ -23,6 +23,10 @@ interface PaymentMethodModalProps {
   // direct-buy-flow waarbij geen winkelwagen-pagina ervoor zit.
   // Wordt gerenderd boven de totaal-regel, onder de payment-keuzes.
   summary?: ReactNode;
+  /** Als gezet: groene info-balk met "Je items zijn N minuten vastgezet zodat
+   *  je rustig kan afrekenen". Alleen relevant voor claimsale-checkout — bij
+   *  direct-buy is er geen claim-timer dus geen notice nodig. */
+  checkoutLockMinutes?: number;
 }
 
 export function PaymentMethodModal({
@@ -33,6 +37,7 @@ export function PaymentMethodModal({
   onCancel,
   loading,
   summary,
+  checkoutLockMinutes,
 }: PaymentMethodModalProps) {
   const t = useTranslations("cart");
 
@@ -61,6 +66,20 @@ export function PaymentMethodModal({
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Checkout-lock notice — alleen voor claimsale-flow, voorkomt dat
+            de buyer in paniek raakt door de timer in de achtergrond. */}
+        {checkoutLockMinutes && checkoutLockMinutes > 0 && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
+            <p>
+              Je items zijn{" "}
+              <span className="font-semibold">{checkoutLockMinutes} minuten</span>{" "}
+              vastgezet zodat je rustig kan afrekenen — ook als de claim-timer
+              in je winkelwagen verloopt.
+            </p>
+          </div>
+        )}
 
         {/* Wallet option */}
         <button

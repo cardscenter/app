@@ -14,8 +14,6 @@ interface StepDetailsProps {
   condition: string;
   tcgdex: CardSearchSelectValue | null;
   variant: "normal" | "reverse";
-  estimatedCardCount: number | null;
-  conditionRange: string;
   productType: string;
   itemCategory: string;
   onChange: (field: string, value: unknown) => void;
@@ -29,8 +27,6 @@ export function StepDetails({
   condition,
   tcgdex,
   variant,
-  estimatedCardCount,
-  conditionRange,
   productType,
   itemCategory,
   onChange,
@@ -145,55 +141,6 @@ export function StepDetails({
             >
               {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-          </div>
-        </div>
-      )}
-
-      {/* MULTI_CARD specific */}
-      {auctionType === "MULTI_CARD" && (
-        <div>
-          <label htmlFor="estimatedCardCount" className="block text-sm font-medium text-foreground">
-            {t("estimatedCardCount")}
-          </label>
-          <input
-            id="estimatedCardCount"
-            type="number"
-            min={1}
-            value={estimatedCardCount ?? ""}
-            onChange={(e) => onChange("estimatedCardCount", e.target.value ? parseInt(e.target.value) : null)}
-            className="mt-1 block w-48 glass-input px-3 py-2.5 text-foreground"
-          />
-        </div>
-      )}
-
-      {/* COLLECTION specific */}
-      {auctionType === "COLLECTION" && (
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="estimatedCardCountCol" className="block text-sm font-medium text-foreground">
-              {t("estimatedCardCount")}
-            </label>
-            <input
-              id="estimatedCardCountCol"
-              type="number"
-              min={1}
-              value={estimatedCardCount ?? ""}
-              onChange={(e) => onChange("estimatedCardCount", e.target.value ? parseInt(e.target.value) : null)}
-              className="mt-1 block w-48 glass-input px-3 py-2.5 text-foreground"
-            />
-          </div>
-          <div>
-            <label htmlFor="conditionRange" className="block text-sm font-medium text-foreground">
-              {t("conditionRange")}
-            </label>
-            <input
-              id="conditionRange"
-              type="text"
-              value={conditionRange}
-              onChange={(e) => onChange("conditionRange", e.target.value)}
-              className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
-              placeholder="e.g. Light Played - Near Mint"
-            />
           </div>
         </div>
       )}

@@ -61,7 +61,7 @@ export function SponsoredRow({ listings, locale, title, tooltip, buyer }: Sponso
             "hidden [@media(min-width:1600px)]:block";
           return (
             <div key={listing.id} className={visibility}>
-              <ListingCard listing={listing} locale={locale} buyer={buyer} />
+              <ListingCard listing={listing} locale={locale} buyer={buyer} isSponsored />
             </div>
           );
         })}

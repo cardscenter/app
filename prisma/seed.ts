@@ -302,7 +302,7 @@ async function main() {
     const methods = getMethodsForSeller(a.seller.id);
     for (const method of methods) {
       await prisma.auctionShippingMethod.create({
-        data: { auctionId: auction.id, shippingMethodId: method.id, price: method.price },
+        data: { auctionId: auction.id, shippingMethodId: method.id, price: method.price ?? 0 },
       });
     }
   }
@@ -343,7 +343,7 @@ async function main() {
     const methods = getMethodsForSeller(l.seller.id);
     for (const method of methods) {
       await prisma.listingShippingMethod.create({
-        data: { listingId: listing.id, shippingMethodId: method.id, price: method.price },
+        data: { listingId: listing.id, shippingMethodId: method.id, price: method.price ?? 0 },
       });
     }
   }
@@ -473,7 +473,7 @@ async function main() {
     const methods = getMethodsForSeller(cs.seller.id);
     for (const method of methods) {
       await prisma.claimsaleShippingMethod.create({
-        data: { claimsaleId: claimsale.id, shippingMethodId: method.id, price: method.price },
+        data: { claimsaleId: claimsale.id, shippingMethodId: method.id, price: method.price ?? 0 },
       });
     }
   }

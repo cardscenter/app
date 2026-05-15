@@ -1,6 +1,7 @@
 import { getCronStatus } from "@/actions/admin/crons";
 import { CronRunNowButton } from "@/components/admin/cron-run-now-button";
-import { CheckCircle2, AlertCircle, Loader2, Clock, AlertTriangle, Calendar } from "lucide-react";
+import { getSchedulerState } from "@/lib/auction-scheduler";
+import { CheckCircle2, AlertCircle, Loader2, Clock, AlertTriangle, Calendar, Zap } from "lucide-react";
 
 function StatusBadge({ status }: { status: string }) {
   const cls = {
@@ -26,6 +27,7 @@ function formatDuration(ms: number | null) {
 
 export default async function AdminCronsPage() {
   const jobs = await getCronStatus();
+  const scheduler = getSchedulerState();
 
   return (
     <div className="space-y-6">
@@ -34,6 +36,71 @@ export default async function AdminCronsPage() {
         <p className="text-sm text-muted-foreground">
           Status van geplande taken. &quot;Run nu&quot; voert de job direct uit en logt het resultaat.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-amber-500" />
+          <h2 className="text-base font-semibold">Auction-end scheduler</h2>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              scheduler.hasTimer
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {scheduler.hasTimer ? "Actief" : "Idle"}
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Sub-seconde-nauwkeurige finalize via in-process setTimeout. De cron <code>auction-finalize</code> hieronder is de
+          safety-net (5 min). Generation: {scheduler.generation}.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
+          <div>
+            <span className="text-muted-foreground">Volgend fire-moment</span>
+            <p className="font-medium tabular-nums">
+              {scheduler.scheduledFor
+                ? new Date(scheduler.scheduledFor).toLocaleString("nl-NL", { hour12: false })
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Voor auction-id</span>
+            <p className="font-mono text-[11px]">{scheduler.scheduledAuctionId ?? "—"}</p>
+          </div>
+        </div>
+        {scheduler.history.length > 0 && (
+          <details className="mt-3 text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+              Laatste {scheduler.history.length} fires
+            </summary>
+            <table className="mt-2 w-full">
+              <thead className="text-left text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                <tr>
+                  <th className="py-1">Gevuurd op</th>
+                  <th className="py-1 text-right">Verwerkt</th>
+                  <th className="py-1 text-right">Errors</th>
+                  <th className="py-1 text-right">Duur</th>
+                  <th className="py-1">Volgende</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scheduler.history.map((h, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="py-1 tabular-nums">{new Date(h.firedAt).toLocaleString("nl-NL", { hour12: false })}</td>
+                    <td className="py-1 text-right tabular-nums">{h.processed}</td>
+                    <td className="py-1 text-right tabular-nums">{h.errors}</td>
+                    <td className="py-1 text-right tabular-nums">{h.delayMs}ms</td>
+                    <td className="py-1 tabular-nums">
+                      {h.nextScheduledFor ? new Date(h.nextScheduledFor).toLocaleString("nl-NL", { hour12: false }) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
+        )}
       </div>
 
       <div className="space-y-3">

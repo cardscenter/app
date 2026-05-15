@@ -14,6 +14,7 @@ import { SocialShare } from "@/components/ui/social-share";
 import { ItemCarousel } from "@/components/ui/item-carousel";
 import { getSellerOtherItems, getSimilarItems } from "@/lib/recommendations";
 import { LiveAuctionContent } from "@/components/auction/live-auction-content";
+import { AuctionLabels } from "@/components/auction/auction-labels";
 import { AuctionOwnerActions } from "@/components/auction/auction-owner-actions";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
 import { SellerInfoBlock } from "@/components/ui/seller-info-block";
@@ -44,6 +45,7 @@ export default async function AuctionDetailPage({
         take: 20,
         include: { bidder: { select: { displayName: true, id: true } } },
       },
+      labels: { select: { type: true, colorKey: true } },
     },
   });
 
@@ -123,6 +125,14 @@ export default async function AuctionDetailPage({
                 <h1 className="mt-2 text-2xl font-bold text-foreground">
                   {auction.title}
                 </h1>
+                {auction.labels.length > 0 && (
+                  <AuctionLabels
+                    labels={auction.labels}
+                    buyNowPrice={auction.buyNowPrice}
+                    size="md"
+                    className="mt-2"
+                  />
+                )}
                 <Link href={`/verkoper/${auction.sellerId}`} className="mt-1 inline-block text-sm text-primary hover:underline">
                   {auction.seller.displayName}
                 </Link>
@@ -191,6 +201,7 @@ export default async function AuctionDetailPage({
             startingBid={auction.startingBid}
             buyNowPrice={auction.buyNowPrice}
             endTime={auction.endTime.toISOString()}
+            startTime={auction.startTime?.toISOString() ?? null}
             status={auction.status}
             reservePrice={auction.reservePrice}
             initialBids={initialBids}

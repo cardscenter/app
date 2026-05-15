@@ -9,11 +9,11 @@ import { ShipBundleForm } from "@/components/dashboard/ship-bundle-form";
 export default async function ClaimsaleClaimsPage({
   params,
 }: {
-  params: Promise<{ claimsaleId: string }>;
+  params: Promise<{ claimsaleId: string; locale: string }>;
 }) {
-  const { claimsaleId } = await params;
+  const { claimsaleId, locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
 
   const t = await getTranslations("sellerClaims");
   const tBreadcrumbs = await getTranslations("breadcrumbs");

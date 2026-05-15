@@ -51,6 +51,8 @@ interface LiveAuctionContentProps {
   pickupCity?: string | null;
   /** Fase 31: globale user-preference om de bid-confirmation modal te skippen */
   skipBidConfirmation?: boolean;
+  /** ISO-string van het moment waarop de veiling van SCHEDULED naar ACTIVE flipt. Null voor live-from-creation auctions. */
+  startTime?: string | null;
   children?: React.ReactNode;
 }
 
@@ -74,6 +76,7 @@ export function LiveAuctionContent({
   deliveryMethod = "SHIP",
   pickupCity = null,
   skipBidConfirmation = false,
+  startTime = null,
   children,
 }: LiveAuctionContentProps) {
   const t = useTranslations("auction");
@@ -100,8 +103,10 @@ export function LiveAuctionContent({
 
   const isHighestBidder =
     currentUserId !== null && bidData.highestBidderId === currentUserId;
+  const isScheduled =
+    bidData.status === "SCHEDULED" || (startTime != null && new Date(startTime) > new Date());
   const isActive =
-    bidData.status === "ACTIVE" && new Date(bidData.endTime) > new Date();
+    !isScheduled && bidData.status === "ACTIVE" && new Date(bidData.endTime) > new Date();
 
   // Update the ref when isHighestBidder changes
   useEffect(() => {
@@ -187,6 +192,19 @@ export function LiveAuctionContent({
       if (event.type !== "auction-ended") return;
       if (event.payload.auctionId !== auctionId) return;
       setBidData((prev) => ({ ...prev, status: event.payload.status }));
+      router.refresh();
+    });
+  }, [subscribe, auctionId, router]);
+
+  // Auction-started broadcast — wanneer de activator-scheduler een
+  // SCHEDULED auction flipt naar ACTIVE, ziet iedereen op de detail-page
+  // direct de bid-form ipv de SCHEDULED-banner. router.refresh trekt
+  // verse SSR-data binnen (initialBids, currentBid, etc.).
+  useEffect(() => {
+    return subscribe("auction-started", (event) => {
+      if (event.type !== "auction-started") return;
+      if (event.payload.auctionId !== auctionId) return;
+      setBidData((prev) => ({ ...prev, status: "ACTIVE" }));
       router.refresh();
     });
   }, [subscribe, auctionId, router]);
@@ -297,11 +315,20 @@ export function LiveAuctionContent({
             </div>
           )}
 
-          {/* Timer */}
+          {/* Timer — voor SCHEDULED: countdown naar startTime; anders endTime. */}
           <div className="mt-4 text-center">
-            <p className="text-sm text-muted-foreground">{t("timeLeft")}</p>
-            <CountdownTimer endTime={bidData.endTime} />
+            <p className="text-sm text-muted-foreground">
+              {isScheduled ? t("startsIn") : t("timeLeft")}
+            </p>
+            <CountdownTimer endTime={isScheduled && startTime ? startTime : bidData.endTime} />
           </div>
+
+          {/* SCHEDULED banner — vervangt de bid-form met een wacht-uitleg */}
+          {isScheduled && (
+            <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              {t("auctionScheduledExplain")}
+            </div>
+          )}
 
           {/* Highest bidder banner */}
           {isActive && !isOwner && currentUserId && isHighestBidder && (
@@ -368,7 +395,7 @@ export function LiveAuctionContent({
             </p>
           )}
 
-          {bidData.status !== "ACTIVE" && (
+          {bidData.status !== "ACTIVE" && !isScheduled && (
             <div className="mt-4 text-center">
               <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
                 {t("ended")} — {bidData.status}

@@ -88,7 +88,7 @@
   --accent-foreground: #f1f5f9;
 
   /* Utility */
-  --muted: #1e293b;
+  --muted: #334155; /* slate-700 — visible above --card (#1e293b) on dark surfaces */
   --muted-foreground: #94a3b8;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
@@ -363,6 +363,45 @@ body {
   border: 1px solid var(--border);
   border-radius: 1rem;
   box-shadow: var(--shadow-card);
+}
+
+/* ── Glass-Soft Card (drijvende cards voor homepage marketing-secties)
+   Geen border, alleen subtiele shadow + 1px ring voor definitie.
+   Wordt op `bg-card` of `bg-background` parents geplaatst (Fase 36 ritme). */
+
+.glass-soft-card {
+  background: var(--card);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-card);
+  /* Hairline ring ipv border voor schoner randje */
+  outline: 1px solid rgba(15, 23, 42, 0.04);
+  outline-offset: -1px;
+  transition: box-shadow 200ms ease, transform 200ms ease, outline-color 200ms ease;
+}
+.glass-soft-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  outline-color: rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+.dark .glass-soft-card {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  outline: 1px solid rgba(148, 163, 184, 0.1);
+  outline-offset: -1px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+.dark .glass-soft-card:hover {
+  outline-color: rgba(148, 163, 184, 0.2);
+}
+
+/* Nested panel binnen een glass-soft-card (zoals "134,536 mi" boxen in UniteCar) */
+.glass-soft-nested {
+  background: rgba(15, 23, 42, 0.025);
+  border-radius: 0.75rem;
+}
+.dark .glass-soft-nested {
+  background: rgba(15, 23, 42, 0.4);
 }
 
 .dark .glass {

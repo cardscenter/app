@@ -4,9 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { BlockedListContent } from "@/components/dashboard/blocked-list-content";
 
-export default async function BlockedListPage() {
+export default async function BlockedListPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("blockReport");
 
   const rows = await prisma.userBlock.findMany({

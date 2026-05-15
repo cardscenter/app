@@ -5,19 +5,33 @@ import { prisma } from "@/lib/prisma";
 import { createAuctionSchema } from "@/lib/validations/auction";
 import { checkAuctionLimit } from "@/lib/account-limits";
 import { getMinimumNextBid, ANTI_SNIPE_MINUTES, ANTI_SNIPE_EXTENSION_MINUTES } from "@/lib/auction/bid-increments";
-import { deductBalance, deductBidPayment, escrowCredit } from "@/actions/wallet";
+import { creditBalance, deductBalance, deductBidPayment, escrowCredit } from "@/actions/wallet";
 import { calculateBidFees } from "@/lib/auction/fees";
 import { resolveAutoBids } from "@/lib/auction/autobid";
 import { createNotification } from "@/actions/notification";
 import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
+import {
+  availableLabelsFor,
+  calculateLabelCost,
+  isValidLabelColor,
+  isValidLabelType,
+  MAX_LABELS_PER_AUCTION,
+  type LabelColor,
+  type LabelType,
+} from "@/lib/auction/labels";
 import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
+import { enrichMethod, deriveListingShippingMethodIds } from "@/lib/shipping/static-methods";
+import { mailboxEligibleType } from "@/lib/listing-types";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
 import { bidPassesVerifiedGate, IP_OVERLAP_LOOKBACK_DAYS } from "@/lib/auction/bid-tiers";
 import { logAdminAction } from "@/lib/admin-audit";
 import { publish, publishMany, userChannel, auctionChannel } from "@/lib/realtime";
+import { hasValidShippingAddress } from "@/lib/address-validation";
+import { processRunnerUpDecision } from "@/lib/cron-jobs";
+import { deriveAuctionWindow, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
@@ -43,18 +57,23 @@ export async function createAuction(formData: FormData) {
     cardName: formData.get("cardName") || undefined,
     condition: formData.get("condition") || undefined,
     tcgdexId: formData.get("tcgdexId") || undefined,
-    estimatedCardCount: formData.get("estimatedCardCount") || undefined,
-    conditionRange: formData.get("conditionRange") || undefined,
     productType: formData.get("productType") || undefined,
     itemCategory: formData.get("itemCategory") || undefined,
     startingBid: formData.get("startingBid"),
     reservePrice: formData.get("reservePrice") || undefined,
     buyNowPrice: formData.get("buyNowPrice") || undefined,
     duration: formData.get("duration"),
+    startDate: formData.get("startDate"),
+    endTimeOfDay: formData.get("endTimeOfDay"),
     runnerUpEnabled: formData.get("runnerUpEnabled") || undefined,
     deliveryMethod: formData.get("deliveryMethod") || "SHIP",
     upsells: formData.get("upsells") || undefined,
+    allowMailbox: formData.get("allowMailbox") === "true",
   };
+
+  // Labels gaan buiten het zod-schema om (niet alle bestaande callers sturen
+  // dit veld); we parsen + valideren ze los hieronder.
+  const labelsRaw = formData.get("labels");
 
   const result = createAuctionSchema.safeParse(raw);
   if (!result.success) {
@@ -62,25 +81,75 @@ export async function createAuction(formData: FormData) {
   }
 
   const data = result.data;
-  const endTime = new Date();
-  endTime.setDate(endTime.getDate() + data.duration);
 
-  // Parse upsells and calculate total cost
-  let upsellEntries: { type: UpsellType; days: number }[] = [];
+  // Bereken start/end-time uit form-inputs (Europe/Amsterdam-conventie).
+  // Bij `startTime > now + 5min` wordt status SCHEDULED — anders ACTIVE
+  // (instant publish). Zie src/lib/auction/timing.ts voor DST-handling.
+  const { startTime, endTime } = deriveAuctionWindow({
+    startDate: data.startDate,
+    duration: data.duration,
+    endTimeOfDay: data.endTimeOfDay,
+  });
+  const initialStatus =
+    startTime.getTime() > Date.now() + SCHEDULED_THRESHOLD_MS ? "SCHEDULED" : "ACTIVE";
+
+  // Parse upsells (dual-handle window: startDay/endDay binnen veiling-duur).
+  // Legacy `days`-format wordt nog ondersteund als fallback (volledig venster
+  // vanaf dag 0). Nieuwe UI stuurt altijd startDay/endDay.
+  type UpsellWindow = {
+    type: UpsellType;
+    startDay: number;
+    endDay: number;
+    days: number;
+  };
+  let upsellWindows: UpsellWindow[] = [];
   let totalUpsellCost = 0;
   let perEntryCosts: number[] = [];
   let freeUsed = 0;
 
   if (data.upsells) {
     try {
-      upsellEntries = JSON.parse(data.upsells) as { type: UpsellType; days: number }[];
+      const parsed = JSON.parse(data.upsells) as Array<{
+        type: UpsellType;
+        startDay?: number;
+        endDay?: number;
+        days?: number;
+      }>;
+      // Normaliseer naar 1-indexed inclusive window. Clamp tegen veiling-duur:
+      // startDay ∈ [1, duration], endDay ∈ [startDay, duration].
+      // days = endDay - startDay + 1 (inclusive).
+      upsellWindows = parsed
+        .map((e) => {
+          let startDay: number;
+          let endDay: number;
+          if (typeof e.startDay === "number" && typeof e.endDay === "number") {
+            startDay = Math.max(1, Math.min(data.duration, Math.floor(e.startDay)));
+            endDay = Math.max(startDay, Math.min(data.duration, Math.floor(e.endDay)));
+          } else {
+            // Legacy: full window van dag 1 t/m laatste dag.
+            startDay = 1;
+            endDay = Math.min(
+              data.duration,
+              Math.max(1, e.days ?? data.duration),
+            );
+          }
+          const days = Math.max(0, endDay - startDay + 1);
+          return { type: e.type, startDay, endDay, days };
+        })
+        .filter((e) => e.days > 0);
+
       const seller = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { balance: true, reservedBalance: true, accountType: true, freeUpsellsRemaining: true },
+        select: {
+          balance: true,
+          reservedBalance: true,
+          accountType: true,
+          freeUpsellsRemaining: true,
+        },
       });
       const accountType = seller?.accountType ?? "FREE";
       const allocation = applyFreeUpsellsToCost(
-        upsellEntries,
+        upsellWindows.map((w) => ({ type: w.type, days: w.days })),
         accountType,
         seller?.freeUpsellsRemaining ?? 0,
         "auction"
@@ -94,8 +163,71 @@ export async function createAuction(formData: FormData) {
         return { error: "Onvoldoende saldo voor promotie-opties" };
       }
     } catch {
-      // Invalid JSON, skip upsells
-      upsellEntries = [];
+      upsellWindows = [];
+    }
+  }
+
+  // Parse + valideer labels (max 2 per veiling, conditional availability,
+  // bundle-prijs 1=€0,99 / 2=€1,69). Server-hercheck van availability is
+  // anti-tamper (UI kan claim "Geen Reserve" terwijl reservePrice gezet is).
+  let parsedLabels: { type: LabelType; colorKey: LabelColor }[] = [];
+  let labelsCost = 0;
+  if (typeof labelsRaw === "string" && labelsRaw.length > 0) {
+    try {
+      const raw = JSON.parse(labelsRaw) as Array<{ type: string; colorKey: string }>;
+      const cleaned = raw
+        .filter(
+          (l) =>
+            typeof l?.type === "string" &&
+            typeof l?.colorKey === "string" &&
+            isValidLabelType(l.type) &&
+            isValidLabelColor(l.colorKey),
+        )
+        .slice(0, MAX_LABELS_PER_AUCTION) as {
+        type: LabelType;
+        colorKey: LabelColor;
+      }[];
+
+      // Anti-tamper: hercheck availability tegen de feitelijke form-state.
+      const availability = availableLabelsFor({
+        reservePrice: data.reservePrice ?? null,
+        buyNowPrice: data.buyNowPrice ?? null,
+        condition: data.condition ?? null,
+        auctionType: data.auctionType ?? null,
+      });
+      const availSet = new Set(
+        availability.filter((a) => a.available).map((a) => a.type),
+      );
+      for (const l of cleaned) {
+        if (!availSet.has(l.type)) {
+          return { error: `Label "${l.type}" is niet beschikbaar voor deze veiling` };
+        }
+      }
+
+      // Geen duplicates op type — als seller per ongeluk twee dezelfde stuurt,
+      // pakken we de eerste.
+      const seen = new Set<LabelType>();
+      parsedLabels = cleaned.filter((l) => {
+        if (seen.has(l.type)) return false;
+        seen.add(l.type);
+        return true;
+      });
+
+      labelsCost = calculateLabelCost(parsedLabels.length);
+
+      if (labelsCost > 0) {
+        const seller = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { balance: true, reservedBalance: true },
+        });
+        const availableBalance =
+          (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
+        if (totalUpsellCost + labelsCost > availableBalance) {
+          return { error: "Onvoldoende saldo voor promotie-opties" };
+        }
+      }
+    } catch {
+      parsedLabels = [];
     }
   }
 
@@ -117,6 +249,18 @@ export async function createAuction(formData: FormData) {
     pickupCity = seller.city;
   }
 
+  // Defense-in-depth: als de gebruiker `maxRunnerUpAttempts = 0` heeft, mag
+  // `runnerUpEnabled` nooit `true` zijn op de DB-record. UI verbergt de toggle
+  // al, maar bij directe form-submit / API-call zou de waarde misleidend zijn.
+  // Effectief: cron `processRunnerUpDecision` finalize't toch direct, maar
+  // we willen consistente data.
+  const sellerSettings = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { maxRunnerUpAttempts: true },
+  });
+  const effectiveRunnerUpEnabled =
+    (sellerSettings?.maxRunnerUpAttempts ?? 2) > 0 && data.runnerUpEnabled;
+
   const auction = await prisma.auction.create({
     data: {
       title: data.title,
@@ -127,8 +271,6 @@ export async function createAuction(formData: FormData) {
       condition: data.condition,
       tcgdexId: data.tcgdexId || null,
       cardSetId: autoCardSetId,
-      estimatedCardCount: data.estimatedCardCount || null,
-      conditionRange: data.conditionRange || null,
       productType: data.productType || null,
       itemCategory: data.itemCategory || null,
       sellerId: session.user.id,
@@ -136,55 +278,80 @@ export async function createAuction(formData: FormData) {
       reservePrice: data.reservePrice || null,
       buyNowPrice: data.buyNowPrice || null,
       duration: data.duration,
-      runnerUpEnabled: data.runnerUpEnabled,
+      runnerUpEnabled: effectiveRunnerUpEnabled,
       deliveryMethod: data.deliveryMethod,
       pickupCity,
+      startTime,
       endTime,
+      status: initialStatus,
     },
   });
 
-  // Create shipping method links
-  const shippingMethodIdsJson = formData.get("shippingMethodIds") as string | null;
-  if (shippingMethodIdsJson) {
-    try {
-      const shippingMethodIds: string[] = JSON.parse(shippingMethodIdsJson);
-      if (shippingMethodIds.length > 0) {
-        const methods = await prisma.sellerShippingMethod.findMany({
-          where: { id: { in: shippingMethodIds }, sellerId: session.user.id },
-        });
+  // Create shipping method links (Fase 33 v2: server-side derivation).
+  // STANDARD+SIGNED altijd inbegrepen, MAILBOX_PARCEL alleen voor SINGLE/MULTI
+  // auctions onder €150 als seller `allowMailbox=true` heeft toegelicht.
+  const isShipDelivery = data.deliveryMethod === "SHIP" || data.deliveryMethod === "BOTH";
+  if (isShipDelivery) {
+    const sellerData = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { country: true },
+    });
+    if (!sellerData?.country) {
+      await prisma.auction.delete({ where: { id: auction.id } });
+      return { error: "Vul eerst je land in op je profiel." };
+    }
 
-        // Validate: must have at least one non-LETTER method
-        const hasNonLetter = methods.some((m) => m.shippingType !== "LETTER");
-        if (!hasNonLetter) {
-          await prisma.auction.delete({ where: { id: auction.id } });
-          return { error: "Je moet naast briefpost minimaal één pakket- of brievenbuspakket-optie aanbieden." };
-        }
+    // Voor mailbox-eligibility kijken we naar het hoogste bekende prijspunt
+    // (buyNow > startBid). Bij ≥€150 wordt MAILBOX uitgesloten.
+    const priceForCheck = data.buyNowPrice ?? data.startingBid ?? null;
 
-        for (const method of methods) {
-          await prisma.auctionShippingMethod.create({
-            data: { auctionId: auction.id, shippingMethodId: method.id, price: method.price },
-          });
-        }
-      }
-    } catch { /* ignore invalid JSON */ }
+    const derivedIds = await deriveListingShippingMethodIds({
+      prisma,
+      sellerId: session.user.id,
+      allowMailbox: data.allowMailbox,
+      listingType: data.auctionType,
+      price: priceForCheck,
+      mailboxEligible: mailboxEligibleType,
+    });
+
+    if (derivedIds.length === 0) {
+      await prisma.auction.delete({ where: { id: auction.id } });
+      return {
+        error: "Configureer eerst je verzending via Dashboard → Verzending — er zijn geen actieve verzendmethoden.",
+      };
+    }
+
+    const methods = await prisma.sellerShippingMethod.findMany({
+      where: { id: { in: derivedIds }, sellerId: session.user.id, isActive: true },
+    });
+
+    for (const method of methods) {
+      const enriched = enrichMethod(method, sellerData.country!);
+      if (!enriched) continue;
+      await prisma.auctionShippingMethod.create({
+        data: { auctionId: auction.id, shippingMethodId: method.id, price: enriched.effectivePrice },
+      });
+    }
   }
 
-  // Create upsell records and deduct balance
-  if (upsellEntries.length > 0) {
-    for (let i = 0; i < upsellEntries.length; i++) {
-      const entry = upsellEntries[i];
+  // Create upsell-records met dual-handle-window. 1-indexed inclusive:
+  // dag N start op startTime + (N-1)*24u en duurt 24u. Voor SCHEDULED auctions
+  // begint de promo-zichtbaarheid pas wanneer de veiling start.
+  if (upsellWindows.length > 0) {
+    const dayMs = 24 * 60 * 60 * 1000;
+    for (let i = 0; i < upsellWindows.length; i++) {
+      const w = upsellWindows[i];
       const cost = perEntryCosts[i];
-      const startsAt = new Date();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + entry.days);
+      const startsAt = new Date(startTime.getTime() + (w.startDay - 1) * dayMs);
+      const expiresAt = new Date(startTime.getTime() + w.endDay * dayMs);
 
       await prisma.auctionUpsell.create({
         data: {
           auctionId: auction.id,
-          type: entry.type,
+          type: w.type,
           startsAt,
           expiresAt,
-          dailyCost: cost / entry.days,
+          dailyCost: w.days > 0 ? cost / w.days : 0,
           totalCost: cost,
         },
       });
@@ -192,11 +359,7 @@ export async function createAuction(formData: FormData) {
 
     // Race-safe quota-decrement (audit-fix Fase 31). Conditional updateMany
     // voorkomt dubbele claim als parallelle createAuction/createListing
-    // dezelfde quota intussen heeft uitgenut. Anders dan in createListing
-    // kunnen we hier niet rollbacken (auction + upsells zijn al gecreëerd
-    // buiten een wrapping-transaction). Bij race: log warning, seller krijgt
-    // dubbel gratis quota — minor finanical impact (€0,75/dag x N dagen).
-    // Volledige fix vereist refactor van createAuction naar één $transaction.
+    // dezelfde quota intussen heeft uitgenut.
     if (freeUsed > 0) {
       const updated = await prisma.user.updateMany({
         where: { id: session.user.id, freeUpsellsRemaining: { gte: freeUsed } },
@@ -208,21 +371,53 @@ export async function createAuction(formData: FormData) {
         );
       }
     }
+  }
 
-    if (totalUpsellCost > 0) {
-      await deductBalance(
-        session.user.id,
-        totalUpsellCost,
-        "UPSELL",
-        `Promotie-opties veiling: ${data.title}`,
-        auction.id
-      );
-    }
+  // Create label-records (max 2, bundle-cost al berekend).
+  if (parsedLabels.length > 0) {
+    const perLabelCost = labelsCost / parsedLabels.length;
+    await prisma.auctionLabel.createMany({
+      data: parsedLabels.map((l) => ({
+        auctionId: auction.id,
+        type: l.type,
+        colorKey: l.colorKey,
+        cost: Math.round(perLabelCost * 100) / 100,
+      })),
+    });
+  }
+
+  // Eén balance-deduct voor upsells + labels samen (was twee aparte voor labels
+  // alleen — minder Transaction-rijen, simpeler trail).
+  const totalPromotionCost = totalUpsellCost + labelsCost;
+  if (totalPromotionCost > 0) {
+    await deductBalance(
+      session.user.id,
+      totalPromotionCost,
+      "UPSELL",
+      `Promotie-opties veiling: ${data.title}`,
+      auction.id
+    );
   }
 
   // Award Ember for creating a listing (auctions count too)
   const { logActivity: logAuctionActivity } = await import("@/actions/activity");
   logAuctionActivity(session.user.id, "CREATE_LISTING", { auctionId: auction.id });
+
+  // Bump auction-end scheduler — als deze nieuwe auction eerder eindigt dan
+  // de huidige scheduled timer, herrekent de scheduler en zet 'ie korter.
+  // Dynamic import om circulaire dep met finalizeAuction (in dit bestand)
+  // te vermijden. Fire-and-forget — failure breekt auction-create niet.
+  import("@/lib/auction-scheduler")
+    .then(({ scheduleNextAuctionFinalize }) => scheduleNextAuctionFinalize("create-auction"))
+    .catch((err) => console.error("[createAuction] scheduler bump failed", err));
+
+  // Voor SCHEDULED auctions ook de activator-scheduler bumpen zodat 'ie
+  // op startTime sub-seconde-nauwkeurig flipt naar ACTIVE.
+  if (initialStatus === "SCHEDULED") {
+    import("@/lib/auction-activator-scheduler")
+      .then(({ scheduleNextAuctionActivation }) => scheduleNextAuctionActivation("create-auction"))
+      .catch((err) => console.error("[createAuction] activator bump failed", err));
+  }
 
   return { success: true, auctionId: auction.id };
 }
@@ -236,6 +431,9 @@ export async function placeBid(auctionId: string, amount: number, deliveryChoice
 
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };
+  if (auction.status === "SCHEDULED" || (auction.startTime && new Date() < auction.startTime)) {
+    return { error: "Deze veiling is nog niet gestart" };
+  }
   if (auction.status !== "ACTIVE") return { error: "Veiling is niet meer actief" };
   if (auction.sellerId === session.user.id) return { error: "Je kunt niet bieden op je eigen veiling" };
   if (new Date() > auction.endTime) return { error: "Veiling is afgelopen" };
@@ -284,6 +482,13 @@ export async function placeBid(auctionId: string, amount: number, deliveryChoice
 
   if (getAvailableBalance(user) < calculateReserveAmount(amount)) {
     return { error: "Onvoldoende saldo" };
+  }
+
+  // Adres-validatie voor SHIP-veilingen: bidder moet adres hebben vóór bod.
+  // Voor BOTH-veilingen: alleen verplicht als de bidder voor SHIP koos.
+  if (bidDeliveryChoice === "SHIP") {
+    const hasAddress = await hasValidShippingAddress(session.user.id);
+    if (!hasAddress) return { error: "NO_ADDRESS" };
   }
 
   // Fase 29: IP-snapshot voor anti-shill-bidding-detectie. Werk via headers()
@@ -439,6 +644,9 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
 
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };
+  if (auction.status === "SCHEDULED" || (auction.startTime && new Date() < auction.startTime)) {
+    return { error: "Deze veiling is nog niet gestart" };
+  }
   if (auction.status !== "ACTIVE") return { error: "Veiling is niet meer actief" };
   if (!auction.buyNowPrice) return { error: "Direct kopen is niet beschikbaar" };
   if (auction.sellerId === session.user.id) return { error: "Je kunt niet je eigen veiling kopen" };
@@ -924,6 +1132,9 @@ export async function setAutoBid(auctionId: string, maxAmount: number, deliveryC
 
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };
+  if (auction.status === "SCHEDULED" || (auction.startTime && new Date() < auction.startTime)) {
+    return { error: "Deze veiling is nog niet gestart" };
+  }
   if (auction.status !== "ACTIVE") return { error: "Veiling is niet meer actief" };
   if (auction.sellerId === session.user.id) return { error: "Je kunt niet bieden op je eigen veiling" };
   if (new Date() > auction.endTime) return { error: "Veiling is afgelopen" };
@@ -960,6 +1171,12 @@ export async function setAutoBid(auctionId: string, maxAmount: number, deliveryC
 
   if (getAvailableBalance(user) < calculateReserveAmount(maxAmount)) {
     return { error: "Onvoldoende saldo" };
+  }
+
+  // Adres-validatie voor SHIP-autobids — zelfde regel als placeBid.
+  if (abDeliveryChoice === "SHIP") {
+    const hasAddress = await hasValidShippingAddress(session.user.id);
+    if (!hasAddress) return { error: "NO_ADDRESS" };
   }
 
   await prisma.autoBid.upsert({
@@ -1063,6 +1280,27 @@ export async function completeAuctionPayment(auctionId: string) {
     return { error: "Vul eerst je adres in via Dashboard → Verzending" };
   }
 
+  // Audit-fix: race-safe pre-emptive claim. Flippen we de status NU naar PAID
+  // (atomic updateMany met paymentStatus-filter), dan kan de cron
+  // `auction-payment-deadline` deze auction niet meer oppakken voor strike +
+  // rotation. Cron's filter is "paymentStatus: AWAITING_PAYMENT" — zodra wij
+  // die naar PAID flippen, of cron 'm naar AWAITING_RUNNER_UP_DECISION,
+  // verliest de andere de race en skipt.
+  //
+  // Bij count=0 heeft cron 'm al gepakt → buyer mag niet meer betalen, want
+  // strike+fee is al toegepast en runner-up-flow is gestart. Voor échte
+  // crashes tussen deze flip en de side-effects (deductBidPayment / escrow /
+  // bundle-update): paymentStatus blijft PAID terwijl side-effects half zijn
+  // — admin-detectie nodig. In praktijk zelden, en geld is niet weg
+  // (deductBidPayment runt als eerste atomair).
+  const claim = await prisma.auction.updateMany({
+    where: { id: auctionId, paymentStatus: "AWAITING_PAYMENT" },
+    data: { paymentStatus: "PAID" },
+  });
+  if (claim.count === 0) {
+    return { error: "De betaaltermijn is verlopen — de runner-up-flow is gestart" };
+  }
+
   // Deduct bid+premium from buyer (Fase 31). Premium gaat naar platform via
   // de AUCTION_PREMIUM-Transaction in deductBidPayment.
   await deductBidPayment(session.user.id, fees.bid, fees.premium, `Veiling gewonnen: ${auction.title}`, auctionId);
@@ -1107,11 +1345,7 @@ export async function completeAuctionPayment(auctionId: string) {
     });
   }
 
-  // Update auction payment status
-  await prisma.auction.update({
-    where: { id: auctionId },
-    data: { paymentStatus: "PAID" },
-  });
+  // (status flip naar PAID is bovenaan al atomic gedaan — geen tweede update)
 
   // Fase 27.102: post-payment sync. Auction.paymentStatus is nu PAID dus
   // recalculateTotalReserved telt deze auction niet meer (filter op
@@ -1157,12 +1391,13 @@ export async function cancelAuction(auctionId: string) {
   });
   if (!auction) return { error: "Veiling niet gevonden" };
   if (auction.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
-  if (auction.status !== "ACTIVE") return { error: "Alleen actieve veilingen kunnen worden geannuleerd" };
+  if (auction.status !== "ACTIVE" && auction.status !== "SCHEDULED") {
+    return { error: "Alleen actieve of geplande veilingen kunnen worden geannuleerd" };
+  }
   if (auction._count.bids > 0) return { error: "Er is al een bod uitgebracht — annuleren niet meer mogelijk" };
 
-  // Race-safe flip: ACTIVE → CANCELLED. Als er tussen het lezen en schrijven
-  // toch een bod binnenkomt, willen we het annuleren tegenhouden. Daarom een
-  // transactie met re-check op bids-count.
+  // Race-safe flip: ACTIVE/SCHEDULED → CANCELLED. Als er tussen het lezen en
+  // schrijven toch een bod binnenkomt, willen we het annuleren tegenhouden.
   const result = await prisma.$transaction(async (tx) => {
     const fresh = await tx.auction.findUnique({
       where: { id: auctionId },
@@ -1172,7 +1407,7 @@ export async function cancelAuction(auctionId: string) {
       return { error: "Er is intussen een bod gedaan — annuleren niet meer mogelijk" } as const;
     }
     const flipped = await tx.auction.updateMany({
-      where: { id: auctionId, status: "ACTIVE" },
+      where: { id: auctionId, status: { in: ["ACTIVE", "SCHEDULED"] } },
       data: { status: "CANCELLED" },
     });
     if (flipped.count === 0) {
@@ -1181,5 +1416,385 @@ export async function cancelAuction(auctionId: string) {
     return { success: true } as const;
   });
 
-  return result;
+  if ("error" in result) return result;
+
+  // Refund promotie-kosten naar seller balance. Spotlights pro-rata op basis
+  // van ongebruikte tijd, labels 100% terug. Free-quota wordt NIET teruggezet
+  // (anti-recycle van de gratis-slot via spam-create-and-cancel). Failure hier
+  // breekt de cancel niet — alleen loggen, status is al CANCELLED.
+  let refundedAmount = 0;
+  try {
+    refundedAmount = await refundAuctionPromotion(session.user.id, auctionId, auction.title);
+  } catch (err) {
+    console.error(`[cancelAuction] Promotion refund failed for auction ${auctionId}:`, err);
+  }
+
+  return { success: true, refundedAmount } as const;
+}
+
+// Pro-rata spotlight-refund + 100% label-refund bij auction-cancel.
+// Apart genoemd zodat we 'm hergebruiken als andere paden ook upsells moeten
+// teruggeven (bv. admin-cancel via moderation in de toekomst).
+async function refundAuctionPromotion(
+  sellerId: string,
+  auctionId: string,
+  auctionTitle: string,
+): Promise<number> {
+  const now = new Date();
+
+  // Upsells: pro-rata op basis van ongebruikte tijd. expiresAt voortzetten
+  // naar now zodat ze niet meer renderen op cards. Skip records die al
+  // verlopen waren of waar totalCost === 0 (gratis quota).
+  const upsells = await prisma.auctionUpsell.findMany({
+    where: { auctionId },
+  });
+
+  let totalRefund = 0;
+  const upsellRefundsForLog: { type: string; amount: number }[] = [];
+
+  for (const upsell of upsells) {
+    if (upsell.totalCost <= 0) continue; // gratis (quota) — niets te refunden
+    const startsAt = upsell.startsAt;
+    const expiresAt = upsell.expiresAt;
+    let refundAmount = 0;
+    if (now <= startsAt) {
+      // Window is nog niet begonnen → 100% terug
+      refundAmount = upsell.totalCost;
+    } else if (now >= expiresAt) {
+      refundAmount = 0; // al verlopen
+    } else {
+      const totalMs = expiresAt.getTime() - startsAt.getTime();
+      const remainingMs = expiresAt.getTime() - now.getTime();
+      const ratio = totalMs > 0 ? remainingMs / totalMs : 0;
+      refundAmount = Math.round(upsell.totalCost * ratio * 100) / 100;
+    }
+    if (refundAmount > 0) {
+      totalRefund += refundAmount;
+      upsellRefundsForLog.push({ type: upsell.type, amount: refundAmount });
+    }
+    // Stop verdere zichtbaarheid op de cards: zet expiresAt = now als die nog
+    // in de toekomst lag. Dit voorkomt dat een gecancelde veiling in de
+    // sponsored-row blijft staan tot z'n natuurlijke expiresAt.
+    if (expiresAt > now) {
+      await prisma.auctionUpsell.update({
+        where: { id: upsell.id },
+        data: { expiresAt: now },
+      });
+    }
+  }
+
+  // Labels: 100% van cost terug. Snapshot per-label cost staat al op de rij.
+  const labels = await prisma.auctionLabel.findMany({
+    where: { auctionId },
+  });
+  const labelRefundTotal = labels.reduce((sum, l) => sum + (l.cost ?? 0), 0);
+  totalRefund += labelRefundTotal;
+
+  const totalRounded = Math.round(totalRefund * 100) / 100;
+  if (totalRounded <= 0) return 0;
+
+  const parts: string[] = [];
+  if (upsellRefundsForLog.length > 0) {
+    parts.push(
+      upsellRefundsForLog
+        .map((u) => `${u.type} €${u.amount.toFixed(2)}`)
+        .join(", "),
+    );
+  }
+  if (labelRefundTotal > 0) {
+    parts.push(`Labels €${labelRefundTotal.toFixed(2)}`);
+  }
+  const description = `Refund promotie-kosten geannuleerde veiling "${auctionTitle}"${
+    parts.length > 0 ? ` (${parts.join(" + ")})` : ""
+  }`;
+
+  await creditBalance(
+    sellerId,
+    totalRounded,
+    "UPSELL_REFUND",
+    description,
+    auctionId,
+  );
+  return totalRounded;
+}
+
+// ============================================================
+// RUNNER-UP OFFER FLOW (post-Fase-33)
+// ============================================================
+// Wanneer een veilingwinnaar de 5d-betaaltermijn mist, krijgt de volgende
+// hoogste bieder een 72u-offer (status AWAITING_DECISION). Hij kan accepteren
+// (5d-betaalflow start) of weigeren (geen straf, volgende kandidaat krijgt
+// offer). Tijdens 72u-window wordt GEEN reserve op de runner-up gelegd.
+
+const PAYMENT_DEADLINE_DAYS_AFTER_ACCEPT = 5;
+
+export async function getMyActiveRunnerUpOffer() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+
+  const offer = await prisma.auctionRunnerUpOffer.findFirst({
+    where: { bidderId: session.user.id, status: "AWAITING_DECISION" },
+    include: {
+      auction: {
+        select: {
+          id: true,
+          title: true,
+          imageUrls: true,
+          deliveryMethod: true,
+          sellerId: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!offer) return null;
+
+  const hasAddress =
+    offer.deliveryChoice === "SHIP"
+      ? await hasValidShippingAddress(session.user.id)
+      : true;
+
+  return {
+    id: offer.id,
+    auctionId: offer.auctionId,
+    auctionTitle: offer.auction.title,
+    auctionImageUrls: offer.auction.imageUrls,
+    bidAmount: offer.bidAmount,
+    premiumAmount: offer.premiumAmount,
+    totalAmount: Math.round((offer.bidAmount + offer.premiumAmount) * 100) / 100,
+    deliveryChoice: offer.deliveryChoice,
+    decisionDeadline: offer.decisionDeadline,
+    createdAt: offer.createdAt,
+    requiresAddress: offer.deliveryChoice === "SHIP" && !hasAddress,
+  };
+}
+
+export async function getActiveRunnerUpOffersForUser() {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  const offers = await prisma.auctionRunnerUpOffer.findMany({
+    where: { bidderId: session.user.id, status: "AWAITING_DECISION" },
+    include: {
+      auction: {
+        select: {
+          id: true,
+          title: true,
+          imageUrls: true,
+          deliveryMethod: true,
+          sellerId: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const hasAddress = await hasValidShippingAddress(session.user.id);
+
+  return offers.map((offer) => ({
+    id: offer.id,
+    auctionId: offer.auctionId,
+    auctionTitle: offer.auction.title,
+    auctionImageUrls: offer.auction.imageUrls,
+    bidAmount: offer.bidAmount,
+    premiumAmount: offer.premiumAmount,
+    totalAmount: Math.round((offer.bidAmount + offer.premiumAmount) * 100) / 100,
+    deliveryChoice: offer.deliveryChoice,
+    decisionDeadline: offer.decisionDeadline,
+    createdAt: offer.createdAt,
+    requiresAddress: offer.deliveryChoice === "SHIP" && !hasAddress,
+  }));
+}
+
+export async function acceptRunnerUpOffer(offerId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  const offer = await prisma.auctionRunnerUpOffer.findUnique({
+    where: { id: offerId },
+    include: { auction: true },
+  });
+  if (!offer || offer.bidderId !== session.user.id) {
+    return { error: "INVALID_OFFER" };
+  }
+  if (offer.status !== "AWAITING_DECISION") {
+    return { error: "INVALID_OFFER" };
+  }
+  if (offer.decisionDeadline < new Date()) {
+    return { error: "OFFER_EXPIRED" };
+  }
+  if (
+    !offer.auction ||
+    offer.auction.paymentStatus !== "AWAITING_RUNNER_UP_DECISION" ||
+    offer.auction.winnerId !== session.user.id
+  ) {
+    return { error: "INVALID_AUCTION_STATE" };
+  }
+
+  // Adres-validatie voor SHIP. Bij PICKUP geen adres nodig.
+  if (offer.deliveryChoice === "SHIP") {
+    const hasAddress = await hasValidShippingAddress(session.user.id);
+    if (!hasAddress) return { error: "NO_ADDRESS" };
+  }
+
+  const buyer = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      street: true,
+      houseNumber: true,
+      postalCode: true,
+      city: true,
+      country: true,
+      isVerified: true,
+      isBusinessBidExempt: true,
+    },
+  });
+  if (!buyer) return { error: "Gebruiker niet gevonden" };
+
+  // Audit-fix: verified-gate-recheck. Als de runner-up bij placeBid verified
+  // was maar tussentijds gedeverificeerd is door admin, mag hij geen ≥€2000-bid
+  // accepteren (zelfde regel als placeBid). Anders kan een gedeverificeerde
+  // user toch een hoge auction overnemen via de runner-up-flow.
+  if (!bidPassesVerifiedGate(offer.bidAmount, buyer)) {
+    return { error: "VERIFIED_REQUIRED_FOR_HIGH_BID" };
+  }
+
+  const newDeadline = new Date();
+  newDeadline.setDate(newDeadline.getDate() + PAYMENT_DEADLINE_DAYS_AFTER_ACCEPT);
+
+  // Audit-fix: race-safe atomic flip. Bij dubbel-klik / parallelle calls doen
+  // beiden de findUnique-status-check en gaan dan beiden naar de tx. Eerste
+  // updateMany flipt status naar ACCEPTED; tweede ziet count=0 (status al
+  // ACCEPTED) → bail vóór bundle-create zodat we niet crashen op P2002 op
+  // ShippingBundle.auctionId @unique.
+  const offerClaim = await prisma.auctionRunnerUpOffer.updateMany({
+    where: { id: offerId, status: "AWAITING_DECISION" },
+    data: { status: "ACCEPTED", decidedAt: new Date() },
+  });
+  if (offerClaim.count === 0) {
+    return { error: "INVALID_OFFER" };
+  }
+
+  // Auction-state flip — race-veilig tegen concurrent decline-cron of
+  // parallelle accept op een ander offer (theoretisch onmogelijk want maar
+  // één offer mag AWAITING_DECISION zijn, maar defense-in-depth).
+  const auctionClaim = await prisma.auction.updateMany({
+    where: { id: offer.auctionId, paymentStatus: "AWAITING_RUNNER_UP_DECISION" },
+    data: {
+      paymentStatus: "AWAITING_PAYMENT",
+      paymentDeadline: newDeadline,
+    },
+  });
+  if (auctionClaim.count === 0) {
+    // Auction-status is intussen veranderd (bv. cron heeft 'm gefinaliseerd).
+    // Roll de offer-flip terug zodat de staat consistent blijft.
+    await prisma.auctionRunnerUpOffer.updateMany({
+      where: { id: offerId, status: "ACCEPTED" },
+      data: { status: "AWAITING_DECISION", decidedAt: null },
+    });
+    return { error: "INVALID_AUCTION_STATE" };
+  }
+
+  // Maak PENDING-bundle met deliveryChoice uit offer
+  const offerDelivery = offer.deliveryChoice === "PICKUP" ? "PICKUP" : "SHIP";
+  await createPendingBundle({
+    buyerId: session.user.id,
+    sellerId: offer.auction.sellerId,
+    totalItemCost: offer.bidAmount,
+    shippingCost: 0,
+    auctionId: offer.auctionId,
+    deliveryMethod: offerDelivery,
+    address:
+      offerDelivery === "SHIP" && buyer
+        ? {
+            street: buyer.street,
+            houseNumber: buyer.houseNumber,
+            postalCode: buyer.postalCode,
+            city: buyer.city,
+            country: buyer.country,
+          }
+        : undefined,
+  });
+
+  // Reserve nu 10% × (bid + premium) op runner-up — pas vanaf accept.
+  await syncReservedBalance(session.user.id);
+
+  await createNotification(
+    offer.auction.sellerId,
+    "ITEM_SOLD",
+    "Runner-up heeft de veiling geaccepteerd",
+    `"${offer.auction.title}" — de runner-up neemt de veiling over voor €${offer.bidAmount.toFixed(2)}. We wachten 5 dagen op betaling.`,
+    `/nl/veilingen/${offer.auctionId}`,
+  );
+  await createNotification(
+    session.user.id,
+    "AUCTION_WON",
+    "Aanbod geaccepteerd",
+    `Je hebt "${offer.auction.title}" overgenomen voor €${offer.bidAmount.toFixed(2)}. Rond de betaling af binnen 5 dagen.`,
+    `/nl/veilingen/${offer.auctionId}`,
+  );
+
+  publishMany(
+    [userChannel(session.user.id), userChannel(offer.auction.sellerId)],
+    { type: "balance-changed", payload: {} },
+  );
+  publish(userChannel(offer.auction.sellerId), {
+    type: "auction-runner-up-decided",
+    payload: { auctionId: offer.auctionId, status: "ACCEPTED" },
+  });
+
+  return { success: true };
+}
+
+export async function declineRunnerUpOffer(offerId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const offer = await prisma.auctionRunnerUpOffer.findUnique({
+    where: { id: offerId },
+    include: { auction: { select: { id: true, sellerId: true, title: true } } },
+  });
+  if (!offer || offer.bidderId !== session.user.id) {
+    return { error: "INVALID_OFFER" };
+  }
+  if (offer.status !== "AWAITING_DECISION") {
+    return { error: "INVALID_OFFER" };
+  }
+
+  // Audit-fix: race-safe atomic flip. Voorheen `update` zonder status-filter
+  // kon een offer decline'n nadat een parallelle accept of cron-expire al de
+  // status had gemuteerd — semantisch corrupt (auction al PAID/AWAITING_PAYMENT
+  // maar offer status DECLINED). Bij race-loss bail vroegtijdig zodat
+  // processRunnerUpDecision niet onnodig wordt aangeroepen.
+  const claim = await prisma.auctionRunnerUpOffer.updateMany({
+    where: { id: offerId, status: "AWAITING_DECISION" },
+    data: { status: "DECLINED", decidedAt: new Date() },
+  });
+  if (claim.count === 0) {
+    return { error: "INVALID_OFFER" };
+  }
+
+  if (offer.auction) {
+    await createNotification(
+      offer.auction.sellerId,
+      "ITEM_SOLD",
+      "Runner-up heeft afgewezen",
+      `"${offer.auction.title}" — de runner-up heeft het aanbod afgewezen. We zoeken naar de volgende kandidaat.`,
+      `/nl/veilingen/${offer.auction.id}`,
+    );
+
+    publish(userChannel(offer.auction.sellerId), {
+      type: "auction-runner-up-decided",
+      payload: { auctionId: offer.auctionId, status: "DECLINED" },
+    });
+  }
+
+  // Schuif door naar volgende kandidaat (of finaliseer PAYMENT_FAILED)
+  await processRunnerUpDecision(offer.auctionId, session.user.id);
+
+  return { success: true };
 }

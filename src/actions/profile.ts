@@ -44,9 +44,19 @@ export async function updateProfile(formData: FormData) {
     const avatarFile = formData.get("avatarFile") as File | null;
     if (avatarFile && avatarFile.size > 0) {
       try {
-        avatarUrl = await saveUploadedFile(avatarFile);
-      } catch {
-        return { error: "Profielfoto uploaden mislukt. Maximaal 5MB (JPG, PNG, WebP, GIF)." };
+        avatarUrl = await saveUploadedFile(avatarFile, {
+          context: "avatar",
+          userId: session.user.id,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "";
+        if (message.startsWith("MODERATION_BLOCKED:")) {
+          const reason = message.slice("MODERATION_BLOCKED:".length).trim();
+          return {
+            error: `Deze profielfoto voldoet niet aan onze richtlijnen${reason ? `: ${reason}` : "."}`,
+          };
+        }
+        return { error: "Profielfoto uploaden mislukt. Maximaal 5MB (JPG, PNG, WebP)." };
       }
     }
   }
@@ -163,8 +173,8 @@ export async function updateMaxRunnerUpAttempts(value: number) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
-  if (!Number.isInteger(value) || value < 1 || value > 10) {
-    return { error: "Waarde moet tussen 1 en 10 liggen" };
+  if (!Number.isInteger(value) || value < 0 || value > 3) {
+    return { error: "Waarde moet tussen 0 en 3 liggen" };
   }
 
   await prisma.user.update({

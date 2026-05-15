@@ -1,17 +1,25 @@
 "use client";
 
-import { useTranslations, useLocale } from "next-intl";
-import { getCountryName } from "@/lib/shipping/countries";
+import { useTranslations } from "next-intl";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
 import { Link } from "@/i18n/navigation";
 import { AlertTriangle } from "lucide-react";
 import { CarrierLogo } from "@/components/ui/carrier-logo";
-import type { SellerShippingMethod } from "@prisma/client";
 
-const MAILBOX_KEYWORDS = ["brievenbuspakket", "brievenbus", "mailbox", "letterbox"];
+/** Shape geleverd door `getSellerShippingMethods` (Fase 33). */
+export interface EnrichedShippingMethod {
+  id: string;
+  service: string; // MAILBOX_PARCEL | PARCEL_STANDARD | PARCEL_SIGNED
+  zone: string;    // DOMESTIC | EU_NEAR | EU_FAR
+  carrier: string;
+  basePrice: number;
+  effectivePrice: number;
+  priceOverride: number | null;
+  isActive: boolean;
+}
 
 interface Props {
-  methods: SellerShippingMethod[];
+  methods: EnrichedShippingMethod[];
   selected: string[];
   onChange: (selected: string[]) => void;
   context?: "listing" | "claimsale" | "auction";
@@ -20,7 +28,6 @@ interface Props {
 
 export function ShippingMethodSelector({ methods, selected, onChange, context, freeShipping }: Props) {
   const t = useTranslations("shipping");
-  const locale = useLocale();
 
   function getCarrierName(carrierId: string) {
     return KNOWN_CARRIERS.find((c) => c.id === carrierId)?.name ?? carrierId;
@@ -36,7 +43,7 @@ export function ShippingMethodSelector({ methods, selected, onChange, context, f
           href="/dashboard/verzending"
           className="mt-2 inline-block text-primary hover:underline"
         >
-          {t("addMethod")}
+          {t("methodsManageLink")}
         </Link>
       </div>
     );
@@ -50,28 +57,16 @@ export function ShippingMethodSelector({ methods, selected, onChange, context, f
     );
   }
 
-  function isMailboxMethod(method: SellerShippingMethod) {
-    return MAILBOX_KEYWORDS.some((kw) =>
-      method.serviceName.toLowerCase().includes(kw)
-    );
-  }
-
   const hasMailboxSelected = selected.some((id) => {
     const m = activeMethods.find((am) => am.id === id);
-    return m && isMailboxMethod(m);
-  });
-
-  const onlyLetterSelected = selected.length > 0 && selected.every((id) => {
-    const m = activeMethods.find((am) => am.id === id);
-    return m?.shippingType === "LETTER";
+    return m?.service === "MAILBOX_PARCEL";
   });
 
   return (
     <div className="space-y-2">
       {activeMethods.map((method) => {
-        const countries: string[] = JSON.parse(method.countries);
         const isSelected = selected.includes(method.id);
-        const isMailbox = isMailboxMethod(method);
+        const isMailbox = method.service === "MAILBOX_PARCEL";
 
         return (
           <label
@@ -92,18 +87,18 @@ export function ShippingMethodSelector({ methods, selected, onChange, context, f
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <CarrierLogo carrierId={method.carrier} size={16} />
-                  <span>{getCarrierName(method.carrier)} — {method.serviceName}</span>
+                  <span>{getCarrierName(method.carrier)} — {t(`service.${method.service}`)}</span>
                 </div>
                 <p className="text-sm font-medium text-primary">
                   {freeShipping ? (
                     <span className="text-green-600 dark:text-green-400">{t("free")}</span>
                   ) : (
-                    <>€{method.price.toFixed(2)}</>
+                    <>€{method.effectivePrice.toFixed(2)}</>
                   )}
                 </p>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {countries.map((c) => getCountryName(c, locale)).join(", ")}
+                {t(`zone.${method.zone}`)}
               </p>
               {isMailbox && isSelected && context === "claimsale" && (
                 <div className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -116,12 +111,6 @@ export function ShippingMethodSelector({ methods, selected, onChange, context, f
         );
       })}
 
-      {onlyLetterSelected && (
-        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{t("requireNonLetterMethod")}</span>
-        </div>
-      )}
       {hasMailboxSelected && context === "claimsale" && (
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />

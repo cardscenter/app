@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { calculateXP, getLevel } from "@/lib/seller-levels";
+import { getRecentlySold } from "@/lib/home-recently-sold";
 
 export type HomepageStats = {
   activeAuctions: number;
@@ -61,7 +62,7 @@ export async function getHomepageData() {
       orderBy: { createdAt: "desc" },
       take: 8,
       include: {
-        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+        seller: { select: { displayName: true, avatarUrl: true, city: true, postalCode: true, country: true } },
         _count: { select: { bids: true } },
       },
     }),
@@ -94,7 +95,7 @@ export async function getHomepageData() {
       orderBy: { endTime: "asc" },
       take: 8,
       include: {
-        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+        seller: { select: { displayName: true, avatarUrl: true, city: true, postalCode: true, country: true } },
         _count: { select: { bids: true } },
       },
     }),
@@ -105,7 +106,7 @@ export async function getHomepageData() {
       orderBy: { bids: { _count: "desc" } },
       take: 12,
       include: {
-        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+        seller: { select: { displayName: true, avatarUrl: true, city: true, postalCode: true, country: true } },
         _count: { select: { bids: true } },
       },
     }),
@@ -118,7 +119,7 @@ export async function getHomepageData() {
       },
       take: 4,
       include: {
-        seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+        seller: { select: { displayName: true, avatarUrl: true, city: true, postalCode: true, country: true } },
         _count: { select: { bids: true } },
       },
     }),
@@ -140,6 +141,12 @@ export async function getHomepageData() {
     getPlatformStats(),
   ]);
 
+  // Fase 36 additions: recently-sold-for + testimonials gating count
+  const [recentlySoldItems, fiveStarReviewCount] = await Promise.all([
+    getRecentlySold(8),
+    prisma.review.count({ where: { rating: 5 } }),
+  ]);
+
   // Filter trending: min 2 bids
   const filteredTrending = trendingAuctions.filter((a) => (a._count?.bids ?? 0) >= 2).slice(0, 8);
 
@@ -159,6 +166,8 @@ export async function getHomepageData() {
     sponsoredListings,
     topSellers,
     platformStats: platformStatsRaw,
+    recentlySoldItems,
+    fiveStarReviewCount,
   };
 }
 

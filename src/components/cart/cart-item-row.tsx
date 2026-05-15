@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Trash2, ImageIcon, Clock, X } from "lucide-react";
+import { Trash2, ImageIcon, Clock, X, ShieldCheck } from "lucide-react";
 import { removeFromCart } from "@/actions/cart";
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -44,11 +44,32 @@ export function CartItemRow({
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [checkoutLocked, setCheckoutLocked] = useState(false);
   const router = useRouter();
 
-  // Countdown timer
+  // Listen naar checkout-lock events vanuit CartCheckout. Bij open:
+  // pauzeer de timer-display + voorkom auto-refresh op expired. Bij cancel:
+  // hervat normaal. (Feitelijke server-side lock zit op claimsaleItem
+  // checkoutLockExpiresAt, dit is puur UI-pauze tegen hartkloppingen.)
   useEffect(() => {
-    if (!expiresAt) return;
+    function lock() {
+      setCheckoutLocked(true);
+    }
+    function unlock() {
+      setCheckoutLocked(false);
+    }
+    window.addEventListener("cart-checkout-locked", lock);
+    window.addEventListener("cart-checkout-unlocked", unlock);
+    return () => {
+      window.removeEventListener("cart-checkout-locked", lock);
+      window.removeEventListener("cart-checkout-unlocked", unlock);
+    };
+  }, []);
+
+  // Countdown timer — gepauzeerd tijdens checkout-lock zodat de buyer niet
+  // schrikt van een seconde-naar-nul-aftellende klok terwijl de modal open is.
+  useEffect(() => {
+    if (!expiresAt || checkoutLocked) return;
 
     const update = () => {
       const remaining = new Date(expiresAt).getTime() - Date.now();
@@ -65,15 +86,16 @@ export function CartItemRow({
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [expiresAt]);
+  }, [expiresAt, checkoutLocked]);
 
-  // Auto refresh when expired
+  // Auto refresh when expired — overslaan tijdens checkout-lock zodat
+  // de page niet onder de modal verdwijnt.
   useEffect(() => {
-    if (expired) {
+    if (expired && !checkoutLocked) {
       const timeout = setTimeout(() => router.refresh(), 2000);
       return () => clearTimeout(timeout);
     }
-  }, [expired, router]);
+  }, [expired, checkoutLocked, router]);
 
   async function handleRemove() {
     setRemoving(true);
@@ -175,12 +197,20 @@ export function CartItemRow({
         )}
       </div>
 
-      {/* Timer */}
-      {timeLeft && !isDeleted && (
-        <div className={`flex shrink-0 items-center gap-1 text-xs font-medium ${timerColor}`}>
-          <Clock className="h-3.5 w-3.5" />
-          {timeLeft}
+      {/* Timer — toont "Vastgezet" tijdens checkout-modal ipv aftellende klok
+          zodat de buyer niet zenuwachtig wordt door 0:00 in de achtergrond. */}
+      {checkoutLocked && !isDeleted ? (
+        <div className="flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Vastgezet
         </div>
+      ) : (
+        timeLeft && !isDeleted && (
+          <div className={`flex shrink-0 items-center gap-1 text-xs font-medium ${timerColor}`}>
+            <Clock className="h-3.5 w-3.5" />
+            {timeLeft}
+          </div>
+        )
       )}
 
       {/* Price */}

@@ -4,9 +4,14 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { DisputesOverview } from "@/components/dashboard/disputes-overview";
 
-export default async function DisputesPage() {
+export default async function DisputesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("disputes");
   const userId = session.user.id;
 

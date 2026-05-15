@@ -43,7 +43,7 @@ export function StepPhotos({ auctionType, images, onChange }: StepPhotosProps) {
         {t(TIP_KEYS[auctionType])}
       </div>
 
-      <ImageUploader images={images} onChange={onChange} maxImages={maxImages} />
+      <ImageUploader images={images} onChange={onChange} maxImages={maxImages} context="auction" />
     </div>
   );
 }

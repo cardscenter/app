@@ -65,7 +65,8 @@ export default async function AdminModerationPage({
       createdAt: r.createdAt.toISOString(), amount: r.price,
     }));
   } else if (tab === "auctions") {
-    const where: Record<string, unknown> = { status: "ACTIVE" };
+    // Toon ook SCHEDULED — admin moet kunnen modereren vóór ze live gaan.
+    const where: Record<string, unknown> = { status: { in: ["ACTIVE", "SCHEDULED"] } };
     if (reportedUserIds) where.sellerId = { in: reportedUserIds };
 
     const rows = await prisma.auction.findMany({

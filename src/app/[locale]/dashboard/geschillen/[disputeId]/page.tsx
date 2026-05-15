@@ -6,11 +6,11 @@ import { DisputeDetailContent } from "@/components/dashboard/dispute-detail-cont
 export default async function DisputeDetailPage({
   params,
 }: {
-  params: Promise<{ disputeId: string }>;
+  params: Promise<{ disputeId: string; locale: string }>;
 }) {
-  const { disputeId } = await params;
+  const { disputeId, locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const userId = session.user.id;
 
   const dispute = await prisma.dispute.findUnique({

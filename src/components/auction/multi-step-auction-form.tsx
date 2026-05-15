@@ -6,22 +6,20 @@ import { createAuction } from "@/actions/auction";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Eye } from "lucide-react";
-import type { SellerShippingMethod } from "@prisma/client";
-import type { AuctionType, UpsellType } from "@/types";
+import type { EnrichedShippingMethod } from "@/components/ui/shipping-method-selector";
+import type { AuctionType } from "@/types";
 
 import { StepType } from "./steps/step-type";
 import { StepPhotos } from "./steps/step-photos";
 import { StepDetails } from "./steps/step-details";
 import { StepPricing } from "./steps/step-pricing";
-import { StepUpsells } from "./steps/step-upsells";
+import { StepTiming } from "./steps/step-timing";
+import { StepUpsells, type UpsellWindowEntry, type SelectedLabel } from "./steps/step-upsells";
 import { AuctionPreview } from "./steps/step-review";
-import { ShippingMethodSelector } from "@/components/ui/shipping-method-selector";
+import { AuctionFormProgress, type AuctionStepKey } from "./auction-form-progress";
+import { AuctionFormSummary } from "./auction-form-summary";
+import { ShippingMethodDisplay } from "@/components/listing/shipping-method-display";
 import type { CardSearchSelectValue } from "@/components/ui/card-search-select";
-
-interface UpsellEntry {
-  type: UpsellType;
-  days: number;
-}
 
 interface FormState {
   auctionType: AuctionType;
@@ -32,12 +30,12 @@ interface FormState {
   condition: string;
   tcgdex: CardSearchSelectValue | null;
   variant: "normal" | "reverse";
-  estimatedCardCount: number | null;
-  conditionRange: string;
   productType: string;
   itemCategory: string;
   startingBid: number | null;
   duration: number;
+  startDate: Date;
+  endTimeOfDay: string;
   hasReserve: boolean;
   reservePrice: number | null;
   hasBuyNow: boolean;
@@ -45,8 +43,10 @@ interface FormState {
   runnerUpEnabled: boolean;
   // Fase 27.95: SHIP / PICKUP / BOTH
   deliveryMethod: "SHIP" | "PICKUP" | "BOTH";
-  selectedShippingMethods: string[];
-  upsells: UpsellEntry[];
+  // Brievenbuspakket opt-in (Fase 33 v2)
+  allowMailbox: boolean;
+  upsells: UpsellWindowEntry[];
+  labels: SelectedLabel[];
 }
 
 const INITIAL_STATE: FormState = {
@@ -58,35 +58,47 @@ const INITIAL_STATE: FormState = {
   condition: "Near Mint",
   tcgdex: null,
   variant: "normal",
-  estimatedCardCount: null,
-  conditionRange: "",
   productType: "",
   itemCategory: "",
   startingBid: null,
   duration: 7,
+  // Default startDate = midnight UTC voor vandaag (NL-kalenderdag).
+  startDate: (() => {
+    const d = new Date();
+    d.setUTCHours(0, 0, 0, 0);
+    return d;
+  })(),
+  endTimeOfDay: "20:00",
   hasReserve: false,
   reservePrice: null,
   hasBuyNow: false,
   buyNowPrice: null,
   runnerUpEnabled: true,
   deliveryMethod: "SHIP",
-  selectedShippingMethods: [],
+  allowMailbox: false,
   upsells: [],
+  labels: [],
 };
 
 interface MultiStepAuctionFormProps {
-  shippingMethods: SellerShippingMethod[];
+  shippingMethods: EnrichedShippingMethod[];
   userBalance: number;
   accountType: string;
   freeUpsellsRemaining?: number;
   userCity?: string | null;
+  maxRunnerUpAttempts?: number;
 }
 
-export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType, freeUpsellsRemaining = 0, userCity = null }: MultiStepAuctionFormProps) {
+export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType, freeUpsellsRemaining = 0, userCity = null, maxRunnerUpAttempts = 2 }: MultiStepAuctionFormProps) {
   const t = useTranslations("auction");
   const ts = useTranslations("shipping");
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(INITIAL_STATE);
+  // Initial state: respect de globale user-instelling — runner-up rotatie kan
+  // niet aan staan als de seller 'm op 0 heeft gezet in z'n profiel.
+  const [form, setForm] = useState<FormState>(() => ({
+    ...INITIAL_STATE,
+    runnerUpEnabled: maxRunnerUpAttempts > 0,
+  }));
   const [showPreview, setShowPreview] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
@@ -119,6 +131,8 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     formData.set("description", form.description);
     formData.set("startingBid", String(form.startingBid ?? ""));
     formData.set("duration", String(form.duration));
+    formData.set("startDate", form.startDate.toISOString());
+    formData.set("endTimeOfDay", form.endTimeOfDay);
 
     // Append "(Reverse Holo)" so buyers see which print they're bidding on.
     const baseName = form.cardName;
@@ -127,8 +141,6 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     if (cardName) formData.set("cardName", cardName);
     if (form.condition) formData.set("condition", form.condition);
     if (form.tcgdex?.id) formData.set("tcgdexId", form.tcgdex.id);
-    if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
-    if (form.conditionRange) formData.set("conditionRange", form.conditionRange);
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
     if (form.hasReserve && form.reservePrice !== null) formData.set("reservePrice", String(form.reservePrice));
@@ -136,22 +148,16 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     formData.set("runnerUpEnabled", form.runnerUpEnabled ? "1" : "0");
     formData.set("deliveryMethod", form.deliveryMethod);
 
-    // Shipping-methods alleen vereist voor SHIP/BOTH (PICKUP-only veiling
-    // heeft geen verzendoptie nodig). Voor BOTH/SHIP: minimaal 1.
-    const needsShipping = form.deliveryMethod === "SHIP" || form.deliveryMethod === "BOTH";
-    if (needsShipping && form.selectedShippingMethods.length === 0) {
-      toast.error(ts("selectAtLeastOneMethod"));
-      return;
-    }
-    if (needsShipping) {
-      formData.set("shippingMethodIds", JSON.stringify(form.selectedShippingMethods));
-    }
+    // Shipping wordt server-side afgeleid (Fase 33 v2). Seller stuurt alleen
+    // de mailbox-toggle mee — STANDARD+SIGNED zijn altijd inbegrepen.
+    formData.set("allowMailbox", String(form.allowMailbox));
     // Voor PICKUP/BOTH: stad moet bekend zijn
     if ((form.deliveryMethod === "PICKUP" || form.deliveryMethod === "BOTH") && !userCity) {
       toast.error("Vul eerst je woonplaats in op je profiel");
       return;
     }
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
+    if (form.labels.length > 0) formData.set("labels", JSON.stringify(form.labels));
 
     startTransition(() => {
       formAction(formData);
@@ -167,149 +173,233 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
         onPublish={handleSubmit}
         pending={pending}
         error={actionState?.error}
+        userCity={userCity}
+        maxRunnerUpAttempts={maxRunnerUpAttempts}
+        accountType={accountType}
+        freeUpsellsRemaining={freeUpsellsRemaining}
       />
     );
   }
 
+  // Welke sectie-stappen zijn lokaal "compleet" — voor de progress-indicator.
+  // Houdt rekening met conditionele velden per auctionType (bijv. cardName
+  // alleen verplicht voor SINGLE_CARD).
+  const completedSteps = new Set<AuctionStepKey>();
+  if (form.auctionType) completedSteps.add("type");
+  if (form.images.length > 0) completedSteps.add("photos");
+  const detailsOk =
+    form.title.length >= 3 &&
+    (form.auctionType !== "SINGLE_CARD" || (form.cardName?.length ?? 0) > 0);
+  if (detailsOk) completedSteps.add("details");
+  if (form.startingBid !== null && form.startingBid > 0) completedSteps.add("pricing");
+  if (form.startDate && form.endTimeOfDay) completedSteps.add("timing");
+  if (form.deliveryMethod) completedSteps.add("delivery");
+  // Promotie is volledig optioneel — markeer als "compleet" zodat de progress
+  // niet onnodig met een open chip blijft staan als seller niets selecteert.
+  completedSteps.add("promotion");
+
+  // Sticky-bar missing-fields chips.
+  const missing: { key: string; label: string }[] = [];
+  if (form.images.length === 0) missing.push({ key: "photo", label: t("photoRequired") });
+  if (!form.title) missing.push({ key: "title", label: t("titleRequired") });
+  if (!form.startingBid) missing.push({ key: "startingBid", label: t("startingBidRequired") });
+
   return (
-    <div ref={topRef} className="space-y-8">
-      {/* Error message */}
-      {actionState?.error && (
-        <div className="glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
-          {actionState.error}
-        </div>
-      )}
+    <div ref={topRef}>
+      {/* 2-koloms layout op desktop: form-kolom (met sticky progress bovenaan) · samenvatting rechts.
+          Op mobile is alleen de form-kolom zichtbaar; progress is daar full-bleed via negatieve margins. */}
+      <div className="lg:grid lg:grid-cols-[1fr_360px] lg:gap-8">
+        <div className="space-y-8">
+          <AuctionFormProgress completed={completedSteps} />
+          {/* Error message */}
+          {actionState?.error && (
+            <div className="glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+              {actionState.error}
+            </div>
+          )}
 
-      {/* Section 1: Type */}
-      <section className="glass rounded-2xl p-6">
-        <StepType value={form.auctionType} onChange={(v) => updateField("auctionType", v)} />
-      </section>
+          {/* Section 1: Type */}
+          <section data-section="type" className="glass rounded-2xl p-6 scroll-mt-32">
+            <StepType value={form.auctionType} onChange={(v) => updateField("auctionType", v)} />
+          </section>
 
-      {/* Section 2: Photos */}
-      <section className="glass rounded-2xl p-6">
-        <StepPhotos auctionType={form.auctionType} images={form.images} onChange={(v) => updateField("images", v)} />
-      </section>
+          {/* Section 2: Photos */}
+          <section data-section="photos" className="glass rounded-2xl p-6 scroll-mt-32">
+            <StepPhotos auctionType={form.auctionType} images={form.images} onChange={(v) => updateField("images", v)} />
+          </section>
 
-      {/* Section 3: Details */}
-      <section className="glass rounded-2xl p-6">
-        <StepDetails
-          auctionType={form.auctionType}
-          title={form.title}
-          description={form.description}
-          cardName={form.cardName}
-          condition={form.condition}
-          tcgdex={form.tcgdex}
-          variant={form.variant}
-          estimatedCardCount={form.estimatedCardCount}
-          conditionRange={form.conditionRange}
-          productType={form.productType}
-          itemCategory={form.itemCategory}
-          onChange={updateField}
-        />
-      </section>
+          {/* Section 3: Details */}
+          <section data-section="details" className="glass rounded-2xl p-6 scroll-mt-32">
+            <StepDetails
+              auctionType={form.auctionType}
+              title={form.title}
+              description={form.description}
+              cardName={form.cardName}
+              condition={form.condition}
+              tcgdex={form.tcgdex}
+              variant={form.variant}
+              productType={form.productType}
+              itemCategory={form.itemCategory}
+              onChange={updateField}
+            />
+          </section>
 
-      {/* Section 4: Pricing & Duration */}
-      <section className="glass rounded-2xl p-6">
-        <StepPricing
-          startingBid={form.startingBid}
-          duration={form.duration}
-          hasReserve={form.hasReserve}
-          reservePrice={form.reservePrice}
-          hasBuyNow={form.hasBuyNow}
-          buyNowPrice={form.buyNowPrice}
-          runnerUpEnabled={form.runnerUpEnabled}
-          pricing={form.variant === "reverse" ? (form.tcgdex?.pricingReverse ?? null) : (form.tcgdex?.pricing ?? null)}
-          onChange={updateField}
-        />
-      </section>
+          {/* Section 4: Pricing (zonder duration — die zit nu in Tijdvenster) */}
+          <section data-section="pricing" className="glass rounded-2xl p-6 scroll-mt-32">
+            <StepPricing
+              startingBid={form.startingBid}
+              hasReserve={form.hasReserve}
+              reservePrice={form.reservePrice}
+              hasBuyNow={form.hasBuyNow}
+              buyNowPrice={form.buyNowPrice}
+              runnerUpEnabled={form.runnerUpEnabled}
+              maxRunnerUpAttempts={maxRunnerUpAttempts}
+              pricing={form.variant === "reverse" ? (form.tcgdex?.pricingReverse ?? null) : (form.tcgdex?.pricing ?? null)}
+              onChange={updateField}
+            />
+          </section>
 
-      {/* Section 5a: Bezorging (Fase 27.95) */}
-      <section className="glass rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-1">Bezorging</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Kies hoe de winnaar zijn aankoop ontvangt. Bij &quot;Beide&quot; geeft elke
-          bieder zijn voorkeur op (verzenden of ophalen) bij het bieden.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {(["SHIP", "PICKUP", "BOTH"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => updateField("deliveryMethod", m)}
-              className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
-                form.deliveryMethod === m
-                  ? "border-primary bg-primary text-white"
-                  : "glass-subtle text-foreground hover:bg-muted"
-              }`}
-            >
-              {m === "SHIP" ? "Alleen verzenden" : m === "PICKUP" ? "Alleen ophalen" : "Beide"}
-            </button>
-          ))}
-        </div>
+          {/* Section 5: Tijdvenster (nieuw) */}
+          <section data-section="timing" className="glass rounded-2xl p-6 scroll-mt-32">
+            <StepTiming
+              startDate={form.startDate}
+              duration={form.duration}
+              endTimeOfDay={form.endTimeOfDay}
+              onChange={updateField}
+            />
+          </section>
 
-        {/* Pickup-locatie display + warning */}
-        {(form.deliveryMethod === "PICKUP" || form.deliveryMethod === "BOTH") && (
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-foreground mb-1">Ophaal-locatie</label>
-            {userCity ? (
-              <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground">
-                {userCity}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-                Geen woonplaats ingevuld. Vul deze in via je profiel voor je een ophaal-veiling kan plaatsen.
+          {/* Section 6a: Bezorging */}
+          <section data-section="delivery" className="glass rounded-2xl p-6 scroll-mt-32">
+            <h2 className="text-lg font-semibold text-foreground mb-1">{t("deliveryHeader")}</h2>
+            <p className="text-sm text-muted-foreground mb-4">{t("deliveryHelp")}</p>
+            <div className="flex flex-wrap gap-2">
+              {(["SHIP", "PICKUP", "BOTH"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => updateField("deliveryMethod", m)}
+                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
+                    form.deliveryMethod === m
+                      ? "border-primary bg-primary text-white"
+                      : "glass-subtle text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {m === "SHIP" ? t("deliveryShip") : m === "PICKUP" ? t("deliveryPickup") : t("deliveryBoth")}
+                </button>
+              ))}
+            </div>
+
+            {/* Pickup-locatie display + warning */}
+            {(form.deliveryMethod === "PICKUP" || form.deliveryMethod === "BOTH") && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-foreground mb-1">{t("pickupLocationLabel")}</label>
+                {userCity ? (
+                  <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground">
+                    {userCity}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                    {t("pickupLocationMissing")}
+                  </div>
+                )}
+                <p className="mt-1 text-xs text-muted-foreground">{t("pickupLocationPrivacy")}</p>
               </div>
             )}
-            <p className="mt-1 text-xs text-muted-foreground">
-              Alleen je plaats is publiek zichtbaar. De exacte locatie wordt pas na koop in chat gedeeld.
-            </p>
-          </div>
-        )}
-      </section>
 
-      {/* Section 5b: Shipping Methods — alleen voor SHIP/BOTH */}
-      {(form.deliveryMethod === "SHIP" || form.deliveryMethod === "BOTH") && (
-        <section className="glass rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-1">{ts("selectShippingMethods")}</h2>
-          <p className="text-sm text-muted-foreground mb-4">{ts("selectShippingMethodsHint")}</p>
-          <ShippingMethodSelector
-            methods={shippingMethods.filter((m) => m.shippingType !== "LETTER")}
-            selected={form.selectedShippingMethods}
-            onChange={(v) => updateField("selectedShippingMethods", v)}
-            context="auction"
+            {/* Shipping Methods */}
+            {(form.deliveryMethod === "SHIP" || form.deliveryMethod === "BOTH") && (
+              <div className="mt-6 border-t border-border pt-6">
+                <h3 className="text-sm font-semibold text-foreground mb-1">{ts("selectShippingMethods")}</h3>
+                <p className="text-xs text-muted-foreground mb-3">{ts("selectShippingMethodsHint")}</p>
+                <ShippingMethodDisplay
+                  methods={shippingMethods}
+                  listingType={form.auctionType}
+                  price={form.buyNowPrice ?? form.startingBid}
+                  allowMailbox={form.allowMailbox}
+                  onAllowMailboxChange={(next) => updateField("allowMailbox", next)}
+                />
+              </div>
+            )}
+
+          </section>
+
+          {/* Section 7: Promotie (eigen sectie — Spotlight-windows + Labels) */}
+          <section data-section="promotion" className="glass rounded-2xl p-6 scroll-mt-32">
+            <StepUpsells
+              upsells={form.upsells}
+              labels={form.labels}
+              userBalance={userBalance}
+              accountType={accountType}
+              freeUpsellsRemaining={freeUpsellsRemaining}
+              auctionDuration={form.duration}
+              reservePrice={form.hasReserve ? form.reservePrice : null}
+              buyNowPrice={form.hasBuyNow ? form.buyNowPrice : null}
+              condition={form.condition || null}
+              auctionType={form.auctionType}
+              onUpsellsChange={(v) => updateField("upsells", v)}
+              onLabelsChange={(v) => updateField("labels", v)}
+            />
+          </section>
+        </div>
+
+        {/* Sticky samenvatting (lg+) — info-overzicht, geen mock-bid-card */}
+        <div className="hidden lg:block">
+          <AuctionFormSummary
+            auctionType={form.auctionType}
+            images={form.images}
+            title={form.title}
+            description={form.description}
+            cardName={form.cardName}
+            condition={form.condition}
+            productType={form.productType}
+            itemCategory={form.itemCategory}
+            startingBid={form.startingBid}
+            hasReserve={form.hasReserve}
+            reservePrice={form.reservePrice}
+            hasBuyNow={form.hasBuyNow}
+            buyNowPrice={form.buyNowPrice}
+            duration={form.duration}
+            startDate={form.startDate}
+            endTimeOfDay={form.endTimeOfDay}
+            deliveryMethod={form.deliveryMethod}
+            pickupCity={userCity}
+            upsellsCount={form.upsells.length}
           />
-        </section>
-      )}
+        </div>
+      </div>
 
-      {/* Section 6: Upsells */}
-      <section className="glass rounded-2xl p-6">
-        <StepUpsells
-          upsells={form.upsells}
-          userBalance={userBalance}
-          accountType={accountType}
-          freeUpsellsRemaining={freeUpsellsRemaining}
-          onChange={(v) => updateField("upsells", v)}
-        />
-      </section>
-
-      {/* Submit bar — preview button */}
-      <div className="sticky bottom-4 z-10">
-        <div className="glass rounded-2xl p-4 flex items-center justify-between shadow-lg">
-          <div className="text-sm text-muted-foreground">
-            {form.images.length === 0 && (
-              <span className="text-amber-600 dark:text-amber-400">{t("photoRequired")}</span>
-            )}
-            {form.images.length > 0 && !form.title && (
-              <span className="text-amber-600 dark:text-amber-400">{t("titleRequired")}</span>
-            )}
-            {form.images.length > 0 && form.title && !form.startingBid && (
-              <span className="text-amber-600 dark:text-amber-400">{t("startingBidRequired")}</span>
+      {/* Submit bar — chip-array voor missing fields + preview-knop.
+          Mobile: column gestapeld + items gecentreerd. Desktop: row met
+          justify-between. */}
+      <div className="sticky bottom-4 z-10 mt-8">
+        <div className="glass rounded-2xl p-4 flex flex-col items-center gap-3 shadow-lg sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            {missing.length === 0 ? (
+              <span className="text-sm text-emerald-700 dark:text-emerald-300">{t("readyToPreview")}</span>
+            ) : (
+              missing.map((m) => (
+                <span
+                  key={m.key}
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  {m.label}
+                </span>
+              ))
             )}
           </div>
           <button
             type="button"
-            onClick={() => setShowPreview(true)}
-            disabled={form.images.length === 0}
+            onClick={() => {
+              setShowPreview(true);
+              // Direct na mount staat de Preview-tree op dezelfde scroll-pos
+              // als de bottom-bar — terug naar boven zodat de seller het
+              // overzicht meteen ziet.
+              if (typeof window !== "undefined") {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            disabled={form.images.length === 0 || !form.title || !form.startingBid}
             className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
           >
             <Eye className="h-4 w-4" />

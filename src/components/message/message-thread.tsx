@@ -13,6 +13,7 @@ import { BundleOfferForm } from "@/components/message/bundle-offer-form";
 import { PartialSaleForm } from "@/components/message/partial-sale-form";
 import { useChatPolling, type PolledPickupState } from "@/hooks/use-chat-polling";
 import { containsPickupCodeShape } from "@/lib/pickup-config";
+import { toast } from "sonner";
 
 type Message = {
   id: string;
@@ -45,10 +46,9 @@ type ProposalData = {
 interface SellerShippingMethodLite {
   id: string;
   carrier: string;
-  serviceName: string;
-  price: number;
-  isSigned: boolean;
-  shippingType: string;
+  service: string;
+  zone: string;
+  effectivePrice: number;
 }
 
 type ListingContext = {
@@ -245,15 +245,21 @@ export function MessageThread({
     setUploading(true);
     const formData = new FormData();
     formData.append("files", file);
+    formData.append("context", "chat");
 
     try {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
+      const data = (await res.json()) as { urls?: string[]; errors?: string[] };
       if (data.urls && data.urls.length > 0) {
         setUploadedImageUrl(data.urls[0]);
       }
+      if (data.errors?.length) {
+        setImagePreview(null);
+        for (const message of data.errors) toast.error(message);
+      }
     } catch {
       setImagePreview(null);
+      toast.error("Upload mislukt. Probeer het opnieuw.");
     } finally {
       setUploading(false);
     }

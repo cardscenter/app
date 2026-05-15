@@ -15,10 +15,9 @@ import { PickupActions, type PickupScheduleData } from "@/components/message/pic
 interface SellerShippingMethodLite {
   id: string;
   carrier: string;
-  serviceName: string;
-  price: number;
-  isSigned: boolean;
-  shippingType: string;
+  service: string;
+  zone: string;
+  effectivePrice: number;
 }
 
 interface BundleListingThumb {
@@ -267,9 +266,10 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
 
         {/* Seller-accept modal voor SHIP-bundles: kies verzendmethode */}
         {showAcceptModal && (() => {
-          const usable = sellerShippingMethods.filter((sm) => sm.shippingType !== "LETTER");
+          // Fase 33: alle methodes zijn pakket+getracked. Insured/SIGNED filter op service.
+          const usable = sellerShippingMethods;
           const insuredRequired = bp.requestInsuredShipping || bp.totalAmount > 150;
-          const visible = insuredRequired ? usable.filter((sm) => sm.isSigned) : usable;
+          const visible = insuredRequired ? usable.filter((sm) => sm.service === "PARCEL_SIGNED") : usable;
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAcceptModal(false)}>
               <div className="glass w-full max-w-md rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
@@ -308,9 +308,9 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                         />
                         <div className="flex-1">
                           <div className="font-medium text-foreground">
-                            {sm.carrier} {sm.serviceName}
+                            {sm.carrier} · {sm.service.replace("PARCEL_", "").replace("_", " ").toLowerCase()}
                           </div>
-                          <div className="text-xs text-muted-foreground">€{sm.price.toFixed(2)}{sm.isSigned ? " · aangetekend" : ""}</div>
+                          <div className="text-xs text-muted-foreground">€{sm.effectivePrice.toFixed(2)}{sm.service === "PARCEL_SIGNED" ? " · aangetekend" : ""}</div>
                         </div>
                       </label>
                     ))}

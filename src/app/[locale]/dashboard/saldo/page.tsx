@@ -5,10 +5,16 @@ import { redirect } from "next/navigation";
 import { BalanceSummary } from "@/components/dashboard/balance-summary";
 import { DepositMethods } from "@/components/dashboard/deposit-methods";
 import { PendingAuctionPayments } from "@/components/dashboard/pending-auction-payments";
+import { PendingFeesBanner } from "@/components/dashboard/pending-fees-banner";
 
-export default async function BalancePage() {
+export default async function BalancePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("wallet");
 
   const user = await prisma.user.findUnique({
@@ -48,6 +54,10 @@ export default async function BalancePage() {
       <h1 className="text-2xl font-bold text-foreground">
         {t("balance")}
       </h1>
+
+      <div className="mt-6">
+        <PendingFeesBanner />
+      </div>
 
       {/* Balance summary */}
       <div className="mt-6">

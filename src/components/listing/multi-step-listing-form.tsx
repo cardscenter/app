@@ -6,16 +6,17 @@ import { createListing } from "@/actions/listing";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Eye, Check, AlertCircle, Sparkles } from "lucide-react";
 import type { Series, CardSet } from "@prisma/client";
-import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType, CardItemEntry } from "@/types";
+import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType } from "@/types";
 
 import { StepType } from "./steps/step-type";
 import { StepPhotos } from "./steps/step-photos";
 import { StepDetails } from "./steps/step-details";
 import { StepPricing } from "./steps/step-pricing";
 import { StepUpsells } from "./steps/step-upsells";
-import { ShippingMethodSelector } from "@/components/ui/shipping-method-selector";
-import type { SellerShippingMethod } from "@prisma/client";
+import type { EnrichedShippingMethod } from "@/components/ui/shipping-method-selector";
+import { ShippingMethodDisplay } from "./shipping-method-display";
 import { ListingPreview } from "./steps/step-review";
+import { mailboxEligibleType } from "@/lib/listing-types";
 import type { CardSearchSelectValue } from "@/components/ui/card-search-select";
 
 type SeriesWithSets = Series & { cardSets: CardSet[] };
@@ -36,11 +37,6 @@ interface FormState {
   condition: string;
   tcgdex: CardSearchSelectValue | null;
   variant: "normal" | "reverse";
-  cardItems: CardItemEntry[];
-  allowPartialSale: boolean;
-  estimatedCardCount: number | null;
-  conditionRangeFrom: string;
-  conditionRangeTo: string;
   productType: string;
   itemCategory: string;
   pricingType: string;
@@ -57,6 +53,10 @@ interface FormState {
   packageSize: PackageSize | "";
   packageCount: number;
   stockQuantity: number;
+  // Brievenbuspakket opt-in (Fase 33 v2). Standaard+Aangetekend zijn altijd
+  // inbegrepen, alleen MAILBOX_PARCEL is per listing toggleable. Forced uit
+  // bij prijs ≥€150 en bij niet-eligible types (COLLECTION/SEALED/OTHER).
+  allowMailbox: boolean;
   upsells: UpsellEntry[];
 }
 
@@ -71,11 +71,6 @@ const INITIAL_STATE: FormState = {
   condition: "Near Mint",
   tcgdex: null,
   variant: "normal",
-  cardItems: [],
-  allowPartialSale: false,
-  estimatedCardCount: null,
-  conditionRangeFrom: "",
-  conditionRangeTo: "",
   productType: "",
   itemCategory: "",
   pricingType: "FIXED",
@@ -92,6 +87,7 @@ const INITIAL_STATE: FormState = {
   packageSize: "",
   packageCount: 1,
   stockQuantity: 1,
+  allowMailbox: false,
   upsells: [],
 };
 
@@ -105,7 +101,6 @@ type Requirement = { key: string; messageKey: string; section: SectionId; profil
 // niet-vervulde regel is de "next required step" die in de sticky bar staat.
 function buildRequirements(
   form: FormState,
-  selectedShippingMethods: string[],
   userCity: string | null,
   shippingMethodsAvailable: number,
 ): Requirement[] {
@@ -136,16 +131,6 @@ function buildRequirements(
       reqs.push({ key: "condition", messageKey: "conditionRequired", section: "details" });
     }
   }
-  if (form.listingType === "MULTI_CARD") {
-    if (form.cardItems.length === 0 || !form.cardItems.some((it) => it.cardName.trim())) {
-      reqs.push({ key: "cardItems", messageKey: "cardItemsRequired", section: "details" });
-    }
-  }
-  if (form.listingType === "COLLECTION") {
-    if (!form.estimatedCardCount || form.estimatedCardCount < 1) {
-      reqs.push({ key: "estimatedCount", messageKey: "estimatedCountRequired", section: "details" });
-    }
-  }
   if (form.listingType === "SEALED_PRODUCT") {
     if (!form.productType) {
       reqs.push({ key: "productType", messageKey: "productTypeRequired", section: "details" });
@@ -170,10 +155,13 @@ function buildRequirements(
   if (isPickup && !form.allowPlatformPickup && !form.allowExternalPickup) {
     reqs.push({ key: "pickupPayment", messageKey: "pickupPaymentRequired", section: "shipping" });
   }
-  if (isShip && selectedShippingMethods.length === 0) {
+  // SHIP zonder seller-shipping-config is niet bruikbaar — koper kan niet
+  // checkouten. STANDARD+SIGNED zijn altijd inbegrepen, dus we checken alleen
+  // dat seller überhaupt actieve methoden heeft.
+  if (isShip && shippingMethodsAvailable === 0) {
     reqs.push({
       key: "shippingMethod",
-      messageKey: shippingMethodsAvailable === 0 ? "shippingMethodNoneAvailable" : "shippingMethodRequired",
+      messageKey: "shippingMethodNoneAvailable",
       section: "shipping",
     });
   }
@@ -187,7 +175,7 @@ interface MultiStepListingFormProps {
   userAccountType: string;
   freeUpsellsRemaining?: number;
   userCity?: string | null;
-  shippingMethods?: SellerShippingMethod[];
+  shippingMethods?: EnrichedShippingMethod[];
 }
 
 // Sectie-status indicator: groen vinkje voor afgeronde verplichte secties,
@@ -230,10 +218,27 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
   const t = useTranslations("listing");
   const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
-  const [selectedShippingMethods, setSelectedShippingMethods] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const isPremium = userAccountType !== "FREE"; // For backward compat references
   const topRef = useRef<HTMLDivElement>(null);
+
+  // Effectieve verzendmethode-ids voor server-snapshot: STANDARD+SIGNED altijd,
+  // MAILBOX alleen als toggle aan + type-eligible + price < €150. Server-side
+  // is dezelfde derivation autoritair (deriveListingShippingMethodIds).
+  const effectiveShippingMethodIds = useMemo(() => {
+    const mailboxOk =
+      form.allowMailbox &&
+      mailboxEligibleType(form.listingType) &&
+      (form.price === null || form.price < 150);
+    return shippingMethods
+      .filter((m) => m.isActive)
+      .filter((m) => {
+        if (m.service === "PARCEL_STANDARD" || m.service === "PARCEL_SIGNED") return true;
+        if (m.service === "MAILBOX_PARCEL") return mailboxOk;
+        return false;
+      })
+      .map((m) => m.id);
+  }, [shippingMethods, form.allowMailbox, form.listingType, form.price]);
 
   const [actionState, formAction, pending] = useActionState(
     async (_prev: { error?: string; success?: boolean; listingId?: string } | null | undefined, formData: FormData) => {
@@ -265,8 +270,8 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
   // Centrale checklist — alle openstaande verplichte velden in volgorde.
   // De eerste regel is de "next required step" voor de sticky bar.
   const requirements = useMemo(
-    () => buildRequirements(form, selectedShippingMethods, userCity, shippingMethods.length),
-    [form, selectedShippingMethods, userCity, shippingMethods.length]
+    () => buildRequirements(form, userCity, shippingMethods.filter((m) => m.isActive).length),
+    [form, userCity, shippingMethods]
   );
   const nextRequirement = requirements[0];
   const isReadyToPublish = requirements.length === 0;
@@ -296,33 +301,14 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
     if (form.condition) formData.set("condition", form.condition);
     if (form.tcgdex?.id) formData.set("tcgdexId", form.tcgdex.id);
     if (form.price !== null) formData.set("price", String(form.price));
-    if (selectedShippingMethods.length > 0) formData.set("shippingMethodIds", JSON.stringify(selectedShippingMethods));
+    // shippingMethodIds wordt server-side afgeleid via deriveListingShippingMethodIds.
+    // We sturen alleen `allowMailbox` mee — de server vult STANDARD+SIGNED altijd in,
+    // en MAILBOX alleen als de regels passen (type-eligible + price < €150).
+    formData.set("allowMailbox", String(form.allowMailbox));
     if (form.carriers.length > 0) formData.set("carriers", JSON.stringify(form.carriers));
     if (form.packageSize) formData.set("packageSize", form.packageSize);
-    // MULTI_CARD: backend leest cardName + cardSetId + tcgdexId + condition +
-    // quantity. We mappen de form-state naar dat afgeslankte formaat zodat
-    // de rich `tcgdex`-snapshot niet meegestuurd hoeft te worden.
-    if (form.cardItems.length > 0) {
-      const items = form.cardItems.map((it) => ({
-        cardName: it.cardName,
-        cardSetId: it.tcgdex?.setId ?? it.cardSetId ?? "",
-        tcgdexId: it.tcgdex?.id,
-        condition: it.condition,
-        quantity: it.quantity,
-      }));
-      formData.set("cardItems", JSON.stringify(items));
-    }
-    if (form.estimatedCardCount !== null) formData.set("estimatedCardCount", String(form.estimatedCardCount));
-    // COLLECTION conditionRange (Fase 27.31): combineer van/tot tot één string.
-    if (form.listingType === "COLLECTION" && (form.conditionRangeFrom || form.conditionRangeTo)) {
-      const range = form.conditionRangeFrom === form.conditionRangeTo
-        ? form.conditionRangeFrom
-        : [form.conditionRangeFrom, form.conditionRangeTo].filter(Boolean).join(" – ");
-      if (range) formData.set("conditionRange", range);
-    }
     if (form.productType) formData.set("productType", form.productType);
     if (form.itemCategory) formData.set("itemCategory", form.itemCategory);
-    if (form.listingType === "MULTI_CARD") formData.set("allowPartialSale", String(form.allowPartialSale));
     if (form.listingType === "SEALED_PRODUCT" || form.listingType === "OTHER") {
       formData.set("stockQuantity", String(Math.max(1, form.stockQuantity)));
     }
@@ -346,7 +332,7 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
       <ListingPreview
         form={form}
         accountType={userAccountType}
-        selectedShippingMethods={selectedShippingMethods}
+        selectedShippingMethods={effectiveShippingMethodIds}
         shippingMethods={shippingMethods}
         missingRequirements={requirements.map((r) => ({ key: r.key, messageKey: r.messageKey }))}
         onBack={() => setShowPreview(false)}
@@ -391,31 +377,11 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
           condition={form.condition}
           tcgdex={form.tcgdex}
           variant={form.variant}
-          cardItems={form.cardItems}
-          estimatedCardCount={form.estimatedCardCount}
-          conditionRangeFrom={form.conditionRangeFrom}
-          conditionRangeTo={form.conditionRangeTo}
           productType={form.productType}
           itemCategory={form.itemCategory}
           stockQuantity={form.stockQuantity}
           onChange={updateField}
         />
-
-        {/* Allow partial sale toggle (MULTI_CARD only, Fase 27.13) */}
-        {form.listingType === "MULTI_CARD" && form.cardItems.length > 0 && (
-          <label className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-card p-4 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.allowPartialSale}
-              onChange={(e) => updateField("allowPartialSale", e.target.checked)}
-              className="mt-0.5 h-4 w-4"
-            />
-            <div className="flex-1">
-              <div className="text-sm font-medium text-foreground">{t("partialSale.label")}</div>
-              <p className="mt-1 text-xs text-muted-foreground">{t("partialSale.hint")}</p>
-            </div>
-          </label>
-        )}
       </section>
 
       {/* Section 4: Pricing */}
@@ -519,11 +485,12 @@ export function MultiStepListingForm({ seriesList, userBalance, userAccountType,
         )}
 
         {(form.deliveryMethod === "SHIP" || form.deliveryMethod === "BOTH") && (
-          <ShippingMethodSelector
+          <ShippingMethodDisplay
             methods={shippingMethods}
-            selected={selectedShippingMethods}
-            onChange={setSelectedShippingMethods}
-            context="listing"
+            listingType={form.listingType}
+            price={form.price}
+            allowMailbox={form.allowMailbox}
+            onAllowMailboxChange={(next) => updateField("allowMailbox", next)}
             freeShipping={form.freeShipping}
           />
         )}

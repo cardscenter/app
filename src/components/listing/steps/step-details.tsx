@@ -1,12 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Plus, Trash2 } from "lucide-react";
 import { CARD_CONDITIONS, SEALED_PRODUCT_TYPES } from "@/types";
-import type { ListingType, CardItemEntry } from "@/types";
+import type { ListingType } from "@/types";
 import type { Series, CardSet } from "@prisma/client";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { CardSearchSelect, type CardSearchSelectValue } from "@/components/ui/card-search-select";
+import { Layers } from "lucide-react";
 
 type SeriesWithSets = Series & { cardSets: CardSet[] };
 
@@ -22,12 +22,6 @@ interface StepDetailsProps {
   condition: string;
   tcgdex: CardSearchSelectValue | null;
   variant: "normal" | "reverse";
-  // MULTI_CARD
-  cardItems: CardItemEntry[];
-  // COLLECTION
-  estimatedCardCount: number | null;
-  conditionRangeFrom: string;
-  conditionRangeTo: string;
   // SEALED_PRODUCT
   productType: string;
   // OTHER
@@ -39,56 +33,19 @@ interface StepDetailsProps {
 
 export function StepDetails({
   listingType,
-  seriesList,
   title,
   description,
   cardName,
   condition,
   tcgdex,
   variant,
-  cardItems,
-  estimatedCardCount,
-  conditionRangeFrom,
-  conditionRangeTo,
   productType,
   itemCategory,
   stockQuantity,
   onChange,
 }: StepDetailsProps) {
   const t = useTranslations("listing");
-  const ttcg = useTranslations("tcg");
   const hasReverse = tcgdex?.variants?.includes("reverse") ?? false;
-
-  // Nieuwe items worden bovenaan toegevoegd (zelfde patroon als claimsale)
-  // zodat de seller direct bij de nieuwste row landt zonder te scrollen.
-  const addCardItem = () => {
-    onChange("cardItems", [{ cardName: "", cardSetId: "", condition: "Near Mint", quantity: 1, tcgdex: null }, ...cardItems]);
-  };
-
-  const setItemTcgdex = (index: number, tcgdex: CardSearchSelectValue | null) => {
-    const updated = cardItems.map((it, i) =>
-      i === index
-        ? {
-            ...it,
-            tcgdex,
-            cardName: tcgdex?.name ?? it.cardName,
-            cardSetId: tcgdex?.setId ?? it.cardSetId,
-          }
-        : it
-    );
-    onChange("cardItems", updated);
-  };
-
-  const removeCardItem = (index: number) => {
-    onChange("cardItems", cardItems.filter((_, i) => i !== index));
-  };
-
-  const updateCardItem = (index: number, field: keyof CardItemEntry, value: string | number) => {
-    const updated = cardItems.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item
-    );
-    onChange("cardItems", updated);
-  };
 
   // Char-counters voor title (100) en description (2000). Description-tekst
   // wordt zonder HTML-tags geteld, want de backend valideert ook op tekst-lengte.
@@ -216,143 +173,18 @@ export function StepDetails({
         </div>
       )}
 
-      {/* MULTI_CARD specific (Fase 27.16: kaart-database-search per item) */}
+      {/* MULTI_CARD: bundel-hint. Geen per-kaart-input meer — als de seller per
+          kaart wil verkopen is een claimsale de juiste route. Kaartlijst hoort
+          in de beschrijving. */}
       {listingType === "MULTI_CARD" && (
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-foreground">{t("cardNames")}</label>
-              <p className="mt-0.5 text-xs text-muted-foreground">{t("multiCardItemsHint")}</p>
-            </div>
-            <button
-              type="button"
-              onClick={addCardItem}
-              className="flex w-full shrink-0 items-center justify-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-primary-hover sm:w-auto sm:py-1.5"
-            >
-              <Plus className="h-3.5 w-3.5" /> {t("addCard")}
-            </button>
-          </div>
-          {cardItems.map((item, index) => {
-            return (
-              <div key={index} className="glass-subtle rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeCardItem(index)}
-                    className="text-red-500 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Kaart-database picker — zelfde patroon als claimsale-form */}
-                <CardSearchSelect
-                  value={item.tcgdex ?? null}
-                  onChange={(v) => setItemTcgdex(index, v)}
-                />
-
-                {/* Extra info chips zodra een DB-kaart is gekozen — read-only
-                    metadata (serie, set, rarity). 1-op-1 met claimsale-stijl. */}
-                {item.tcgdex && (item.tcgdex.series?.name || item.tcgdex.setName || item.tcgdex.rarity) && (
-                  <div className="flex flex-wrap gap-1.5 text-[11px]">
-                    {item.tcgdex.series?.name && (
-                      <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                        <span className="opacity-60">Serie:</span> <span className="font-medium text-foreground">{item.tcgdex.series.name}</span>
-                      </span>
-                    )}
-                    {item.tcgdex.setName && (
-                      <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                        <span className="opacity-60">Set:</span> <span className="font-medium text-foreground">{item.tcgdex.setName}</span>
-                      </span>
-                    )}
-                    {item.tcgdex.rarity && (
-                      <span className="rounded-md bg-muted/60 px-2 py-0.5 text-muted-foreground">
-                        <span className="opacity-60">Zeldzaamheid:</span> <span className="font-medium text-foreground">{item.tcgdex.rarity}</span>
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      {t("condition")}
-                    </label>
-                    <select
-                      value={item.condition}
-                      onChange={(e) => updateCardItem(index, "condition", e.target.value)}
-                      className="block w-full glass-input px-3 py-2 text-sm text-foreground"
-                    >
-                      {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      {t("quantity")}
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) => updateCardItem(index, "quantity", parseInt(e.target.value) || 1)}
-                      className="block w-full glass-input px-3 py-2 text-sm text-foreground"
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          {cardItems.length === 0 && (
-            <div className="glass-subtle rounded-xl p-6 text-center text-sm text-muted-foreground">
-              {t("addCard")}
-            </div>
-          )}
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          <Layers className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>{t("multiCardBundleHint")}</p>
         </div>
       )}
 
-      {/* COLLECTION specific */}
-      {listingType === "COLLECTION" && (
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="estimatedCardCount" className="block text-sm font-medium text-foreground">{t("estimatedCardCount")}</label>
-            <input
-              id="estimatedCardCount"
-              type="number"
-              min={1}
-              value={estimatedCardCount ?? ""}
-              onChange={(e) => onChange("estimatedCardCount", e.target.value ? parseInt(e.target.value) : null)}
-              className="mt-1 block w-48 glass-input px-3 py-2.5 text-foreground"
-            />
-          </div>
-
-          {/* Condition range (Fase 27.31) — twee selects van/tot. Optioneel
-              maar sterk aanbevolen zodat koper een kwaliteitsidee heeft. */}
-          <div>
-            <label className="block text-sm font-medium text-foreground">{t("conditionRange.label")}</label>
-            <p className="mt-0.5 text-xs text-muted-foreground">{t("conditionRange.hint")}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <select
-                value={conditionRangeFrom}
-                onChange={(e) => onChange("conditionRangeFrom", e.target.value)}
-                className="glass-input px-3 py-2 text-sm text-foreground"
-              >
-                <option value="">{t("conditionRange.from")}</option>
-                {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <span className="text-muted-foreground">–</span>
-              <select
-                value={conditionRangeTo}
-                onChange={(e) => onChange("conditionRangeTo", e.target.value)}
-                className="glass-input px-3 py-2 text-sm text-foreground"
-              >
-                <option value="">{t("conditionRange.to")}</option>
-                {CARD_CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* COLLECTION: geen extra velden meer — alle info hoort in de
+          beschrijving. */}
 
       {/* SEALED_PRODUCT specific */}
       {listingType === "SEALED_PRODUCT" && (

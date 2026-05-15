@@ -27,12 +27,14 @@ import {
 import { getCommissionRate } from "@/lib/subscription-tiers";
 
 type Props = {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ period?: string }>;
 };
 
-export default async function StatistiekenPage({ searchParams }: Props) {
+export default async function StatistiekenPage({ params, searchParams }: Props) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("dashboard");
 
   const user = await prisma.user.findUnique({
@@ -55,8 +57,8 @@ export default async function StatistiekenPage({ searchParams }: Props) {
     );
   }
 
-  const params = await searchParams;
-  const period = params.period ?? "90d";
+  const resolvedSearchParams = await searchParams;
+  const period = resolvedSearchParams.period ?? "90d";
   const { start, previousStart } = getPeriodDates(period);
 
   // Fetch all data in parallel

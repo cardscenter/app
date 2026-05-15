@@ -6,9 +6,15 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 interface HomeCarouselProps {
   children: ReactNode;
   className?: string;
+  /**
+   * Tailwind "from-*" class voor de edge-fade gradient.
+   * Default `from-background` past op de standaard light page-achtergrond.
+   * Voor een dark zone (bv. `bg-slate-950`) gebruik `from-slate-950`.
+   */
+  fadeFromClass?: string;
 }
 
-export function HomeCarousel({ children, className }: HomeCarouselProps) {
+export function HomeCarousel({ children, className, fadeFromClass = "from-background" }: HomeCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -64,10 +70,10 @@ export function HomeCarousel({ children, className }: HomeCarouselProps) {
 
       {/* Edge fade indicators */}
       {canScrollLeft && (
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-[1] pointer-events-none" />
+        <div className={`absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r ${fadeFromClass} to-transparent z-[1] pointer-events-none`} />
       )}
       {canScrollRight && (
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-[1] pointer-events-none" />
+        <div className={`absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l ${fadeFromClass} to-transparent z-[1] pointer-events-none`} />
       )}
 
       {/* Scrollable container */}

@@ -56,7 +56,7 @@ export function SponsoredSpotlight({ auctions, listings, locale, buyer }: Sponso
   if (auctions.length === 0 && listings.length === 0) return null;
 
   return (
-    <section className="py-8 sm:py-12 bg-background">
+    <section className="bg-card py-12 lg:py-16">
       <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
         <AnimatedSection>
           <div className="flex items-center gap-3 mb-6">

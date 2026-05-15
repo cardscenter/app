@@ -40,7 +40,7 @@ export function StepPhotos({ listingType, images, onChange }: StepPhotosProps) {
         {t(TIP_KEYS[listingType])}
       </div>
 
-      <ImageUploader images={images} onChange={onChange} maxImages={maxImages} />
+      <ImageUploader images={images} onChange={onChange} maxImages={maxImages} context="listing" />
     </div>
   );
 }

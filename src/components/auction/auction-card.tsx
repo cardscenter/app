@@ -4,6 +4,7 @@ import { Clock, Gavel } from "lucide-react";
 import Image from "next/image";
 import { parseImageUrls } from "@/lib/upload";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
+import { AuctionLabels, type AuctionLabelData } from "@/components/auction/auction-labels";
 
 // Drempel waarboven een veiling als "hot" gemarkeerd wordt met een 🔥-emoji
 // in de bid-counter. Empirisch bepaald op de seed-data — mediaan ligt op 1-3,
@@ -26,6 +27,8 @@ export interface AuctionCardData {
   startingBid: number;
   buyNowPrice: number | null;
   endTime: Date | string;
+  startTime?: Date | string | null;
+  status?: string;
   imageUrls?: string | null;
   deliveryMethod?: string | null;
   pickupCity?: string | null;
@@ -36,6 +39,7 @@ export interface AuctionCardData {
     country?: string | null;
   };
   _count?: { bids: number };
+  labels?: AuctionLabelData[];
 }
 
 interface AuctionCardProps {
@@ -72,9 +76,15 @@ export function AuctionCard({ auction, sponsored, buyer }: AuctionCardProps) {
         ) : (
           <Gavel className="h-10 w-10 text-slate-600" />
         )}
-        {/* Countdown badge — heeft nu de volle breedte zonder type-conflict */}
+        {/* Countdown badge — voor SCHEDULED toont 'ie "Start over Xd" ipv
+            de end-countdown, met indigo-tint zodat de seller direct ziet
+            dat deze veiling nog niet biedbaar is. */}
         <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-          <CountdownPill endTime={auction.endTime} />
+          {auction.status === "SCHEDULED" && auction.startTime ? (
+            <ScheduledStartPill startTime={auction.startTime} />
+          ) : (
+            <CountdownPill endTime={auction.endTime} />
+          )}
         </div>
       </div>
 
@@ -107,6 +117,14 @@ export function AuctionCard({ auction, sponsored, buyer }: AuctionCardProps) {
             seller={auction.seller}
             buyer={buyer}
           />
+          {auction.labels && auction.labels.length > 0 && (
+            <AuctionLabels
+              labels={auction.labels}
+              buyNowPrice={auction.buyNowPrice}
+              size="sm"
+              className="mt-1.5"
+            />
+          )}
         </div>
 
         {/* Price + bids */}
@@ -125,15 +143,43 @@ export function AuctionCard({ auction, sponsored, buyer }: AuctionCardProps) {
                 {bidCount === 1 ? "bod" : "biedingen"}
               </p>
             )}
-            {auction.buyNowPrice && (
-              <p className="mt-0.5 text-xs font-medium text-success">
-                {t("buyNow")}: &euro;{auction.buyNowPrice.toFixed(2)}
-              </p>
-            )}
+            {/* "Direct Kopen €X" tonen we niet meer gratis op de card —
+                sellers kopen dit nu via het betaalde DIRECT_KOPEN-label
+                (auction.labels). */}
           </div>
         </div>
       </div>
     </Link>
+  );
+}
+
+function ScheduledStartPill({ startTime }: { startTime: Date | string }) {
+  const start = typeof startTime === "string" ? new Date(startTime) : startTime;
+  const diff = start.getTime() - Date.now();
+  if (diff <= 0) {
+    // Edge-case: scheduled-status maar startTime al gepasseerd (cron heeft 'm
+    // nog niet geflipt). Toon "start nu" zodat het niet raar leeg blijft.
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/90 px-2 py-1 text-xs font-medium text-white">
+        <Clock className="size-3" />
+        Start nu
+      </span>
+    );
+  }
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const text =
+    days > 0
+      ? `Start over ${days}d ${String(hours).padStart(2, "0")}h`
+      : hours > 0
+        ? `Start over ${hours}h ${String(minutes).padStart(2, "0")}m`
+        : `Start over ${minutes}m`;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/90 px-2 py-1 text-xs font-mono font-medium text-white shadow backdrop-blur-sm">
+      <Clock className="size-3" />
+      {text}
+    </span>
   );
 }
 

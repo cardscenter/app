@@ -11,9 +11,14 @@ import {
   fetchRecentBundles,
 } from "@/lib/dashboard-queries";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("dashboard");
   const tw = await getTranslations("wallet");
 

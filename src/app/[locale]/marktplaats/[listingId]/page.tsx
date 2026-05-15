@@ -259,13 +259,14 @@ export default async function ListingDetailPage({
                         available={availableItems}
                         availableBalance={buyerAvailableBalance}
                         deliveryChoice="SHIP"
-                        shippingMethods={listing.shippingMethods.map((sm) => ({
-                          id: sm.shippingMethodId,
-                          carrier: sm.shippingMethod.carrier,
-                          serviceName: sm.shippingMethod.serviceName,
-                          price: sm.price,
-                          isSigned: sm.shippingMethod.isSigned,
-                        }))}
+                        shippingMethods={listing.shippingMethods
+                          .filter((sm) => sm.shippingMethod.service)
+                          .map((sm) => ({
+                            id: sm.shippingMethodId,
+                            carrier: sm.shippingMethod.carrier,
+                            service: sm.shippingMethod.service!,
+                            price: sm.price,
+                          }))}
                       />
                     </BuyRouteCard>
                   )}
@@ -351,13 +352,14 @@ export default async function ListingDetailPage({
                         freeShipping={listing.freeShipping}
                         availableBalance={buyerAvailableBalance}
                         deliveryChoice="SHIP"
-                        shippingMethods={listing.shippingMethods.map((sm) => ({
-                          id: sm.shippingMethodId,
-                          carrier: sm.shippingMethod.carrier,
-                          serviceName: sm.shippingMethod.serviceName,
-                          price: sm.price,
-                          isSigned: sm.shippingMethod.isSigned,
-                        }))}
+                        shippingMethods={listing.shippingMethods
+                          .filter((sm) => sm.shippingMethod.service)
+                          .map((sm) => ({
+                            id: sm.shippingMethodId,
+                            carrier: sm.shippingMethod.carrier,
+                            service: sm.shippingMethod.service!,
+                            price: sm.price,
+                          }))}
                       />
                     </BuyRouteCard>
                   )}

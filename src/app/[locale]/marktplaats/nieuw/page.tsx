@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { MultiStepListingForm } from "@/components/listing/multi-step-listing-form";
 import { PageContainer } from "@/components/layout/page-container";
+import { getSellerShippingMethods } from "@/actions/shipping-method";
 
 export default async function NieuwListingPage({
   params,
@@ -32,11 +33,8 @@ export default async function NieuwListingPage({
     select: { balance: true, accountType: true, city: true, freeUpsellsRemaining: true },
   });
 
-  // Get seller's shipping methods
-  const shippingMethods = await prisma.sellerShippingMethod.findMany({
-    where: { sellerId: session.user.id!, isActive: true },
-    orderBy: { createdAt: "asc" },
-  });
+  // Get seller's shipping methods (Fase 33: enriched met basePrice/effectivePrice)
+  const shippingMethods = await getSellerShippingMethods();
 
   return (
     <PageContainer width="default" className="py-8">

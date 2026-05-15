@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/navigation";
+import { toast } from "sonner";
 import { cancelAuction } from "@/actions/auction";
 import { Trash2 } from "lucide-react";
 
@@ -13,29 +14,46 @@ interface Props {
   variant?: "card" | "panel";
 }
 
-// Fase 27.88: eigenaar van een ACTIVE veiling zonder biedingen kan deze
-// annuleren. Bij ≥1 bid verdwijnt de knop — daar zit de seller aan vast.
+// Fase 27.88: eigenaar van een ACTIVE/SCHEDULED veiling zonder biedingen kan
+// deze annuleren. Bij ≥1 bid verdwijnt de knop — daar zit de seller aan vast.
 export function AuctionOwnerActions({ auctionId, bidCount, status, variant = "panel" }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Conditie: alleen ACTIVE + 0 biedingen mag annuleren.
-  if (status !== "ACTIVE" || bidCount > 0) return null;
+  // Conditie: ACTIVE of SCHEDULED + 0 biedingen mag annuleren.
+  if ((status !== "ACTIVE" && status !== "SCHEDULED") || bidCount > 0) return null;
 
   const handleCancel = () => {
-    if (!confirm("Weet je zeker dat je deze veiling wilt annuleren? Dit kan niet ongedaan worden gemaakt.")) return;
+    if (
+      !confirm(
+        "Weet je zeker dat je deze veiling wilt annuleren?\n\n" +
+          "Dit kan niet ongedaan worden gemaakt. Eventueel betaalde promotie-" +
+          "kosten worden naar rato teruggestort op je saldo " +
+          "(spotlights pro-rata, labels volledig).",
+      )
+    ) {
+      return;
+    }
     setError(null);
     startTransition(async () => {
       const result = await cancelAuction(auctionId);
       if (result?.error) {
         setError(result.error);
+        return;
+      }
+      const refunded = result?.refundedAmount ?? 0;
+      if (refunded > 0) {
+        toast.success("Veiling geannuleerd", {
+          description: `€${refunded.toFixed(2).replace(".", ",")} promotie-kosten teruggestort op je saldo.`,
+          duration: 6000,
+        });
       } else {
-        router.refresh();
-        if (variant === "panel") {
-          // Op de detail-page is de veiling daarna CANCELLED — terug naar dashboard.
-          router.push("/dashboard/veilingen");
-        }
+        toast.success("Veiling geannuleerd");
+      }
+      router.refresh();
+      if (variant === "panel") {
+        router.push("/dashboard/veilingen");
       }
     });
   };
@@ -70,7 +88,8 @@ export function AuctionOwnerActions({ auctionId, bidCount, status, variant = "pa
         {pending ? "Bezig..." : "Veiling annuleren"}
       </button>
       <p className="text-xs text-muted-foreground">
-        Annuleren kan zolang er nog geen bod is uitgebracht.
+        Annuleren kan zolang er nog geen bod is uitgebracht. Promotie-kosten
+        worden naar rato teruggestort.
       </p>
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>

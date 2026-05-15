@@ -11,12 +11,15 @@ import { RealtimePageRefresh } from "@/components/providers/realtime-page-refres
 
 export default async function DashboardLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
   const session = await auth();
   if (!session?.user) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
   const user = await prisma.user.findUnique({

@@ -1,7 +1,7 @@
 "use client";
 
 import { Info, X } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { EscrowInfoModal } from "./escrow-info-modal";
 
 export function EscrowInfoButton() {
@@ -22,7 +22,7 @@ export function EscrowInfoButton() {
   );
 }
 
-export function InfoPopup({ title, text }: { title: string; text: string }) {
+export function InfoPopup({ title, text }: { title: string; text: ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 

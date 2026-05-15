@@ -98,6 +98,9 @@ export default async function MarktplaatsPage({
         where: { expiresAt: { gt: now } },
         select: { type: true, expiresAt: true },
       },
+      _count: {
+        select: { cardItemRows: { where: { status: "AVAILABLE" } } },
+      },
     },
   });
   const sponsoredIds = sponsoredListings.map((l) => l.id);
@@ -215,6 +218,28 @@ export default async function MarktplaatsPage({
         : undefined,
   }));
 
+  // Interleave: weeft sponsored-listings na elke 10 organische items in de
+  // hoofdlijst zodat sponsored ook midden in de pagina zichtbaar is, niet
+  // alleen in de top-row. Sponsored-cards krijgen amber border + "Gesponsord"-pill.
+  const enrichedSponsored = sponsoredListings.map((l) => ({
+    ...l,
+    availableStock:
+      l.listingType === "SEALED_PRODUCT" || l.listingType === "OTHER"
+        ? l._count.cardItemRows
+        : undefined,
+  }));
+  type DisplayItem = { kind: "organic" | "sponsored"; listing: typeof enrichedListings[0] };
+  const displayItems: DisplayItem[] = [];
+  let sponsoredIdx = 0;
+  for (let i = 0; i < enrichedListings.length; i++) {
+    displayItems.push({ kind: "organic", listing: enrichedListings[i] });
+    if ((i + 1) % 10 === 0 && enrichedSponsored.length > 0) {
+      const sponsored = enrichedSponsored[sponsoredIdx % enrichedSponsored.length];
+      displayItems.push({ kind: "sponsored", listing: sponsored });
+      sponsoredIdx++;
+    }
+  }
+
   const buyerHasPostcode = !!buyerLocation?.postalCode;
 
   // Bouw extraParams voor pagination — alle filter-params behouden bij navigatie.
@@ -276,12 +301,13 @@ export default async function MarktplaatsPage({
           ) : filters.view === "grid" ? (
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [@media(min-width:1600px)]:grid-cols-5">
-                {enrichedListings.map((listing) => (
+                {displayItems.map((item, idx) => (
                   <ListingCard
-                    key={listing.id}
-                    listing={listing}
+                    key={`${item.kind}-${item.listing.id}-${idx}`}
+                    listing={item.listing}
                     locale={locale}
                     buyer={buyerLocation}
+                    isSponsored={item.kind === "sponsored"}
                   />
                 ))}
               </div>
@@ -296,14 +322,15 @@ export default async function MarktplaatsPage({
           ) : (
             <>
               <div className="space-y-3">
-                {enrichedListings.map((listing) => (
+                {displayItems.map((item, idx) => (
                   <ListingListRow
-                    key={listing.id}
-                    listing={listing}
+                    key={`${item.kind}-${item.listing.id}-${idx}`}
+                    listing={item.listing}
                     locale={locale}
                     buyer={buyerLocation}
-                    initialWatched={watchlistIds.has(listing.id)}
+                    initialWatched={watchlistIds.has(item.listing.id)}
                     showWatchlist={!!session?.user?.id}
+                    isSponsored={item.kind === "sponsored"}
                   />
                 ))}
               </div>

@@ -1,12 +1,29 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
 import { signIn } from "@/lib/auth";
 import { AuthError } from "next-auth";
 import { saveUploadedFile } from "@/lib/upload";
-import { getDefaultShippingMethods } from "@/lib/shipping/defaults";
+import { setupStaticShippingMethods } from "@/actions/shipping-method";
+import {
+  getCooldownRemaining,
+  recordFailedAttempt,
+  clearAttempts,
+  extractIp,
+} from "@/lib/auth/rate-limit";
+import { sendEmailVerificationEmail, sendWelcomeEmail } from "@/lib/email/send-email";
+
+const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24u
+
+function getPostRegisterRedirect(selectedPlan: string | null): string | undefined {
+  if (selectedPlan === "PRO" || selectedPlan === "UNLIMITED") return "/dashboard/abonnement";
+  if (selectedPlan === "ENTERPRISE") return "/dashboard/abonnement/enterprise-aanvraag";
+  return undefined;
+}
 
 export async function register(formData: FormData) {
   const raw = {
@@ -95,23 +112,37 @@ export async function register(formData: FormData) {
     },
   });
 
-  // Create default shipping methods based on user's country
-  const defaults = getDefaultShippingMethods(data.country);
-  if (defaults.length > 0) {
-    await prisma.sellerShippingMethod.createMany({
-      data: defaults.map((method) => ({
-        sellerId: newUser.id,
-        carrier: method.carrier,
-        serviceName: method.serviceName,
-        price: method.price,
-        countries: JSON.stringify(method.countries),
-        shippingType: method.shippingType,
-        isDefault: true,
-        isTracked: method.isTracked,
-        isSigned: method.isSigned,
-      })),
+  // Setup static shipping methods op basis van origin-country (Fase 33).
+  await setupStaticShippingMethods(newUser.id);
+
+  // Fase 37 — e-mailverificatie-token genereren + welkom + verify-link mails
+  // versturen. Email-helper logt nu naar console (Fase 16 swap naar SMTP).
+  try {
+    const verificationToken = crypto.randomBytes(32).toString("base64url");
+    await prisma.emailVerificationToken.create({
+      data: {
+        userId: newUser.id,
+        token: verificationToken,
+        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS),
+      },
     });
+    // Fire-and-forget — geen await zodat slow email-provider de register
+    // niet vertraagt. Errors worden gelogd door sendEmail.
+    void sendEmailVerificationEmail({
+      to: newUser.email,
+      displayName: newUser.displayName,
+      token: verificationToken,
+    });
+    void sendWelcomeEmail({ to: newUser.email, displayName: newUser.displayName });
+  } catch (err) {
+    // E-mail/verify-token errors mogen registratie niet blokkeren — log alleen.
+    console.error("[register] email-verification setup failed", err);
   }
+
+  // Fase 37 — selectedPlan post-register redirect. PRO/UNLIMITED → abonnement,
+  // ENTERPRISE → enterprise-aanvraag, FREE/null → caller-default (homepage).
+  const selectedPlan = (formData.get("selectedPlan") as string | null) ?? null;
+  const redirectTo = getPostRegisterRedirect(selectedPlan);
 
   // Auto sign in after registration (no redirect — handled client-side)
   try {
@@ -127,12 +158,26 @@ export async function register(formData: FormData) {
     // Don't rethrow — we handle redirect client-side
   }
 
-  return { success: true };
+  return { success: true, redirectTo };
 }
 
 export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  // rememberMe is geaccepteerd voor UI-affordance; functionele JWT-extensie
+  // wacht op een NextAuth-callback uitbreiding (open follow-up).
+  // const rememberMe = formData.get("rememberMe") === "on";
+
+  // Rate-limiting: blokkeer als IP momenteel in cooldown zit (Fase 37).
+  const requestHeaders = await headers();
+  const ip = extractIp(requestHeaders);
+  const cooldownMs = getCooldownRemaining(ip);
+  if (cooldownMs > 0) {
+    const minutes = Math.ceil(cooldownMs / 60000);
+    return {
+      error: `Te veel mislukte pogingen. Probeer opnieuw over ${minutes} minu${minutes === 1 ? "ut" : "ten"}.`,
+    };
+  }
 
   try {
     await signIn("credentials", {
@@ -142,9 +187,18 @@ export async function login(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
+      const { cooldownActive, cooldownMs: newCooldown } = recordFailedAttempt(ip);
+      if (cooldownActive) {
+        const minutes = Math.ceil(newCooldown / 60000);
+        return {
+          error: `Te veel mislukte pogingen. Probeer opnieuw over ${minutes} minuten.`,
+        };
+      }
       return { error: "Ongeldige inloggegevens" };
     }
   }
 
+  // Succesvolle login → reset attempts voor dit IP
+  clearAttempts(ip);
   return { success: true };
 }

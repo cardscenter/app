@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { ActiveRunnerUpOffersSection } from "@/components/dashboard/active-runner-up-offers-section";
 
 export default async function BiedingenPage({
   params,
@@ -45,6 +46,8 @@ export default async function BiedingenPage({
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+
+      <ActiveRunnerUpOffersSection />
 
       {uniqueBids.length === 0 ? (
         <div className="glass-subtle rounded-2xl p-8 text-center text-muted-foreground">

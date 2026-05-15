@@ -8,8 +8,14 @@ import { publish, userChannel } from "@/lib/realtime";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 import { createNotification } from "@/actions/notification";
 import { normalizeIban } from "@/lib/validations/iban";
+import { settlePendingFees } from "@/lib/pending-fees";
 
 const PREMIUM_RATE_LABEL = `${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
+
+function withSettlementSuffix(description: string, settledTotal: number): string {
+  if (settledTotal <= 0.0001) return description;
+  return `${description} (€${settledTotal.toFixed(2)} verrekend met openstaande platformkosten)`;
+}
 
 // Get current user's balance
 export async function getBalance(): Promise<number | null> {
@@ -56,8 +62,10 @@ export async function adminDeposit(userId: string, amount: number, description?:
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
+  const { remaining, settledTotal } = await settlePendingFees(userId, amount);
+
   const balanceBefore = user.balance;
-  const balanceAfter = balanceBefore + amount;
+  const balanceAfter = balanceBefore + remaining;
 
   await prisma.$transaction([
     prisma.user.update({
@@ -68,10 +76,13 @@ export async function adminDeposit(userId: string, amount: number, description?:
       data: {
         userId,
         type: "DEPOSIT",
-        amount,
+        amount: remaining,
         balanceBefore,
         balanceAfter,
-        description: description ?? `Storting €${amount.toFixed(2)}`,
+        description: withSettlementSuffix(
+          description ?? `Storting €${amount.toFixed(2)}`,
+          settledTotal,
+        ),
       },
     }),
   ]);
@@ -108,8 +119,10 @@ export async function confirmBankTransfer(
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
+  const { remaining, settledTotal } = await settlePendingFees(userId, amount);
+
   const balanceBefore = user.balance;
-  const balanceAfter = balanceBefore + amount;
+  const balanceAfter = balanceBefore + remaining;
 
   // Fase 32: IBAN-match — alleen als admin een sender-IBAN invulde én user
   // een eigen IBAN op profiel heeft staan. Genormaliseerd vergelijken
@@ -131,12 +144,15 @@ export async function confirmBankTransfer(
       data: {
         userId,
         type: "DEPOSIT",
-        amount,
+        amount: remaining,
         balanceBefore,
         balanceAfter,
-        description: adminNote
-          ? `Bankoverschrijving bevestigd: €${amount.toFixed(2)} (${adminNote})`
-          : `Bankoverschrijving bevestigd: €${amount.toFixed(2)}`,
+        description: withSettlementSuffix(
+          adminNote
+            ? `Bankoverschrijving bevestigd: €${amount.toFixed(2)} (${adminNote})`
+            : `Bankoverschrijving bevestigd: €${amount.toFixed(2)}`,
+          settledTotal,
+        ),
       },
     }),
   ]);
@@ -307,8 +323,13 @@ export async function refundAuctionPremium(buyerId: string, auctionId: string) {
   const buyer = await prisma.user.findUnique({ where: { id: buyerId } });
   if (!buyer) throw new Error("Buyer not found");
 
+  // Audit-fix: settlement vóór credit zodat een wanbetaler-met-schuld de
+  // PendingPlatformFee niet kan ontwijken via een premium-refund van een
+  // andere auction. FIFO-afroming op alle open fees.
+  const { remaining, settledTotal } = await settlePendingFees(buyerId, refundAmount);
+
   const balanceBefore = buyer.balance;
-  const balanceAfter = Math.round((balanceBefore + refundAmount) * 100) / 100;
+  const balanceAfter = Math.round((balanceBefore + remaining) * 100) / 100;
 
   await prisma.$transaction([
     prisma.user.update({
@@ -319,10 +340,13 @@ export async function refundAuctionPremium(buyerId: string, auctionId: string) {
       data: {
         userId: buyerId,
         type: "AUCTION_PREMIUM_REFUND",
-        amount: refundAmount,
+        amount: remaining,
         balanceBefore,
         balanceAfter,
-        description: `Veilingkosten teruggestort: ${premiumTx.description.replace(/^Veilingkosten \d+(?:[.,]\d+)?%: /, "")}`,
+        description: withSettlementSuffix(
+          `Veilingkosten teruggestort: ${premiumTx.description.replace(/^Veilingkosten \d+(?:[.,]\d+)?%: /, "")}`,
+          settledTotal,
+        ),
         relatedAuctionId: auctionId,
       },
     }),
@@ -335,11 +359,13 @@ export async function refundAuctionPremium(buyerId: string, auctionId: string) {
 
 // Internal: credit balance (used when seller receives payment)
 export async function creditBalance(userId: string, amount: number, type: string, description: string, relatedAuctionId?: string, relatedClaimsaleItemId?: string) {
+  const { remaining, settledTotal } = await settlePendingFees(userId, amount);
+
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("User not found");
 
   const balanceBefore = user.balance;
-  const balanceAfter = balanceBefore + amount;
+  const balanceAfter = balanceBefore + remaining;
 
   await prisma.$transaction([
     prisma.user.update({
@@ -350,10 +376,10 @@ export async function creditBalance(userId: string, amount: number, type: string
       data: {
         userId,
         type,
-        amount,
+        amount: remaining,
         balanceBefore,
         balanceAfter,
-        description,
+        description: withSettlementSuffix(description, settledTotal),
         relatedAuctionId,
         relatedClaimsaleItemId,
       },
@@ -427,8 +453,13 @@ export async function releaseEscrow(userId: string, amount: number, description:
   const commissionAmount = Math.round(commissionBase * commissionRate * 100) / 100;
   const sellerReceives = Math.round((actualReleased - commissionAmount) * 100) / 100;
 
+  const { remaining: creditAmount, settledTotal } = await settlePendingFees(
+    userId,
+    sellerReceives,
+  );
+
   const balanceBefore = user.balance;
-  const balanceAfter = balanceBefore + sellerReceives;
+  const balanceAfter = balanceBefore + creditAmount;
 
   const operations = [
     prisma.user.update({
@@ -442,10 +473,10 @@ export async function releaseEscrow(userId: string, amount: number, description:
       data: {
         userId,
         type: "SALE",
-        amount: sellerReceives,
+        amount: creditAmount,
         balanceBefore,
         balanceAfter,
-        description,
+        description: withSettlementSuffix(description, settledTotal),
         relatedShippingBundleId,
       },
     }),
@@ -485,8 +516,13 @@ export async function partialRefundEscrow(sellerId: string, buyerId: string, ref
   // Ensure escrow deduction doesn't exceed held balance
   const safeEscrowDeduction = Math.min(escrowDeduction, Math.max(seller.heldBalance, 0));
 
+  const { remaining: buyerCredit, settledTotal: buyerSettled } = await settlePendingFees(
+    buyerId,
+    refundAmount,
+  );
+
   const buyerBalanceBefore = buyer.balance;
-  const buyerBalanceAfter = buyerBalanceBefore + refundAmount;
+  const buyerBalanceAfter = buyerBalanceBefore + buyerCredit;
 
   await prisma.$transaction([
     // Return partial funds to buyer
@@ -498,10 +534,13 @@ export async function partialRefundEscrow(sellerId: string, buyerId: string, ref
       data: {
         userId: buyerId,
         type: "PURCHASE",
-        amount: refundAmount,
+        amount: buyerCredit,
         balanceBefore: buyerBalanceBefore,
         balanceAfter: buyerBalanceAfter,
-        description: `Gedeeltelijke terugbetaling: ${description}`,
+        description: withSettlementSuffix(
+          `Gedeeltelijke terugbetaling: ${description}`,
+          buyerSettled,
+        ),
         relatedShippingBundleId,
       },
     }),
@@ -535,8 +574,13 @@ export async function refundEscrow(sellerId: string, buyerId: string, amount: nu
     );
   }
 
+  const { remaining: buyerCredit, settledTotal: buyerSettled } = await settlePendingFees(
+    buyerId,
+    amount,
+  );
+
   const buyerBalanceBefore = buyer.balance;
-  const buyerBalanceAfter = buyerBalanceBefore + amount;
+  const buyerBalanceAfter = buyerBalanceBefore + buyerCredit;
 
   await prisma.$transaction([
     // Return funds to buyer
@@ -548,10 +592,10 @@ export async function refundEscrow(sellerId: string, buyerId: string, amount: nu
       data: {
         userId: buyerId,
         type: "PURCHASE",
-        amount,
+        amount: buyerCredit,
         balanceBefore: buyerBalanceBefore,
         balanceAfter: buyerBalanceAfter,
-        description: `Terugbetaling: ${description}`,
+        description: withSettlementSuffix(`Terugbetaling: ${description}`, buyerSettled),
         relatedShippingBundleId,
       },
     }),

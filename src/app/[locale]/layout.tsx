@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Poppins, IBM_Plex_Mono, Libre_Baskerville } from "next/font/google";
 import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/header";
+import { TopBar } from "@/components/layout/top-bar";
 import { Footer } from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { RealtimeProvider } from "@/components/providers/realtime-provider";
@@ -68,6 +69,7 @@ export default async function LocaleLayout({
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
             <RealtimeProvider isAuthenticated={!!session?.user?.id}>
+              <TopBar />
               <Header />
               <main className="flex-1">{children}</main>
               <Footer />

@@ -10,7 +10,9 @@ import { generateOrderNumber } from "@/lib/order-number";
 import { checkListingLimit } from "@/lib/account-limits";
 import type { UpsellType } from "@/types";
 import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
-import { requiresSignedShipping, isUntrackedAllowed } from "@/lib/shipping/tracked-threshold";
+import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
+import { enrichMethod, deriveListingShippingMethodIds } from "@/lib/shipping/static-methods";
+import { mailboxEligibleType } from "@/lib/listing-types";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
 import { publish, listingChannel, userChannel } from "@/lib/realtime";
@@ -43,9 +45,6 @@ export async function createListing(formData: FormData) {
     cardName: formData.get("cardName") || undefined,
     cardSetId: formData.get("cardSetId") || undefined,
     tcgdexId: formData.get("tcgdexId") || undefined,
-    cardItems: formData.get("cardItems") || undefined,
-    estimatedCardCount: formData.get("estimatedCardCount") || undefined,
-    conditionRange: formData.get("conditionRange") || undefined,
     productType: formData.get("productType") || undefined,
     itemCategory: formData.get("itemCategory") || undefined,
     condition: formData.get("condition") || undefined,
@@ -58,9 +57,13 @@ export async function createListing(formData: FormData) {
     packageSize: formData.get("packageSize") || undefined,
     packageCount: formData.get("packageCount") || "1",
     upsells: formData.get("upsells") || undefined,
-    shippingMethodIds: formData.get("shippingMethodIds") || undefined,
-    allowPartialSale: formData.get("allowPartialSale") === "true",
+    allowMailbox: formData.get("allowMailbox") === "true",
     stockQuantity: formData.get("stockQuantity") || "1",
+    suggestedPrice: formData.get("suggestedPrice") || undefined,
+    allowDirectBuy: formData.get("allowDirectBuy") === "true",
+    acceptsOffers: formData.get("acceptsOffers") === "true",
+    allowPlatformPickup: formData.get("allowPlatformPickup") === "true",
+    allowExternalPickup: formData.get("allowExternalPickup") === "true",
   };
 
   const result = createListingSchema.safeParse(raw);
@@ -132,7 +135,7 @@ export async function createListing(formData: FormData) {
     packageSize: data.packageSize || null,
     packageCount: data.packageCount,
     pickupCity: (data.deliveryMethod === "PICKUP" || data.deliveryMethod === "BOTH") ? user.city : null,
-    allowPartialSale: data.listingType === "MULTI_CARD" ? data.allowPartialSale : false,
+    allowPartialSale: false,
     // stockQuantity is alleen betekenisvol voor SEALED_PRODUCT/OTHER. Voor
     // andere types blijft het 1 (default).
     stockQuantity: (data.listingType === "SEALED_PRODUCT" || data.listingType === "OTHER")
@@ -170,11 +173,10 @@ export async function createListing(formData: FormData) {
       if (data.cardSetId && !listingData.cardSetId) listingData.cardSetId = data.cardSetId;
       break;
     case "MULTI_CARD":
-      listingData.cardItems = data.cardItems;
+      // Geen extra velden — bundle wordt als geheel verkocht (Fase 33 v2).
       break;
     case "COLLECTION":
-      listingData.estimatedCardCount = data.estimatedCardCount;
-      listingData.conditionRange = data.conditionRange || null;
+      // Geen extra velden — alle info hoort in description (Fase 33 v2).
       break;
     case "SEALED_PRODUCT":
       listingData.productType = data.productType;
@@ -184,29 +186,45 @@ export async function createListing(formData: FormData) {
       break;
   }
 
-  // Parse shipping method IDs
-  let shippingMethodIds: string[] = [];
-  if (data.shippingMethodIds) {
-    try {
-      shippingMethodIds = JSON.parse(data.shippingMethodIds);
-    } catch {
-      // ignore
-    }
-  }
-
-  // Look up methods for price snapshots
+  // Server-side derivation van shipping methods (Fase 33 v2). STANDARD+SIGNED
+  // altijd inbegrepen; MAILBOX_PARCEL alleen voor SINGLE/MULTI listings onder
+  // €150 én als seller `allowMailbox=true` heeft aangevinkt.
   let methodSnapshots: { id: string; price: number }[] = [];
-  if (shippingMethodIds.length > 0) {
-    const methods = await prisma.sellerShippingMethod.findMany({
-      where: { id: { in: shippingMethodIds }, sellerId: userId },
+  const isShipDelivery = data.deliveryMethod === "SHIP" || data.deliveryMethod === "BOTH";
+  if (isShipDelivery) {
+    const seller = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { country: true },
     });
-    methodSnapshots = methods.map((m) => ({ id: m.id, price: m.price }));
-
-    // Validate: must have at least one non-LETTER method
-    const hasNonLetter = methods.some((m) => m.shippingType !== "LETTER");
-    if (!hasNonLetter) {
-      return { error: "Je moet naast briefpost minimaal één pakket- of brievenbuspakket-optie aanbieden." };
+    if (!seller?.country) {
+      return { error: "Vul eerst je land in op je profiel voordat je kunt verkopen." };
     }
+
+    const derivedIds = await deriveListingShippingMethodIds({
+      prisma,
+      sellerId: userId,
+      allowMailbox: data.allowMailbox,
+      listingType: data.listingType,
+      price: data.pricingType === "FIXED" ? data.price ?? null : null,
+      mailboxEligible: mailboxEligibleType,
+    });
+
+    if (derivedIds.length === 0) {
+      return {
+        error: "Configureer eerst je verzending via Dashboard → Verzending — er zijn geen actieve verzendmethoden.",
+      };
+    }
+
+    const methods = await prisma.sellerShippingMethod.findMany({
+      where: { id: { in: derivedIds }, sellerId: userId, isActive: true },
+    });
+
+    methodSnapshots = methods
+      .map((m) => {
+        const enriched = enrichMethod(m, seller.country!);
+        return enriched ? { id: m.id, price: enriched.effectivePrice } : null;
+      })
+      .filter((s): s is { id: string; price: number } => s !== null);
   }
 
   // Atomic transaction: create listing + shipping methods + upsells + deduct balance
@@ -215,39 +233,8 @@ export async function createListing(formData: FormData) {
     listing = await prisma.$transaction(async (tx) => {
     const newListing = await tx.listing.create({ data: listingData as never });
 
-    // MULTI_CARD: leid per-item ListingCardItem-rows af uit het cardItems-JSON
-    // (Fase 27.13). Vereist voor partial-sale-flow; voor non-MULTI_CARD wordt
-    // dit overgeslagen.
-    //
-    // Fase 27.17: een entry met quantity > 1 wordt geëxpandeerd naar N rijen
-    // van qty 1 zodat partial-sale precies kan kiezen hoeveel exemplaren
-    // (UI groepeert bij display + biedt een stepper). De originele cardItems-
-    // JSON blijft ongewijzigd voor compatibility en als snapshot.
-    if (data.listingType === "MULTI_CARD" && data.cardItems) {
-      try {
-        const items: Array<{ cardName: string; cardSetId?: string; tcgdexId?: string; condition?: string; quantity?: number }> =
-          JSON.parse(data.cardItems);
-        for (const item of items) {
-          if (!item.cardName) continue;
-          const qty = Math.max(1, item.quantity ?? 1);
-          for (let i = 0; i < qty; i++) {
-            await tx.listingCardItem.create({
-              data: {
-                listingId: newListing.id,
-                cardName: item.cardName,
-                cardSetId: item.cardSetId || null,
-                tcgdexId: item.tcgdexId || null,
-                condition: item.condition || null,
-                quantity: 1,
-                status: "AVAILABLE",
-              },
-            });
-          }
-        }
-      } catch {
-        // Ongeldige JSON al door zod afgevangen; defensieve catch.
-      }
-    }
+    // MULTI_CARD heeft geen per-kaart-rows meer (Fase 33 v2): de bundel wordt
+    // altijd als geheel verkocht. Geen partial-sale-flow.
 
     // Fase 27.23: SEALED_PRODUCT en OTHER met stockQuantity > 1 krijgen
     // ook N rijen voor stock-tracking + buy-quantity-flow. Bij stock=1
@@ -473,31 +460,23 @@ export async function buyListing(
   }
 
   // Shipping enforcement — alleen voor SHIP-aankopen (PICKUP heeft geen carrier).
+  // Fase 33: alle methodes zijn getracked. SIGNED is verplicht ≥€150 (alle zones).
+  // Fase 33 v2: MAILBOX_PARCEL niet toegestaan ≥€150 (anti-fraude).
   if (wantsShip && selectedMethodId) {
-    const seller = await prisma.user.findUnique({
-      where: { id: listing.sellerId },
-      select: { country: true },
-    });
-    const isInternational = seller?.country !== buyer.country;
-
     const shippingMethod = await prisma.sellerShippingMethod.findUnique({
       where: { id: selectedMethodId },
-      select: { isSigned: true, isTracked: true },
+      select: { service: true },
     });
 
-    // Briefpost check: untracked not allowed above €25
-    if (shippingMethod && !shippingMethod.isTracked && !isUntrackedAllowed(listing.price)) {
-      return { error: "Briefpost is niet beschikbaar voor bestellingen boven €25. Kies een verzendmethode met tracking." };
+    if (listing.price >= 150 && shippingMethod?.service === "MAILBOX_PARCEL") {
+      return {
+        error: "Brievenbuspakket niet toegestaan voor bestellingen boven €150",
+      };
     }
-
-    // Signed shipping check
-    if (requiresSignedShipping(listing.price, isInternational)) {
-      if (shippingMethod && !shippingMethod.isSigned) {
-        const reason = isInternational
-          ? "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen"
-          : `Aangetekende verzending is verplicht voor bestellingen boven €150`;
-        return { error: reason };
-      }
+    if (requiresSignedShipping(listing.price) && shippingMethod?.service !== "PARCEL_SIGNED") {
+      return {
+        error: "Aangetekende verzending is verplicht voor bestellingen boven €150",
+      };
     }
   }
 
@@ -641,25 +620,19 @@ async function buyListingStocked(args: {
     return { error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalCost.toFixed(2)}` };
   }
 
-  // Shipping enforcement (op TOTAAL, want het is één pakket) — alleen SHIP
+  // Shipping enforcement (op TOTAAL, want het is één pakket) — alleen SHIP.
+  // Fase 33: SIGNED verplicht ≥€150 (alle zones).
+  // Fase 33 v2: MAILBOX_PARCEL niet toegestaan ≥€150 (anti-fraude).
   if (wantsShip && selectedMethodId) {
-    const seller = await prisma.user.findUnique({ where: { id: listing.sellerId }, select: { country: true } });
-    const isInternational = seller?.country !== buyer.country;
     const shippingMethod = await prisma.sellerShippingMethod.findUnique({
       where: { id: selectedMethodId },
-      select: { isSigned: true, isTracked: true },
+      select: { service: true },
     });
-    if (shippingMethod && !shippingMethod.isTracked && !isUntrackedAllowed(itemSubtotal)) {
-      return { error: "Briefpost is niet beschikbaar voor bestellingen boven €25. Kies een verzendmethode met tracking." };
+    if (itemSubtotal >= 150 && shippingMethod?.service === "MAILBOX_PARCEL") {
+      return { error: "Brievenbuspakket niet toegestaan voor bestellingen boven €150" };
     }
-    if (requiresSignedShipping(itemSubtotal, isInternational)) {
-      if (shippingMethod && !shippingMethod.isSigned) {
-        return {
-          error: isInternational
-            ? "Aangetekende verzending (met handtekening) is verplicht voor internationale zendingen"
-            : "Aangetekende verzending is verplicht voor bestellingen boven €150",
-        };
-      }
+    if (requiresSignedShipping(itemSubtotal) && shippingMethod?.service !== "PARCEL_SIGNED") {
+      return { error: "Aangetekende verzending is verplicht voor bestellingen boven €150" };
     }
   }
 
@@ -1279,16 +1252,33 @@ async function createSingleBulkListing(
 
   let methodSnapshots: { id: string; price: number }[] = [];
   if (data.shippingMethodIds.length > 0) {
-    const methods = await prisma.sellerShippingMethod.findMany({
-      where: { id: { in: data.shippingMethodIds }, sellerId },
+    const seller = await prisma.user.findUnique({
+      where: { id: sellerId },
+      select: { country: true },
     });
-    methodSnapshots = methods.map((m) => ({ id: m.id, price: m.price }));
+    if (!seller?.country) {
+      throw new Error("Vul eerst je land in op je profiel voordat je bulk-uploads doet");
+    }
 
-    // Audit-fix: dezelfde non-LETTER-validatie als createListing — bulk-rijen
-    // mogen niet alleen briefpost aanbieden, anders kan koper niet kopen.
-    const hasNonLetter = methods.some((m) => m.shippingType !== "LETTER");
-    if (isShipping && !hasNonLetter) {
-      throw new Error("Minstens één pakket- of brievenbuspakket-optie vereist (alleen briefpost is niet voldoende)");
+    const methods = await prisma.sellerShippingMethod.findMany({
+      where: { id: { in: data.shippingMethodIds }, sellerId, isActive: true },
+    });
+
+    // Fase 33 v2: filter MAILBOX_PARCEL als prijs ≥€150 of type niet eligible
+    const blockMailbox =
+      (data.pricingType === "FIXED" && data.price >= 150) ||
+      !mailboxEligibleType(data.listingType);
+
+    methodSnapshots = methods
+      .filter((m) => !(blockMailbox && m.service === "MAILBOX_PARCEL"))
+      .map((m) => {
+        const enriched = enrichMethod(m, seller.country!);
+        return enriched ? { id: m.id, price: enriched.effectivePrice } : null;
+      })
+      .filter((s): s is { id: string; price: number } => s !== null);
+
+    if (isShipping && methodSnapshots.length === 0) {
+      throw new Error("Geen geldige verzendmethodes geselecteerd voor deze rij");
     }
   } else if (isShipping) {
     // SHIP/BOTH-rijen MOETEN minstens één shipping-method opgeven.
@@ -1306,7 +1296,7 @@ async function createSingleBulkListing(
         price: data.pricingType === "FIXED" ? data.price : null,
         deliveryMethod: data.deliveryMethod,
         freeShipping: false,
-        shippingCost: null,
+        shippingCost: 0,
         pickupCity: isPickup ? userCity : null,
         condition: data.condition ?? null,
         sellerId,

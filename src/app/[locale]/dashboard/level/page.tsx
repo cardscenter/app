@@ -4,9 +4,14 @@ import { getTranslations } from "next-intl/server";
 import { getSellerStats } from "@/actions/review";
 import { getLevel, getNextLevel, getLevelProgress, SELLER_LEVELS } from "@/lib/seller-levels";
 
-export default async function DashboardLevelPage() {
+export default async function DashboardLevelPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
 
   const t = await getTranslations("reputation");
   const td = await getTranslations("dashboard");

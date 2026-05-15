@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSellerShippingMethods } from "@/actions/shipping-method";
 import { ChatLayout, type ConversationPreview } from "@/components/message/chat-layout";
 import { MessageThread } from "@/components/message/message-thread";
 import { ChatActions } from "@/components/message/chat-actions";
@@ -213,10 +214,13 @@ export default async function ConversationPage({
   // op een bundle-offer (Fase 27.10). Pas relevant als current user de seller
   // van een binnenkomende offer is.
   const otherUserId = otherUser?.userId ?? null;
-  const currentUserSellerShippingMethods = await prisma.sellerShippingMethod.findMany({
-    where: { sellerId: session.user.id!, isActive: true },
-    select: { id: true, carrier: true, serviceName: true, price: true, isSigned: true, shippingType: true },
-  });
+  const currentUserSellerShippingMethods = (await getSellerShippingMethods()).map((m) => ({
+    id: m.id,
+    carrier: m.carrier,
+    service: m.service,
+    zone: m.zone,
+    effectivePrice: m.effectivePrice,
+  }));
 
   // Fase 27.48: actieve single-listing pickup-bundle voor deze conversation —
   // niet via bundle-proposal maar via directe buyListing met PICKUP_PLATFORM

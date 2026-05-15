@@ -8,9 +8,14 @@ import { WithdrawalHistory } from "@/components/dashboard/withdrawal-history";
 import { WITHDRAWAL_MIN_AMOUNT } from "@/lib/withdrawal-config";
 import { maskIban } from "@/lib/validations/iban";
 
-export default async function MyWithdrawalsPage() {
+export default async function MyWithdrawalsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/${locale}/login`);
   const t = await getTranslations("withdrawal");
 
   const user = await prisma.user.findUnique({

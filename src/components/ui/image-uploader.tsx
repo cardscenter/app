@@ -2,14 +2,22 @@
 
 import { useState, useCallback, useRef } from "react";
 import { Upload, X, ImageIcon } from "lucide-react";
+import { toast } from "sonner";
+import type { UploadContext } from "@/lib/upload";
 
 interface ImageUploaderProps {
   images: string[];
   onChange: (images: string[]) => void;
   maxImages?: number;
+  /**
+   * Upload-context voor content-moderation. Alleen "listing", "auction", "avatar"
+   * en "chat" worden door Claude gecheckt; andere contexten slaan de check over.
+   * Laat undefined als deze upload geen moderation hoort te krijgen.
+   */
+  context?: UploadContext;
 }
 
-export function ImageUploader({ images, onChange, maxImages = 10 }: ImageUploaderProps) {
+export function ImageUploader({ images, onChange, maxImages = 10, context }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -26,19 +34,25 @@ export function ImageUploader({ images, onChange, maxImages = 10 }: ImageUploade
 
     const formData = new FormData();
     toUpload.forEach((f) => formData.append("files", f));
+    if (context) formData.append("context", context);
 
     try {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
+      const data = (await res.json()) as { urls?: string[]; errors?: string[] };
       if (data.urls?.length) {
         onChange([...images, ...data.urls]);
       }
+      if (data.errors?.length) {
+        for (const message of data.errors) {
+          toast.error(message);
+        }
+      }
     } catch {
-      // silently fail
+      toast.error("Upload mislukt. Probeer het opnieuw.");
     } finally {
       setUploading(false);
     }
-  }, [images, maxImages, onChange]);
+  }, [images, maxImages, onChange, context]);
 
   function removeImage(index: number) {
     onChange(images.filter((_, i) => i !== index));
@@ -110,7 +124,7 @@ export function ImageUploader({ images, onChange, maxImages = 10 }: ImageUploade
           >
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept="image/jpeg,image/png,image/webp"
               multiple
               className="sr-only"
               onChange={(e) => e.target.files && uploadFiles(e.target.files)}
@@ -168,7 +182,7 @@ export function ImageUploader({ images, onChange, maxImages = 10 }: ImageUploade
           >
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept="image/jpeg,image/png,image/webp"
               multiple
               className="sr-only"
               onChange={(e) => e.target.files && uploadFiles(e.target.files)}
@@ -183,7 +197,7 @@ export function ImageUploader({ images, onChange, maxImages = 10 }: ImageUploade
 
       {/* Help text */}
       <div className="text-xs text-muted-foreground space-y-0.5">
-        <p>JPG, PNG, WebP of GIF — max 5MB per foto</p>
+        <p>JPG, PNG of WebP — max 5MB per foto</p>
         <p>Sleep foto&apos;s om de volgorde te wijzigen. De eerste foto wordt de thumbnail.</p>
       </div>
     </div>

@@ -1,17 +1,78 @@
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { prisma } from "@/lib/prisma";
+import { moderateImage, type ModeratableMimeType } from "@/lib/moderation";
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads");
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_TYPES: ReadonlyArray<ModeratableMimeType> = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
 
-export async function saveUploadedFile(file: File): Promise<string> {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new Error(`Ongeldig bestandstype: ${file.type}. Toegestaan: JPG, PNG, WebP, GIF`);
+export type UploadContext =
+  | "listing"
+  | "auction"
+  | "avatar"
+  | "chat"
+  | "claimsale"
+  | "verification";
+
+const MODERATED_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
+  "listing",
+  "auction",
+  "avatar",
+  "chat",
+]);
+
+export const MODERATION_BLOCKED_PREFIX = "MODERATION_BLOCKED:";
+
+export async function saveUploadedFile(
+  file: File,
+  options?: { context?: UploadContext; userId?: string },
+): Promise<string> {
+  if (!ALLOWED_TYPES.includes(file.type as ModeratableMimeType)) {
+    throw new Error(`Ongeldig bestandstype: ${file.type}. Toegestaan: JPG, PNG, WebP`);
   }
 
   if (file.size > MAX_FILE_SIZE) {
     throw new Error("Bestand is te groot. Maximaal 5MB.");
+  }
+
+  const mimeType = file.type as ModeratableMimeType;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const context = options?.context;
+  if (context && MODERATED_CONTEXTS.has(context)) {
+    const verdict = await moderateImage(buffer, mimeType);
+
+    const verdictKey = verdict.safe
+      ? verdict.skipped === "missing_key"
+        ? "skipped_no_key"
+        : verdict.skipped === "api_unavailable"
+          ? "skipped_unavailable"
+          : "safe"
+      : "blocked";
+
+    await prisma.imageModerationLog
+      .create({
+        data: {
+          userId: options?.userId ?? null,
+          context,
+          verdict: verdictKey,
+          reason: verdict.safe ? null : verdict.reason,
+          mimeType,
+          sizeBytes: buffer.length,
+        },
+      })
+      .catch((err) => {
+        console.warn("[upload] kon ImageModerationLog niet schrijven:", err);
+      });
+
+    if (!verdict.safe) {
+      throw new Error(`${MODERATION_BLOCKED_PREFIX}${verdict.reason}`);
+    }
   }
 
   const ext = file.name.split(".").pop() ?? "jpg";
@@ -19,7 +80,6 @@ export async function saveUploadedFile(file: File): Promise<string> {
 
   await mkdir(UPLOAD_DIR, { recursive: true });
 
-  const buffer = Buffer.from(await file.arrayBuffer());
   const filepath = join(UPLOAD_DIR, filename);
   await writeFile(filepath, buffer);
 
