@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { SellerLevelBadge } from "@/components/ui/seller-level-badge";
 import { StarRatingDisplay } from "@/components/ui/star-rating";
 import { TrustBadges } from "@/components/ui/trust-badges";
+import { CountryFlag } from "@/components/ui/country-flag";
 import {
   MapPin,
   ShoppingBag,
@@ -113,6 +114,7 @@ export function SellerInfoBlock({ seller, showMapsLink = false }: SellerInfoBloc
             {(seller.city || seller.country) && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
+                {seller.country && <CountryFlag code={seller.country} size="xs" />}
                 {[seller.city, seller.country].filter(Boolean).join(", ")}
               </span>
             )}

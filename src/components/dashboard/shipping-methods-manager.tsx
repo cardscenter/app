@@ -10,6 +10,7 @@ import type { CarrierInfo } from "@/lib/shipping/carriers";
 import { getCountryName } from "@/lib/shipping/countries";
 import { PRICE_OVERRIDE_TOLERANCE, type ShippingService, type ShippingZone } from "@/lib/shipping/tariffs";
 import { isRequiredSlot, zonesInScope, type SellingScope } from "@/lib/shipping/static-methods";
+import { CountryFlag } from "@/components/ui/country-flag";
 
 const ZONE_ORDER: Record<string, number> = {
   DOMESTIC: 0,
@@ -27,6 +28,8 @@ interface Props {
   methods: EnrichedShippingMethod[];
   availableCarriers: CarrierInfo[];
   hasCountry: boolean;
+  /** Seller's eigen land (ISO 3166-1 alpha-2) voor de DOMESTIC-vlag. */
+  originCountry: string | null;
   /** Lijst van EU_NEAR-buurlanden voor de seller. Gebruikt om het EU_NEAR-kopje te labelen
    *  ("Naar België" i.p.v. generiek "EU-buurland"). */
   neighbors: string[];
@@ -34,7 +37,7 @@ interface Props {
   scope: SellingScope;
 }
 
-export function ShippingMethodsManager({ methods, availableCarriers, hasCountry, neighbors, scope }: Props) {
+export function ShippingMethodsManager({ methods, availableCarriers, hasCountry, originCountry, neighbors, scope }: Props) {
   const t = useTranslations("shipping");
   const locale = useLocale();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -74,10 +77,31 @@ export function ShippingMethodsManager({ methods, availableCarriers, hasCountry,
   const neighborNames = neighbors.map((c) => getCountryName(c, locale));
   const neighborLabel = formatList(neighborNames, locale);
 
-  function zoneHeading(zone: string): string {
-    if (zone === "DOMESTIC") return t("zone.DOMESTIC");
-    if (zone === "EU_NEAR") return t("zone.EU_NEAR_HEADING", { neighbors: neighborLabel });
-    return t("zone.EU_FAR");
+  function zoneHeading(zone: string) {
+    if (zone === "DOMESTIC") {
+      return (
+        <span className="inline-flex items-center gap-2">
+          {originCountry && <CountryFlag code={originCountry} size="sm" />}
+          {t("zone.DOMESTIC")}
+        </span>
+      );
+    }
+    if (zone === "EU_NEAR") {
+      return (
+        <span className="inline-flex items-center gap-2 flex-wrap">
+          {neighbors.map((code) => (
+            <CountryFlag key={code} code={code} size="sm" />
+          ))}
+          {t("zone.EU_NEAR_HEADING", { neighbors: neighborLabel })}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-2">
+        <CountryFlag code="EU" size="sm" />
+        {t("zone.EU_FAR")}
+      </span>
+    );
   }
 
   function renderRow(method: EnrichedShippingMethod) {

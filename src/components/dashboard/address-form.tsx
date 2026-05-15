@@ -6,6 +6,7 @@ import { useActionState, useState } from "react";
 import { EUROPEAN_COUNTRIES, getCountryName } from "@/lib/shipping/countries";
 import { MapPin, Pencil, Lock, Info } from "lucide-react";
 import { getAddressCooldownInfo } from "@/lib/address-cooldown";
+import { CountryFlag } from "@/components/ui/country-flag";
 import type { User } from "@prisma/client";
 
 export function AddressForm({ user }: { user: User }) {
@@ -78,7 +79,10 @@ export function AddressForm({ user }: { user: User }) {
               <p className="text-sm text-foreground">
                 {address.postalCode} {address.city}
               </p>
-              <p className="text-sm text-muted-foreground">{countryName}</p>
+              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <CountryFlag code={address.country} size="sm" />
+                {countryName}
+              </p>
             </div>
           </div>
           <button

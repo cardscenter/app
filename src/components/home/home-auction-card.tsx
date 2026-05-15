@@ -14,6 +14,7 @@ import {
 import { parseImageUrls } from "@/lib/upload";
 import type { AuctionCardData } from "@/components/auction/auction-card";
 import { CountdownLabel } from "@/components/home/countdown-label";
+import { CountryFlag } from "@/components/ui/country-flag";
 
 const HOT_BIDS_THRESHOLD = 5;
 const URGENT_HOURS = 3;
@@ -172,7 +173,13 @@ export function HomeAuctionCard({ auction }: HomeAuctionCardProps) {
           <SpecRow Icon={Hash} value={refShort} />
           <SpecRow Icon={Gavel} value={`${bidCount} ${t("heroCardBidsLabel")}`} />
           <SpecRow Icon={Layers} value={typeLabel} />
-          <SpecRow Icon={MapPin} value={sellerLocation || "—"} />
+          <div className="flex items-center gap-1.5 truncate">
+            <MapPin className="size-3.5 shrink-0 text-muted-foreground/70 dark:text-slate-500" />
+            <span className="truncate">{sellerLocation || "—"}</span>
+            {auction.seller.country && (
+              <CountryFlag code={auction.seller.country} size="xs" className="ml-0.5" />
+            )}
+          </div>
         </div>
 
         {/* Seller-rij */}

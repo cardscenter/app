@@ -1,5 +1,6 @@
 import { MapPin } from "lucide-react";
-import { distanceKm, formatDistance, countryFlag } from "@/lib/distance";
+import { distanceKm, formatDistance } from "@/lib/distance";
+import { CountryFlag } from "@/components/ui/country-flag";
 
 export interface SellerLocationLineProps {
   /** Voor PICKUP/BOTH listings: pickupCity wint als label. Anders seller's eigen plaats. */
@@ -16,8 +17,9 @@ export interface SellerLocationLineProps {
   className?: string;
 }
 
-/** Toont "📍 Plaats · 12 km" onder de seller-naam op item-cards.
- *  Distance alleen voor same-country (NL ↔ NL); cross-border → vlaggetje. */
+/** Toont "📍 Plaats 🇳🇱 · 12 km" onder de seller-naam op item-cards.
+ *  Vlag wordt altijd getoond als de seller een land heeft; afstand alleen
+ *  voor same-country (NL ↔ NL) waar de haversine-data beschikbaar is. */
 export function SellerLocationLine({
   pickupCity,
   deliveryMethod,
@@ -30,7 +32,6 @@ export function SellerLocationLine({
   if (!displayCity) return null;
 
   const sellerCountry = seller.country ?? null;
-  const flag = countryFlag(sellerCountry, buyer?.country ?? null);
   const km = buyer
     ? distanceKm({
         buyerCountry: buyer.country,
@@ -44,7 +45,7 @@ export function SellerLocationLine({
     <p className={`mt-0.5 flex items-center gap-1 text-xs text-muted-foreground truncate ${className}`}>
       <MapPin className="size-3 shrink-0" />
       <span className="truncate">{displayCity}</span>
-      {flag && <span className="ml-0.5">{flag}</span>}
+      {sellerCountry && <CountryFlag code={sellerCountry} size="xs" className="ml-0.5" />}
       {km !== null && (
         <span className="shrink-0 tabular-nums">· {formatDistance(km)}</span>
       )}

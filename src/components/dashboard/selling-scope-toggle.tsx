@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Globe, MapPin, Users } from "lucide-react";
 import { updateSellingScope } from "@/actions/shipping-method";
 import type { SellingScope } from "@/lib/shipping/static-methods";
 import { getCountryName } from "@/lib/shipping/countries";
+import { CountryFlag } from "@/components/ui/country-flag";
 
 interface Props {
   current: SellingScope;
@@ -54,7 +54,7 @@ export function SellingScopeToggle({ current, originCountry, neighbors }: Props)
             : "border-border hover:border-muted-foreground/30"
         }`}
       >
-        <MapPin className={`h-5 w-5 shrink-0 ${value === "DOMESTIC_ONLY" ? "text-primary" : "text-muted-foreground"}`} />
+        <CountryFlag code={originCountry} size="lg" className="shrink-0" />
         <div>
           <p className="text-sm font-medium text-foreground">
             {t("scopeDomesticOnly", { country: originName })}
@@ -76,7 +76,12 @@ export function SellingScopeToggle({ current, originCountry, neighbors }: Props)
               : "border-border hover:border-muted-foreground/30"
         }`}
       >
-        <Users className={`h-5 w-5 shrink-0 ${value === "DOMESTIC_AND_NEAR" ? "text-primary" : "text-muted-foreground"}`} />
+        <div className="flex shrink-0 -space-x-1.5">
+          <CountryFlag code={originCountry} size="md" className="ring-1 ring-card" />
+          {neighbors.slice(0, 3).map((code) => (
+            <CountryFlag key={code} code={code} size="md" className="ring-1 ring-card" />
+          ))}
+        </div>
         <div>
           <p className="text-sm font-medium text-foreground">
             {hasNeighbors
@@ -101,7 +106,7 @@ export function SellingScopeToggle({ current, originCountry, neighbors }: Props)
             : "border-border hover:border-muted-foreground/30"
         }`}
       >
-        <Globe className={`h-5 w-5 shrink-0 ${value === "ALL_EU" ? "text-primary" : "text-muted-foreground"}`} />
+        <CountryFlag code="EU" size="lg" className="shrink-0" />
         <div>
           <p className="text-sm font-medium text-foreground">{t("scopeAllEu")}</p>
           <p className="text-xs text-muted-foreground">{t("scopeAllEuDescription")}</p>

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { MapPin, Package, User, Camera } from "lucide-react";
 import { ShipBundleForm } from "@/components/dashboard/ship-bundle-form";
+import { CountryFlag } from "@/components/ui/country-flag";
 
 type BuyerShippingInfoProps = {
   buyerName: string;
@@ -82,7 +83,10 @@ export function BuyerShippingInfo({
               <p className="text-muted-foreground">
                 {address.postalCode} {address.city}
               </p>
-              <p className="text-muted-foreground">{address.country}</p>
+              <p className="flex items-center gap-1.5 text-muted-foreground">
+                <CountryFlag code={address.country} size="xs" />
+                {address.country}
+              </p>
               {shippingMethodName && (
                 <p className="mt-1 text-xs text-muted-foreground">
                   <Package className="inline h-3 w-3 mr-1" />{shippingMethodName}

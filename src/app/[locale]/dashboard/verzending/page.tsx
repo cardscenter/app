@@ -66,6 +66,7 @@ export default async function ShippingPage({
             methods={enrichedMethods}
             availableCarriers={availableCarriers}
             hasCountry={!!user.country}
+            originCountry={user.country ?? null}
             neighbors={neighbors}
             scope={scope}
           />

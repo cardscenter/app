@@ -69,31 +69,3 @@ export function formatDistance(km: number): string {
   return `${Math.round(km)} km`;
 }
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  NL: "🇳🇱",
-  BE: "🇧🇪",
-  DE: "🇩🇪",
-  FR: "🇫🇷",
-  LU: "🇱🇺",
-  AT: "🇦🇹",
-  ES: "🇪🇸",
-  IT: "🇮🇹",
-  PT: "🇵🇹",
-  PL: "🇵🇱",
-  DK: "🇩🇰",
-  SE: "🇸🇪",
-  FI: "🇫🇮",
-  IE: "🇮🇪",
-  CZ: "🇨🇿",
-};
-
-/** Vlaggetje voor cross-border listings. Returnt lege string voor onbekend
- *  land of voor het buyer's eigen land (geen vlag bij same-country). */
-export function countryFlag(
-  sellerCountry: string | null | undefined,
-  buyerCountry: string | null | undefined,
-): string {
-  if (!sellerCountry) return "";
-  if (sellerCountry === buyerCountry) return "";
-  return COUNTRY_FLAGS[sellerCountry] ?? "";
-}
