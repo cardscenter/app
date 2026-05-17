@@ -2859,6 +2859,8 @@
     "sectionSystem": "System",
     "navOverview": "Dashboard",
     "navDisputes": "Disputes",
+    "navDisputesV2": "Disputes v2",
+    "navShippingIssues": "Tracking tickets",
     "navVerifications": "Verifications",
     "navWithdrawals": "Withdrawals",
     "navBuybacks": "Buybacks",

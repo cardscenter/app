@@ -29,7 +29,9 @@ export type AdminAction =
   | "REVOKE_BID_DEPOSIT_EXEMPTION"
   // Fase 31 — Enterprise-aanvraag
   | "APPROVE_ENTERPRISE_REQUEST"
-  | "REJECT_ENTERPRISE_REQUEST";
+  | "REJECT_ENTERPRISE_REQUEST"
+  // Fase 40 — ShippingIssue admin-tickets
+  | "RESOLVE_SHIPPING_ISSUE";
 
 export type AdminTargetType =
   | "USER"
@@ -46,7 +48,8 @@ export type AdminTargetType =
   | "CARD"
   | "CRON"
   | "REPORT"
-  | "ENTERPRISE_REQUEST";
+  | "ENTERPRISE_REQUEST"
+  | "SHIPPING_ISSUE";
 
 /**
  * Log an admin or system action.

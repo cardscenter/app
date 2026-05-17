@@ -2859,6 +2859,8 @@
     "sectionSystem": "Systeem",
     "navOverview": "Dashboard",
     "navDisputes": "Geschillen",
+    "navDisputesV2": "Geschillen v2",
+    "navShippingIssues": "Trackingtickets",
     "navVerifications": "Verificaties",
     "navWithdrawals": "Uitbetalingen",
     "navBuybacks": "Inkoop",

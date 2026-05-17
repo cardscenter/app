@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   AlertTriangle,
   Building2,
+  Truck,
 } from "lucide-react";
 
 type Section = {
@@ -35,6 +36,8 @@ export function AdminNav({
 }: {
   pendingCounts?: {
     disputes?: number;
+    disputesV2?: number;
+    shippingIssues?: number;
     verifications?: number;
     withdrawals?: number;
     buybacks?: number;
@@ -58,6 +61,8 @@ export function AdminNav({
       label: "sectionQueues",
       items: [
         { href: "/dashboard/admin/disputes", labelKey: "navDisputes", icon: Scale, badge: pendingCounts?.disputes },
+        { href: "/dashboard/admin/disputes-v2", labelKey: "navDisputesV2", icon: Scale, badge: pendingCounts?.disputesV2 },
+        { href: "/dashboard/admin/shipping-issues", labelKey: "navShippingIssues", icon: Truck, badge: pendingCounts?.shippingIssues },
         { href: "/dashboard/admin/verifications", labelKey: "navVerifications", icon: ShieldCheck, badge: pendingCounts?.verifications },
         { href: "/dashboard/admin/withdrawals", labelKey: "navWithdrawals", icon: Wallet, badge: pendingCounts?.withdrawals },
         { href: "/dashboard/admin/buybacks", labelKey: "navBuybacks", icon: ArrowDownToLine, badge: pendingCounts?.buybacks },

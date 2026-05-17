@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { OpenDisputeV2Form } from "./open-dispute-v2-form";
+import { OpenShippingIssueForm } from "./open-shipping-issue-form";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
 import { OrderDetailModal } from "./order-detail-modal";
 import { PendingAuctionPayments } from "./pending-auction-payments";
@@ -302,6 +303,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [showDeliveryConfirm, setShowDeliveryConfirm] = useState(false);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [showShippingIssueForm, setShowShippingIssueForm] = useState(false);
 
   const DISPUTE_OPEN_AFTER_DAYS = 10;
 
@@ -522,7 +524,10 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
             </div>
             {trackingStuck && (
               <button
-                onClick={() => setExpanded(true)}
+                onClick={() => {
+                  setExpanded(true);
+                  setShowShippingIssueForm(true);
+                }}
                 className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
               >
                 <AlertTriangle className="h-3 w-3" />
@@ -650,7 +655,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                   {t("autoConfirmWarning", { date: autoConfirmFormatted })}
                 </p>
               )}
-              {!showDeliveryConfirm && !showDisputeForm ? (
+              {!showDeliveryConfirm && !showDisputeForm && !showShippingIssueForm ? (
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setShowDeliveryConfirm(true)}
@@ -700,6 +705,12 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                 <OpenDisputeV2Form
                   bundleId={bundle.id}
                   onCancel={() => setShowDisputeForm(false)}
+                />
+              ) : showShippingIssueForm ? (
+                <OpenShippingIssueForm
+                  bundleId={bundle.id}
+                  onCancel={() => setShowShippingIssueForm(false)}
+                  perspective="buyer"
                 />
               ) : null}
             </div>

@@ -264,7 +264,11 @@ export async function autoConfirmDeliveries() {
     where: {
       status: "SHIPPED",
       shippedAt: { lte: cutoffDate },
-      dispute: null, // Skip bundles with active disputes
+      dispute: null, // Skip bundles with active v1 disputes
+      disputeV2: null, // (Fase 40) idem voor v2
+      // (Fase 40) ShippingIssue (tracking-stuck-tickets) onder onderzoek skippen
+      // ook — we willen niet dat escrow vrijkomt tijdens admin-onderzoek.
+      shippingIssues: { none: { status: { in: ["OPEN", "INVESTIGATING"] } } },
     },
   });
 
