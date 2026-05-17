@@ -223,6 +223,16 @@ model User {
 
   // Image moderation log
   imageModerationLogs     ImageModerationLog[] @relation("ImageModerationLogUser")
+
+  // Dispute v2 (Fase 40) — greenfield rewrite naast bestaande Dispute-model
+  disputesV2OpenedByBuyer  DisputeV2[] @relation("DisputeV2Buyer")
+  disputesV2OnMySales      DisputeV2[] @relation("DisputeV2Seller")
+  disputesV2ResolvedByAdmin DisputeV2[] @relation("DisputeV2Admin")
+  disputeV2EventsCreated   DisputeV2Event[] @relation("DisputeV2EventActor")
+
+  // ShippingIssue (Fase 40) — lightweight admin-tickets voor verloren/vastgelopen pakketten
+  shippingIssuesReported   ShippingIssue[] @relation("ShippingIssueReporter")
+  shippingIssuesHandled    ShippingIssue[] @relation("ShippingIssueAdmin")
 }
 
 // ============================================================
@@ -729,6 +739,13 @@ model ClaimsaleItem {
   // permanent blokkeert. Niet renewable bij herhaalde klik (anti-abuse).
   checkoutLockExpiresAt DateTime?
 
+  // (Fase 40) Anti-abuse tegen lock-renewal-exploit: bij `unclaimItem` werd
+  // `checkoutLockExpiresAt` gereset, waarna user direct kon reclaimen + opnieuw
+  // 5min lock pakken (effectief: indefinite-renewal). Nu trackt deze stamp het
+  // laatste unclaim-moment; in `claimItem` cappen we de totaal-alive-time per
+  // user+item op een hard window zodat de exploit niet werkt.
+  lastUnclaimAt DateTime?
+
   refundedAt   DateTime? // Set when seller refunds this item
 
   createdAt    DateTime @default(now())
@@ -1027,6 +1044,13 @@ model ShippingBundle {
   items         ClaimsaleItem[]
   cardItems     ListingCardItem[] @relation("BundleCardItems")
   dispute       Dispute?
+
+  // Dispute v2 (Fase 40) — greenfield. Bestaande v1-cases blijven op `dispute`,
+  // nieuwe cases gaan via `disputeV2`. Beide nullable, exclusive in praktijk.
+  disputeV2     DisputeV2?
+
+  // Lightweight admin-tickets voor tracking-stuck / verloren pakket (Fase 40)
+  shippingIssues ShippingIssue[]
 
   @@index([buyerId])
   @@index([sellerId])
@@ -1764,6 +1788,11 @@ model CancellationRequest {
 
   expiresAt        DateTime // createdAt + 7 dagen
 
+  // (Fase 40) Bij EXPIRED-pad zonder shipping wordt automatisch een
+  // ShippingIssue aangemaakt voor admin-bemiddeling, ipv stille limbo.
+  escalatedShippingIssueId String? @unique
+  escalatedShippingIssue   ShippingIssue? @relation("CancellationEscalation", fields: [escalatedShippingIssueId], references: [id])
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -2216,7 +2245,7 @@ model EmailVerificationToken {
 
 // Audit log voor Claude-vision content-moderation op upload.
 // Verdict-waarden: "safe" | "blocked" | "skipped_unavailable" | "skipped_no_key"
-// Context-waarden: "listing" | "auction" | "avatar" | "chat"
+// Context-waarden: "listing" | "auction" | "avatar" | "chat" | "dispute" | "shipping"
 model ImageModerationLog {
   id        String   @id @default(cuid())
   userId    String?
@@ -2230,4 +2259,181 @@ model ImageModerationLog {
 
   @@index([userId, createdAt])
   @@index([verdict, createdAt])
+}
+
+// ============================================================
+// DISPUTE V2 (Fase 40) — greenfield rewrite
+// ============================================================
+//
+// Naast de bestaande `Dispute`/`DisputeEvent`-modellen (Fase 12 / Fase 28).
+// Lopende v1-cases blijven daar tot ze resolved zijn; alle nieuwe disputes
+// gaan via dit model. Verschillen met v1:
+//   - structured `reasonCategory` (5 hoofd-redenen + sub-categorie) ipv free-text
+//   - explicit `MEDIATION`-fase voor proposal-loop (max 5 ronden in actions)
+//   - `adminSLADeadline` voor escalation → admin krijgt 5d-flag
+//   - `events` linken naar actor + actorType (BUYER/SELLER/ADMIN/SYSTEM)
+//   - werkt voor SHIPPED én EXTERNAL-pickup-COMPLETED-bundles
+//   - foto-upload-UI bestaat daadwerkelijk (v1 had dead `evidenceUrls`-param)
+//
+// Refund-correctheid:
+//   FULL_REFUND  → bundle CANCELLED, escrow + premium terug naar buyer
+//   PARTIAL_REFUND → bundle COMPLETED, refundedAmount updated
+//   NO_REFUND    → bundle COMPLETED, geen mutaties
+//   RETURN_AND_REFUND → admin-only, FULL_REFUND na proof-of-return
+model DisputeV2 {
+  id                String   @id @default(cuid())
+
+  bundleId          String   @unique
+  bundle            ShippingBundle @relation(fields: [bundleId], references: [id])
+
+  buyerId           String
+  buyer             User     @relation("DisputeV2Buyer", fields: [buyerId], references: [id])
+
+  sellerId          String
+  seller            User     @relation("DisputeV2Seller", fields: [sellerId], references: [id])
+
+  // Status-flow:
+  //   OPEN → seller heeft `responseDeadline` (14d) om te reageren
+  //   SELLER_RESPONDED → buyer heeft `buyerReviewDeadline` (14d): accept / reject / propose
+  //   MEDIATION → één partij heeft proposedRefund gezet, andere moet reageren
+  //   ESCALATED → beide akkoord met admin-review, `adminSLADeadline` (5d) loopt
+  //   RESOLVED_BUYER → 100% refund, bundle CANCELLED
+  //   RESOLVED_SELLER → geen refund, bundle COMPLETED (bij SHIPPED) of stays
+  //   RESOLVED_MUTUAL → partial via mutual agreement
+  //   RESOLVED_ADMIN → admin-decision (kan elke uitkomst zijn)
+  //   CANCELLED → buyer trekt geschil zelf in (alleen pre-MEDIATION)
+  status            String   @default("OPEN")
+
+  // Reden-categorie (hard categorieën, ipv free-text). Sub-categorie bv.
+  // "in_transit_stuck_14d" of "delivered_to_wrong_address" voor NOT_RECEIVED.
+  reasonCategory    String   // NOT_RECEIVED | NOT_AS_DESCRIBED | DAMAGED | WRONG_ITEM | COUNTERFEIT_SUSPECTED | OTHER
+  reasonSubCategory String?
+
+  // Statements
+  buyerStatement    String
+  sellerStatement   String?
+
+  // Evidence — JSON arrays van upload URLs. Beide partijen kunnen achteraf
+  // toevoegen via `addEvidenceV2` (apart van initial statements).
+  evidenceBuyer     String   @default("[]")
+  evidenceSeller    String   @default("[]")
+
+  // Proposal-systeem (MEDIATION-fase)
+  proposedRefund    Float?
+  proposedById      String?  // userId van wie het proposal deed
+
+  // Resolution
+  finalRefund       Float?   // wat uiteindelijk uitbetaald is
+  resolution        String?  // FULL_REFUND | PARTIAL_REFUND | NO_REFUND | RETURN_AND_REFUND
+  resolvedAt        DateTime?
+
+  // Admin (alleen bij ESCALATED + RESOLVED_ADMIN)
+  adminId           String?
+  admin             User?    @relation("DisputeV2Admin", fields: [adminId], references: [id])
+  adminNotes        String?
+  adminSLADeadline  DateTime? // set bij flip naar ESCALATED, 5d window
+
+  // Generic deadlines
+  responseDeadline    DateTime
+  buyerReviewDeadline DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  events DisputeV2Event[]
+
+  // Link terug vanuit ShippingIssue als deze hier naar geescaleerd is
+  escalatedFromShippingIssueId String? @unique
+  escalatedFromShippingIssue   ShippingIssue? @relation("ShippingIssueEscalation", fields: [escalatedFromShippingIssueId], references: [id])
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([adminSLADeadline])
+}
+
+model DisputeV2Event {
+  id          String   @id @default(cuid())
+  disputeId   String
+  dispute     DisputeV2 @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  // Event-types: OPENED | SELLER_RESPONDED | PROPOSAL | PROPOSAL_ACCEPTED |
+  //   PROPOSAL_REJECTED | EVIDENCE_ADDED | ESCALATION_REQUESTED | ESCALATED |
+  //   ADMIN_DECISION | AUTO_RESOLVED | CANCELLED
+  type        String
+
+  actorId     String?
+  actor       User?    @relation("DisputeV2EventActor", fields: [actorId], references: [id])
+  actorType   String   // BUYER | SELLER | ADMIN | SYSTEM
+
+  message     String?  // korte tekst getoond in timeline
+  metadata    String?  // JSON (bv. proposedAmount, evidenceCount)
+
+  createdAt   DateTime @default(now())
+
+  @@index([disputeId])
+}
+
+// ============================================================
+// SHIPPING ISSUE (Fase 40) — lightweight admin-ticket
+// ============================================================
+//
+// Voor scenario's waar de zware DisputeV2-flow disproportioneel zou zijn:
+//   - tracking blijft hangen op "in transit" > 14 dagen
+//   - geen scan-update meer
+//   - pakket bij verkeerd adres bezorgd
+//
+// Buyer kan na 14d sinds shipped een ticket openen. Admin onderzoekt en
+// resolved met:
+//   RESOLVED_GOODWILL → platform credit tot €50 (Transaction GOODWILL_REFUND)
+//   RESOLVED_NO_ACTION → seller wint, ticket dicht
+//   ESCALATED_TO_DISPUTE → auto-create DisputeV2 met NOT_RECEIVED + admin-notes
+//
+// Tijdens OPEN / INVESTIGATING skipt auto-confirm-cron de bundle — voorkomt
+// dat escrow released wordt tijdens admin-onderzoek.
+model ShippingIssue {
+  id          String   @id @default(cuid())
+
+  bundleId    String
+  bundle      ShippingBundle @relation(fields: [bundleId], references: [id])
+
+  reporterId  String
+  reporter    User    @relation("ShippingIssueReporter", fields: [reporterId], references: [id])
+
+  // TRACKING_STUCK = "in transit" > 14d zonder update
+  // NO_SCAN_UPDATE = pakket was eens "in transit" maar tracking is gestopt
+  // WRONG_DELIVERY = bezorgd op verkeerd adres (zowel buyer als seller kan dit melden)
+  // OTHER          = vrije-tekst
+  type        String
+
+  description String
+
+  // Status-flow:
+  //   OPEN → admin nog niet gekeken
+  //   INVESTIGATING → admin onderzoekt actief (5d-flag voor zelf-tracking)
+  //   RESOLVED_GOODWILL → platform refundt tot €50 vanuit goodwill-pot
+  //   RESOLVED_NO_ACTION → ticket gesloten zonder actie
+  //   ESCALATED_TO_DISPUTE → DisputeV2 aangemaakt
+  status      String   @default("OPEN")
+
+  resolution  String?  // free-text admin-notitie
+
+  adminId     String?
+  admin       User?    @relation("ShippingIssueAdmin", fields: [adminId], references: [id])
+
+  // Bij RESOLVED_GOODWILL: link naar de Transaction-rij die de credit deed
+  goodwillTransactionId String?
+
+  // Bij ESCALATED_TO_DISPUTE: link naar het aangemaakte DisputeV2-record
+  escalatedDispute DisputeV2? @relation("ShippingIssueEscalation")
+
+  // Reverse-relatie voor CancellationRequest.escalatedShippingIssue
+  cancellationRequest CancellationRequest? @relation("CancellationEscalation")
+
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+
+  @@index([bundleId])
+  @@index([reporterId])
+  @@index([status])
 }
