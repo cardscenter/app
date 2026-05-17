@@ -230,6 +230,14 @@ export function MultiStepClaimsaleForm({
             />
           </section>
 
+          <section data-section="timing" className="glass rounded-2xl p-6 scroll-mt-32">
+            <StepTiming
+              startDate={form.startDate}
+              startTimeOfDay={form.startTimeOfDay}
+              onChange={updateField}
+            />
+          </section>
+
           <section data-section="verzending" className="glass rounded-2xl p-6 scroll-mt-32">
             <StepVerzending
               type={form.type}
@@ -252,14 +260,6 @@ export function MultiStepClaimsaleForm({
               hasMintItem={hasMintItem}
               onUpsellsChange={(v) => updateField("upsells", v)}
               onLabelsChange={(v) => updateField("labels", v)}
-            />
-          </section>
-
-          <section data-section="timing" className="glass rounded-2xl p-6 scroll-mt-32">
-            <StepTiming
-              startDate={form.startDate}
-              startTimeOfDay={form.startTimeOfDay}
-              onChange={updateField}
             />
           </section>
         </div>

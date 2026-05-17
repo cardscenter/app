@@ -100,8 +100,11 @@ export function StepPricing({
           } else {
             onChange("hasBuyNow", false);
           }
-          // Looptijd zit in step-timing maar wordt hier alvast doorgezet.
-          onChange("duration", advice.duration);
+          // Tijdvenster (start + eind) wordt alvast op de aanbevolen waarden
+          // gezet — seller kan in step-timing nog verschuiven voor optimaal
+          // eindmoment (vrij/zat 19-21u).
+          onChange("startTime", advice.startTime);
+          onChange("endTime", advice.endTime);
         }}
       />
 

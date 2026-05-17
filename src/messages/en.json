@@ -560,7 +560,7 @@
     "stepTiming": "Time window",
     "timingIntro": "Plan when your auction goes live and when it ends. The time on the end-day decides the snipe moment — early evening works best.",
     "startDateLabel": "Start date",
-    "startDateHelp": "Today or up to 5 days ahead.",
+    "startDateHelp": "Today or up to 7 days ahead.",
     "endTimeLabel": "End time on the end-day",
     "nlTimeBadge": "🕒 NL-time",
     "sweetSpotHint": "Between 19:00 and 21:00 buyers are most active — sniping pushes prices up.",

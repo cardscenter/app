@@ -83,6 +83,10 @@ export type RealtimeEvent =
   | {
       type: "claimsale-started";
       payload: { claimsaleId: string };
+    }
+  | {
+      type: "auction-updated";
+      payload: { auctionId: string };
     };
 
 export function claimsaleChannel(claimsaleId: string): string {

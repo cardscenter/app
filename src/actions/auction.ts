@@ -2,7 +2,8 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createAuctionSchema } from "@/lib/validations/auction";
+import { createAuctionSchema, updateAuctionSchema } from "@/lib/validations/auction";
+import { computeEditScope, type EditScope } from "@/lib/auction/edit-scope";
 import { checkAuctionLimit } from "@/lib/account-limits";
 import { getMinimumNextBid, ANTI_SNIPE_MINUTES, ANTI_SNIPE_EXTENSION_MINUTES } from "@/lib/auction/bid-increments";
 import { creditBalance, deductBalance, deductBidPayment, escrowCredit } from "@/actions/wallet";
@@ -31,7 +32,7 @@ import { logAdminAction } from "@/lib/admin-audit";
 import { publish, publishMany, userChannel, auctionChannel } from "@/lib/realtime";
 import { hasValidShippingAddress } from "@/lib/address-validation";
 import { processRunnerUpDecision } from "@/lib/cron-jobs";
-import { deriveAuctionWindow, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
+import { deriveDurationDays, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
@@ -62,9 +63,8 @@ export async function createAuction(formData: FormData) {
     startingBid: formData.get("startingBid"),
     reservePrice: formData.get("reservePrice") || undefined,
     buyNowPrice: formData.get("buyNowPrice") || undefined,
-    duration: formData.get("duration"),
-    startDate: formData.get("startDate"),
-    endTimeOfDay: formData.get("endTimeOfDay"),
+    startTime: formData.get("startTime"),
+    endTime: formData.get("endTime"),
     runnerUpEnabled: formData.get("runnerUpEnabled") || undefined,
     deliveryMethod: formData.get("deliveryMethod") || "SHIP",
     upsells: formData.get("upsells") || undefined,
@@ -82,14 +82,11 @@ export async function createAuction(formData: FormData) {
 
   const data = result.data;
 
-  // Bereken start/end-time uit form-inputs (Europe/Amsterdam-conventie).
-  // Bij `startTime > now + 5min` wordt status SCHEDULED — anders ACTIVE
-  // (instant publish). Zie src/lib/auction/timing.ts voor DST-handling.
-  const { startTime, endTime } = deriveAuctionWindow({
-    startDate: data.startDate,
-    duration: data.duration,
-    endTimeOfDay: data.endTimeOfDay,
-  });
+  // startTime + endTime komen direct uit het form. Bij `startTime > now + 5min`
+  // wordt status SCHEDULED — anders ACTIVE (instant publish).
+  const startTime = data.startTime;
+  const endTime = data.endTime;
+  const durationDays = deriveDurationDays(startTime, endTime);
   const initialStatus =
     startTime.getTime() > Date.now() + SCHEDULED_THRESHOLD_MS ? "SCHEDULED" : "ACTIVE";
 
@@ -123,14 +120,14 @@ export async function createAuction(formData: FormData) {
           let startDay: number;
           let endDay: number;
           if (typeof e.startDay === "number" && typeof e.endDay === "number") {
-            startDay = Math.max(1, Math.min(data.duration, Math.floor(e.startDay)));
-            endDay = Math.max(startDay, Math.min(data.duration, Math.floor(e.endDay)));
+            startDay = Math.max(1, Math.min(durationDays, Math.floor(e.startDay)));
+            endDay = Math.max(startDay, Math.min(durationDays, Math.floor(e.endDay)));
           } else {
             // Legacy: full window van dag 1 t/m laatste dag.
             startDay = 1;
             endDay = Math.min(
-              data.duration,
-              Math.max(1, e.days ?? data.duration),
+              durationDays,
+              Math.max(1, e.days ?? durationDays),
             );
           }
           const days = Math.max(0, endDay - startDay + 1);
@@ -277,7 +274,7 @@ export async function createAuction(formData: FormData) {
       startingBid: data.startingBid,
       reservePrice: data.reservePrice || null,
       buyNowPrice: data.buyNowPrice || null,
-      duration: data.duration,
+      duration: durationDays,
       runnerUpEnabled: effectiveRunnerUpEnabled,
       deliveryMethod: data.deliveryMethod,
       pickupCity,
@@ -1805,6 +1802,364 @@ export async function declineRunnerUpOffer(offerId: string) {
 
   // Schuif door naar volgende kandidaat (of finaliseer PAYMENT_FAILED)
   await processRunnerUpDecision(offer.auctionId, session.user.id);
+
+  return { success: true };
+}
+
+/**
+ * Status-aware update voor bestaande veilingen. Seller-only.
+ *
+ * Welke velden mogen worden gewijzigd hangt af van `computeEditScope`:
+ *   FULL              — SCHEDULED + 0 bids: alles
+ *   TIMING_LOCKED     — ACTIVE + 0 bids: alles behalve startTime/endTime
+ *   DESCRIPTION_ONLY  — ACTIVE + ≥1 bid: alleen description + image-append + labels-add
+ *   NONE              — ended/awaiting statussen: niets
+ *
+ * Race-safe: scope wordt zowel buiten als binnen de $transaction opnieuw
+ * berekend zodat een bid die tussendoor binnenkomt verboden velden alsnog
+ * blokkeert.
+ *
+ * v1-beperkingen (follow-ups):
+ *   - shippingMethodIds wordt geaccepteerd maar nog niet verwerkt — seller die
+ *     verzending wil veranderen moet annuleren-en-opnieuw (alleen mogelijk
+ *     zonder biedingen).
+ *   - upsell-toevoegen vanuit edit-flow is uit v1 gehaald (pro-rata cost-
+ *     interactie met refundAuctionPromotion vereist apart ontwerp).
+ */
+export async function updateAuction(
+  auctionId: string,
+  formData: FormData,
+): Promise<{ success: true } | { error: string; field?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const susp = await requireNotSuspended(session.user.id);
+  if ("error" in susp) return { error: susp.error };
+
+  // 1. Parse + valideer input
+  const rawObj: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string") rawObj[key] = value;
+  }
+  const parsed = updateAuctionSchema.safeParse(rawObj);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    return { error: first?.message ?? "Ongeldige invoer", field: first?.path?.join(".") };
+  }
+  const data = parsed.data;
+
+  // 2. Load huidige veiling-state
+  const auction = await prisma.auction.findUnique({
+    where: { id: auctionId },
+    select: {
+      sellerId: true,
+      status: true,
+      title: true,
+      imageUrls: true,
+      reservePrice: true,
+      buyNowPrice: true,
+      condition: true,
+      auctionType: true,
+      startingBid: true,
+      startTime: true,
+      endTime: true,
+      _count: { select: { bids: true } },
+    },
+  });
+  if (!auction) return { error: "Veiling niet gevonden" };
+  if (auction.sellerId !== session.user.id) return { error: "Niet geautoriseerd" };
+
+  const scope: EditScope = computeEditScope(auction.status, auction._count.bids);
+  if (scope === "NONE") {
+    return { error: "Deze veiling kan niet meer aangepast worden" };
+  }
+
+  // 3. Per-veld scope-validatie (vóór tx zodat we user-friendly error geven
+  //    in plaats van het hele patch silently te negeren)
+  const fullOnlyFields: Array<keyof typeof data> = ["startTime", "endTime"];
+  const replaceFields: Array<keyof typeof data> = [
+    "title",
+    "imageUrls",
+    "cardItems",
+    "estimatedCardCount",
+    "conditionRange",
+    "productType",
+    "itemCategory",
+    "startingBid",
+    "reservePrice",
+    "buyNowPrice",
+    "pickupCity",
+    "shippingMethodIds",
+  ];
+
+  if (scope !== "FULL") {
+    for (const f of fullOnlyFields) {
+      if (data[f] !== undefined) {
+        return {
+          error: "Het tijdvenster kan niet meer gewijzigd worden — de veiling is al gestart",
+          field: f,
+        };
+      }
+    }
+  }
+  if (scope === "DESCRIPTION_ONLY") {
+    for (const f of replaceFields) {
+      if (data[f] !== undefined) {
+        return {
+          error: "Dit veld kan niet meer gewijzigd worden — er is al een bod uitgebracht",
+          field: f,
+        };
+      }
+    }
+  }
+
+  // 4. Cross-field re-check: schema's superRefine vergelijkt alleen velden die
+  //    in dezelfde submit zitten. We re-checken ook tegen DB-waarden (seller
+  //    kan reservePrice los wijzigen zonder buyNowPrice mee te sturen).
+  const effectiveStarting = data.startingBid ?? auction.startingBid;
+  const effectiveReserve = data.reservePrice ?? auction.reservePrice ?? 0;
+  const effectiveBuyNow = data.buyNowPrice ?? auction.buyNowPrice ?? 0;
+  if (effectiveBuyNow > 0 && effectiveBuyNow <= effectiveStarting) {
+    return { error: "Buy Now-prijs moet hoger zijn dan het startbod", field: "buyNowPrice" };
+  }
+  if (effectiveReserve > 0 && effectiveReserve < effectiveStarting) {
+    return { error: "Reserveprijs mag niet lager zijn dan het startbod", field: "reservePrice" };
+  }
+  if (effectiveBuyNow > 0 && effectiveReserve > 0 && effectiveBuyNow <= effectiveReserve) {
+    return { error: "Direct Kopen-prijs moet hoger zijn dan de reserveprijs", field: "buyNowPrice" };
+  }
+
+  // 5. Timing-update (alleen FULL). De edit-drawer stuurt alleen endTime —
+  //    startTime is locked. Maar voor toekomstige flexibiliteit accepteren we
+  //    beide. Recompute `duration` afgeleid + status-flip naar ACTIVE als
+  //    startTime intussen voorbij de threshold ligt.
+  let timingPatch: { startTime?: Date; endTime?: Date; duration?: number; status?: "ACTIVE" } = {};
+  if (scope === "FULL" && (data.startTime !== undefined || data.endTime !== undefined)) {
+    const newStart = data.startTime ?? auction.startTime ?? new Date();
+    const newEnd = data.endTime ?? auction.endTime;
+    const diffMs = newEnd.getTime() - newStart.getTime();
+    if (diffMs < 60 * 60 * 1000) {
+      return { error: "De veiling moet minstens een uur duren", field: "endTime" };
+    }
+    if (diffMs >= 15 * 24 * 60 * 60 * 1000) {
+      return { error: "Een veiling mag niet 15 dagen of langer duren", field: "endTime" };
+    }
+    if (newEnd.getTime() <= Date.now()) {
+      return { error: "Eindtijd mag niet in het verleden liggen", field: "endTime" };
+    }
+    if (data.startTime !== undefined) timingPatch.startTime = data.startTime;
+    if (data.endTime !== undefined) timingPatch.endTime = data.endTime;
+    timingPatch.duration = deriveDurationDays(newStart, newEnd);
+    if (newStart.getTime() <= Date.now() + SCHEDULED_THRESHOLD_MS) {
+      timingPatch.status = "ACTIVE";
+    }
+  }
+
+  // 6. Labels-add validatie + cost
+  let parsedNewLabels: Array<{ type: LabelType; colorKey: LabelColor }> = [];
+  let labelsCost = 0;
+  if (data.addLabels) {
+    try {
+      const raw = JSON.parse(data.addLabels);
+      if (!Array.isArray(raw)) {
+        return { error: "Ongeldige labels-payload", field: "addLabels" };
+      }
+      const cleaned = raw.filter(
+        (l: unknown): l is { type: string; colorKey: string } =>
+          typeof l === "object" &&
+          l !== null &&
+          "type" in l &&
+          "colorKey" in l &&
+          typeof (l as { type: unknown }).type === "string" &&
+          typeof (l as { colorKey: unknown }).colorKey === "string",
+      );
+
+      const validated: Array<{ type: LabelType; colorKey: LabelColor }> = [];
+      const seen = new Set<string>();
+      for (const l of cleaned) {
+        if (!isValidLabelType(l.type) || !isValidLabelColor(l.colorKey)) continue;
+        if (seen.has(l.type)) continue;
+        seen.add(l.type);
+        validated.push({ type: l.type, colorKey: l.colorKey });
+      }
+
+      // Anti-tamper: alleen labels die in availableLabelsFor() zitten voor deze
+      // veiling. Refresh's `condition`/`auctionType` zijn DB-waarden, geen input.
+      const avail = availableLabelsFor({
+        reservePrice: effectiveReserve > 0 ? effectiveReserve : null,
+        buyNowPrice: effectiveBuyNow > 0 ? effectiveBuyNow : null,
+        condition: auction.condition,
+        auctionType: auction.auctionType,
+      });
+      const availSet = new Set(avail.filter((a) => a.available).map((a) => a.type));
+      for (const l of validated) {
+        if (!availSet.has(l.type)) {
+          return { error: `Label "${l.type}" is niet beschikbaar voor deze veiling`, field: "addLabels" };
+        }
+      }
+
+      const existingCount = await prisma.auctionLabel.count({ where: { auctionId } });
+      if (existingCount + validated.length > MAX_LABELS_PER_AUCTION) {
+        return {
+          error: `Maximaal ${MAX_LABELS_PER_AUCTION} labels per veiling`,
+          field: "addLabels",
+        };
+      }
+
+      parsedNewLabels = validated;
+      // Bundle-tarief: cost van DE TOTALE labels-stand na deze toevoeging,
+      // minus wat seller eerder al heeft betaald (eerste label €0,99, twee €1,69).
+      const newTotalCount = existingCount + validated.length;
+      const newTotalCost = calculateLabelCost(newTotalCount);
+      const existingCost = await prisma.auctionLabel
+        .findMany({ where: { auctionId }, select: { cost: true } })
+        .then((rows) => rows.reduce((s, r) => s + (r.cost ?? 0), 0));
+      labelsCost = Math.max(0, Math.round((newTotalCost - existingCost) * 100) / 100);
+
+      if (labelsCost > 0) {
+        const seller = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { balance: true, reservedBalance: true },
+        });
+        const availableBalance = (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
+        if (labelsCost > availableBalance) {
+          return { error: "Onvoldoende saldo voor extra labels" };
+        }
+      }
+    } catch {
+      return { error: "Kon labels-payload niet parsen", field: "addLabels" };
+    }
+  }
+
+  // 7. Atomic update binnen $transaction met race-check op scope
+  const result = await prisma.$transaction(async (tx) => {
+    const fresh = await tx.auction.findUnique({
+      where: { id: auctionId },
+      select: { status: true, imageUrls: true, _count: { select: { bids: true } } },
+    });
+    if (!fresh) return { error: "Veiling niet gevonden" } as const;
+    const freshScope = computeEditScope(fresh.status, fresh._count.bids);
+    if (freshScope === "NONE") return { error: "Veiling kan niet meer aangepast worden" } as const;
+
+    // Als scope intussen versmald is (bv. nieuwe bid binnen race-window),
+    // moeten velden die in fresh-scope niet meer mogen, geweigerd worden.
+    if (scope === "FULL" && freshScope !== "FULL") {
+      for (const f of fullOnlyFields) {
+        if (data[f] !== undefined) {
+          return { error: "Er is intussen een bod gedaan — tijdvenster is nu vergrendeld" } as const;
+        }
+      }
+    }
+    if (scope !== "DESCRIPTION_ONLY" && freshScope === "DESCRIPTION_ONLY") {
+      for (const f of replaceFields) {
+        if (data[f] !== undefined) {
+          return { error: "Er is intussen een bod gedaan — dit veld is nu vergrendeld" } as const;
+        }
+      }
+    }
+
+    // Bouw dataPatch gefilterd op freshScope
+    const dataPatch: Record<string, unknown> = {};
+
+    if (data.description !== undefined) dataPatch.description = data.description.trim();
+
+    // Image-append (alle scopes — additive, geen remove)
+    if (data.appendImageUrls) {
+      try {
+        const existing = fresh.imageUrls ? (JSON.parse(fresh.imageUrls) as string[]) : [];
+        const toAppend = JSON.parse(data.appendImageUrls) as string[];
+        if (!Array.isArray(toAppend)) throw new Error("not-array");
+        dataPatch.imageUrls = JSON.stringify([...existing, ...toAppend]);
+      } catch {
+        return { error: "Kon foto's-payload niet parsen" } as const;
+      }
+    }
+
+    if (freshScope !== "DESCRIPTION_ONLY") {
+      if (data.title !== undefined) dataPatch.title = data.title;
+      if (data.imageUrls !== undefined) dataPatch.imageUrls = data.imageUrls; // full-replace overschrijft append
+      if (data.cardItems !== undefined) dataPatch.cardItems = data.cardItems;
+      if (data.estimatedCardCount !== undefined) dataPatch.estimatedCardCount = data.estimatedCardCount;
+      if (data.conditionRange !== undefined) dataPatch.conditionRange = data.conditionRange;
+      if (data.productType !== undefined) dataPatch.productType = data.productType;
+      if (data.itemCategory !== undefined) dataPatch.itemCategory = data.itemCategory;
+      if (data.startingBid !== undefined) dataPatch.startingBid = data.startingBid;
+      if (data.reservePrice !== undefined) dataPatch.reservePrice = data.reservePrice > 0 ? data.reservePrice : null;
+      if (data.buyNowPrice !== undefined) dataPatch.buyNowPrice = data.buyNowPrice > 0 ? data.buyNowPrice : null;
+      if (data.pickupCity !== undefined) dataPatch.pickupCity = data.pickupCity || null;
+    }
+
+    if (freshScope === "FULL") {
+      if (timingPatch.startTime) dataPatch.startTime = timingPatch.startTime;
+      if (timingPatch.endTime) dataPatch.endTime = timingPatch.endTime;
+      if (timingPatch.duration !== undefined) dataPatch.duration = timingPatch.duration;
+      if (timingPatch.status) dataPatch.status = timingPatch.status;
+    }
+
+    // Niets te updaten? Dan is alleen labels-add van toepassing (of niets) —
+    // schip het atomic-update-call.
+    let updateAttempted = false;
+    if (Object.keys(dataPatch).length > 0) {
+      updateAttempted = true;
+      // Race-gated: status van fresh moet binnen allowed-set blijven
+      const allowedStatuses =
+        freshScope === "FULL" ? ["SCHEDULED"] : ["ACTIVE"];
+      const flipped = await tx.auction.updateMany({
+        where: { id: auctionId, status: { in: allowedStatuses } },
+        data: dataPatch,
+      });
+      if (flipped.count === 0) {
+        return { error: "Veiling kon niet bijgewerkt worden — status is gewijzigd" } as const;
+      }
+    }
+
+    // Labels-add binnen tx (na auction-update zodat we niet inserten bij race-fail)
+    if (parsedNewLabels.length > 0) {
+      const totalAfter = await tx.auctionLabel.count({ where: { auctionId } });
+      if (totalAfter + parsedNewLabels.length > MAX_LABELS_PER_AUCTION) {
+        return { error: `Maximaal ${MAX_LABELS_PER_AUCTION} labels per veiling` } as const;
+      }
+      const perLabelCost =
+        parsedNewLabels.length > 0 ? Math.round((labelsCost / parsedNewLabels.length) * 100) / 100 : 0;
+      await tx.auctionLabel.createMany({
+        data: parsedNewLabels.map((l) => ({
+          auctionId,
+          type: l.type,
+          colorKey: l.colorKey,
+          cost: perLabelCost,
+        })),
+      });
+    }
+
+    return { success: true, updateAttempted } as const;
+  });
+
+  if ("error" in result) return result;
+
+  // 8. Labels-cost buiten tx deducten. deductBalance opent eigen tx en throws
+  //    bij insufficient balance — we hebben dat al boven gecheckt maar fang
+  //    de error toch op zodat een ultra-rare race tussen check en deduct geen
+  //    crash geeft (labels staan dan al in DB, seller krijgt ze gratis — niet
+  //    erg, beter dan rollback met label-delete).
+  if (labelsCost > 0) {
+    try {
+      await deductBalance(
+        session.user.id,
+        labelsCost,
+        "UPSELL",
+        `Extra labels veiling: ${auction.title}`,
+        auctionId,
+      );
+    } catch (err) {
+      console.error(`[updateAuction] Labels deduct failed na succesvolle insert voor auction ${auctionId}:`, err);
+    }
+  }
+
+  // 9. Real-time publish
+  publishMany(
+    [auctionChannel(auctionId), userChannel(session.user.id)],
+    { type: "auction-updated", payload: { auctionId } },
+  );
 
   return { success: true };
 }

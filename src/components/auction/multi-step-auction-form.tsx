@@ -34,9 +34,8 @@ interface FormState {
   productType: string;
   itemCategory: string;
   startingBid: number | null;
-  duration: number;
-  startDate: Date;
-  endTimeOfDay: string;
+  startTime: Date;
+  endTime: Date;
   hasReserve: boolean;
   reservePrice: number | null;
   hasBuyNow: boolean;
@@ -62,14 +61,15 @@ const INITIAL_STATE: FormState = {
   productType: "",
   itemCategory: "",
   startingBid: null,
-  duration: 7,
-  // Default startDate = midnight UTC voor vandaag (NL-kalenderdag).
-  startDate: (() => {
-    const d = new Date();
-    d.setUTCHours(0, 0, 0, 0);
-    return d;
+  // Default: start nu, eindig over 7 dagen op 20:00 NL-tijd. De seller kan
+  // beide vrij verschuiven binnen de validatie-grenzen.
+  startTime: new Date(),
+  endTime: (() => {
+    const end = new Date();
+    end.setDate(end.getDate() + 7);
+    end.setHours(20, 0, 0, 0);
+    return end;
   })(),
-  endTimeOfDay: "20:00",
   hasReserve: false,
   reservePrice: null,
   hasBuyNow: false,
@@ -150,9 +150,8 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     formData.set("title", form.title);
     formData.set("description", form.description);
     formData.set("startingBid", String(form.startingBid ?? ""));
-    formData.set("duration", String(form.duration));
-    formData.set("startDate", form.startDate.toISOString());
-    formData.set("endTimeOfDay", form.endTimeOfDay);
+    formData.set("startTime", form.startTime.toISOString());
+    formData.set("endTime", form.endTime.toISOString());
 
     // Append "(Reverse Holo)" so buyers see which print they're bidding on.
     const baseName = form.cardName;
@@ -212,7 +211,13 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     (form.auctionType !== "SINGLE_CARD" || (form.cardName?.length ?? 0) > 0);
   if (detailsOk) completedSteps.add("details");
   if (form.startingBid !== null && form.startingBid >= MIN_STARTING_BID) completedSteps.add("pricing");
-  if (form.startDate && form.endTimeOfDay) completedSteps.add("timing");
+  // Timing-validatie hier light gehouden — server doet de echte check.
+  // We willen alleen weten "heeft seller een eindtijd ingesteld?" voor de
+  // progress-indicator.
+  const timingDiffMs = form.endTime.getTime() - form.startTime.getTime();
+  if (timingDiffMs >= 60 * 60 * 1000 && timingDiffMs < 15 * 24 * 60 * 60 * 1000) {
+    completedSteps.add("timing");
+  }
   if (form.deliveryMethod) completedSteps.add("delivery");
   // Promotie is volledig optioneel — markeer als "compleet" zodat de progress
   // niet onnodig met een open chip blijft staan als seller niets selecteert.
@@ -284,9 +289,8 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
           {/* Section 5: Tijdvenster (nieuw) */}
           <section data-section="timing" className="glass rounded-2xl p-6 scroll-mt-32">
             <StepTiming
-              startDate={form.startDate}
-              duration={form.duration}
-              endTimeOfDay={form.endTimeOfDay}
+              startTime={form.startTime}
+              endTime={form.endTime}
               onChange={updateField}
             />
           </section>
@@ -356,7 +360,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
               userBalance={userBalance}
               accountType={accountType}
               freeUpsellsRemaining={freeUpsellsRemaining}
-              auctionDuration={form.duration}
+              auctionDuration={Math.max(1, Math.round((form.endTime.getTime() - form.startTime.getTime()) / 86400000))}
               reservePrice={form.hasReserve ? form.reservePrice : null}
               buyNowPrice={form.hasBuyNow ? form.buyNowPrice : null}
               condition={form.condition || null}
@@ -383,9 +387,8 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
             reservePrice={form.reservePrice}
             hasBuyNow={form.hasBuyNow}
             buyNowPrice={form.buyNowPrice}
-            duration={form.duration}
-            startDate={form.startDate}
-            endTimeOfDay={form.endTimeOfDay}
+            startTime={form.startTime}
+            endTime={form.endTime}
             deliveryMethod={form.deliveryMethod}
             pickupCity={userCity}
             upsellsCount={form.upsells.length}

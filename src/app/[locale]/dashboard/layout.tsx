@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { getSellerStats } from "@/actions/review";
+import { fetchActiveActivity } from "@/lib/dashboard-queries";
 import { getLevel, getNextLevel, getLevelProgress } from "@/lib/seller-levels";
 import { isUserSuspended } from "@/lib/suspension";
 import { SuspensionBanner } from "@/components/dashboard/suspension-banner";
@@ -34,7 +35,10 @@ export default async function DashboardLayout({
 
   const suspended = user ? isUserSuspended(user) : false;
 
-  const stats = await getSellerStats(session.user.id!);
+  const [stats, activity] = await Promise.all([
+    getSellerStats(session.user.id!),
+    fetchActiveActivity(session.user.id!),
+  ]);
   const xp = stats?.xp ?? 0;
   const currentLevel = getLevel(xp);
   const nextLevel = getNextLevel(xp);
@@ -56,6 +60,7 @@ export default async function DashboardLayout({
               progress,
               nextLevelName: nextLevel?.name ?? null,
             }}
+            counts={activity.counts}
           />
         </aside>
         <div className="flex-1 min-w-0">

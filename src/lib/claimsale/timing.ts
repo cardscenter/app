@@ -12,10 +12,17 @@ import {
   combineDateAndTimeNL,
   formatNLDateTime,
   SCHEDULED_THRESHOLD_MS,
-  MAX_SCHEDULE_DAYS_AHEAD,
 } from "@/lib/auction/timing";
 
-export { combineDateAndTimeNL, formatNLDateTime, SCHEDULED_THRESHOLD_MS, MAX_SCHEDULE_DAYS_AHEAD };
+export { combineDateAndTimeNL, formatNLDateTime, SCHEDULED_THRESHOLD_MS };
+
+/**
+ * Claimsales mogen tot 5 dagen vooruit gepland worden — korter dan veilingen
+ * (7d) omdat een claimsale geen vast eindmoment heeft. Langer plannen heeft
+ * weinig nut: items moeten zo snel mogelijk live om bij sellers' workflow te
+ * passen.
+ */
+export const MAX_SCHEDULE_DAYS_AHEAD = 5;
 
 /**
  * Default start-wandkloktijd wanneer de seller (nog) geen tijd koos.

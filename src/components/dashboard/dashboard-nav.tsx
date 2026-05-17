@@ -41,6 +41,8 @@ type NavItem = {
   comingSoon?: boolean;
   /** Toon een pulserend rood "Live"-bolletje achter de label (Live Hub). */
   liveIndicator?: boolean;
+  /** Live-count badge naast de label. Hidden bij 0 of undefined. */
+  badge?: number;
 };
 
 // A group with `labelKey` collapses behind a chevron-button header. Without
@@ -66,6 +68,9 @@ type DashboardNavProps = {
   accountType?: string;
   level?: LevelInfo;
   adminPendingCounts?: { disputes?: number; verifications?: number; withdrawals?: number; buybacks?: number; reports?: number; sellerWarnings?: number; enterpriseRequests?: number };
+  /** Live counts voor de "offer"-groep — auctions = ACTIVE+SCHEDULED,
+   *  claimsales = LIVE+SCHEDULED, listings = ACTIVE. */
+  counts?: { auctions: number; listings: number; claimsales: number };
 };
 
 const OPEN_STATE_STORAGE_KEY = "dashboard-nav-open";
@@ -83,7 +88,7 @@ export function DashboardNav(props: DashboardNavProps) {
   return <DashboardNavInner {...props} />;
 }
 
-function DashboardNavInner({ accountType, level }: DashboardNavProps) {
+function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
   const pathname = usePathname();
@@ -122,9 +127,9 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
         id: "offer",
         labelKey: "sectionOffer",
         items: [
-          { href: "/dashboard/veilingen", labelKey: "myAuctions", icon: Gavel },
-          { href: "/dashboard/marktplaats", labelKey: "myListings", icon: Store },
-          { href: "/dashboard/claimsales", labelKey: "myClaimsales", icon: Tag },
+          { href: "/dashboard/veilingen", labelKey: "myAuctions", icon: Gavel, badge: counts?.auctions },
+          { href: "/dashboard/claimsales", labelKey: "myClaimsales", icon: Tag, badge: counts?.claimsales },
+          { href: "/dashboard/marktplaats", labelKey: "myListings", icon: Store, badge: counts?.listings },
         ],
       },
       {
@@ -173,7 +178,7 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
         ],
       },
     ],
-    []
+    [counts]
   );
 
   function isActive(href: string) {
@@ -342,6 +347,17 @@ function DashboardNavInner({ accountType, level }: DashboardNavProps) {
           <Icon className="h-4 w-4 shrink-0" />
         )}
         <span className="flex-1 truncate">{t(item.labelKey)}</span>
+        {typeof item.badge === "number" && item.badge > 0 && (
+          <span
+            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+              active
+                ? "bg-primary/20 text-primary"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {item.badge}
+          </span>
+        )}
       </Link>
     );
   }

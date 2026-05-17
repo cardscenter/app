@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { MIN_STARTING_BID } from "@/lib/validations/auction";
+import { combineDateAndTimeNL, formatNLDateTimeLocal } from "@/lib/auction/timing";
 
 type Strategy = "flash" | "fast" | "standard" | "patient";
 type Duration = 3 | 5 | 7 | 14;
@@ -24,6 +25,13 @@ interface Advice {
   startingBid: number;
   reservePrice: number | null;
   buyNowPrice: number | null;
+  /** Aanbevolen starttijd — nu (live-publish). */
+  startTime: Date;
+  /** Aanbevolen eindtijd — N dagen vanaf nu om 20:00 (NL-conventie). Seller
+   *  kan hierna in step-timing fijn-tunen voor een optimale weekdag. */
+  endTime: Date;
+  /** Behouden voor display in stap-4 ("Looptijd: N dagen"). Wordt niet
+   *  meer als losse veld in de form-state gezet. */
   duration: Duration;
 }
 
@@ -132,7 +140,20 @@ function computeAdvice(
     buyNowPrice = b;
   }
 
-  return { startingBid, reservePrice, buyNowPrice, duration };
+  // Compute start/end-time uit duration. Start = nu (live-publish). Eind =
+  // op de NL-kalenderdag (vandaag + duration) om 20:00 NL-tijd. 20:00 valt
+  // midden in de sweet-spot 19-21u die de hoogste bid-activiteit trekt.
+  // Seller kan in step-timing nog naar 19:30 of zaterdag schuiven indien
+  // gewenst — de rating-block geeft daar feedback over.
+  const startTime = new Date();
+  const todayNL = formatNLDateTimeLocal(startTime).split("T")[0]; // "yyyy-MM-dd"
+  const [y, m, d] = todayNL.split("-").map(Number);
+  // Calendar-day-only Date in UTC-midnight (zoals combineDateAndTimeNL
+  // verwacht). +duration dagen telt op kalenderdag-niveau.
+  const targetCalendarDay = new Date(Date.UTC(y, m - 1, d + duration, 0, 0, 0));
+  const endTime = combineDateAndTimeNL(targetCalendarDay, "20:00");
+
+  return { startingBid, reservePrice, buyNowPrice, startTime, endTime, duration };
 }
 
 function formatEuro(n: number): string {

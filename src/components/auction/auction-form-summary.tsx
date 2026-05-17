@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Clock, Image as ImageIcon, ListChecks } from "lucide-react";
-import { deriveAuctionWindow, formatNLDateTime, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
+import { deriveDurationDays, formatNLDateTime, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
 import type { AuctionType } from "@/types";
 
 interface AuctionFormSummaryProps {
@@ -20,9 +20,8 @@ interface AuctionFormSummaryProps {
   reservePrice: number | null;
   hasBuyNow: boolean;
   buyNowPrice: number | null;
-  duration: number;
-  startDate: Date;
-  endTimeOfDay: string;
+  startTime: Date;
+  endTime: Date;
   deliveryMethod: "SHIP" | "PICKUP" | "BOTH";
   pickupCity?: string | null;
   upsellsCount: number;
@@ -81,16 +80,15 @@ export function AuctionFormSummary({
   reservePrice,
   hasBuyNow,
   buyNowPrice,
-  duration,
-  startDate,
-  endTimeOfDay,
+  startTime,
+  endTime,
   deliveryMethod,
   pickupCity,
   upsellsCount,
 }: AuctionFormSummaryProps) {
   const t = useTranslations("auction");
-  const window = deriveAuctionWindow({ startDate, duration, endTimeOfDay });
-  const isScheduled = window.startTime.getTime() > Date.now() + SCHEDULED_THRESHOLD_MS;
+  const isScheduled = startTime.getTime() > Date.now() + SCHEDULED_THRESHOLD_MS;
+  const duration = deriveDurationDays(startTime, endTime);
   const firstImage = images[0];
 
   const plainDescription = description ? stripHtml(description) : "";
@@ -178,12 +176,12 @@ export function AuctionFormSummary({
             {isScheduled && (
               <div className="mt-2.5">
                 <Row label={t("summaryStartsAt")} muted>
-                  {formatNLDateTime(window.startTime)}
+                  {formatNLDateTime(startTime)}
                 </Row>
               </div>
             )}
             <div className="mt-2.5">
-              <Row label={t("summaryEndsAt")}>{formatNLDateTime(window.endTime)}</Row>
+              <Row label={t("summaryEndsAt")}>{formatNLDateTime(endTime)}</Row>
             </div>
           </div>
 

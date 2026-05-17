@@ -145,9 +145,12 @@ export type ActiveActivity = {
 
 export async function fetchActiveActivity(userId: string): Promise<ActiveActivity> {
   const [auctions, listings, claimsales, myAuctions] = await Promise.all([
-    prisma.auction.count({ where: { sellerId: userId, status: "ACTIVE" } }),
+    // Auctions + claimsales tellen ook SCHEDULED mee — die zijn "in de pijplijn"
+    // en horen in de nav-badge naast de echt-lopende items. Listings hebben geen
+    // SCHEDULED-state.
+    prisma.auction.count({ where: { sellerId: userId, status: { in: ["ACTIVE", "SCHEDULED"] } } }),
     prisma.listing.count({ where: { sellerId: userId, status: "ACTIVE" } }),
-    prisma.claimsale.count({ where: { sellerId: userId, status: "LIVE" } }),
+    prisma.claimsale.count({ where: { sellerId: userId, status: { in: ["LIVE", "SCHEDULED"] } } }),
     prisma.auction.findMany({
       where: { status: "ACTIVE", bids: { some: { bidderId: userId } } },
       select: {

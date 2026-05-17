@@ -18,9 +18,9 @@ const STEPS: Array<{
 }> = [
   { key: "basis", labelKey: "progressBasis", icon: FileText },
   { key: "inhoud", labelKey: "progressInhoud", icon: LayoutGrid },
+  { key: "timing", labelKey: "progressTiming", icon: Clock },
   { key: "verzending", labelKey: "progressVerzending", icon: Truck },
   { key: "promotie", labelKey: "progressPromotie", icon: Megaphone },
-  { key: "timing", labelKey: "progressTiming", icon: Clock },
 ];
 
 export function ClaimsaleFormProgress({ completed }: ClaimsaleFormProgressProps) {

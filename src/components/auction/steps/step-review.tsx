@@ -19,9 +19,10 @@ import {
   Sparkles,
   RotateCcw,
   Info,
+  Lock,
 } from "lucide-react";
 import type { AuctionType, UpsellType } from "@/types";
-import { deriveAuctionWindow, formatNLDateTime, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
+import { deriveDurationDays, formatNLDateTime, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
 import { calculateLabelCost, type LabelColor, type LabelType } from "@/lib/auction/labels";
@@ -49,9 +50,8 @@ interface AuctionFormData {
   productType: string;
   itemCategory: string;
   startingBid: number | null;
-  duration: number;
-  startDate: Date;
-  endTimeOfDay: string;
+  startTime: Date;
+  endTime: Date;
   hasReserve: boolean;
   reservePrice: number | null;
   hasBuyNow: boolean;
@@ -157,12 +157,9 @@ export function AuctionPreview({
   const [lightbox, setLightbox] = useState(false);
   const images = form.images;
 
-  const window = deriveAuctionWindow({
-    startDate: form.startDate,
-    duration: form.duration,
-    endTimeOfDay: form.endTimeOfDay,
-  });
-  const isScheduled = window.startTime.getTime() > Date.now() + SCHEDULED_THRESHOLD_MS;
+  const auctionWindow = { startTime: form.startTime, endTime: form.endTime };
+  const isScheduled = auctionWindow.startTime.getTime() > Date.now() + SCHEDULED_THRESHOLD_MS;
+  const durationDays = deriveDurationDays(auctionWindow.startTime, auctionWindow.endTime);
 
   const startBid = form.startingBid ?? 0;
   const reserve = form.hasReserve && form.reservePrice ? form.reservePrice : null;
@@ -395,11 +392,11 @@ export function AuctionPreview({
         <SectionCard icon={Calendar} title={t("stepTiming")}>
           <dl className="space-y-2">
             <InfoRow label={t("duration")}>
-              {form.duration} {t("days")}
+              {durationDays} {t("days")}
             </InfoRow>
-            <InfoRow label={t("summaryStartsAt")}>{formatNLDateTime(window.startTime)}</InfoRow>
+            <InfoRow label={t("summaryStartsAt")}>{formatNLDateTime(auctionWindow.startTime)}</InfoRow>
             <InfoRow label={t("summaryEndsAt")} emphasize>
-              {formatNLDateTime(window.endTime)}
+              {formatNLDateTime(auctionWindow.endTime)}
             </InfoRow>
           </dl>
           <div
@@ -416,8 +413,15 @@ export function AuctionPreview({
             />
             <p className={isScheduled ? "text-amber-800 dark:text-amber-300" : "text-emerald-800 dark:text-emerald-300"}>
               {isScheduled
-                ? t("reviewScheduledExplain", { date: formatNLDateTime(window.startTime) })
+                ? t("reviewScheduledExplain", { date: formatNLDateTime(auctionWindow.startTime) })
                 : t("reviewInstantExplain")}
+            </p>
+          </div>
+          <div className="mt-2 flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-2.5 text-xs text-muted-foreground">
+            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <p>
+              Startdatum en eindtijd staan vast zodra je de veiling publiceert. Alleen de
+              looptijd kun je later nog aanpassen via <span className="font-medium text-foreground">Mijn veilingen</span>.
             </p>
           </div>
         </SectionCard>

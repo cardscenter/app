@@ -1,52 +1,84 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Calendar, Clock, Sparkles } from "lucide-react";
+import { Calendar, Clock, ThumbsUp, Info, AlertTriangle } from "lucide-react";
 import {
-  deriveAuctionWindow,
   formatNLDateTime,
-  isSweetSpot,
+  formatNLDateTimeLocal,
+  parseNLDateTimeLocal,
+  rateAuctionEndTime,
   MAX_SCHEDULE_DAYS_AHEAD,
-  SCHEDULED_THRESHOLD_MS,
+  MAX_AUCTION_DURATION_MS,
 } from "@/lib/auction/timing";
 
 interface StepTimingProps {
-  startDate: Date;
-  duration: number;
-  endTimeOfDay: string;
+  startTime: Date;
+  endTime: Date;
   onChange: (field: string, value: unknown) => void;
 }
 
-const DURATIONS = [3, 5, 7, 14];
-
-function toDateInputValue(date: Date): string {
-  // Format als yyyy-mm-dd in UTC (de form-state houdt midnight-UTC voor de
-  // gekozen NL-kalenderdag).
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+function formatDurationLabel(startTime: Date, endTime: Date): string {
+  const diffMs = endTime.getTime() - startTime.getTime();
+  if (diffMs <= 0) return "—";
+  const totalMinutes = Math.round(diffMs / 60000);
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} ${days === 1 ? "dag" : "dagen"}`);
+  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "uur" : "uur"}`);
+  if (days === 0 && minutes > 0) parts.push(`${minutes} min`);
+  return parts.length > 0 ? parts.join(" en ") : "—";
 }
 
-function fromDateInputValue(value: string): Date {
-  // "yyyy-mm-dd" → midnight UTC voor die dag.
-  const [y, m, d] = value.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
-}
-
-export function StepTiming({ startDate, duration, endTimeOfDay, onChange }: StepTimingProps) {
+export function StepTiming({ startTime, endTime, onChange }: StepTimingProps) {
   const t = useTranslations("auction");
 
-  // Min/max voor date-input — vandaag t/m vandaag + 5d in NL-kalender.
-  // Voor de input gebruiken we de UTC-getters omdat we Date als
-  // calendar-day-in-NL representeren.
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  const maxDate = new Date(today.getTime() + MAX_SCHEDULE_DAYS_AHEAD * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const maxStart = new Date(now.getTime() + MAX_SCHEDULE_DAYS_AHEAD * 24 * 60 * 60 * 1000);
+  // Calendar-cap: exact 14 dagen vanaf de starttijd zodat het laatste
+  // selecteerbare moment "14 dagen om dezelfde tijd" is. Server hanteert
+  // nog steeds < 15 dagen als hard limit.
+  const maxEnd = new Date(startTime.getTime() + 14 * 24 * 60 * 60 * 1000);
+  // Min voor endTime = max(startTime + 1u, now + 1u) — voorkomt eindtijden in
+  // het verleden of trivial-flash-veilingen.
+  const minEnd = new Date(Math.max(startTime.getTime() + 60 * 60 * 1000, now.getTime() + 60 * 60 * 1000));
 
-  const window = deriveAuctionWindow({ startDate, duration, endTimeOfDay });
-  const isInstant = window.startTime.getTime() <= Date.now() + SCHEDULED_THRESHOLD_MS;
-  const sweetSpot = isSweetSpot(endTimeOfDay);
+  const rating = rateAuctionEndTime(endTime);
+  const ratingClasses = {
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-200",
+    sky: "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/50 dark:bg-sky-950/30 dark:text-sky-200",
+    slate: "border-border bg-muted/40 text-foreground",
+    amber: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200",
+    rose: "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800/50 dark:bg-rose-950/30 dark:text-rose-200",
+  }[rating.tone];
+  const RatingIcon = rating.score >= 4 ? ThumbsUp : rating.score === 3 ? Info : AlertTriangle;
+
+  const durationLabel = formatDurationLabel(startTime, endTime);
+  const tooShort = endTime.getTime() - startTime.getTime() < 60 * 60 * 1000;
+  const tooLong = endTime.getTime() - startTime.getTime() >= MAX_AUCTION_DURATION_MS;
+
+  function handleStartChange(value: string) {
+    if (!value) return;
+    const newStart = parseNLDateTimeLocal(value);
+    if (Number.isNaN(newStart.getTime())) return;
+    onChange("startTime", newStart);
+    // Als endTime nu binnen 1u na start of zelfs vóór start ligt, schuif 'm
+    // naar start + huidige duration (of min 1u). Behoudt de gewenste lengte
+    // van de seller als die al een goed eindmoment had ingesteld.
+    const currentDuration = endTime.getTime() - startTime.getTime();
+    const adjustedEnd = new Date(newStart.getTime() + Math.max(currentDuration, 60 * 60 * 1000));
+    if (adjustedEnd.getTime() !== endTime.getTime()) {
+      onChange("endTime", adjustedEnd);
+    }
+  }
+
+  function handleEndChange(value: string) {
+    if (!value) return;
+    const newEnd = parseNLDateTimeLocal(value);
+    if (Number.isNaN(newEnd.getTime())) return;
+    onChange("endTime", newEnd);
+  }
 
   return (
     <div className="space-y-6">
@@ -56,89 +88,73 @@ export function StepTiming({ startDate, duration, endTimeOfDay, onChange }: Step
       </div>
       <p className="text-sm text-muted-foreground">{t("timingIntro")}</p>
 
-      {/* Startdatum */}
+      {/* Starttijd */}
       <div>
-        <label htmlFor="startDate" className="block text-sm font-medium text-foreground">
-          {t("startDateLabel")}
+        <label htmlFor="startTime" className="block text-sm font-medium text-foreground">
+          Starttijd
         </label>
         <input
-          id="startDate"
-          type="date"
-          min={toDateInputValue(today)}
-          max={toDateInputValue(maxDate)}
-          value={toDateInputValue(startDate)}
-          onChange={(e) => {
-            if (e.target.value) onChange("startDate", fromDateInputValue(e.target.value));
-          }}
-          className="mt-1 block w-56 glass-input px-3 py-2.5 text-foreground"
+          id="startTime"
+          type="datetime-local"
+          min={formatNLDateTimeLocal(now)}
+          max={formatNLDateTimeLocal(maxStart)}
+          value={formatNLDateTimeLocal(startTime)}
+          onChange={(e) => handleStartChange(e.target.value)}
+          step={60}
+          className="mt-1 block w-64 glass-input px-3 py-2.5 text-foreground"
         />
-        <p className="mt-1 text-xs text-muted-foreground">{t("startDateHelp")}</p>
-      </div>
-
-      {/* Looptijd */}
-      <div>
-        <label className="block text-sm font-medium text-foreground">{t("duration")}</label>
-        <div className="mt-2 flex flex-wrap gap-3">
-          {DURATIONS.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => onChange("duration", d)}
-              className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-all ${
-                duration === d
-                  ? "border-primary bg-primary text-white shadow-md"
-                  : "glass-subtle text-foreground hover:bg-muted"
-              }`}
-            >
-              <Clock className="h-4 w-4" />
-              {d} {t("days")}
-            </button>
-          ))}
-        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Nu of tot {MAX_SCHEDULE_DAYS_AHEAD} dagen vooruit. Bij een starttijd binnen 5 minuten gaat de veiling direct live.
+        </p>
       </div>
 
       {/* Eindtijd */}
       <div>
-        <label htmlFor="endTimeOfDay" className="block text-sm font-medium text-foreground">
-          {t("endTimeLabel")}
-          <span className="ml-2 text-xs font-normal text-muted-foreground">{t("nlTimeBadge")}</span>
+        <label htmlFor="endTime" className="block text-sm font-medium text-foreground">
+          Eindtijd
         </label>
         <input
-          id="endTimeOfDay"
-          type="time"
-          value={endTimeOfDay}
-          onChange={(e) => onChange("endTimeOfDay", e.target.value)}
+          id="endTime"
+          type="datetime-local"
+          min={formatNLDateTimeLocal(minEnd)}
+          max={formatNLDateTimeLocal(maxEnd)}
+          value={formatNLDateTimeLocal(endTime)}
+          onChange={(e) => handleEndChange(e.target.value)}
           step={60}
-          className="mt-1 block w-32 glass-input px-3 py-2.5 text-foreground"
+          className="mt-1 block w-64 glass-input px-3 py-2.5 text-foreground"
         />
-
-        {/* Sweet-spot-hint */}
-        <div
-          className={`mt-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
-            sweetSpot
-              ? "border-primary bg-primary/5 text-foreground"
-              : "border-border bg-muted/40 text-muted-foreground"
-          }`}
-        >
-          <div className="flex items-start gap-2">
-            <Sparkles className={`mt-0.5 h-4 w-4 shrink-0 ${sweetSpot ? "text-primary" : "text-muted-foreground"}`} />
-            <span>{t("sweetSpotHint")}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Live-preview */}
-      <div className="rounded-xl border border-border bg-card p-4 shadow-card">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("timingPreviewTitle")}</p>
-        <p className="mt-1 text-sm font-medium text-foreground">
-          {isInstant
-            ? t("instantStartHint", { endDate: formatNLDateTime(window.endTime) })
-            : t("startsOnPreview", { date: formatNLDateTime(window.startTime) })}
+        <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Clock className="h-3.5 w-3.5" />
+          Looptijd: <span className="font-medium text-foreground">{durationLabel}</span>
         </p>
-        {!isInstant && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("endsOnPreview", { date: formatNLDateTime(window.endTime) })}
-          </p>
+
+        {tooShort && (
+          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
+            De veiling moet minstens een uur duren.
+          </div>
+        )}
+        {tooLong && (
+          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
+            Een veiling mag niet 15 dagen of langer duren.
+          </div>
+        )}
+
+        {/* Eindmoment-advies */}
+        {!tooShort && !tooLong && (
+          <div className={`mt-3 rounded-xl border px-4 py-3 text-sm transition-colors ${ratingClasses}`}>
+            <div className="flex items-start gap-2.5">
+              <RatingIcon className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <span className="font-semibold">{rating.label}</span>
+                <p className="text-xs opacity-90">
+                  Eindigt op <span className="font-medium">{formatNLDateTime(endTime)}</span>.
+                </p>
+                {rating.recommendation && (
+                  <p className="text-xs leading-relaxed">{rating.recommendation}</p>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
