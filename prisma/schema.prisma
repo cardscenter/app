@@ -744,7 +744,8 @@ model ClaimsaleItem {
   // 5min lock pakken (effectief: indefinite-renewal). Nu trackt deze stamp het
   // laatste unclaim-moment; in `claimItem` cappen we de totaal-alive-time per
   // user+item op een hard window zodat de exploit niet werkt.
-  lastUnclaimAt DateTime?
+  lastUnclaimAt     DateTime?
+  lastUnclaimedById String?  // wie het laatst unclaim'de — voor "same user reclaim"-detectie
 
   refundedAt   DateTime? // Set when seller refunds this item
 

@@ -10,12 +10,33 @@ import { publish, userChannel, auctionChannel } from "@/lib/realtime";
  * (the one with the highest maxAmount), then recurses if needed.
  *
  * Returns the final highest bid amount after all autobid resolutions.
+ *
+ * Fase 40 — recursion depth-guard: in theorie kan een active veiling met veel
+ * autobids leiden tot diepe recursie (Node.js stack-limiet ~10k frames maar
+ * we willen het ruim daaronder houden). 50 is meer dan genoeg voor elk
+ * realistisch scenario; bij overschrijding deactiveren we ALLE resterende
+ * autobids op deze veiling als safety-fallback en stoppen — voorkomt
+ * pathologische loops + flagt voor admin-onderzoek.
  */
+const AUTOBID_MAX_DEPTH = 50;
+
 export async function resolveAutoBids(
   auctionId: string,
   currentBidAmount: number,
-  currentBidderId: string
+  currentBidderId: string,
+  depth: number = 0,
 ): Promise<{ finalBid: number; finalBidderId: string }> {
+  if (depth >= AUTOBID_MAX_DEPTH) {
+    console.warn(
+      `[resolveAutoBids] Hit max recursion depth (${AUTOBID_MAX_DEPTH}) on auction ${auctionId}. Deactivating remaining autobids as safety fallback.`,
+    );
+    await prisma.autoBid.updateMany({
+      where: { auctionId, isActive: true },
+      data: { isActive: false },
+    });
+    return { finalBid: currentBidAmount, finalBidderId: currentBidderId };
+  }
+
   // Find active autobids from OTHER users that can still outbid
   const nextBid = getMinimumNextBid(currentBidAmount);
 
@@ -74,7 +95,7 @@ export async function resolveAutoBids(
       `/nl/veilingen/${auctionId}`
     );
     // Try next autobidder
-    return resolveAutoBids(auctionId, currentBidAmount, currentBidderId);
+    return resolveAutoBids(auctionId, currentBidAmount, currentBidderId, depth + 1);
   }
 
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
@@ -151,5 +172,5 @@ export async function resolveAutoBids(
   }
 
   // Check if there are competing autobids that might outbid this one
-  return resolveAutoBids(auctionId, autobidAmount, winner.userId);
+  return resolveAutoBids(auctionId, autobidAmount, winner.userId, depth + 1);
 }

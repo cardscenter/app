@@ -581,8 +581,10 @@ export async function expireClaimedItems(claimsaleId?: string) {
   });
 
   // Reset items to AVAILABLE and delete associated cart items in transaction.
-  // checkoutLockExpiresAt op null zetten zodat een volgende claimer een
-  // nieuwe one-shot lock kan zetten bij hun checkout.
+  // checkoutLockExpiresAt op null zetten zodat een volgende claimer (welke
+  // dan ook) een nieuwe one-shot lock kan zetten — dit is een systeem-
+  // initiated expire (15min was om), geen same-user unclaim, dus unclaim-
+  // history ook clearen.
   await prisma.$transaction([
     prisma.claimsaleItem.updateMany({
       where: { id: { in: expiredIds } },
@@ -591,6 +593,8 @@ export async function expireClaimedItems(claimsaleId?: string) {
         claimedAt: null,
         claimedById: null,
         checkoutLockExpiresAt: null,
+        lastUnclaimAt: null,
+        lastUnclaimedById: null,
       },
     }),
     prisma.cartItem.deleteMany({
@@ -672,22 +676,53 @@ export async function claimItem(claimsaleItemId: string) {
 
   try {
     await prisma.$transaction(async (tx) => {
-      // Atomically claim the item (race condition protection). Reset
-      // checkoutLockExpiresAt: defensief, voor het geval een eerdere
-      // claim-cycle de lock niet had opgeruimd. Nieuwe claimer krijgt
-      // bij z'n checkout een verse one-shot lock.
-      const updated = await tx.claimsaleItem.updateMany({
-        where: { id: claimsaleItemId, status: "AVAILABLE" },
+      // Fase 40 — Two-path claim om anti-renewal-exploit te dichten:
+      //
+      //   Fresh-claim (geen recente unclaim of door ander unclaim'd):
+      //     reset checkoutLockExpiresAt + clear unclaim-history zodat deze
+      //     user bij checkout een verse one-shot lock kan pakken.
+      //
+      //   Same-user reclaim (lastUnclaimedById === userId):
+      //     behoud bestaande checkoutLockExpiresAt zodat dezelfde user niet
+      //     via unclaim+reclaim een nieuwe lock kan pakken. Hun reclaim mag,
+      //     maar geen nieuwe lock-window.
+      const freshClaim = await tx.claimsaleItem.updateMany({
+        where: {
+          id: claimsaleItemId,
+          status: "AVAILABLE",
+          OR: [
+            { lastUnclaimedById: null },
+            { lastUnclaimedById: { not: userId } },
+          ],
+        },
         data: {
           status: "CLAIMED",
           claimedAt: now,
           claimedById: userId,
           checkoutLockExpiresAt: null,
+          lastUnclaimAt: null,
+          lastUnclaimedById: null,
         },
       });
 
-      if (updated.count === 0) {
-        throw new Error("ALREADY_CLAIMED");
+      if (freshClaim.count === 0) {
+        // Same-user-reclaim-pad: alleen status + claimedAt updaten, lock blijft.
+        const reclaim = await tx.claimsaleItem.updateMany({
+          where: {
+            id: claimsaleItemId,
+            status: "AVAILABLE",
+            lastUnclaimedById: userId,
+          },
+          data: {
+            status: "CLAIMED",
+            claimedAt: now,
+            claimedById: userId,
+            // checkoutLockExpiresAt: NIET resetten — anti-exploit
+          },
+        });
+        if (reclaim.count === 0) {
+          throw new Error("ALREADY_CLAIMED");
+        }
       }
 
       // Note: each claim keeps its own per-item timer. We intentionally do NOT
@@ -764,17 +799,45 @@ export async function claimAllItems(claimsaleId: string) {
   const itemIds = itemsToClaim.map((i) => i.id);
 
   await prisma.$transaction(async (tx) => {
-    // Atomically claim all items. Reset checkoutLockExpiresAt defensief
-    // (zie claimItem voor uitleg).
-    const updated = await tx.claimsaleItem.updateMany({
-      where: { id: { in: itemIds }, status: "AVAILABLE" },
+    // Fase 40 — Anti-renewal-exploit (zie claimItem): items waar deze user
+    // de laatste unclaimer was houden hun bestaande checkoutLockExpiresAt
+    // (geen fresh lock-window). Andere items krijgen een verse one-shot lock.
+    const freshClaim = await tx.claimsaleItem.updateMany({
+      where: {
+        id: { in: itemIds },
+        status: "AVAILABLE",
+        OR: [
+          { lastUnclaimedById: null },
+          { lastUnclaimedById: { not: userId } },
+        ],
+      },
       data: {
         status: "CLAIMED",
         claimedAt: now,
         claimedById: userId,
         checkoutLockExpiresAt: null,
+        lastUnclaimAt: null,
+        lastUnclaimedById: null,
       },
     });
+
+    // Same-user reclaim: lock blijft staan zoals 'ie was
+    const reclaim = await tx.claimsaleItem.updateMany({
+      where: {
+        id: { in: itemIds },
+        status: "AVAILABLE",
+        lastUnclaimedById: userId,
+      },
+      data: {
+        status: "CLAIMED",
+        claimedAt: now,
+        claimedById: userId,
+      },
+    });
+
+    // Totale gewijzigde count = fresh + reclaim (sommige items konden in
+    // tussentijd door anderen geclaimd zijn → tellen niet mee).
+    const updated = { count: freshClaim.count + reclaim.count };
 
     // Reset ALL existing claim timers for this user (items not in this batch)
     await tx.claimsaleItem.updateMany({
@@ -832,6 +895,12 @@ export async function unclaimItem(claimsaleItemId: string) {
     return { error: "Dit item is niet door jou geclaimd" };
   }
 
+  // Fase 40 — Anti-renewal-exploit: bij unclaim leggen we `lastUnclaimAt` +
+  // `lastUnclaimedById` vast. De checkout-lock op de item-rij (`checkoutLock
+  // ExpiresAt`) blijft staan ZOLANG dezelfde user 'm vasthoudt — pas wanneer
+  // een ANDERE user 'm reclaimt wordt de lock-state resetbaar (in claimItem).
+  // Zo kan dezelfde user niet eindeloos via unclaim+reclaim een nieuwe
+  // 5min-lock pakken.
   await prisma.$transaction([
     prisma.claimsaleItem.update({
       where: { id: claimsaleItemId },
@@ -839,7 +908,9 @@ export async function unclaimItem(claimsaleItemId: string) {
         status: "AVAILABLE",
         claimedAt: null,
         claimedById: null,
-        checkoutLockExpiresAt: null,
+        // checkoutLockExpiresAt: NIET resetten — anti-exploit (zie comment)
+        lastUnclaimAt: new Date(),
+        lastUnclaimedById: userId,
       },
     }),
     prisma.cartItem.deleteMany({

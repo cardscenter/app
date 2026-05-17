@@ -7,6 +7,7 @@ import { computeEditScope, type EditScope } from "@/lib/auction/edit-scope";
 import { checkAuctionLimit } from "@/lib/account-limits";
 import { getMinimumNextBid, ANTI_SNIPE_MINUTES, ANTI_SNIPE_EXTENSION_MINUTES } from "@/lib/auction/bid-increments";
 import { creditBalance, deductBalance, deductBidPayment, escrowCredit } from "@/actions/wallet";
+import { deductBidPaymentInTx, escrowCreditInTx } from "@/lib/wallet-internal";
 import { calculateBidFees } from "@/lib/auction/fees";
 import { resolveAutoBids } from "@/lib/auction/autobid";
 import { createNotification } from "@/actions/notification";
@@ -702,139 +703,170 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
   // bids, BuyNow zonder bids). Rate-bron: AUCTION_BUYER_PREMIUM_RATE.
   const buyNowFees = calculateBidFees(auction.buyNowPrice);
 
-  if (available >= buyNowFees.total) {
-    // Full payment — immediate purchase. Premium gaat naar platform via
-    // deductBidPayment, escrow voor seller blijft het bid-deel.
-    await deductBidPayment(
-      session.user.id,
-      buyNowFees.bid,
-      buyNowFees.premium,
-      `Direct gekocht: ${auction.title}`,
-      auctionId,
-    );
-    await escrowCredit(auction.sellerId, auction.buyNowPrice, `Verkocht (direct kopen): ${auction.title}`);
+  // Fase 40 — Race-safe buyNow. De vorige flow had twee gaps:
+  //  (a) status-check + auction.update waren NIET atomic — een gelijktijdige
+  //      finalize-cron of een 2e buyNow-tab kon ertussen flippen.
+  //  (b) Bij full-payment was de volgorde: deductBidPayment → escrowCredit →
+  //      auction.update → bundle.create. Failure op 3 betekende balance al weg
+  //      maar geen geldige auction. Dit was bekende risico.
+  //
+  // Nu: één $transaction met:
+  //  1. Atomic claim via `updateMany WHERE status="ACTIVE" AND endTime > now
+  //     AND buyNowPrice IS NOT NULL` — als count=0 bail met user-friendly error
+  //  2. Wallet-mutaties via wallet-internal tx-helpers (geen publish hier)
+  //  3. Bundle-create
+  // Realtime events + notifications + syncReservedBalance erna (idempotent).
 
-    await prisma.auction.update({
-      where: { id: auctionId },
-      data: {
-        status: "BOUGHT_NOW",
-        winnerId: session.user.id,
-        finalPrice: auction.buyNowPrice,
-        paymentStatus: "PAID",
-      },
-    });
+  try {
+    if (available >= buyNowFees.total) {
+      // FULL PAYMENT — direct PAID
+      await prisma.$transaction(async (tx) => {
+        const claim = await tx.auction.updateMany({
+          where: {
+            id: auctionId,
+            status: "ACTIVE",
+            endTime: { gt: new Date() },
+            buyNowPrice: { not: null },
+          },
+          data: {
+            status: "BOUGHT_NOW",
+            winnerId: session.user.id,
+            finalPrice: buyNowPrice,
+            paymentStatus: "PAID",
+          },
+        });
+        if (claim.count === 0) throw new Error("AUCTION_NOT_AVAILABLE");
 
-    // ShippingBundle. Voor SHIP: address verplicht (gegarandeerd door check
-    // hierboven). Voor PICKUP: address mag null, deliveryMethod=PICKUP zodat
-    // de pickup-flow (PickupSchedule, code-confirm) bekend werkt.
-    await prisma.shippingBundle.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        buyerId: session.user.id,
-        sellerId: auction.sellerId,
-        shippingCost: 0,
-        totalItemCost: auction.buyNowPrice,
-        totalCost: auction.buyNowPrice,
-        status: "PAID",
-        auctionId,
-        deliveryMethod: chosenDelivery,
-        paymentMode: "PLATFORM",
-        buyerStreet: chosenDelivery === "SHIP" ? user.street! : null,
-        buyerHouseNumber: chosenDelivery === "SHIP" ? user.houseNumber : null,
-        buyerPostalCode: chosenDelivery === "SHIP" ? user.postalCode! : null,
-        buyerCity: chosenDelivery === "SHIP" ? user.city! : null,
-        buyerCountry: chosenDelivery === "SHIP" ? user.country : null,
-      },
-    });
-
-    // Notify seller about buy-now sale
-    await createNotification(
-      auction.sellerId,
-      "ORDER_PAID",
-      chosenDelivery === "PICKUP" ? "Veiling direct gekocht — ophalen" : "Veiling direct gekocht!",
-      `"${auction.title}" is direct gekocht voor €${auction.buyNowPrice.toFixed(2)}. ${chosenDelivery === "PICKUP" ? "Stem de ophaal-afspraak af in chat." : "Bekijk je verkopen om te verzenden."}`,
-      "/dashboard/verkopen"
-    );
-
-    // Fase 27.98: sync buyer's reservedBalance. Een eerdere bid op deze
-    // auction (eerste bod, daarna buyNow) blijft als bid-record bestaan, maar
-    // status is nu BOUGHT_NOW. Zonder sync zou recalculateTotalReserved bij
-    // een latere balance-actie het correct opruimen, maar het is netter om
-    // het hier expliciet te doen zodat de UI direct juiste cijfers toont.
-    await syncReservedBalance(session.user.id);
-  } else {
-    // Partial payment — reserve 10% (Fase 30), give 5-day deadline. Bij niet-
-    // betalen na 5d activeert auction-payment-deadline cron forfait + strike
-    // voor amounts ≥ €2000 (Fase 31).
-    const paymentDeadline = new Date();
-    paymentDeadline.setDate(paymentDeadline.getDate() + 5);
-
-    // Atomic: auction-flip + bid-record + pending-bundle in één $transaction
-    // (audit-fix Fase 31). Voorheen waren dit 3 sequentiële prisma-calls;
-    // bij failure tussen stap 1 en 3 ontstond een orphaned auction in
-    // AWAITING_PAYMENT zonder bid-record waardoor de cron-rotatie geen
-    // runner-up vond. syncReservedBalance blijft buiten de transactie omdat
-    // het een afgeleide herberekening is (idempotent — kan later herhaald).
-    await prisma.$transaction(async (tx) => {
-      await tx.auction.update({
-        where: { id: auctionId },
-        data: {
-          status: "BOUGHT_NOW",
-          winnerId: session.user.id,
-          finalPrice: buyNowPrice,
-          paymentStatus: "AWAITING_PAYMENT",
-          paymentDeadline,
-        },
-      });
-
-      await tx.auctionBid.create({
-        data: { auctionId, bidderId: session.user.id, amount: buyNowPrice },
-      });
-
-      // Pre-create PENDING ShippingBundle (Fase 27.93). Inline omdat
-      // createPendingBundle een eigen prisma.shippingBundle.create doet
-      // buiten onze tx — we herhalen die logica hier zodat het atomic blijft.
-      await tx.shippingBundle.create({
-        data: {
-          orderNumber: generateOrderNumber(),
-          buyerId: session.user.id,
-          sellerId: auction.sellerId,
-          shippingCost: 0,
-          totalItemCost: buyNowPrice,
-          totalCost: buyNowPrice,
-          status: "PENDING",
+        // Wallet: bid + premium af van koper, escrow vol bedrag naar seller
+        await deductBidPaymentInTx(
+          tx,
+          session.user.id,
+          buyNowFees.bid,
+          buyNowFees.premium,
+          `Direct gekocht: ${auction.title}`,
           auctionId,
-          deliveryMethod: chosenDelivery,
-          buyerStreet: chosenDelivery === "SHIP" ? user.street ?? null : null,
-          buyerHouseNumber: chosenDelivery === "SHIP" ? user.houseNumber ?? null : null,
-          buyerPostalCode: chosenDelivery === "SHIP" ? user.postalCode ?? null : null,
-          buyerCity: chosenDelivery === "SHIP" ? user.city ?? null : null,
-          buyerCountry: chosenDelivery === "SHIP" ? user.country ?? null : null,
-        },
+        );
+        await escrowCreditInTx(
+          tx,
+          auction.sellerId,
+          buyNowPrice,
+          `Verkocht (direct kopen): ${auction.title}`,
+        );
+
+        // ShippingBundle — PAID-state, geen verzending nodig op auctions
+        // dus shippingCost=0 (Fase 27).
+        await tx.shippingBundle.create({
+          data: {
+            orderNumber: generateOrderNumber(),
+            buyerId: session.user.id,
+            sellerId: auction.sellerId,
+            shippingCost: 0,
+            totalItemCost: buyNowPrice,
+            totalCost: buyNowPrice,
+            status: "PAID",
+            auctionId,
+            deliveryMethod: chosenDelivery,
+            paymentMode: "PLATFORM",
+            buyerStreet: chosenDelivery === "SHIP" ? user.street! : null,
+            buyerHouseNumber: chosenDelivery === "SHIP" ? user.houseNumber : null,
+            buyerPostalCode: chosenDelivery === "SHIP" ? user.postalCode! : null,
+            buyerCity: chosenDelivery === "SHIP" ? user.city! : null,
+            buyerCountry: chosenDelivery === "SHIP" ? user.country : null,
+          },
+        });
       });
-    });
 
-    // Idempotente reserve-recalculatie buiten de tx — leest bid-records
-    // die binnen de tx zijn aangemaakt. Bij hier-falen blijft de DB consistent;
-    // syncReservedBalance kan opnieuw vanuit een andere actie of via cron.
-    await syncReservedBalance(session.user.id);
+      // Post-commit side effects
+      publish(userChannel(session.user.id), { type: "balance-changed", payload: {} });
 
-    await createNotification(
-      session.user.id,
-      "AUCTION_WIN",
-      "Direct gekocht — betaling vereist",
-      `Je hebt "${auction.title}" direct gekocht voor €${auction.buyNowPrice.toFixed(2)}. Rond de betaling af binnen 5 dagen.`,
-      `/nl/dashboard/aankopen`
-    );
+      await createNotification(
+        auction.sellerId,
+        "ORDER_PAID",
+        chosenDelivery === "PICKUP" ? "Veiling direct gekocht — ophalen" : "Veiling direct gekocht!",
+        `"${auction.title}" is direct gekocht voor €${buyNowPrice.toFixed(2)}. ${chosenDelivery === "PICKUP" ? "Stem de ophaal-afspraak af in chat." : "Bekijk je verkopen om te verzenden."}`,
+        "/dashboard/verkopen"
+      );
 
-    // Notify seller — pending sale, payment not in yet
-    await createNotification(
-      auction.sellerId,
-      "ITEM_SOLD",
-      "Veiling direct gekocht — wachten op betaling",
-      `"${auction.title}" is direct gekocht voor €${auction.buyNowPrice.toFixed(2)} maar de koper moet nog betalen. Verzend pas zodra de betaling binnen is (5 dagen deadline).`,
-      `/nl/veilingen/${auctionId}`
-    );
+      // Sync buyer's reservedBalance — een eerdere bid op deze auction blijft
+      // als bid-record bestaan maar status is nu BOUGHT_NOW. Idempotent.
+      await syncReservedBalance(session.user.id);
+    } else {
+      // PARTIAL PAYMENT — 5d-deadline + AWAITING_PAYMENT
+      const paymentDeadline = new Date();
+      paymentDeadline.setDate(paymentDeadline.getDate() + 5);
+
+      await prisma.$transaction(async (tx) => {
+        const claim = await tx.auction.updateMany({
+          where: {
+            id: auctionId,
+            status: "ACTIVE",
+            endTime: { gt: new Date() },
+            buyNowPrice: { not: null },
+          },
+          data: {
+            status: "BOUGHT_NOW",
+            winnerId: session.user.id,
+            finalPrice: buyNowPrice,
+            paymentStatus: "AWAITING_PAYMENT",
+            paymentDeadline,
+          },
+        });
+        if (claim.count === 0) throw new Error("AUCTION_NOT_AVAILABLE");
+
+        await tx.auctionBid.create({
+          data: { auctionId, bidderId: session.user.id, amount: buyNowPrice },
+        });
+
+        // Pre-create PENDING bundle zodat completeAuctionPayment 'm later
+        // kan promoten naar PAID (auctionId @unique).
+        await tx.shippingBundle.create({
+          data: {
+            orderNumber: generateOrderNumber(),
+            buyerId: session.user.id,
+            sellerId: auction.sellerId,
+            shippingCost: 0,
+            totalItemCost: buyNowPrice,
+            totalCost: buyNowPrice,
+            status: "PENDING",
+            auctionId,
+            deliveryMethod: chosenDelivery,
+            buyerStreet: chosenDelivery === "SHIP" ? user.street ?? null : null,
+            buyerHouseNumber: chosenDelivery === "SHIP" ? user.houseNumber ?? null : null,
+            buyerPostalCode: chosenDelivery === "SHIP" ? user.postalCode ?? null : null,
+            buyerCity: chosenDelivery === "SHIP" ? user.city ?? null : null,
+            buyerCountry: chosenDelivery === "SHIP" ? user.country ?? null : null,
+          },
+        });
+      });
+
+      // Post-commit: reserve-sync (idempotent), notifications
+      await syncReservedBalance(session.user.id);
+
+      await createNotification(
+        session.user.id,
+        "AUCTION_WIN",
+        "Direct gekocht — betaling vereist",
+        `Je hebt "${auction.title}" direct gekocht voor €${buyNowPrice.toFixed(2)}. Rond de betaling af binnen 5 dagen.`,
+        `/nl/dashboard/aankopen`
+      );
+
+      await createNotification(
+        auction.sellerId,
+        "ITEM_SOLD",
+        "Veiling direct gekocht — wachten op betaling",
+        `"${auction.title}" is direct gekocht voor €${buyNowPrice.toFixed(2)} maar de koper moet nog betalen. Verzend pas zodra de betaling binnen is (5 dagen deadline).`,
+        `/nl/veilingen/${auctionId}`
+      );
+    }
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (msg === "AUCTION_NOT_AVAILABLE") {
+      return { error: "Deze veiling is net beëindigd of niet meer beschikbaar voor direct kopen." };
+    }
+    if (msg === "INSUFFICIENT_BALANCE") {
+      return { error: "Onvoldoende saldo. Je saldo is mogelijk net veranderd, probeer opnieuw." };
+    }
+    throw e;
   }
 
   // Release reserves for all other bidders
@@ -1405,6 +1437,11 @@ export async function cancelAuction(auctionId: string) {
 
   // Race-safe flip: ACTIVE/SCHEDULED → CANCELLED. Als er tussen het lezen en
   // schrijven toch een bod binnenkomt, willen we het annuleren tegenhouden.
+  //
+  // Fase 40 — orphan-cleanup: ruim defensief eventueel achtergebleven
+  // AuctionRunnerUpOffer (AWAITING_DECISION) + PENDING ShippingBundle op.
+  // Normaal kunnen die er niet zijn (cancelAuction vereist 0 bids), maar bij
+  // legacy-data of race met finalize blijft het anders als orphans staan.
   const result = await prisma.$transaction(async (tx) => {
     const fresh = await tx.auction.findUnique({
       where: { id: auctionId },
@@ -1420,6 +1457,21 @@ export async function cancelAuction(auctionId: string) {
     if (flipped.count === 0) {
       return { error: "Veiling kon niet geannuleerd worden — status is gewijzigd" } as const;
     }
+
+    // Defensief: AWAITING_DECISION runner-up offers expireren zodat de
+    // bidder geen stale notificatie of accept-knop ziet voor een
+    // gecancelde veiling.
+    await tx.auctionRunnerUpOffer.updateMany({
+      where: { auctionId, status: "AWAITING_DECISION" },
+      data: { status: "EXPIRED", decidedAt: new Date() },
+    });
+
+    // Defensief: PENDING ShippingBundle delete (geen escrow nog dus mag
+    // direct weg). PAID/SHIPPED bundles raken we nooit aan via cancel.
+    await tx.shippingBundle.deleteMany({
+      where: { auctionId, status: "PENDING" },
+    });
+
     return { success: true } as const;
   });
 
