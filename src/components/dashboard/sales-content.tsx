@@ -281,6 +281,14 @@ export function SalesContent({
           </div>
         ) : (
           <div className="space-y-4">
+            {/* (Fase 40) Heldere uitleg-banner zodat seller weet dat ze niets
+             *  hoeven te doen — de payment-deadline-cron handelt non-pay af. */}
+            <div className="rounded-xl border border-sky-200/60 bg-sky-50/60 p-3 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/30 dark:text-sky-200">
+              <p className="font-medium">{t("awaitingPaymentSectionTitle")}</p>
+              <p className="mt-0.5 text-xs text-sky-800/80 dark:text-sky-300/80">
+                {t("awaitingPaymentSectionBody")}
+              </p>
+            </div>
             {pendingAuctions.map((auction) => (
               <PendingAuctionCard key={auction.id} auction={auction} locale={locale} />
             ))}
@@ -518,8 +526,48 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
         />
       )}
 
-      {/* Collapsed hints */}
-      {!expanded && bundle.status === "PAID" && (
+      {/* Collapsed hints — (Fase 40) PAID krijgt urgency-aware countdown naar
+       * auto-cancel-deadline. Rood < 2d, amber 2-7d, blauw > 7d. Alleen voor
+       * SHIP-bundles — PICKUP heeft eigen reservation-timeout-flow. */}
+      {!expanded && bundle.status === "PAID" && !bundle.hasActiveCancellation && (() => {
+        const isShip = bundle.deliveryMethod === "SHIP";
+        if (!isShip) {
+          return (
+            <div className="border-t border-border/50 px-4 py-2">
+              <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+                <Package className="h-3.5 w-3.5" />
+                <span>{t("statusPaid")}</span>
+              </div>
+            </div>
+          );
+        }
+        const STALE_PAID_DAYS = 14;
+        const paid = new Date(bundle.createdAt);
+        const daysSincePaid = (Date.now() - paid.getTime()) / (1000 * 60 * 60 * 24);
+        const daysLeft = Math.max(0, Math.ceil(STALE_PAID_DAYS - daysSincePaid));
+        const tone =
+          daysLeft <= 2 ? "rose" : daysLeft <= 7 ? "amber" : "blue";
+        const toneClass =
+          tone === "rose"
+            ? "border-rose-200/60 bg-rose-50/60 text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"
+            : tone === "amber"
+            ? "border-amber-200/60 bg-amber-50/60 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200"
+            : "border-border/50 text-blue-600 dark:text-blue-400";
+        const Icon = tone === "rose" || tone === "amber" ? AlertTriangle : Package;
+        return (
+          <div className={`border-t px-4 py-2 ${toneClass}`}>
+            <div className="flex items-center gap-1.5 text-xs">
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="font-medium">
+                {t("shipDeadlineCountdown", { days: daysLeft })}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Active cancellation badge fallback voor PAID met actieve cancel */}
+      {!expanded && bundle.status === "PAID" && bundle.hasActiveCancellation && (
         <div className="border-t border-border/50 px-4 py-2">
           <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
             <Package className="h-3.5 w-3.5" />
