@@ -23,7 +23,7 @@ import {
   Info,
 } from "lucide-react";
 import Image from "next/image";
-import { OpenDisputeForm } from "./open-dispute-form";
+import { OpenDisputeV2Form } from "./open-dispute-v2-form";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
 import { OrderDetailModal } from "./order-detail-modal";
 import { PendingAuctionPayments } from "./pending-auction-payments";
@@ -697,7 +697,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                   onCancel={() => setShowDeliveryConfirm(false)}
                 />
               ) : showDisputeForm ? (
-                <OpenDisputeForm
+                <OpenDisputeV2Form
                   bundleId={bundle.id}
                   onCancel={() => setShowDisputeForm(false)}
                 />
