@@ -910,15 +910,54 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     const expired = await prisma.cancellationRequest.findMany({
       where: { status: "PENDING", expiresAt: { lt: now } },
       include: {
-        shippingBundle: { select: { id: true, orderNumber: true, buyerId: true, sellerId: true, status: true } },
+        shippingBundle: { select: { id: true, orderNumber: true, buyerId: true, sellerId: true, status: true, shippedAt: true } },
       },
     });
     let processed = 0;
+    let escalated = 0;
     for (const r of expired) {
-      await prisma.cancellationRequest.update({ where: { id: r.id }, data: { status: "EXPIRED" } });
-      await createNotification(r.proposedById, "NEW_MESSAGE", "Annuleringsverzoek verlopen",
-        `Je annuleringsverzoek voor bestelling ${r.shippingBundle.orderNumber} is verlopen omdat de wederpartij niet heeft gereageerd. De bestelling staat nog open.`,
-        "/dashboard/aankopen");
+      // (Fase 40) PAID-bundles waar EXPIRED-cancel niet beantwoord werd én
+      // er nog GEEN shipping is, krijgen automatisch een ShippingIssue ticket
+      // zodat de bundle niet stil blijft hangen tot de auto-cancel-stale-paid
+      // cron 14d later iets doet. Geen ticket voor SHIPPED-bundles — daar
+      // gelden andere flows (dispute/tracking).
+      const shouldEscalate =
+        r.shippingBundle.status === "PAID" &&
+        !r.shippingBundle.shippedAt;
+
+      let shippingIssueId: string | null = null;
+      if (shouldEscalate) {
+        const issue = await prisma.shippingIssue.create({
+          data: {
+            bundleId: r.shippingBundle.id,
+            reporterId: r.proposedById,
+            type: "TRACKING_STUCK",
+            description: `Auto-geëscaleerd: annuleringsverzoek voor bestelling ${r.shippingBundle.orderNumber} is na 7 dagen verlopen zonder reactie van de wederpartij. De verkoper heeft (nog) niet verzonden.`,
+            status: "OPEN",
+          },
+        });
+        shippingIssueId = issue.id;
+        escalated++;
+      }
+
+      await prisma.cancellationRequest.update({
+        where: { id: r.id },
+        data: {
+          status: "EXPIRED",
+          escalatedShippingIssueId: shippingIssueId,
+        },
+      });
+
+      await createNotification(
+        r.proposedById,
+        "NEW_MESSAGE",
+        shouldEscalate ? "Annuleringsverzoek verlopen — admin onderzoekt" : "Annuleringsverzoek verlopen",
+        shouldEscalate
+          ? `Je annuleringsverzoek voor bestelling ${r.shippingBundle.orderNumber} is verlopen. We hebben een trackingticket geopend zodat admin het probleem onderzoekt.`
+          : `Je annuleringsverzoek voor bestelling ${r.shippingBundle.orderNumber} is verlopen omdat de wederpartij niet heeft gereageerd. De bestelling staat nog open.`,
+        "/dashboard/aankopen",
+      );
+
       // Real-time: beide partijen zien PENDING-marker verdwijnen op /aankopen + /verkopen
       for (const uid of [r.shippingBundle.buyerId, r.shippingBundle.sellerId]) {
         publish(userChannel(uid), {
@@ -928,7 +967,7 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       }
       processed++;
     }
-    return { itemsProcessed: processed, result: { processed, total: expired.length } };
+    return { itemsProcessed: processed, result: { processed, escalated, total: expired.length } };
   },
   "cleanup-archived-chats": async () => {
     const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
