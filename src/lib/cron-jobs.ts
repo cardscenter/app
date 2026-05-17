@@ -275,6 +275,7 @@ export async function processRunnerUpDecision(
 export const CRON_JOB_NAMES = [
   "auto-confirm",
   "auto-resolve-disputes",
+  "auto-resolve-disputes-v2",
   "check-subscriptions",
   "expire-claims",
   "sync-pokewallet",
@@ -314,6 +315,12 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   "auto-resolve-disputes": {
     description:
       "Sluit disputes die de wederpartij niet binnen de termijn beantwoord heeft, met de standaard-uitkomst (terugbetaling of vrijgave volgens de regels).",
+    schedule: "Dagelijks",
+    allowManualRun: true,
+  },
+  "auto-resolve-disputes-v2": {
+    description:
+      "Dispute v2 (Fase 40): OPEN-disputes waar verkoper >14d niet reageert → 100% refund + premium naar koper. SELLER_RESPONDED waar koper >14d niet reageert → escrow naar verkoper. Niet voor ESCALATED — die wachten op admin.",
     schedule: "Dagelijks",
     allowManualRun: true,
   },
@@ -444,6 +451,11 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
   },
   "auto-resolve-disputes": async () => {
     const r = await autoResolveDisputes();
+    return { itemsProcessed: r.resolved, result: r };
+  },
+  "auto-resolve-disputes-v2": async () => {
+    const { autoResolveDisputesV2 } = await import("@/actions/dispute-v2");
+    const r = await autoResolveDisputesV2();
     return { itemsProcessed: r.resolved, result: r };
   },
   "check-subscriptions": async () => {
