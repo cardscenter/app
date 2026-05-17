@@ -17,13 +17,21 @@ export type UploadContext =
   | "avatar"
   | "chat"
   | "claimsale"
-  | "verification";
+  | "verification"
+  // (Fase 40) "dispute" = bewijsfoto's uit DisputeV2-flow door buyer/seller.
+  // "shipping" = optionele verzend-proof-foto's bij markAsShipped (pakket-
+  // label, doos-foto). Beide door moderation om misbruik te voorkomen
+  // (NSFW/scam-uitingen in plaats van legit bewijs).
+  | "dispute"
+  | "shipping";
 
 const MODERATED_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
   "listing",
   "auction",
   "avatar",
   "chat",
+  "dispute",
+  "shipping",
 ]);
 
 export const MODERATION_BLOCKED_PREFIX = "MODERATION_BLOCKED:";

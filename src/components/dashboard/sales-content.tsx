@@ -708,6 +708,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
                 carrierId={bundle.shippingMethodCarrier}
                 buyerCountry={bundle.buyerCountry}
                 buyerPostalCode={bundle.buyerPostalCode}
+                bundleValue={bundle.totalCost}
               />
 
               <div className="border-t border-border/50 pt-3">

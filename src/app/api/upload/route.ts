@@ -13,6 +13,8 @@ const VALID_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
   "chat",
   "claimsale",
   "verification",
+  "dispute",
+  "shipping",
 ]);
 
 export async function POST(request: NextRequest) {

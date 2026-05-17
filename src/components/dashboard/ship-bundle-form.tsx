@@ -14,7 +14,12 @@ interface ShipBundleFormProps {
   carrierId?: string | null;
   buyerCountry?: string | null;
   buyerPostalCode?: string | null;
+  /** (Fase 40) bundle.totalCost — bepaalt of we de "sterk aanbevolen" prompt
+   *  tonen voor proof-foto's (≥€50). Geen blokkade, alleen UX-nudge. */
+  bundleValue?: number;
 }
+
+const PROOF_RECOMMENDED_THRESHOLD = 50;
 
 export function ShipBundleForm({
   bundleId,
@@ -22,6 +27,7 @@ export function ShipBundleForm({
   carrierId,
   buyerCountry,
   buyerPostalCode,
+  bundleValue,
 }: ShipBundleFormProps) {
   const t = useTranslations("sellerClaims");
   const ts = useTranslations("shipping");
@@ -44,6 +50,7 @@ export function ShipBundleForm({
     for (const file of Array.from(files)) {
       formData.append("files", file);
     }
+    formData.append("context", "shipping");
     try {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
@@ -151,7 +158,22 @@ export function ShipBundleForm({
         </div>
       )}
 
-      {/* Proof photos */}
+      {/* Proof photos — (Fase 40) Sterke aanbeveling boven de input zelf zodat
+       * seller begrijpt wat dit oplevert. Recommended-banner voor bundles
+       * ≥ €50; iedereen ziet de basis-hint. Foto's worden gemodereerd via
+       * UploadContext "shipping" (claude-haiku vision check). */}
+      {!isBriefpost && bundleValue !== undefined && bundleValue >= PROOF_RECOMMENDED_THRESHOLD && proofUrls.length === 0 && (
+        <div className="flex items-start gap-2 rounded-lg border border-sky-200/60 bg-sky-50/60 p-2.5 text-xs text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/30 dark:text-sky-200">
+          <Camera className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <div>
+            <p className="font-medium">{ts("proofPromptStrongTitle")}</p>
+            <p className="mt-0.5 text-sky-800/80 dark:text-sky-300/80">
+              {ts("proofPromptStrongBody", { amount: bundleValue.toFixed(2) })}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="block text-sm font-medium text-foreground">
           {ts("proofPhotos")} {isBriefpost ? <span className="text-red-500">*</span> : <span className="text-muted-foreground font-normal">({ts("optional")})</span>}

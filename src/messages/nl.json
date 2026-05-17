@@ -2165,6 +2165,8 @@
     "proofPhotos": "Verzendbewijs foto's",
     "proofPhotosHintBriefpost": "Maak een foto van de brief met inhoud en de dichtgeplakte brief. Dit is verplicht bij briefpost.",
     "proofPhotosHintTracked": "Optioneel: voeg foto's toe van het pakket als extra bewijs.",
+    "proofPromptStrongTitle": "Sterk aanbevolen — bestelling van €{amount}",
+    "proofPromptStrongBody": "Upload een foto van het pakket-label én van de inhoud vóór dichtplakken. Bij eventuele geschillen is dit jouw belangrijkste bewijs dat de verzending klopt.",
     "proofRequired": "Minimaal 1 foto is verplicht bij briefpost verzending.",
     "addPhoto": "Foto toevoegen",
     "free": "Gratis",

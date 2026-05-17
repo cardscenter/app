@@ -27,6 +27,11 @@ type AdminDispute = {
     totalItemCost: number;
     shippingCost: number;
     trackingUrl: string | null;
+    /** (Fase 40) Verzend-proof-foto's die seller uploadte bij markAsShipped.
+     *  Voorheen alleen zichtbaar voor buyer — nu ook voor admin als belangrijk
+     *  bewijs naast dispute-evidence. Kan leeg zijn. */
+    shippingProofUrls: string[];
+    shippedAt: string | null;
     buyerName: string;
     sellerName: string;
     carrier: string | null;
@@ -170,6 +175,76 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
               </div>
             )}
           </div>
+
+          {/* (Fase 40) Verzend-proof-foto's seller — admin moet hier het sterkste
+           * "wel verstuurd"-bewijs kunnen zien naast de evidence van beide partijen */}
+          {dispute.bundle.shippingProofUrls.length > 0 && (
+            <div className="rounded-lg border border-sky-200/60 bg-sky-50/40 p-3 dark:border-sky-900/40 dark:bg-sky-950/20">
+              <p className="mb-2 text-xs font-semibold text-sky-700 dark:text-sky-300">
+                Verzend-bewijs verkoper ({dispute.bundle.shippingProofUrls.length} foto{dispute.bundle.shippingProofUrls.length === 1 ? "" : "'s"})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {dispute.bundle.shippingProofUrls.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block h-20 w-20 overflow-hidden rounded-md border border-border hover:opacity-80"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Verzend-bewijs ${i + 1}`} className="h-full w-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Koper's evidence-foto's (bij dispute-opening) */}
+          {dispute.evidenceUrls.length > 0 && (
+            <div className="rounded-lg border border-amber-200/60 bg-amber-50/40 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <p className="mb-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                Bewijs koper ({dispute.evidenceUrls.length} foto{dispute.evidenceUrls.length === 1 ? "" : "'s"})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {dispute.evidenceUrls.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block h-20 w-20 overflow-hidden rounded-md border border-border hover:opacity-80"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Koper-bewijs ${i + 1}`} className="h-full w-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Verkoper's evidence-foto's (bij response) */}
+          {dispute.sellerEvidenceUrls.length > 0 && (
+            <div className="rounded-lg border border-blue-200/60 bg-blue-50/40 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+              <p className="mb-2 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                Bewijs verkoper bij response ({dispute.sellerEvidenceUrls.length} foto{dispute.sellerEvidenceUrls.length === 1 ? "" : "'s"})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {dispute.sellerEvidenceUrls.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block h-20 w-20 overflow-hidden rounded-md border border-border hover:opacity-80"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Verkoper-bewijs ${i + 1}`} className="h-full w-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Decision form */}
           <div className="border-t border-border/50 pt-4 space-y-3">

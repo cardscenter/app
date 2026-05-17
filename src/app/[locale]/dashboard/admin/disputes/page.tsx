@@ -37,6 +37,13 @@ export default async function AdminDisputesPage() {
       totalItemCost: d.shippingBundle.totalItemCost,
       shippingCost: d.shippingBundle.shippingCost,
       trackingUrl: d.shippingBundle.trackingUrl,
+      // (Fase 40) shippingProofUrls zichtbaar voor admin — voorheen alleen
+      // voor de buyer in /aankopen. Admin moet kunnen oordelen op basis van
+      // wat seller bij verzending uploadde (label + inhoud-foto).
+      shippingProofUrls: d.shippingBundle.shippingProofUrls
+        ? (JSON.parse(d.shippingBundle.shippingProofUrls) as string[])
+        : [],
+      shippedAt: d.shippingBundle.shippedAt?.toISOString() ?? null,
       buyerName: d.shippingBundle.buyer.displayName,
       sellerName: d.shippingBundle.seller.displayName,
       carrier: d.shippingBundle.shippingMethod?.carrier ?? null,

@@ -2165,6 +2165,8 @@
     "proofPhotos": "Shipping proof photos",
     "proofPhotosHintBriefpost": "Take a photo of the letter with contents and the sealed letter. This is required for regular mail.",
     "proofPhotosHintTracked": "Optional: add photos of the package as extra proof.",
+    "proofPromptStrongTitle": "Strongly recommended — order of €{amount}",
+    "proofPromptStrongBody": "Upload a photo of the shipping label AND the contents before sealing. In case of disputes this is your strongest evidence that the shipment is correct.",
     "proofRequired": "At least 1 photo is required for regular mail shipping.",
     "addPhoto": "Add photo",
     "free": "Free",
