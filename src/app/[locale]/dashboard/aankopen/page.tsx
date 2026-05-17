@@ -257,6 +257,10 @@ export default async function MyPurchasesPage({
     lockedForPackingAt: b.lockedForPackingAt?.toISOString() ?? null,
     appendEvents: parseAppendHistory(b.appendHistory),
     createdAt: b.createdAt.toISOString(),
+    // (Fase 40) `autoExpiredAt` wordt gezet door de auto-cancel-stale-paid
+    // cron (14d zonder shipping). Buyer ziet dan een gele banner met uitleg
+    // — onderscheidt cron-cancel van mutual-akkoord-cancel.
+    autoExpiredAt: b.autoExpiredAt?.toISOString() ?? null,
     sourceType: b.auctionId
       ? "auction" as const
       : (b.listingId || b.bundleListings.length > 0 || b.cardItems.length > 0)

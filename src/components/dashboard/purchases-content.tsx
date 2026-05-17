@@ -82,6 +82,9 @@ type PurchaseBundle = {
   lockedForPackingAt: string | null;
   appendEvents: AppendEvent[];
   createdAt: string;
+  /** (Fase 40) Wanneer de auto-cancel-stale-paid cron deze bundle force-cancelde
+   *  vanwege seller niet-verzenden binnen 14d. Null voor mutual-akkoord cancels. */
+  autoExpiredAt: string | null;
   sourceType: "claimsale" | "auction" | "listing";
   sourceTitle: string | null;
   sourceImageUrl: string | null;
@@ -126,6 +129,15 @@ const STATUS_BADGE: Record<Tab, string> = {
 };
 
 const AUTO_CONFIRM_DAYS = 30;
+
+// (Fase 40) Buyer-warning constants. STALE_PAID_DAYS = 14 matched de cron;
+// vanaf SHOW_WARNING_AFTER_DAYS toont UI een gele banner met aanbeveling
+// om actief annulering aan te vragen ipv passief op de cron te wachten.
+const STALE_PAID_DAYS = 14;
+const SHOW_WARNING_AFTER_DAYS = 7;
+// Voor SHIPPED-bundles: na X dagen zonder delivery-confirm krijgt buyer een
+// "tracking-stuck?"-knop die straks (Fase 40-G) een ShippingIssue opent.
+const TRACKING_STUCK_AFTER_DAYS = 14;
 
 type PendingAuctionPayment = {
   id: string;
@@ -437,35 +449,101 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
         />
       )}
 
-      {/* Status hints (collapsed) */}
-      {!expanded && bundle.status === "PAID" && (
-        <div className="border-t border-border/50 px-4 py-2">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{t("waitingForShipment")}</span>
-          </div>
-        </div>
-      )}
+      {/* (Fase 40) PAID-status hints met urgency-niveau: <7d rustig wachten,
+       * ≥7d gele waarschuwing met expand-CTA, hasActiveCancellation badge
+       * staat al in de header. autoExpiredAt-bundles renderen in CANCELLED. */}
+      {!expanded && bundle.status === "PAID" && !bundle.hasActiveCancellation && (() => {
+        const paidDate = new Date(bundle.createdAt);
+        const daysSincePaid = (Date.now() - paidDate.getTime()) / (1000 * 60 * 60 * 24);
+        const daysUntilAutoCancel = Math.max(0, Math.ceil(STALE_PAID_DAYS - daysSincePaid));
+        // Voor PICKUP-bundles geldt geen auto-cancel-cron (eigen 14d pickup-
+        // reservation-timeout-cron handelt EXTERNAL af, PLATFORM-pickup
+        // wacht op code-confirm). Geen STALE_PAID-waarschuwing daar.
+        const isShip = bundle.deliveryMethod === "SHIP";
+        const showWarning = isShip && daysSincePaid >= SHOW_WARNING_AFTER_DAYS;
 
-      {!expanded && bundle.status === "SHIPPED" && (
-        <div className="border-t border-border/50 px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {bundle.trackingUrl && (
-              <a
-                href={bundle.trackingUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+        if (showWarning) {
+          return (
+            <div className="border-t border-amber-200/60 bg-amber-50/60 px-4 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="flex-1 min-w-0 text-xs text-amber-900 dark:text-amber-200">
+                  <p className="font-medium">
+                    {t("staleWarningTitle", { days: Math.floor(daysSincePaid) })}
+                  </p>
+                  <p className="mt-0.5 text-amber-800/80 dark:text-amber-300/80">
+                    {t("staleWarningBody", { daysLeft: daysUntilAutoCancel })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setExpanded(true)}
+                  className="shrink-0 rounded-md bg-amber-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-amber-700"
+                >
+                  {t("staleWarningCta")}
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div className="border-t border-border/50 px-4 py-2">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span>{t("waitingForShipment")}</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {!expanded && bundle.status === "SHIPPED" && (() => {
+        const daysSinceShipped = bundle.shippedAt
+          ? (Date.now() - new Date(bundle.shippedAt).getTime()) / (1000 * 60 * 60 * 24)
+          : 0;
+        const trackingStuck = daysSinceShipped >= TRACKING_STUCK_AFTER_DAYS;
+        return (
+          <div className="border-t border-border/50 px-4 py-2 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-3">
+              {bundle.trackingUrl && (
+                <a
+                  href={bundle.trackingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {t("trackingLink")}
+                </a>
+              )}
+              {autoConfirmFormatted && (
+                <span className="text-xs text-muted-foreground">
+                  {t("autoConfirmWarning", { date: autoConfirmFormatted })}
+                </span>
+              )}
+            </div>
+            {trackingStuck && (
+              <button
+                onClick={() => setExpanded(true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
               >
-                <ExternalLink className="h-3 w-3" />
-                {t("trackingLink")}
-              </a>
+                <AlertTriangle className="h-3 w-3" />
+                {t("trackingStuckCta")}
+              </button>
             )}
-            {autoConfirmFormatted && (
-              <span className="text-xs text-muted-foreground">
-                {t("autoConfirmWarning", { date: autoConfirmFormatted })}
-              </span>
-            )}
+          </div>
+        );
+      })()}
+
+      {/* (Fase 40) auto-cancel banner voor system-canceled bundles */}
+      {!expanded && bundle.status === "CANCELLED" && bundle.autoExpiredAt && (
+        <div className="border-t border-amber-200/60 bg-amber-50/60 px-4 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+          <div className="flex items-start gap-2">
+            <Ban className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1 min-w-0 text-xs text-amber-900 dark:text-amber-200">
+              <p className="font-medium">{t("autoCancelledTitle")}</p>
+              <p className="mt-0.5 text-amber-800/80 dark:text-amber-300/80">
+                {t("autoCancelledBody")}
+              </p>
+            </div>
           </div>
         </div>
       )}
