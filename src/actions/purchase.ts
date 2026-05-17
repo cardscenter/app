@@ -67,10 +67,35 @@ export async function markAsShipped(
   const trimmedNumber = trackingNumber?.trim() || null;
 
   // Build tracking URL from carrier + number + buyer address
-  const { buildTrackingUrl } = await import("@/lib/shipping/carriers");
+  const { buildTrackingUrl, getCarrierById } = await import("@/lib/shipping/carriers");
+  const { validateTrackingNumber } = await import("@/lib/shipping/tracking-validation");
   const resolvedCarrier = carrierId ?? bundle.shippingMethod?.carrier ?? null;
   const resolvedCountry = buyerCountry ?? bundle.buyerCountry ?? "NL";
   const resolvedPostalCode = buyerPostalCode ?? bundle.buyerPostalCode ?? "";
+
+  // Fase 40 — server-side tracking-validatie. Bij hit: hard-block met user-
+  // friendly bericht; voorkomt dat verkoper een typo aanlevert en koper
+  // achteraf in een dispute belandt omdat tracking niet werkt.
+  if (trimmedNumber && !isBriefpost) {
+    const validation = validateTrackingNumber(resolvedCarrier, trimmedNumber);
+    if (!validation.ok) {
+      return { error: validation.message ?? "Trackingnummer is niet geldig" };
+    }
+  }
+
+  // Fase 40 — PostNL fix: PostNL vereist postcode in de URL. Als die ontbreekt
+  // krijgt de buyer een halve URL "...track-and-trace/3SABC-NL-" die niet
+  // werkt. Bij PostNL + lege postcode: blokkeer markAsShipped met duidelijke
+  // melding zodat seller eerst de adres-koppeling controleert.
+  if (resolvedCarrier === "POSTNL" && !resolvedPostalCode) {
+    const carrier = getCarrierById(resolvedCarrier);
+    if (carrier?.needsPostalCode) {
+      return {
+        error:
+          "PostNL-tracking vereist de postcode van de koper, maar die ontbreekt op deze bestelling. Controleer het verzendadres in de bestelling, of kies een andere vervoerder.",
+      };
+    }
+  }
 
   let trackingUrl: string | null = null;
   if (trimmedNumber && resolvedCarrier) {
