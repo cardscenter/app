@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { MAX_SCHEDULE_DAYS_AHEAD } from "@/lib/auction/timing";
 
+/**
+ * Minimum startbod voor een veiling. Items onder dit bedrag horen via een
+ * claimsale verkocht te worden — het veiling-format met biedstappen, anti-snipe
+ * en 2,9% premium loont niet bij lage waardes en zou de marktplaats vullen
+ * met lage-waarde-spam.
+ */
+export const MIN_STARTING_BID = 5;
+
 export const createAuctionSchema = z
   .object({
     title: z.string().min(3).max(100),
@@ -16,8 +24,8 @@ export const createAuctionSchema = z
     productType: z.string().optional(),
     // Other/Collectibles
     itemCategory: z.string().optional(),
-    // Pricing
-    startingBid: z.coerce.number().min(0.01),
+    // Pricing — minimumstartbod is €5; lagere items horen in een claimsale.
+    startingBid: z.coerce.number().min(MIN_STARTING_BID, `Het startbod moet minimaal €${MIN_STARTING_BID} zijn`),
     reservePrice: z.coerce.number().min(0).optional(),
     buyNowPrice: z.coerce.number().min(0).optional(),
     duration: z.coerce.number().refine((v) => [3, 5, 7, 14].includes(v)),

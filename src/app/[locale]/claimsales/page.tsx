@@ -3,9 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ShoppingBag, Plus } from "lucide-react";
-import { ClaimsaleCard } from "@/components/claimsale/claimsale-card";
 import { ClaimsaleListRow } from "@/components/claimsale/claimsale-list-row";
-import { ClaimsaleViewToggle } from "@/components/claimsale/claimsale-view-toggle";
 import { ClaimsalesFilterSidebar } from "@/components/claimsale/claimsales-filter-sidebar";
 import { ClaimsalesMobileFilters } from "@/components/claimsale/claimsales-mobile-filters";
 import { SponsoredClaimsaleRow } from "@/components/claimsale/sponsored-row";
@@ -229,10 +227,10 @@ export default async function ClaimsalesPage({
         <ClaimsalesFilterSidebar buyerHasPostcode={buyerHasPostcode} />
 
         <div className="min-w-0 flex-1">
-          {/* Toolbar: mobile-filter + view-toggle */}
+          {/* Toolbar: alleen mobile-filter — claimsales hebben geen grid-view
+              (te druk visueel, lijst toont items + prijzen veel beter). */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <ClaimsalesMobileFilters buyerHasPostcode={buyerHasPostcode} />
-            <ClaimsaleViewToggle />
           </div>
 
           {sponsoredClaimsales.length > 0 && (
@@ -257,21 +255,6 @@ export default async function ClaimsalesPage({
                 {t("createTitle")} &rarr;
               </Link>
             </div>
-          ) : filters.view === "grid" ? (
-            <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [@media(min-width:1600px)]:grid-cols-5">
-                {claimsales.map((cs) => (
-                  <ClaimsaleCard key={cs.id} claimsale={cs} buyer={buyerLocation} />
-                ))}
-              </div>
-              <Pagination
-                currentPage={safePage}
-                totalPages={totalPages}
-                baseUrl="/claimsales"
-                locale={locale}
-                extraParams={extraParams}
-              />
-            </>
           ) : (
             <>
               <div className="space-y-3">

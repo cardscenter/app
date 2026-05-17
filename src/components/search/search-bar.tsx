@@ -51,7 +51,7 @@ export function SearchBar({ variant, defaultValue = "" }: SearchBarProps) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={t("placeholder")}
-          className="w-full rounded-lg bg-white/5 pl-9 pr-9 py-2 text-sm text-white ring-1 ring-white/10 placeholder:text-slate-400 transition-colors hover:bg-white/10 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full rounded-lg bg-white/5 pl-9 pr-9 py-2 text-base text-white ring-1 ring-white/10 placeholder:text-slate-400 transition-colors hover:bg-white/10 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
         />
         {value && (
           <button

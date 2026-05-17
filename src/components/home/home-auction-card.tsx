@@ -12,12 +12,13 @@ import {
   Zap,
 } from "lucide-react";
 import { parseImageUrls } from "@/lib/upload";
+import { getMinimumIncrement } from "@/lib/auction/bid-increments";
 import type { AuctionCardData } from "@/components/auction/auction-card";
 import { CountdownLabel } from "@/components/home/countdown-label";
 import { CountryFlag } from "@/components/ui/country-flag";
 
 const HOT_BIDS_THRESHOLD = 5;
-const URGENT_HOURS = 3;
+const URGENT_MINUTES = 5;
 
 const TYPE_LABELS_NL: Record<string, string> = {
   SINGLE_CARD: "Enkele kaart",
@@ -26,14 +27,6 @@ const TYPE_LABELS_NL: Record<string, string> = {
   SEALED_PRODUCT: "Sealed",
   OTHER: "Overig",
 };
-
-function calculateMinIncrement(currentBid: number): number {
-  if (currentBid < 50) return 1;
-  if (currentBid < 200) return 2;
-  if (currentBid < 500) return 5;
-  if (currentBid < 2000) return 10;
-  return 25;
-}
 
 function formatEuro(n: number): string {
   return `€${n.toLocaleString("nl-NL", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -81,15 +74,14 @@ export function HomeAuctionCard({ auction }: HomeAuctionCardProps) {
   const firstImage = images[0];
 
   const currentBid = auction.currentBid ?? auction.startingBid;
-  const minIncrement = calculateMinIncrement(currentBid);
-  const nextIncrementAmount = minIncrement;
+  const nextIncrementAmount = getMinimumIncrement(currentBid);
 
   const bidCount = auction._count?.bids ?? 0;
   const isHot = bidCount >= HOT_BIDS_THRESHOLD;
 
   const endTimeDate = typeof auction.endTime === "string" ? new Date(auction.endTime) : auction.endTime;
-  const hoursLeft = (endTimeDate.getTime() - Date.now()) / (1000 * 60 * 60);
-  const isUrgent = hoursLeft > 0 && hoursLeft <= URGENT_HOURS;
+  const minutesLeft = (endTimeDate.getTime() - Date.now()) / (1000 * 60);
+  const isUrgent = minutesLeft > 0 && minutesLeft <= URGENT_MINUTES;
 
   const hasBuyNow = !!auction.buyNowPrice && auction.buyNowPrice > 0;
   const hasReserve = !!auction.reservePrice && auction.reservePrice > 0;
@@ -218,24 +210,13 @@ export function HomeAuctionCard({ auction }: HomeAuctionCardProps) {
 
         {/* Bid-block */}
         <div className="mt-4 rounded-xl bg-muted/60 p-3 ring-1 ring-black/[0.04] dark:bg-slate-950/60 dark:ring-white/[0.06]">
-          {/* 2-col labels — beide gecentreerd */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="text-center">
-              <p className="text-[10px] font-medium text-muted-foreground dark:text-slate-500">
-                {t("homeCardStartingBid")}
-              </p>
-              <p className="mt-0.5 text-base font-bold text-foreground dark:text-white">
-                {formatEuro(auction.startingBid)}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-[10px] font-medium text-muted-foreground dark:text-slate-500">
-                {t("homeCardCurrentBid")}
-              </p>
-              <p className="mt-0.5 text-base font-bold text-foreground dark:text-white">
-                {formatEuro(currentBid)}
-              </p>
-            </div>
+          <div className="text-center">
+            <p className="text-[10px] font-medium text-muted-foreground dark:text-slate-500">
+              {t("homeCardCurrentBid")}
+            </p>
+            <p className="mt-0.5 text-base font-bold text-foreground dark:text-white">
+              {formatEuro(currentBid)}
+            </p>
           </div>
 
           {/* 2-col buttons — light: contrasterend (donker op licht), dark: invers (licht op donker) */}

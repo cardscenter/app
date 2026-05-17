@@ -13,6 +13,7 @@ import { StepType } from "./steps/step-type";
 import { StepPhotos } from "./steps/step-photos";
 import { StepDetails } from "./steps/step-details";
 import { StepPricing } from "./steps/step-pricing";
+import { MIN_STARTING_BID } from "@/lib/validations/auction";
 import { StepTiming } from "./steps/step-timing";
 import { StepUpsells, type UpsellWindowEntry, type SelectedLabel } from "./steps/step-upsells";
 import { AuctionPreview } from "./steps/step-review";
@@ -104,8 +105,23 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     runnerUpEnabled: maxRunnerUpAttempts > 0,
   }));
   const [showPreview, setShowPreview] = useState(false);
+  const [helperModalOpen, setHelperModalOpen] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
+
+  // Pricing-helper modal verbergt de sticky bottom-bar tijdelijk — anders
+  // schemert die op mobile door de modal-backdrop heen en breekt de focus
+  // van de wizard. Helper dispatcht zelf de events.
+  useEffect(() => {
+    const onOpen = () => setHelperModalOpen(true);
+    const onClose = () => setHelperModalOpen(false);
+    window.addEventListener("pricing-helper-open", onOpen);
+    window.addEventListener("pricing-helper-close", onClose);
+    return () => {
+      window.removeEventListener("pricing-helper-open", onOpen);
+      window.removeEventListener("pricing-helper-close", onClose);
+    };
+  }, []);
 
   const [actionState, formAction, pending] = useActionState(
     async (_prev: { error?: string; success?: boolean; auctionId?: string } | null | undefined, formData: FormData) => {
@@ -195,7 +211,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
     form.title.length >= 3 &&
     (form.auctionType !== "SINGLE_CARD" || (form.cardName?.length ?? 0) > 0);
   if (detailsOk) completedSteps.add("details");
-  if (form.startingBid !== null && form.startingBid > 0) completedSteps.add("pricing");
+  if (form.startingBid !== null && form.startingBid >= MIN_STARTING_BID) completedSteps.add("pricing");
   if (form.startDate && form.endTimeOfDay) completedSteps.add("timing");
   if (form.deliveryMethod) completedSteps.add("delivery");
   // Promotie is volledig optioneel — markeer als "compleet" zodat de progress
@@ -206,7 +222,9 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
   const missing: { key: string; label: string }[] = [];
   if (form.images.length === 0) missing.push({ key: "photo", label: t("photoRequired") });
   if (!form.title) missing.push({ key: "title", label: t("titleRequired") });
-  if (!form.startingBid) missing.push({ key: "startingBid", label: t("startingBidRequired") });
+  if (!form.startingBid || form.startingBid < MIN_STARTING_BID) {
+    missing.push({ key: "startingBid", label: t("startingBidRequired") });
+  }
 
   return (
     <div ref={topRef}>
@@ -377,21 +395,37 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
 
       {/* Submit bar — chip-array voor missing fields + preview-knop.
           Mobile: column gestapeld + items gecentreerd. Desktop: row met
-          justify-between. */}
-      <div className="sticky bottom-4 z-10 mt-8">
+          justify-between.
+          Wordt verborgen wanneer de Prijs-helper-modal open is — anders
+          schemert 'ie door de modal-backdrop heen op mobile. */}
+      <div
+        className={`sticky bottom-4 z-10 mt-8 ${helperModalOpen ? "invisible" : ""}`}
+        aria-hidden={helperModalOpen}
+      >
         <div className="glass rounded-2xl p-4 flex flex-col items-center gap-3 shadow-lg sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
             {missing.length === 0 ? (
               <span className="text-sm text-emerald-700 dark:text-emerald-300">{t("readyToPreview")}</span>
             ) : (
-              missing.map((m) => (
-                <span
-                  key={m.key}
-                  className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
-                >
-                  {m.label}
-                </span>
-              ))
+              <>
+                {missing.map((m, i) => (
+                  <span
+                    key={m.key}
+                    className={`items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 ${
+                      i === 0 ? "inline-flex" : "hidden sm:inline-flex"
+                    }`}
+                  >
+                    {m.label}
+                  </span>
+                ))}
+                {/* Mobile-only "+N meer" counter zodat seller weet dat er nog
+                    open errors zijn buiten de eerste. */}
+                {missing.length > 1 && (
+                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 sm:hidden">
+                    +{missing.length - 1}
+                  </span>
+                )}
+              </>
             )}
           </div>
           <button
@@ -405,7 +439,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }
             }}
-            disabled={form.images.length === 0 || !form.title || !form.startingBid}
+            disabled={form.images.length === 0 || !form.title || !form.startingBid || form.startingBid < MIN_STARTING_BID}
             className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg disabled:opacity-50"
           >
             <Eye className="h-4 w-4" />

@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Info } from "lucide-react";
+import { Info, Sparkles, Tag } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
 import { InfoPopup } from "@/components/ui/info-tooltip";
 import type { CardPricingSnapshot } from "@/components/ui/card-search-select";
+import { MIN_STARTING_BID } from "@/lib/validations/auction";
+import { PricingHelperModal } from "@/components/auction/pricing-helper-modal";
 
 interface StepPricingProps {
   startingBid: number | null;
@@ -31,12 +34,16 @@ export function StepPricing({
   onChange,
 }: StepPricingProps) {
   const t = useTranslations("auction");
+  const [helperOpen, setHelperOpen] = useState(false);
 
   // Real-time validatie — mirrort de Zod-regels in src/lib/validations/auction.ts
   // zodat de seller geen rondreis naar het sticky-bottom hoeft te maken om te
   // weten dat er iets niet klopt. Errors zijn null als regel niet aktief is
   // (bijv. velden niet ingevuld of toggle uit).
   const startBidNum = typeof startingBid === "number" && !Number.isNaN(startingBid) ? startingBid : null;
+  // Toon de waarschuwing voor élke ingevulde waarde onder €5 — inclusief 0 en
+  // negatieve invoer. Alleen bij leeg (null) blijft de hint neutraal.
+  const startBidTooLow = startBidNum !== null && startBidNum < MIN_STARTING_BID;
   const reserveNum =
     hasReserve && typeof reservePrice === "number" && !Number.isNaN(reservePrice) && reservePrice > 0
       ? reservePrice
@@ -63,7 +70,40 @@ export function StepPricing({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-foreground">{t("stepPricing")}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-foreground">{t("stepPricing")}</h2>
+        <button
+          type="button"
+          onClick={() => setHelperOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+        >
+          <Sparkles className="size-3.5" />
+          {t("pricingHelperTrigger")}
+        </button>
+      </div>
+
+      <PricingHelperModal
+        open={helperOpen}
+        onClose={() => setHelperOpen(false)}
+        defaultValue={pricing?.avg ?? null}
+        onApply={(advice) => {
+          onChange("startingBid", advice.startingBid);
+          if (advice.reservePrice !== null) {
+            onChange("hasReserve", true);
+            onChange("reservePrice", advice.reservePrice);
+          } else {
+            onChange("hasReserve", false);
+          }
+          if (advice.buyNowPrice !== null) {
+            onChange("hasBuyNow", true);
+            onChange("buyNowPrice", advice.buyNowPrice);
+          } else {
+            onChange("hasBuyNow", false);
+          }
+          // Looptijd zit in step-timing maar wordt hier alvast doorgezet.
+          onChange("duration", advice.duration);
+        }}
+      />
 
       {/* Market price — shows when a TCGdex card is picked */}
       {pricing && pricing.avg !== null && (
@@ -79,12 +119,48 @@ export function StepPricing({
             id="startingBid"
             type="number"
             step="0.01"
-            min="0.01"
+            min={MIN_STARTING_BID}
             value={startingBid ?? ""}
-            onChange={(e) => onChange("startingBid", e.target.value ? parseFloat(e.target.value) : null)}
-            className="block w-48 glass-input px-3 py-2.5 text-foreground"
+            onKeyDown={(e) => {
+              // Blokkeer minteken en scientific-notation invoer (-, e, +).
+              if (e.key === "-" || e.key === "e" || e.key === "+") e.preventDefault();
+            }}
+            onChange={(e) => {
+              if (!e.target.value) {
+                onChange("startingBid", null);
+                return;
+              }
+              const parsed = parseFloat(e.target.value);
+              if (Number.isNaN(parsed)) return;
+              // Defense-in-depth tegen paste / browser autofill van negatieve waardes.
+              onChange("startingBid", parsed < 0 ? 0 : parsed);
+            }}
+            aria-invalid={startBidTooLow ? true : undefined}
+            className={`block w-48 glass-input px-3 py-2.5 text-foreground ${
+              startBidTooLow ? "border-amber-400 dark:border-amber-700" : ""
+            }`}
           />
         </div>
+        <p className="mt-1 text-xs text-muted-foreground">{t("startingBidMinHint", { min: MIN_STARTING_BID })}</p>
+        {startBidTooLow && (
+          <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-700/40 dark:bg-amber-500/10">
+            <Tag className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1">
+              <p className="font-medium text-amber-900 dark:text-amber-200">
+                {t("startingBidTooLowTitle", { min: MIN_STARTING_BID })}
+              </p>
+              <p className="mt-0.5 text-amber-800/90 dark:text-amber-300/90">
+                {t("startingBidTooLowBody")}
+              </p>
+              <Link
+                href="/claimsales/nieuw"
+                className="mt-1.5 inline-block font-semibold text-amber-900 underline-offset-2 hover:underline dark:text-amber-200"
+              >
+                {t("startingBidTooLowCta")}
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reserve price */}

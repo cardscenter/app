@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Tag, Truck, Clock } from "lucide-react";
+import { Truck, Clock } from "lucide-react";
 import { parseImageUrls } from "@/lib/upload";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
@@ -80,7 +80,7 @@ function relativeTime(date: Date | null): string {
   if (d < 7) return `${d} dag${d === 1 ? "" : "en"} geleden`;
   if (d < 30) {
     const w = Math.floor(d / 7);
-    return `${w} week${w === 1 ? "" : "en"} geleden`;
+    return w === 1 ? "1 week geleden" : `${w} weken geleden`;
   }
   const mo = Math.floor(d / 30);
   if (mo < 12) return `${mo} maand${mo === 1 ? "" : "en"} geleden`;
@@ -138,50 +138,46 @@ export function ClaimsaleListRow({
   const remainingItems = availableCount - previewItems.length;
 
   return (
-    <article className="group relative flex flex-row gap-3 sm:gap-5 rounded-2xl border border-border bg-card p-3 sm:p-4 shadow-card transition-shadow hover:shadow-card-hover">
-      {/* IMAGE — cover van de claimsale */}
-      <div className="relative shrink-0">
-        <Link
-          href={`/${locale}/claimsales/${claimsale.id}`}
-          className="block relative w-24 h-32 sm:w-40 sm:h-48 overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 to-slate-100 dark:from-slate-800 dark:to-slate-900"
-        >
-          {claimsale.coverImage ? (
-            <Image
-              src={claimsale.coverImage}
-              alt={claimsale.title}
-              fill
-              className="object-cover transition-transform group-hover:scale-105"
-              sizes="(max-width: 640px) 96px, 160px"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Tag className="size-8 text-slate-300 dark:text-slate-600" />
-            </div>
-          )}
-          {/* Aantal items pill linksboven — of SCHEDULED start-pill */}
-          {isScheduled && claimsale.startTime ? (
-            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
-              <Clock className="h-2.5 w-2.5" />
-              {formatStartPill(claimsale.startTime)}
-            </span>
-          ) : (
-            <span className="absolute left-1.5 top-1.5 rounded-md bg-amber-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
-              {totalItems} kaarten
-            </span>
-          )}
-        </Link>
-
-        {showWatchlist && (
-          <div className="absolute right-1 top-1 sm:hidden">
-            <div className="rounded-full bg-background/90 p-0.5 shadow-md backdrop-blur">
-              <WatchlistButton
-                claimsaleId={claimsale.id}
-                initialWatched={initialWatched}
+    // Mobile: flex-col met 3 verticale blokken (image+body / carousel /
+    // seller-footer). Desktop: flex-row waar de inner-wrapper oplost via
+    // `sm:contents` zodat image en body direct broertjes van article worden,
+    // naast de rechter prijs-kolom.
+    // sm:min-h-[14rem] ≈ image-hoogte (h-48 = 12rem) + padding (2rem) — zorgt
+    // dat alle cards op desktop minimaal even hoog zijn (ook zonder cover);
+    // body heeft `flex-1 flex flex-col` en de desktop-footer `mt-auto`, dus
+    // de seller-regel zit op alle cards op dezelfde y-positie.
+    <article className="group relative flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover sm:flex-row sm:gap-5 sm:min-h-[14rem]">
+      {/* IMAGE + BODY in wrapper. Op mobile = flex-row (image-left, body-
+          right). Op desktop verdampt de wrapper via `contents` zodat image
+          en body direct broertjes van article worden in de buiten-flex-row. */}
+      <div className="flex flex-row gap-3 sm:contents sm:gap-5">
+        {claimsale.coverImage && (
+          <div className="relative shrink-0">
+            <Link
+              href={`/${locale}/claimsales/${claimsale.id}`}
+              className="block relative w-24 h-32 sm:w-40 sm:h-48 overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 to-slate-100 dark:from-slate-800 dark:to-slate-900"
+            >
+              <Image
+                src={claimsale.coverImage}
+                alt={claimsale.title}
+                fill
+                className="object-cover transition-transform group-hover:scale-105"
+                sizes="(max-width: 640px) 96px, 160px"
               />
-            </div>
+              {/* Aantal items pill linksboven — of SCHEDULED start-pill */}
+              {isScheduled && claimsale.startTime ? (
+                <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
+                  <Clock className="h-2.5 w-2.5" />
+                  {formatStartPill(claimsale.startTime)}
+                </span>
+              ) : (
+                <span className="absolute left-1.5 top-1.5 rounded-md bg-amber-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
+                  {totalItems} kaarten
+                </span>
+              )}
+            </Link>
           </div>
         )}
-      </div>
 
       {/* BODY */}
       <div className="flex flex-1 min-w-0 flex-col">
@@ -195,6 +191,23 @@ export function ClaimsaleListRow({
             </span>
           </div>
         </Link>
+
+        {/* Status-pill inline — alleen tonen als de image-zone (waar de pill
+            normaal op zit) is weggevallen door ontbrekende cover. */}
+        {!claimsale.coverImage && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            {isScheduled && claimsale.startTime ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <Clock className="h-2.5 w-2.5" />
+                {formatStartPill(claimsale.startTime)}
+              </span>
+            ) : (
+              <span className="rounded-md bg-amber-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {totalItems} kaarten
+              </span>
+            )}
+          </div>
+        )}
 
         {claimsale.labels && claimsale.labels.length > 0 && (
           <ClaimsaleLabels labels={claimsale.labels} size="md" className="mt-2" />
@@ -281,9 +294,9 @@ export function ClaimsaleListRow({
             </p>
             <span className="text-[10px] text-muted-foreground">per kaart</span>
           </div>
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-sky-800 ring-1 ring-inset ring-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-800">
-              <Truck className="size-3" />
+          <div className="flex items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 font-medium text-sky-800 ring-1 ring-inset ring-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-800">
+              <Truck className="size-3.5" />
               €{claimsale.shippingCost.toFixed(2)}
             </span>
             <span className="text-muted-foreground">{relativeTime(claimsale.publishedAt)}</span>
@@ -300,9 +313,11 @@ export function ClaimsaleListRow({
           </span>
         </div>
 
-        {/* FOOTER */}
-        <div className="mt-auto pt-3 border-t border-border/60">
-          <div className="flex items-center justify-between gap-2">
+        {/* FOOTER — desktop-only. mt-auto duwt 'm naar de bodem van body.
+            Mobile heeft een aparte full-width seller-footer onder de
+            carousel verderop. */}
+        <div className="hidden sm:block mt-auto pt-3 border-t border-border/60">
+          <div className="flex items-center justify-end gap-2">
             <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
               <span className="truncate font-medium text-foreground/80">
                 {claimsale.seller.displayName}
@@ -318,6 +333,79 @@ export function ClaimsaleListRow({
                 </>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+      </div>{/* /image+body wrapper */}
+
+      {/* MOBILE-ONLY: items carousel (preview-strip in horizontaal scroll). */}
+      {previewItems.length > 0 && (
+        <div className="sm:hidden -mx-1 px-1">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {previewItems.map((item) => (
+              <Link
+                key={item.id}
+                href={`/${locale}/claimsales/${claimsale.id}`}
+                className="group/thumb relative flex w-20 shrink-0 flex-col gap-1"
+                title={`${item.cardName} · ${item.condition} · €${item.price.toFixed(2)}`}
+              >
+                <div className="relative h-28 w-20 overflow-hidden rounded-sm bg-muted ring-1 ring-border">
+                  <Image
+                    src={item.firstImage}
+                    alt={item.cardName}
+                    fill
+                    className="object-cover"
+                    sizes="200px"
+                    quality={85}
+                  />
+                </div>
+                <span className="text-center text-[11px] font-semibold text-foreground tabular-nums">
+                  €{item.price.toFixed(2)}
+                </span>
+              </Link>
+            ))}
+            {remainingItems > 0 && (
+              <Link
+                href={`/${locale}/claimsales/${claimsale.id}`}
+                className="flex h-28 w-20 shrink-0 flex-col items-center justify-center rounded-sm border border-dashed border-border bg-muted/40 text-center text-[11px] font-medium text-muted-foreground"
+              >
+                <span className="text-lg font-bold leading-none text-foreground">
+                  +{remainingItems}
+                </span>
+                <span className="mt-0.5 leading-tight">meer</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE-ONLY: seller-footer over volledige card-breedte. Watchlist
+          links, seller-info rechts — beide visueel uit elkaar zodat het
+          hartje niet meer over titel of labels heen valt. */}
+      <div className="sm:hidden pt-3 border-t border-border/60">
+        <div className="flex items-center justify-between gap-2">
+          {showWatchlist ? (
+            <WatchlistButton
+              claimsaleId={claimsale.id}
+              initialWatched={initialWatched}
+            />
+          ) : (
+            <span />
+          )}
+          <div className="flex min-w-0 items-center justify-end gap-2 text-xs text-muted-foreground">
+            <span className="truncate font-medium text-foreground/80">
+              {claimsale.seller.displayName}
+            </span>
+            {claimsale.seller.city && (
+              <>
+                <span className="text-border">·</span>
+                <SellerLocationLine
+                  seller={claimsale.seller}
+                  buyer={buyer}
+                  className="!mt-0"
+                />
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,14 +48,22 @@ interface Props {
 
 const DEBOUNCE_MS = 300;
 const MIN_QUERY = 2;
+// Fetch wat extra zodat "Meer weergeven" puur client-side kan zonder re-fetch.
+// Eerste view toont alleen de top-INITIAL_VISIBLE — klik onthult de rest.
+const FETCH_LIMIT = 60;
+const INITIAL_VISIBLE = 24;
 
 const VARIANT_LABEL: Record<string, string> = {
-  normal: "Normal",
   holo: "Holo",
   reverse: "Reverse",
   firstEdition: "1st Ed.",
   wPromo: "W Promo",
 };
+
+// "normal" verbergen we — alle kaarten hebben een normal-print, dus die
+// variant-chip zegt niets en vervuilt de resultaat-rij. Alleen bijzondere
+// printtypes (Holo / Reverse / 1st Ed. / W Promo) zijn relevant.
+const HIDDEN_VARIANTS = new Set(["normal"]);
 
 // The search endpoint stores the TCGdex `variants` field as the raw JSON
 // string (e.g. `{"normal":true,"holo":false,...}`). We only care about the
@@ -88,8 +97,39 @@ export function CardSearchSelect({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Bereken dropdown-positie t.o.v. viewport zodra 'ie opent. Update bij scroll
+  // en resize zodat de dropdown blijft "kleven" aan de input ook als de
+  // achtergrond beweegt. Via Portal + position:fixed ontsnappen we elke
+  // parent stacking-context — voorkomt de iOS Safari z-index-trap die
+  // sticky + backdrop-filter veroorzaakt.
+  useEffect(() => {
+    if (!open) {
+      setDropdownRect(null);
+      return;
+    }
+    function updatePosition() {
+      if (!wrapperRef.current) return;
+      const rect = wrapperRef.current.getBoundingClientRect();
+      setDropdownRect({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open]);
 
   // Debounced search
   useEffect(() => {
@@ -106,9 +146,11 @@ export function CardSearchSelect({
 
       setLoading(true);
       setError(null);
+      // Reset expand-state — nieuwe zoekopdracht start altijd in compact-mode.
+      setExpanded(false);
       try {
         const res = await fetch(
-          `/api/cards/search?q=${encodeURIComponent(query.trim())}&limit=24`,
+          `/api/cards/search?q=${encodeURIComponent(query.trim())}&limit=${FETCH_LIMIT}`,
           { signal: controller.signal }
         );
         if (!res.ok) {
@@ -155,12 +197,15 @@ export function CardSearchSelect({
     return () => clearTimeout(handle);
   }, [query]);
 
-  // Close on outside click
+  // Close on outside click — dropdown zit nu via Portal in document.body dus
+  // buiten de wrapper-DOM-tree. Beide refs checken zodat clicks op dropdown
+  // niet als "outside" tellen.
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (wrapperRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
@@ -200,39 +245,64 @@ export function CardSearchSelect({
     setOpen(false);
   }
 
-  // Selected state
+  // Selected state — grotere preview + uitgebreide info-rij
   if (value) {
+    const previewSrc = value.imageUrl ?? value.thumbnailUrl;
+    const filteredVariants = value.variants?.filter((v) => !HIDDEN_VARIANTS.has(v)) ?? [];
+    const releaseYear = value.releaseDate?.slice(0, 4);
     return (
-      <div className={cn("flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-2.5", className)}>
-        {value.thumbnailUrl ? (
+      <div className={cn("relative flex items-start gap-4 rounded-xl border border-border bg-muted/30 p-3 sm:p-4", className)}>
+        {previewSrc ? (
           <Image
-            src={value.thumbnailUrl}
+            src={previewSrc}
             alt={value.name}
-            width={60}
-            height={84}
-            className="rounded-md object-cover"
+            width={140}
+            height={196}
+            className="shrink-0 rounded-lg object-cover ring-1 ring-black/5 dark:ring-white/10"
             unoptimized
           />
         ) : (
-          <div className="flex h-[84px] w-[60px] items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
-            Geen<br />afb.
+          <div className="flex h-[196px] w-[140px] shrink-0 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
+            Geen<br />afbeelding
           </div>
         )}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-foreground truncate">{value.name}</p>
-          <p className="text-xs text-muted-foreground">
-            #{value.localId}
-            {value.setName && ` · ${value.setName}`}
-          </p>
-          {value.rarity && (
-            <p className="mt-0.5 text-xs text-muted-foreground italic">{value.rarity}</p>
-          )}
+        <div className="flex-1 min-w-0 space-y-2 pr-8">
+          <div>
+            <p className="text-base font-semibold leading-snug text-foreground sm:text-lg">
+              {value.name}
+              <span className="ml-1.5 text-sm font-normal text-muted-foreground">#{value.localId}</span>
+            </p>
+            {value.setName && (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {value.setName}
+                {releaseYear && <span className="ml-1 text-muted-foreground/70">· {releaseYear}</span>}
+              </p>
+            )}
+            {value.series?.name && (
+              <p className="mt-0.5 text-xs text-muted-foreground/80">{value.series.name}</p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {value.rarity && (
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground ring-1 ring-border">
+                {value.rarity}
+              </span>
+            )}
+            {filteredVariants.map((v) => (
+              <span
+                key={v}
+                className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary ring-1 ring-primary/20"
+              >
+                {VARIANT_LABEL[v] ?? v}
+              </span>
+            ))}
+          </div>
         </div>
         <button
           type="button"
           onClick={handleClear}
           disabled={disabled}
-          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+          className="absolute right-2 top-2 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
           aria-label="Wijzig kaart"
         >
           <X className="size-4" />
@@ -252,15 +322,29 @@ export function CardSearchSelect({
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-9 text-sm outline-none ring-primary/40 focus:ring-2 disabled:opacity-50"
+          className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-9 text-base outline-none ring-primary/40 focus:ring-2 disabled:opacity-50 sm:text-sm"
         />
         {loading && (
           <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         )}
       </div>
 
-      {open && (
-        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-lg sm:w-[min(640px,calc(100vw-2rem))]">
+      {open && dropdownRect && typeof document !== "undefined" && createPortal(
+        // Dropdown via Portal in document.body — ontsnapt alle parent
+        // stacking-contexts (sticky form-progress, backdrop-filter, etc.).
+        // Position fixed met dynamische top/left/width o.b.v. de input-
+        // bounding-rect. Update via scroll/resize-listeners.
+        <div
+          ref={dropdownRef}
+          style={{
+            position: "fixed",
+            top: dropdownRect.top,
+            left: dropdownRect.left,
+            width: dropdownRect.width,
+            zIndex: 100,
+          }}
+          className="overflow-hidden rounded-xl border border-border bg-popover shadow-lg"
+        >
           {error && (
             <p className="p-3 text-sm text-red-500">{error}</p>
           )}
@@ -269,59 +353,81 @@ export function CardSearchSelect({
               Geen kaarten gevonden voor &quot;{query}&quot;.
             </p>
           )}
-          {!error && results.length > 0 && (
-            // Mobile: vertical list. sm+: 2-col grid, lg+: 3-col grid.
-            <div className="grid max-h-[70vh] grid-cols-1 gap-1 overflow-y-auto p-1 sm:grid-cols-2 lg:grid-cols-3">
-              {results.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => handleSelect(r)}
-                  className="flex items-start gap-2 rounded-lg p-2 text-left transition-colors hover:bg-muted/60"
-                >
-                  {r.thumbnailUrl ? (
-                    <Image
-                      src={r.thumbnailUrl}
-                      alt={r.name}
-                      width={44}
-                      height={62}
-                      className="shrink-0 rounded object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex h-[62px] w-[44px] shrink-0 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
-                      -
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {r.name}
-                      <span className="ml-1 font-normal text-muted-foreground">#{r.localId}</span>
-                    </p>
-                    {r.setName && (
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {r.setName}
-                        {r.releaseDate && ` · ${r.releaseDate.slice(0, 4)}`}
-                      </p>
-                    )}
-                    <div className="mt-0.5 flex flex-wrap gap-1">
-                      {r.rarity && (
-                        <span className="rounded bg-muted/70 px-1.5 py-0.5 text-[9px] text-muted-foreground">
-                          {r.rarity}
-                        </span>
-                      )}
-                      {r.variants?.slice(0, 3).map((v) => (
-                        <span key={v} className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">
-                          {VARIANT_LABEL[v] ?? v}
-                        </span>
-                      ))}
-                    </div>
+          {!error && results.length > 0 && (() => {
+            const visible = expanded ? results : results.slice(0, INITIAL_VISIBLE);
+            const hiddenCount = results.length - INITIAL_VISIBLE;
+            return (
+              <div className="max-h-[70vh] overflow-y-auto p-2">
+                {/* Mobile: 1 kolom. sm+: 2 kolommen. lg+: 3 kolommen met thumb 112×156. */}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {visible.map((r) => {
+                    const filteredVariants = r.variants?.filter((v) => !HIDDEN_VARIANTS.has(v)) ?? [];
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => handleSelect(r)}
+                        className="flex items-start gap-3 rounded-lg border border-transparent p-2.5 text-left transition-colors hover:border-border hover:bg-muted/60"
+                      >
+                        {r.thumbnailUrl ? (
+                          <Image
+                            src={r.thumbnailUrl}
+                            alt={r.name}
+                            width={112}
+                            height={156}
+                            className="shrink-0 rounded-md object-cover ring-1 ring-black/5 dark:ring-white/10"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-[156px] w-[112px] shrink-0 items-center justify-center rounded-md bg-muted text-[10px] text-muted-foreground">
+                            -
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {r.name}
+                            <span className="ml-1 font-normal text-muted-foreground">#{r.localId}</span>
+                          </p>
+                          {r.setName && (
+                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                              {r.setName}
+                              {r.releaseDate && ` · ${r.releaseDate.slice(0, 4)}`}
+                            </p>
+                          )}
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            {r.rarity && (
+                              <span className="rounded bg-muted/70 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                {r.rarity}
+                              </span>
+                            )}
+                            {filteredVariants.slice(0, 3).map((v) => (
+                              <span key={v} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                {VARIANT_LABEL[v] ?? v}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {!expanded && hiddenCount > 0 && (
+                  <div className="mt-2 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setExpanded(true)}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted/70"
+                    >
+                      Meer weergeven (+{hiddenCount})
+                    </button>
                   </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>,
+        document.body,
       )}
     </div>
   );

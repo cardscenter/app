@@ -4,13 +4,11 @@ import { getHomepageData } from "@/lib/homepage-data";
 import { pickDailyBanner } from "@/lib/hero-banners";
 import { getBuyerLocation } from "@/lib/shipping/filter";
 import { fetchActionItems, type ActionItemsCounts } from "@/lib/dashboard-queries";
-import { Tag, Store, Users } from "lucide-react";
+import { Tag, Store } from "lucide-react";
 
 import { MarketingHeroV2 } from "@/components/home/marketing-hero-v2";
 import { LoggedInHeroV2 } from "@/components/home/logged-in-hero-v2";
 import { SponsoredSpotlight } from "@/components/home/sponsored-spotlight";
-import { TopSellersSection } from "@/components/home/top-sellers-section";
-import { PlatformStatsSection } from "@/components/home/platform-stats-section";
 import { HowItWorksThreePaths } from "@/components/home/how-it-works-three-paths";
 import { TrustPillarsSection } from "@/components/home/trust-pillars-section";
 import { TestimonialsSection } from "@/components/home/testimonials-section";
@@ -69,7 +67,6 @@ async function HomePageContent({
   const showTierComparison = !isLoggedIn || accountType === "FREE" || !accountType;
   const hasRecentClaimsales = data.recentClaimsales.length > 0;
   const hasRecentListings = data.recentListings.length > 0;
-  const hasTopSellers = data.topSellers.length > 0;
 
   return (
     <div className="flex flex-col">
@@ -199,28 +196,12 @@ async function HomePageContent({
           Geen mobile variant: sectie is `hidden md:block`. */}
       {!isLoggedIn && <CompetitorComparisonSection bgClass="bg-background" locale={locale} />}
 
-      {/* 12. Top Sellers — bg-card (of EmptyHomeSection) */}
-      {hasTopSellers ? (
-        <TopSellersSection sellers={data.topSellers} />
-      ) : (
-        <EmptyHomeSection
-          icon={<Users className="size-5" />}
-          iconClass="bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
-          title={t("emptyTopSellersTitle")}
-          description={t("emptyTopSellersDesc")}
-          ctaLabel={t("emptyTopSellersCta")}
-          ctaHref={isLoggedIn ? "/marktplaats/nieuw" : "/register"}
-          bgClass="bg-card"
-        />
-      )}
-
-      {/* 13. Testimonials (logged-out only, conditional ≥3 5★) — bg-background */}
+      {/* 12. Testimonials (logged-out only, conditional ≥3 5★) — bg-background.
+          Top Sellers + Platform Stats secties zijn (tijdelijk) verborgen in de
+          beginfase — pas terugzetten zodra er echte verkopers/cijfers zijn. */}
       {!isLoggedIn && <TestimonialsSection fiveStarCount={data.fiveStarReviewCount} />}
 
-      {/* 14. Platform Statistics — bg-card */}
-      <PlatformStatsSection stats={data.platformStats} />
-
-      {/* 15. FAQ — voor iedereen, ook logged-in users vinden onboarding-info bruikbaar */}
+      {/* 13. FAQ — voor iedereen, ook logged-in users vinden onboarding-info bruikbaar */}
       <FaqSection bgClass="bg-background" />
     </div>
   );

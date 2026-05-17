@@ -577,3 +577,31 @@ body {
 .animate-flash-in {
   animation: flash-in 220ms ease-out;
 }
+
+/* ── iOS Safari auto-zoom prevention ──
+   Op iOS Safari zoomt de browser automatisch in zodra je een input/textarea/
+   select tapt waarvan de computed font-size kleiner is dan 16px. De rest
+   van het scherm wordt dan meegescaled en de bezoeker moet handmatig weer
+   uitzoomen — een UX-killer die mensen laat afhaken op mobile.
+
+   We forceren computed font-size op 16px voor alle text-input form-fields
+   onder de sm-breakpoint (640px). Tailwind-classes als text-sm worden
+   overruled op mobile, maar het visuele renderverschil tussen 14px en 16px
+   is verwaarloosbaar in form-velden, en in ruil krijg je geen ongewenste
+   page-zoom meer.
+
+   We gebruiken `!important` omdat Tailwind v4 utilities (text-sm etc.) in
+   een eigen CSS-layer staan en de cascade-volgorde anders soms onverwacht
+   uitvalt op iOS. Trade-off: text-lg/text-xl op input-elementen wordt
+   visueel teruggebracht naar 16px op mobile — een paar pixels verschil
+   die in form-velden amper opvalt, maar de zoom-killer is weg.
+
+   Excluded: checkbox/radio/range/color/file — die renderen geen tekst en
+   zijn geen zoom-triggers. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

@@ -6,19 +6,26 @@ import { useSession, SessionProvider } from "next-auth/react";
 import { UserBalance } from "./user-balance";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, Search } from "lucide-react";
+import { Menu, X, Search, Bell, MessageCircle, ChevronRight } from "lucide-react";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { MessageIcon } from "@/components/ui/message-icon";
 import { SearchBar } from "@/components/search/search-bar";
 import { CartIcon } from "@/components/ui/cart-icon";
 import { AdminShield } from "@/components/layout/admin-shield";
+import { getUnreadCount } from "@/actions/notification";
+import { getUnreadConversationCount } from "@/actions/message";
+import { useRealtime } from "@/components/providers/realtime-provider";
 
 function HeaderContent() {
   const t = useTranslations("common");
+  const tn = useTranslations("notifications");
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const { subscribe } = useRealtime();
 
   useEffect(() => {
     function handleAvatarUpdate(e: Event) {
@@ -28,6 +35,32 @@ function HeaderContent() {
     window.addEventListener("avatar-updated", handleAvatarUpdate);
     return () => window.removeEventListener("avatar-updated", handleAvatarUpdate);
   }, []);
+
+  // Unread badges voor mobile-menu — 60s polling fallback + SSE realtime
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    getUnreadConversationCount().then(setUnreadMessages).catch(() => {});
+    getUnreadCount().then(setUnreadNotifs).catch(() => {});
+    const id = setInterval(() => {
+      getUnreadConversationCount().then(setUnreadMessages).catch(() => {});
+      getUnreadCount().then(setUnreadNotifs).catch(() => {});
+    }, 60000);
+    return () => clearInterval(id);
+  }, [status]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const unsubM = subscribe("new-message", (event) => {
+      if (event.type === "new-message") setUnreadMessages(event.payload.unreadConversationCount);
+    });
+    const unsubN = subscribe("notification-created", (event) => {
+      if (event.type === "notification-created") setUnreadNotifs(event.payload.unreadCount);
+    });
+    return () => {
+      unsubM();
+      unsubN();
+    };
+  }, [status, subscribe]);
 
   // Primary sections get subtle brand accents matching their page colors
   // (blue / amber / emerald). "Kaarten" and any later additions are
@@ -118,26 +151,25 @@ function HeaderContent() {
           <HeaderSearchToggle />
 
           {session?.user ? (
-            <div className="hidden items-center gap-1 md:flex md:gap-1.5">
-              {/* Balance */}
+            <>
+              {/* Saldo — ALTIJD zichtbaar (mobile + desktop). Click-popover
+                  toont beschikbaar/vastgehouden/totaal saldo. */}
               <UserBalance />
 
-              {/* Notifications */}
-              <NotificationBell />
+              {/* Desktop-only iconen: notifications, admin, messages */}
+              <div className="hidden items-center gap-1 md:flex md:gap-1.5">
+                <NotificationBell />
+                <AdminShield />
+                <MessageIcon />
+              </div>
 
-              {/* Admin shield (only renders for ADMIN accounts) */}
-              <AdminShield />
-
-              {/* Messages — real-time bell-style popover */}
-              <MessageIcon />
-
-              {/* Cart */}
+              {/* Winkelwagen — ALTIJD zichtbaar (mobile + desktop) */}
               <CartIcon />
 
-              {/* Dashboard / Avatar */}
+              {/* Dashboard / Avatar — desktop-only (mobile heeft 'm in menu) */}
               <Link
                 href="/dashboard"
-                className="ml-1 flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                className="ml-1 hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/20 md:flex"
               >
                 {(avatarOverride || session.user.image) ? (
                   <img
@@ -152,7 +184,7 @@ function HeaderContent() {
                 )}
                 <span className="max-w-[120px] truncate">{session.user.name}</span>
               </Link>
-            </div>
+            </>
           ) : (
             <div className="hidden items-center gap-2 md:flex">
               <Link
@@ -187,67 +219,191 @@ function HeaderContent() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="border-t border-white/10 bg-slate-950 px-4 pb-4 pt-2 md:hidden">
+        <div className="border-t border-white/10 bg-slate-950 px-4 pb-5 pt-3 md:hidden">
           {/* Mobile search */}
           <MobileSearchBar />
-          <nav className="mt-2 space-y-1">
-            {[...primaryLinks, ...secondaryLinks].map((link) => {
-              const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`block rounded-md px-4 py-3 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-white/15 text-white"
-                      : "text-slate-300 hover:bg-white/10"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
 
-            {session?.user ? (
-              <>
-                <div className="px-4 py-3">
-                  <UserBalance />
-                </div>
+          {session?.user ? (
+            <>
+              {/* QUICK ACTIONS — Berichten + Meldingen icons (met unread-badge)
+                  links, Dashboard-pill rechts. Tap navigeert direct, geen
+                  popover (popovers worden door header-bell/icon op desktop
+                  afgehandeld). */}
+              <div className="mt-3 flex items-center gap-2">
                 <Link
                   href="/berichten"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-md px-4 py-3 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10"
+                  aria-label={`${t("messages")}${unreadMessages > 0 ? ` (${unreadMessages})` : ""}`}
+                  className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition-colors hover:bg-white/15"
                 >
-                  {t("messages")}
+                  <MessageCircle className="size-5" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white ring-2 ring-slate-950">
+                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                    </span>
+                  )}
                 </Link>
+
+                <Link
+                  href="/dashboard/meldingen"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label={`${tn("title")}${unreadNotifs > 0 ? ` (${unreadNotifs})` : ""}`}
+                  className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition-colors hover:bg-white/15"
+                >
+                  <Bell className="size-5" />
+                  {unreadNotifs > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-950">
+                      {unreadNotifs > 9 ? "9+" : unreadNotifs}
+                    </span>
+                  )}
+                </Link>
+
                 <Link
                   href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-md px-4 py-3 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10"
+                  className="ml-auto flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-hover px-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40"
                 >
-                  {t("dashboard")} ({session.user.name})
+                  {(avatarOverride || session.user.image) ? (
+                    <img
+                      src={avatarOverride || session.user.image!}
+                      alt=""
+                      className="h-7 w-7 shrink-0 rounded-full object-cover ring-2 ring-white/30"
+                    />
+                  ) : (
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
+                      {session.user.name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="min-w-0 flex-1 truncate">{t("dashboard")}</span>
+                  <ChevronRight className="size-4 shrink-0 opacity-80" />
                 </Link>
-              </>
-            ) : (
-              <div className="mt-3 flex gap-2 border-t border-white/10 pt-3">
+              </div>
+
+              {/* Section label */}
+              <p className="mt-5 mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Categorieën
+              </p>
+
+              {/* Primary nav cards — gekleurde bolletjes + active-state highlight */}
+              <nav className="space-y-1">
+                {primaryLinks.map((link) => {
+                  const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                  const a = accentClasses[link.accent];
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`group/menu flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors ${
+                        isActive ? a.active : a.idle
+                      }`}
+                    >
+                      <span
+                        className={`relative inline-flex size-2.5 shrink-0 rounded-full ${a.dot}`}
+                        aria-hidden
+                      >
+                        {isActive && (
+                          <span className={`absolute inset-0 animate-ping rounded-full ${a.dot} opacity-60`} />
+                        )}
+                      </span>
+                      <span className="flex-1">{link.label}</span>
+                      <ChevronRight className="size-4 opacity-40 transition-opacity group-hover/menu:opacity-70" />
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* Secondary — Kaarten en eventuele extra */}
+              {secondaryLinks.length > 0 && (
+                <>
+                  <p className="mt-5 mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Overig
+                  </p>
+                  <nav className="space-y-1">
+                    {secondaryLinks.map((link) => {
+                      const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors ${
+                            isActive
+                              ? "bg-white/15 text-white"
+                              : "text-slate-300 hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          <span className="flex-1">{link.label}</span>
+                          <ChevronRight className="size-4 opacity-40" />
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Logged-out: primary + secondary nav, dan login/register-knoppen */}
+              <p className="mt-4 mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Categorieën
+              </p>
+              <nav className="space-y-1">
+                {primaryLinks.map((link) => {
+                  const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                  const a = accentClasses[link.accent];
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors ${
+                        isActive ? a.active : a.idle
+                      }`}
+                    >
+                      <span className={`inline-block size-2.5 shrink-0 rounded-full ${a.dot}`} />
+                      <span className="flex-1">{link.label}</span>
+                      <ChevronRight className="size-4 opacity-40" />
+                    </Link>
+                  );
+                })}
+                {secondaryLinks.map((link) => {
+                  const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-white/15 text-white"
+                          : "text-slate-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <span className="flex-1">{link.label}</span>
+                      <ChevronRight className="size-4 opacity-40" />
+                    </Link>
+                  );
+                })}
+              </nav>
+              <div className="mt-5 flex gap-2 border-t border-white/10 pt-4">
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 rounded-md border border-white/20 px-4 py-3 text-center text-sm font-medium text-slate-300 transition-colors hover:bg-white/10"
+                  className="flex-1 rounded-xl border border-white/20 px-4 py-3 text-center text-sm font-medium text-slate-300 transition-colors hover:bg-white/10"
                 >
                   {t("login")}
                 </Link>
                 <Link
                   href="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 rounded-md bg-primary px-4 py-3 text-center text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                  className="flex-1 rounded-xl bg-primary px-4 py-3 text-center text-sm font-medium text-white shadow-lg shadow-primary/20 transition-colors hover:bg-primary-hover"
                 >
                   {t("register")}
                 </Link>
               </div>
-            )}
-          </nav>
+            </>
+          )}
         </div>
       )}
     </header>
@@ -276,7 +432,7 @@ function MobileSearchBar() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={t("placeholder")}
-          className="w-full rounded-lg bg-white/10 pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-slate-400 focus:bg-white/15 focus:outline-none focus:ring-1 focus:ring-white/30"
+          className="w-full rounded-lg bg-white/10 pl-9 pr-3 py-2.5 text-base text-white placeholder:text-slate-400 focus:bg-white/15 focus:outline-none focus:ring-1 focus:ring-white/30"
         />
       </div>
     </form>
@@ -347,7 +503,7 @@ function HeaderSearchToggle() {
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder={t("placeholder")}
-              className="w-full rounded-lg bg-slate-800/95 pl-9 pr-9 py-2 text-sm text-white shadow-lg ring-1 ring-white/20 placeholder:text-slate-400 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg bg-slate-800/95 pl-9 pr-9 py-2 text-base text-white shadow-lg ring-1 ring-white/20 placeholder:text-slate-400 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <button
               type="button"

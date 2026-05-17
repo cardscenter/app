@@ -71,7 +71,11 @@ export function AuctionFormProgress({ completed }: AuctionFormProgressProps) {
   };
 
   return (
-    <div className="sticky top-16 z-20 -mx-4 mb-6 border-b border-border bg-background/85 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border lg:bg-card/95 lg:px-4 lg:shadow-sm">
+    <div className="sticky top-16 z-20 -mx-4 mb-6 border-b border-border bg-background px-4 py-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border lg:bg-card lg:px-4 lg:shadow-sm">
+      {/* Geen backdrop-blur — op iOS Safari creëert sticky + backdrop-filter
+          een "atomic" stacking context die de CardSearchSelect-dropdown niet
+          netjes laat overlappen, zelfs met z-[100]. Solide bg lost het op
+          zonder visueel verlies. */}
       <ol
         ref={listRef}
         className="flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

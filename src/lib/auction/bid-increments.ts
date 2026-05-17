@@ -1,11 +1,14 @@
 export function getMinimumIncrement(currentBid: number): number {
-  if (currentBid < 1) return 0.1;
-  if (currentBid < 5) return 0.25;
-  if (currentBid < 10) return 0.5;
-  if (currentBid < 50) return 1;
-  if (currentBid < 100) return 2.5;
-  if (currentBid < 500) return 5;
-  return 10;
+  if (currentBid < 20) return 1;
+  if (currentBid < 50) return 2;
+  if (currentBid < 80) return 3;
+  if (currentBid < 120) return 4;
+  if (currentBid < 200) return 5;
+  if (currentBid < 500) return 10;
+  if (currentBid < 1000) return 25;
+  if (currentBid < 2500) return 50;
+  if (currentBid < 5000) return 100;
+  return 200;
 }
 
 export function getMinimumNextBid(currentBid: number): number {

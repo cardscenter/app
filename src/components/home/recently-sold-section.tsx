@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useTranslations, useFormatter, useNow } from "next-intl";
 import { Gavel, Package, Store, Tag, TrendingUp } from "lucide-react";
 import { AnimatedSection } from "@/components/home/animated-section";
+import { HomeCarousel, CarouselSlide } from "@/components/home/home-carousel";
 import { Link } from "@/i18n/navigation";
 import type { RecentlySoldItem } from "@/lib/home-recently-sold";
 
@@ -46,52 +47,55 @@ export function RecentlySoldSection({ items, bgClass = "bg-card" }: RecentlySold
             </div>
           </div>
 
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {items.map((item) => {
-              const meta = KIND_META[item.kind];
-              const Icon = meta.Icon;
-              return (
-                <Link
-                  key={item.bundleId}
-                  href={`/verkoper/${item.sellerId}`}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:shadow-card-hover"
-                >
-                  <div className="relative aspect-square w-full overflow-hidden bg-muted">
-                    {item.imageUrl ? (
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.title}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <Icon className="size-10 text-muted-foreground/40" />
+          <div className="mt-8">
+            <HomeCarousel fadeFromClass={bgClass === "bg-card" ? "from-card" : "from-background"}>
+              {items.map((item) => {
+                const meta = KIND_META[item.kind];
+                const Icon = meta.Icon;
+                return (
+                  <CarouselSlide key={item.bundleId}>
+                    <Link
+                      href={`/verkoper/${item.sellerId}`}
+                      className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:shadow-card-hover"
+                    >
+                      <div className="relative aspect-square w-full overflow-hidden bg-muted">
+                        {item.imageUrl ? (
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.title}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Icon className="size-10 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-foreground backdrop-blur-sm">
+                          <Icon className={`size-3 ${meta.color}`} />
+                          {t(meta.labelKey)}
+                        </div>
                       </div>
-                    )}
-                    <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-foreground backdrop-blur-sm">
-                      <Icon className={`size-3 ${meta.color}`} />
-                      {t(meta.labelKey)}
-                    </div>
-                  </div>
-                  <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
-                    <div>
-                      <h3 className="line-clamp-2 text-sm font-medium text-foreground">{item.title}</h3>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">{item.sellerDisplayName}</p>
-                    </div>
-                    <div className="mt-3 flex items-end justify-between gap-2">
-                      <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 sm:text-xl">
-                        {format.number(item.soldPrice, { style: "currency", currency: "EUR" })}
+                      <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
+                        <div>
+                          <h3 className="line-clamp-2 text-sm font-medium text-foreground">{item.title}</h3>
+                          <p className="mt-1 truncate text-xs text-muted-foreground">{item.sellerDisplayName}</p>
+                        </div>
+                        <div className="mt-3 flex items-end justify-between gap-2">
+                          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 sm:text-xl">
+                            {format.number(item.soldPrice, { style: "currency", currency: "EUR" })}
+                          </div>
+                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            {format.relativeTime(item.soldAt, now)}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {format.relativeTime(item.soldAt, now)}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+                    </Link>
+                  </CarouselSlide>
+                );
+              })}
+            </HomeCarousel>
           </div>
         </AnimatedSection>
       </div>
