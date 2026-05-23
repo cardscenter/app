@@ -121,8 +121,8 @@ export async function openShippingIssue(params: {
     "/dashboard/aankopen",
   );
 
-  publish(userChannel(bundle.buyerId), { type: "bundle-changed", payload: { bundleId: bundle.id } });
-  publish(userChannel(bundle.sellerId), { type: "bundle-changed", payload: { bundleId: bundle.id } });
+  publish(userChannel(bundle.buyerId), { type: "bundle-changed", payload: { bundleId: bundle.id, status: bundle.status } });
+  publish(userChannel(bundle.sellerId), { type: "bundle-changed", payload: { bundleId: bundle.id, status: bundle.status } });
 
   return { success: true, issueId: issue.id };
 }
@@ -167,7 +167,7 @@ export async function resolveShippingIssueGoodwill(params: {
 
   const issue = await prisma.shippingIssue.findUnique({
     where: { id: params.issueId },
-    include: { bundle: { select: { id: true, buyerId: true, sellerId: true } } },
+    include: { bundle: { select: { id: true, buyerId: true, sellerId: true, status: true } } },
   });
   if (!issue) return { error: "Ticket niet gevonden" };
   if (!["OPEN", "INVESTIGATING"].includes(issue.status)) {
@@ -220,8 +220,8 @@ export async function resolveShippingIssueGoodwill(params: {
   );
 
   publish(userChannel(issue.bundle.buyerId), { type: "balance-changed", payload: {} });
-  publish(userChannel(issue.bundle.buyerId), { type: "bundle-changed", payload: { bundleId: issue.bundle.id } });
-  publish(userChannel(issue.bundle.sellerId), { type: "bundle-changed", payload: { bundleId: issue.bundle.id } });
+  publish(userChannel(issue.bundle.buyerId), { type: "bundle-changed", payload: { bundleId: issue.bundle.id, status: issue.bundle.status } });
+  publish(userChannel(issue.bundle.sellerId), { type: "bundle-changed", payload: { bundleId: issue.bundle.id, status: issue.bundle.status } });
 
   return { success: true };
 }
@@ -241,7 +241,7 @@ export async function resolveShippingIssueNoAction(params: {
 
   const issue = await prisma.shippingIssue.findUnique({
     where: { id: params.issueId },
-    include: { bundle: { select: { id: true, buyerId: true, sellerId: true } } },
+    include: { bundle: { select: { id: true, buyerId: true, sellerId: true, status: true } } },
   });
   if (!issue) return { error: "Ticket niet gevonden" };
   if (!["OPEN", "INVESTIGATING"].includes(issue.status)) {
@@ -274,8 +274,8 @@ export async function resolveShippingIssueNoAction(params: {
     "/dashboard/aankopen",
   );
 
-  publish(userChannel(issue.bundle.buyerId), { type: "bundle-changed", payload: { bundleId: issue.bundle.id } });
-  publish(userChannel(issue.bundle.sellerId), { type: "bundle-changed", payload: { bundleId: issue.bundle.id } });
+  publish(userChannel(issue.bundle.buyerId), { type: "bundle-changed", payload: { bundleId: issue.bundle.id, status: issue.bundle.status } });
+  publish(userChannel(issue.bundle.sellerId), { type: "bundle-changed", payload: { bundleId: issue.bundle.id, status: issue.bundle.status } });
 
   return { success: true };
 }
@@ -385,8 +385,8 @@ export async function escalateShippingIssueToDispute(params: {
     `/dashboard/geschillen-v2/${dispute.id}`,
   );
 
-  publish(userChannel(issue.bundle.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-  publish(userChannel(issue.bundle.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+  publish(userChannel(issue.bundle.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: dispute.status } });
+  publish(userChannel(issue.bundle.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: dispute.status } });
 
   return { success: true, disputeId: dispute.id };
 }

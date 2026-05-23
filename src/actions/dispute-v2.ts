@@ -168,8 +168,8 @@ export async function openDisputeV2(params: {
     `/dashboard/geschillen-v2/${dispute.id}`,
   );
 
-  publish(userChannel(bundle.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-  publish(userChannel(bundle.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+  publish(userChannel(bundle.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: dispute.status } });
+  publish(userChannel(bundle.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: dispute.status } });
 
   return { success: true, disputeId: dispute.id };
 }
@@ -248,8 +248,9 @@ export async function respondToDisputeV2(params: {
     `/dashboard/geschillen-v2/${dispute.id}`,
   );
 
-  publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-  publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+  const newStatus = proposedRefund !== null ? "MEDIATION" : "SELLER_RESPONDED";
+  publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: newStatus } });
+  publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: newStatus } });
 
   return { success: true };
 }
@@ -304,8 +305,8 @@ export async function proposeRefundV2(disputeId: string, amount: number) {
   });
 
   const otherUserId = isBuyer ? dispute.sellerId : dispute.buyerId;
-  publish(userChannel(otherUserId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-  publish(userChannel(session.user.id), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+  publish(userChannel(otherUserId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "MEDIATION" } });
+  publish(userChannel(session.user.id), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "MEDIATION" } });
 
   return { success: true };
 }
@@ -420,8 +421,8 @@ export async function acceptProposalV2(disputeId: string) {
     `/dashboard/geschillen-v2/${dispute.id}`,
   );
 
-  publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-  publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+  publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "RESOLVED_MUTUAL" } });
+  publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "RESOLVED_MUTUAL" } });
   publish(userChannel(dispute.buyerId), { type: "balance-changed", payload: {} });
   publish(userChannel(dispute.sellerId), { type: "balance-changed", payload: {} });
 
@@ -467,8 +468,8 @@ export async function rejectProposalV2(disputeId: string) {
   });
 
   const otherUserId = isBuyer ? dispute.sellerId : dispute.buyerId;
-  publish(userChannel(otherUserId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-  publish(userChannel(session.user.id), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+  publish(userChannel(otherUserId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "SELLER_RESPONDED" } });
+  publish(userChannel(session.user.id), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "SELLER_RESPONDED" } });
 
   return { success: true };
 }
@@ -536,8 +537,9 @@ export async function requestEscalationV2(disputeId: string) {
     }
   });
 
-  publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId } });
-  publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId } });
+  const escalationStatus = bothAgreed ? "ESCALATED" : dispute.status;
+  publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId, status: escalationStatus } });
+  publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId, status: escalationStatus } });
 
   return { success: true, escalated: bothAgreed };
 }
@@ -765,8 +767,10 @@ export async function adminResolveDisputeV2(params: {
     `/dashboard/geschillen-v2/${dispute.id}`,
   );
 
-  publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-  publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+  const resolvedStatus =
+    bundleStatusAfter === "CANCELLED" ? "RESOLVED_BUYER" : finalRefund > 0 ? "RESOLVED_ADMIN" : "RESOLVED_SELLER";
+  publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: resolvedStatus } });
+  publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: resolvedStatus } });
   publish(userChannel(dispute.buyerId), { type: "balance-changed", payload: {} });
   publish(userChannel(dispute.sellerId), { type: "balance-changed", payload: {} });
 
@@ -847,8 +851,8 @@ export async function autoResolveDisputesV2(): Promise<{ resolved: number }> {
       `/dashboard/geschillen-v2/${dispute.id}`,
     );
 
-    publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-    publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+    publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "RESOLVED_BUYER" } });
+    publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "RESOLVED_BUYER" } });
     publish(userChannel(dispute.buyerId), { type: "balance-changed", payload: {} });
 
     resolved++;
@@ -916,8 +920,8 @@ export async function autoResolveDisputesV2(): Promise<{ resolved: number }> {
       `/dashboard/geschillen-v2/${dispute.id}`,
     );
 
-    publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
-    publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id } });
+    publish(userChannel(dispute.buyerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "RESOLVED_SELLER" } });
+    publish(userChannel(dispute.sellerId), { type: "dispute-changed", payload: { disputeId: dispute.id, status: "RESOLVED_SELLER" } });
     publish(userChannel(dispute.sellerId), { type: "balance-changed", payload: {} });
 
     resolved++;

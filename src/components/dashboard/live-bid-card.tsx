@@ -98,7 +98,7 @@ export function LiveBidCard({ auction }: { auction: LiveBidCardData }) {
     }
     startTransition(async () => {
       const result = await setAutoBid(auction.id, amount, deliveryChoice);
-      if (result?.error) {
+      if (result && "error" in result && result.error) {
         setError(result.error);
         return;
       }
