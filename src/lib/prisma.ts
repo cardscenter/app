@@ -6,7 +6,14 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  const adapter = new PrismaLibSql({ url: "file:dev.db" });
+  // Lokaal (geen DATABASE_URL gezet) → SQLite-bestand. In productie (Railway)
+  // wijst DATABASE_URL naar de Turso libSQL-database; TURSO_AUTH_TOKEN hoort
+  // daarbij. Voor een lokaal file:-pad is geen token nodig.
+  const url = process.env.DATABASE_URL ?? "file:dev.db";
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const adapter = new PrismaLibSql(
+    authToken ? { url, authToken } : { url }
+  );
   return new PrismaClient({ adapter });
 }
 

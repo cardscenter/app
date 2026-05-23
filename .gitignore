@@ -33,6 +33,7 @@ dev-server.log
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -46,6 +47,13 @@ next-env.d.ts
 # local dev database (SQLite) — too large for git, refresh locally
 dev.db
 dev.db-journal
+
+# uploaded user content — niet in git; productie gebruikt een Railway-volume
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# dev-server logfiles
+*.log
 
 # Claude Code runtime state (per-session, niet projectspecifiek)
 .claude/
