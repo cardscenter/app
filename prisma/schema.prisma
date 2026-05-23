@@ -988,6 +988,11 @@ model ShippingBundle {
   // afwees). Mutual-akkoord-cancels hebben dit veld leeg.
   autoExpiredAt DateTime?
 
+  // (Fase 40) Gevuld door cron `cleanup-sold-images` zodra de foto-bestanden
+  // van een voltooide verkoop (30d na deliveredAt) zijn verwijderd. Filtert de
+  // bundle uit volgende cron-runs (idempotent). Alle tekstdata blijft intact.
+  imagesPurgedAt DateTime?
+
   // Inpak-vergrendeling (claimsale-merge): zolang dit veld leeg is mag een
   // koper bij een volgende claimsale-checkout items aan deze bundle toevoegen
   // (mits het ook een claimsale-bundle is). Seller flipt 'm met de
@@ -1058,6 +1063,7 @@ model ShippingBundle {
   @@index([buyerId, sellerId, status])
   @@index([paymentMode, status])
   @@index([pickupReservationExpiresAt])
+  @@index([status, imagesPurgedAt])
 }
 
 // ============================================================

@@ -32,8 +32,10 @@ import { suspendUserSystem } from "@/lib/suspension";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 import { recordPendingFeeInTx } from "@/lib/pending-fees";
 import { getBlockedUserIds } from "@/lib/blocking";
+import { parseImageUrls, deleteUploadedFile } from "@/lib/upload";
 
 const STALE_PAID_DAYS = 14;
+const CLEANUP_SOLD_IMAGES_DAYS = 30;
 const RUNNER_UP_DECISION_HOURS = 72;
 const PAYMENT_DEADLINE_DAYS = 5;
 const MAX_RUNNER_UP_ATTEMPTS_CAP = 3;
@@ -295,6 +297,7 @@ export const CRON_JOB_NAMES = [
   "payment-failure-decay",
   "prune-bid-ips",
   "reset-free-upsells",
+  "cleanup-sold-images",
 ] as const;
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
 
@@ -440,6 +443,12 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     description:
       "Reset op de 1e van de maand de gratis HOMEPAGE_SPOTLIGHT-quota voor alle PRO/Unlimited/Enterprise-abonnees naar de tier-default (1 / 5 / 999). Schedule deze cron op de 1e om 00:05 zodat alle users tegelijk hun nieuwe quota krijgen.",
     schedule: "Maandelijks (1e)",
+    allowManualRun: true,
+  },
+  "cleanup-sold-images": {
+    description:
+      "Verwijdert 30 dagen na voltooide verkoop (deliveredAt) de geüploade foto-bestanden van die verkoop (R2/schijf) en maakt de DB-foto-velden leeg — alle tekstdata blijft. Slaat bestellingen met lopend geschil/ticket over. Idempotent via imagesPurgedAt. Gedeelde foto's (listing met restvoorraad, claimsale-cover) blijven tot ook die volledig klaar zijn.",
+    schedule: "Dagelijks",
     allowManualRun: true,
   },
 };
@@ -1407,5 +1416,158 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       itemsProcessed: total,
       result: { pro: pro.count, unlimited: unlim.count, enterprise: ent.count, total },
     };
+  },
+  "cleanup-sold-images": async () => {
+    // 30 dagen ná voltooide verkoop (deliveredAt) verwijderen we de geüploade
+    // foto-BESTANDEN van die verkoop (R2/schijf) en legen we de DB-foto-velden.
+    // Alle tekstdata blijft. Idempotent via imagesPurgedAt; geschil-veilig
+    // (skip lopende disputes/tickets, anders gooien we bewijs weg). Bewust 30d
+    // ná deliveredAt (niet ná verzending): voorbij zowel de 30d refund-window
+    // als het 10-30d geschil-venster.
+    const cutoff = new Date(Date.now() - CLEANUP_SOLD_IMAGES_DAYS * 24 * 60 * 60 * 1000);
+    const bundles = await prisma.shippingBundle.findMany({
+      where: {
+        status: "COMPLETED",
+        deliveredAt: { lte: cutoff },
+        imagesPurgedAt: null,
+        dispute: null,
+        disputeV2: null,
+        shippingIssues: { none: { status: { in: ["OPEN", "INVESTIGATING"] } } },
+      },
+      select: {
+        id: true,
+        shippingProofUrls: true,
+        auctionId: true,
+        auction: { select: { imageUrls: true } },
+        listing: { select: { id: true, status: true, imageUrls: true } },
+        bundleListings: {
+          select: { listing: { select: { id: true, status: true, imageUrls: true } } },
+        },
+        items: { select: { id: true, imageUrls: true, claimsaleId: true } },
+      },
+    });
+
+    // Een listing-foto mag alleen weg als de listing volledig klaar is: status
+    // SOLD én geen resterende voorraad (stocked/MULTI_CARD kan andere lopende
+    // bundles hebben die dezelfde imageUrls delen).
+    async function listingFullyDone(listingId: string, status: string): Promise<boolean> {
+      if (status !== "SOLD") return false;
+      const blocking = await prisma.listingCardItem.count({
+        where: { listingId, status: { in: ["AVAILABLE", "RESERVED"] } },
+      });
+      return blocking === 0;
+    }
+
+    let processed = 0;
+    let filesDeleted = 0;
+
+    for (const b of bundles) {
+      const filesToDelete: string[] = [];
+      const listingIdsToClear: string[] = [];
+      const claimsaleItemIdsToClear: string[] = [];
+      const claimsaleCoverIdsToClear: string[] = [];
+      let clearShippingProof = false;
+      let clearAuction = false;
+
+      // 1. Shipping-proof (per-bundle, altijd veilig)
+      const proof = parseImageUrls(b.shippingProofUrls);
+      if (proof.length > 0) {
+        filesToDelete.push(...proof);
+        clearShippingProof = true;
+      }
+
+      // 2. Auction (1:1 met de bundle)
+      if (b.auctionId && b.auction) {
+        const imgs = parseImageUrls(b.auction.imageUrls);
+        if (imgs.length > 0) {
+          filesToDelete.push(...imgs);
+          clearAuction = true;
+        }
+      }
+
+      // 3. Losse listing
+      if (b.listing && (await listingFullyDone(b.listing.id, b.listing.status))) {
+        const imgs = parseImageUrls(b.listing.imageUrls);
+        if (imgs.length > 0) {
+          filesToDelete.push(...imgs);
+          listingIdsToClear.push(b.listing.id);
+        }
+      }
+
+      // 4. Multi-listing bundle
+      for (const bl of b.bundleListings) {
+        if (await listingFullyDone(bl.listing.id, bl.listing.status)) {
+          const imgs = parseImageUrls(bl.listing.imageUrls);
+          if (imgs.length > 0) {
+            filesToDelete.push(...imgs);
+            listingIdsToClear.push(bl.listing.id);
+          }
+        }
+      }
+
+      // 5. Claimsale-items (elk 1:1 met buyer/bundle)
+      for (const it of b.items) {
+        const imgs = parseImageUrls(it.imageUrls);
+        if (imgs.length > 0) {
+          filesToDelete.push(...imgs);
+          claimsaleItemIdsToClear.push(it.id);
+        }
+      }
+
+      // 6. Claimsale coverImage — GEDEELD: alleen weg als de hele claimsale
+      // CLOSED is en geen items meer AVAILABLE/CLAIMED zijn.
+      const claimsaleIds = [...new Set(b.items.map((i) => i.claimsaleId))];
+      for (const csId of claimsaleIds) {
+        const cs = await prisma.claimsale.findUnique({
+          where: { id: csId },
+          select: {
+            id: true,
+            status: true,
+            coverImage: true,
+            items: {
+              where: { status: { in: ["AVAILABLE", "CLAIMED"] } },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        });
+        if (cs && cs.status === "CLOSED" && cs.items.length === 0 && cs.coverImage) {
+          filesToDelete.push(cs.coverImage);
+          claimsaleCoverIdsToClear.push(cs.id);
+        }
+      }
+
+      // Bestanden verwijderen (best-effort, buiten tx). deleteUploadedFile is
+      // niet-throwend + no-op op externe/seed-URLs.
+      for (const url of filesToDelete) {
+        if (await deleteUploadedFile(url)) filesDeleted++;
+      }
+
+      // DB-velden leegmaken + marker zetten in één tx. imagesPurgedAt pas ná
+      // de DB-update → bij een gefaalde bestand-delete hooguit een wees-bestand
+      // (gelogd), nooit een inconsistente state.
+      await prisma.$transaction(async (tx) => {
+        if (clearShippingProof) {
+          await tx.shippingBundle.update({ where: { id: b.id }, data: { shippingProofUrls: null } });
+        }
+        if (clearAuction && b.auctionId) {
+          await tx.auction.update({ where: { id: b.auctionId }, data: { imageUrls: "[]" } });
+        }
+        for (const lid of listingIdsToClear) {
+          await tx.listing.update({ where: { id: lid }, data: { imageUrls: "[]" } });
+        }
+        for (const iid of claimsaleItemIdsToClear) {
+          await tx.claimsaleItem.update({ where: { id: iid }, data: { imageUrls: "[]" } });
+        }
+        for (const cid of claimsaleCoverIdsToClear) {
+          await tx.claimsale.update({ where: { id: cid }, data: { coverImage: null } });
+        }
+        await tx.shippingBundle.update({ where: { id: b.id }, data: { imagesPurgedAt: new Date() } });
+      });
+
+      processed++;
+    }
+
+    return { itemsProcessed: processed, result: { processed, total: bundles.length, filesDeleted } };
   },
 };
