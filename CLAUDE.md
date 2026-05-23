@@ -5,6 +5,7 @@
 Pokémon trading card marketplace — auctions, claimsales, listings, wallet, messaging, reviews, watchlist, notifications, disputes.
 
 ## CRITICAL RULES
+- **NOOIT zomaar naar `main` op GitHub pushen.** `main` is gekoppeld aan Railway en **elke push naar `main` deployt automatisch naar de LIVE site** (https://cardscenter.up.railway.app). Daarom: bij élke wijziging aan de app EERST lokaal testen op de localhost-testserver (`npm run dev`, controleren in de browser / met `curl`), pas pushen als het daar werkt — en alleen na expliciete toestemming van de gebruiker. Werk op een feature-branch en push die desnoods; push naar `main` is een bewuste "we gaan live"-keuze, geen routine. Zie sectie **Deployment & Hosting (Fase 41)**.
 - **NOOIT destructieve git commando's** (`git stash`, `git reset --hard`, `git checkout .`, `git clean`) gebruiken zonder EERST te committen. Op 2026-03-31 zijn alle unstaged wijzigingen verloren gegaan door een mislukte `git stash`.
 - **Altijd committen** na elke grote wijziging zodat werk niet verloren gaat.
 - **Nooit `npm run build` draaien vanuit achtergrond agents** terwijl de dev server draait — dit veroorzaakt database locks en frozen pages.
@@ -38,6 +39,40 @@ Pokémon trading card marketplace — auctions, claimsales, listings, wallet, me
 3. `npx prisma db push --accept-data-loss && npx prisma generate`
 4. `rm -rf .next && npm run dev` (verse cache)
 5. `curl http://localhost:3000/<gewijzigde-page>` om te compileren
+
+## Deployment & Hosting (Fase 41 — live sinds 2026-05-23)
+De testfase-site draait live. **Workflow: altijd eerst lokaal testen (`npm run dev`), dan pas pushen naar `main` (= live deploy), en alleen met toestemming.**
+
+- **Live URL:** https://cardscenter.up.railway.app
+- **Stack:** Railway (hosting, Node-container) ← auto-deploy vanaf GitHub `cardscenter/app` branch **`main`** · Turso (libSQL database) · Cloudflare R2 (geüploade foto's). Drie aparte accounts/dashboards.
+- **Auto-deploy:** elke push naar `main` triggert een Railway build+deploy naar productie. Feature-branches deployen niet. → test lokaal vóór je naar `main` pusht.
+
+### Railway-specifieke afspraken (valkuilen die we raakten — niet wijzigen zonder reden)
+- **Node-versie gepind** op 24 via `.nvmrc` (`24`) + `engines.node` (`24.x`). Anders gebruikt Railway oudere npm die `@swc/helpers` anders resolved → `npm ci` faalt op lockfile-mismatch. Lokaal = Node 24 / npm 11. Houd lokaal en Railway op dezelfde major.
+- **Poort = 8080.** Railway luistert op 8080 en negeert een zelf-gezette `PORT`. Het publieke domein moet target-poort **8080** hebben (niet 3000).
+- **Env-vars staan op de SERVICE**, niet project-wide. Railway's project-/shared-variabelen werken NIET automatisch door naar een service — alles moet in de Variables-tab van de service zelf. Geen quotes en geen plaatshouders (`<...>`) in waarden. `NEXT_PUBLIC_*` is build-time → na wijziging een rebuild (redeploy) nodig.
+- **`postinstall: prisma generate`** in package.json zorgt dat Railway de Prisma-client bouwt.
+- **`src/app/sitemap.ts` is `force-dynamic`** (+ try/catch-fallback): bevroeg anders de DB tijdens `next build` → faalde omdat Turso op build-time niet bereikbaar is.
+
+### Productie env-vars (Railway service Variables)
+`DATABASE_URL` (libsql Turso-URL), `TURSO_AUTH_TOKEN`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, `NEXTAUTH_URL` + `NEXT_PUBLIC_SITE_URL` (= live domein), `CRON_SECRET`, `R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`R2_BUCKET`. Optioneel: `ANTHROPIC_API_KEY`, `POKEWALLET_API_KEY`. Sjabloon: `.env.example`.
+
+### Schema naar Turso pushen (NIET `prisma db push` — die praat niet met remote libSQL)
+`prisma.config.ts` heeft geen driver-adapter, dus de Prisma-CLI kan geen remote `libsql://` bereiken. Workflow voor schema-wijzigingen op Turso:
+1. SQL genereren: `npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script > prisma/turso-schema.sql` (let op: vlag is `--to-schema`, niet `--to-schema-datamodel`).
+2. Toepassen: `npx tsx scripts/push-to-turso.ts "libsql://<db>.turso.io"` (leest `TURSO_AUTH_TOKEN` uit `.env`, voert SQL uit via `@libsql/client.executeMultiple`).
+   - Let op: `--from-empty` is voor een **lege** DB. Voor incrementele wijzigingen op een gevulde Turso-DB een diff genereren met `--from-schema` van de oude staat (of handmatige ALTER).
+
+### Helper-scripts (`scripts/`)
+- `push-to-turso.ts` — schema naar Turso (zie boven).
+- `check-turso.ts` — test Turso-connectie + telt tabellen/User-rijen (`npx tsx scripts/check-turso.ts "<url>"`).
+- `test-r2.ts` — round-trip R2-test (upload/ophalen/verwijderen) met `.env`-credentials.
+
+### Crons in productie
+In-process schedulers (auction-finalize/activate, claimsale-activate, expire-claims) draaien automatisch bij container-boot (`src/instrumentation.ts`). De overige tijdgestuurde crons (`/api/cron/*`, o.a. `cleanup-sold-images`, betaaltermijnen, dispute-auto-resolve) hebben een **externe scheduler** nodig die ze dagelijks aanroept met `Authorization: Bearer <CRON_SECRET>` — nog in te stellen (Railway cron of externe dienst).
+
+### E-mail
+Nog mock/console (Fase 16 niet af) — wachtwoord-reset/verificatie-mails worden alleen gelogd, niet verstuurd.
 
 ## Conventions
 - Code (variables, functions, components) in **English**
