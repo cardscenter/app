@@ -12,6 +12,9 @@
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
   },
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
     "@auth/prisma-adapter": "^2.11.1",
