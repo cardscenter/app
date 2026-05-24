@@ -98,10 +98,10 @@ export default function VoorwaardenPage() {
             We kunnen deze voorwaarden aanpassen. Bij belangrijke wijzigingen
             informeren we je tijdig. Vragen? Mail{" "}
             <a
-              href="mailto:info@poke-center.nl"
+              href="mailto:info@cards-center.eu"
               className="font-medium text-primary hover:underline"
             >
-              info@poke-center.nl
+              info@cards-center.eu
             </a>
             .
           </p>

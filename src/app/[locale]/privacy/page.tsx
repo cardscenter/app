@@ -96,10 +96,10 @@ export default function PrivacyPage() {
             van je gegevens, en je kunt bezwaar maken tegen verwerking. Neem
             hiervoor contact op via{" "}
             <a
-              href="mailto:info@poke-center.nl"
+              href="mailto:info@cards-center.eu"
               className="font-medium text-primary hover:underline"
             >
-              info@poke-center.nl
+              info@cards-center.eu
             </a>
             .
           </p>
@@ -109,10 +109,10 @@ export default function PrivacyPage() {
           <p className="text-muted-foreground">
             Vragen over dit privacybeleid? Mail{" "}
             <a
-              href="mailto:info@poke-center.nl"
+              href="mailto:info@cards-center.eu"
               className="font-medium text-primary hover:underline"
             >
-              info@poke-center.nl
+              info@cards-center.eu
             </a>
             .
           </p>
