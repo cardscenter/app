@@ -75,13 +75,13 @@ export function Footer() {
             </h3>
             <div className="mt-3 flex flex-col gap-2">
               <Link
-                href="/"
+                href="/privacy"
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 {t("privacyPolicy")}
               </Link>
               <Link
-                href="/"
+                href="/voorwaarden"
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 {t("terms")}
