@@ -25,7 +25,6 @@ import {
 import { PasswordInput } from "@/components/auth/password-input";
 import { PasswordStrengthMeter } from "@/components/auth/password-strength-meter";
 import { UsernameAvailabilityIndicator } from "@/components/auth/username-availability-indicator";
-import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { ACCOUNT_TIERS, type TierKey } from "@/lib/subscription-tiers";
 
 const TOTAL_STEPS = 4;
@@ -230,11 +229,6 @@ function MultiStepRegisterForm() {
       )}
 
       <div className="space-y-6">
-        {/* Social login (alleen step 1) */}
-        {currentStep === 1 && (
-          <SocialLoginButtons callbackUrl={`/${locale}`} />
-        )}
-
         {/* Progress bar */}
         <div className="space-y-3">
           <p className="text-center text-sm text-muted-foreground">

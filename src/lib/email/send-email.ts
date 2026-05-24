@@ -1,15 +1,18 @@
 /**
- * E-mail helper (Fase 37).
+ * E-mail helper (Fase 37 → Fase 42).
  *
- * Mock-implementatie: console-logt de e-mail in dev en wanneer er geen echte
- * provider geconfigureerd is. Fase 16 (Email notificaties) swappt de body van
- * `sendEmail()` naar een echte SMTP/Resend/Mailgun-call — alle callers
- * (forgot-password, e-mailverificatie, welkom-mail) blijven dan ongewijzigd
- * doorwerken.
+ * `EMAIL_PROVIDER` bepaalt het kanaal:
+ *   - "console" (of leeg) → mock: de mail wordt alleen naar de console gelogd,
+ *     handig in dev en de testfase. Er wordt niets verstuurd.
+ *   - "resend" → écht versturen via Resend (vereist RESEND_API_KEY + EMAIL_FROM).
  *
- * Gebruik altijd de specifieke wrapper (sendPasswordResetEmail etc.) niet
- * `sendEmail` direct, zodat de copy in één plek beheerd wordt.
+ * Alle callers (forgot-password, e-mailverificatie, welkom-mail) blijven bij een
+ * provider-wissel ongewijzigd doorwerken. Gebruik altijd de specifieke wrapper
+ * (sendPasswordResetEmail etc.), niet `sendEmail` direct, zodat de copy op één
+ * plek beheerd wordt.
  */
+
+import { Resend } from "resend";
 
 interface SendEmailArgs {
   to: string;
@@ -23,25 +26,57 @@ interface SendEmailResult {
   messageId?: string;
 }
 
+// Module-level gecachede client zodat we 'm niet per mail opnieuw bouwen.
+let resendClient: Resend | null = null;
+function getResendClient(): Resend {
+  if (!resendClient) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) {
+      throw new Error(
+        "EMAIL_PROVIDER=resend maar RESEND_API_KEY ontbreekt — zet 'm in de env-vars.",
+      );
+    }
+    resendClient = new Resend(key);
+  }
+  return resendClient;
+}
+
 export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
   const provider = process.env.EMAIL_PROVIDER;
-  const isProductionProvider = provider && provider !== "console";
 
-  if (!isProductionProvider) {
-    // Mock-mode: console-log zodat developers de e-mails kunnen zien in
-    // de dev-server output. Geen e-mail wordt daadwerkelijk verstuurd.
-    const separator = "─".repeat(60);
-    console.log(
-      `\n📧 [EMAIL MOCK]\n${separator}\nTo:      ${args.to}\nSubject: ${args.subject}\n${separator}\n${args.text}\n${separator}\n`,
-    );
-    return { mocked: true };
+  if (provider === "resend") {
+    const from = process.env.EMAIL_FROM;
+    if (!from) {
+      throw new Error(
+        "EMAIL_PROVIDER=resend maar EMAIL_FROM ontbreekt — zet de afzender in de env-vars.",
+      );
+    }
+    const { data, error } = await getResendClient().emails.send({
+      from,
+      to: args.to,
+      subject: args.subject,
+      html: args.html,
+      text: args.text,
+    });
+    if (error) {
+      throw new Error(`Resend kon de e-mail niet versturen: ${error.message}`);
+    }
+    return { mocked: false, messageId: data?.id };
   }
 
-  // Fase 16: swap deze branch naar de gekozen provider (Resend / SMTP / etc.).
-  // Voor nu nooit bereikbaar omdat EMAIL_PROVIDER niet gezet wordt.
-  throw new Error(
-    `Email provider "${provider}" is configured but not implemented yet — wacht op Fase 16.`,
+  if (provider && provider !== "console") {
+    throw new Error(
+      `Onbekende EMAIL_PROVIDER "${provider}" — gebruik "console" of "resend".`,
+    );
+  }
+
+  // Mock-mode (default): console-log zodat developers de e-mails kunnen zien in
+  // de dev-server output. Geen e-mail wordt daadwerkelijk verstuurd.
+  const separator = "─".repeat(60);
+  console.log(
+    `\n📧 [EMAIL MOCK]\n${separator}\nTo:      ${args.to}\nSubject: ${args.subject}\n${separator}\n${args.text}\n${separator}\n`,
   );
+  return { mocked: true };
 }
 
 /** App-URL helper — gebruikt NEXTAUTH_URL of fallback voor links in e-mails. */

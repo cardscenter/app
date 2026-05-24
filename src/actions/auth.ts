@@ -5,7 +5,7 @@ import crypto from "crypto";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
-import { signIn } from "@/lib/auth";
+import { signIn, auth } from "@/lib/auth";
 import { AuthError } from "next-auth";
 import { saveUploadedFile } from "@/lib/upload";
 import { setupStaticShippingMethods } from "@/actions/shipping-method";
@@ -15,9 +15,14 @@ import {
   clearAttempts,
   extractIp,
 } from "@/lib/auth/rate-limit";
-import { sendEmailVerificationEmail, sendWelcomeEmail } from "@/lib/email/send-email";
+import {
+  sendEmailVerificationEmail,
+  sendWelcomeEmail,
+  sendPasswordResetEmail,
+} from "@/lib/email/send-email";
 
 const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24u
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1u
 
 function getPostRegisterRedirect(selectedPlan: string | null): string | undefined {
   if (selectedPlan === "PRO" || selectedPlan === "UNLIMITED") return "/dashboard/abonnement";
@@ -200,5 +205,157 @@ export async function login(formData: FormData) {
 
   // Succesvolle login → reset attempts voor dit IP
   clearAttempts(ip);
+  return { success: true };
+}
+
+/**
+ * E-mailverificatie (Fase 42). Verzilvert de token uit de verificatie-mail.
+ * Idempotent-vriendelijk: een al-geverifieerd account geeft gewoon succes.
+ */
+export async function verifyEmail(
+  token: string,
+): Promise<{ success: true } | { error: string }> {
+  if (!token) return { error: "Ontbrekende of ongeldige verificatielink." };
+
+  const record = await prisma.emailVerificationToken.findUnique({
+    where: { token },
+    include: { user: { select: { id: true, emailVerifiedAt: true } } },
+  });
+
+  if (!record) return { error: "Deze verificatielink is ongeldig." };
+  if (record.user.emailVerifiedAt) return { success: true };
+  if (record.usedAt) return { error: "Deze verificatielink is al gebruikt." };
+  if (record.expiresAt < new Date()) {
+    return { error: "Deze verificatielink is verlopen. Vraag een nieuwe aan." };
+  }
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { emailVerifiedAt: new Date() },
+    }),
+    prisma.emailVerificationToken.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() },
+    }),
+  ]);
+
+  return { success: true };
+}
+
+/**
+ * Opnieuw een verificatie-mail sturen (voor de "bevestig je e-mail"-banner).
+ * Vereist een ingelogde, nog-niet-geverifieerde gebruiker.
+ */
+export async function resendVerificationEmail(): Promise<
+  { success: true } | { error: string }
+> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return { error: "Niet ingelogd." };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, displayName: true, emailVerifiedAt: true },
+  });
+  if (!user) return { error: "Account niet gevonden." };
+  if (user.emailVerifiedAt) return { success: true };
+
+  const token = crypto.randomBytes(32).toString("base64url");
+  await prisma.emailVerificationToken.create({
+    data: {
+      userId,
+      token,
+      expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS),
+    },
+  });
+  await sendEmailVerificationEmail({
+    to: user.email,
+    displayName: user.displayName,
+    token,
+  });
+  return { success: true };
+}
+
+/**
+ * Wachtwoord-reset aanvragen (Fase 42). Stuurt altijd dezelfde generieke
+ * melding terug — geen account-enumeratie (we verklappen niet of het e-mailadres
+ * bestaat).
+ */
+export async function requestPasswordReset(
+  formData: FormData,
+): Promise<{ success: true } | { error: string }> {
+  const email = (formData.get("email") as string | null)?.trim().toLowerCase();
+  if (!email) return { error: "Vul je e-mailadres in." };
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, email: true, displayName: true },
+  });
+
+  if (user) {
+    try {
+      const token = crypto.randomBytes(32).toString("base64url");
+      await prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          token,
+          expiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS),
+        },
+      });
+      await sendPasswordResetEmail({
+        to: user.email,
+        displayName: user.displayName,
+        token,
+      });
+    } catch (err) {
+      console.error("[requestPasswordReset] failed", err);
+      // Val toch generiek terug — verklap niets aan de aanvrager.
+    }
+  }
+
+  return { success: true };
+}
+
+/**
+ * Wachtwoord daadwerkelijk resetten via de token uit de reset-mail.
+ */
+export async function resetPassword(
+  formData: FormData,
+): Promise<{ success: true } | { error: string }> {
+  const token = formData.get("token") as string | null;
+  const password = formData.get("password") as string | null;
+  const confirmPassword = formData.get("confirmPassword") as string | null;
+
+  if (!token) return { error: "Ontbrekende of ongeldige reset-link." };
+  if (!password || password.length < 8) {
+    return { error: "Wachtwoord moet minstens 8 tekens zijn." };
+  }
+  if (password !== confirmPassword) {
+    return { error: "De wachtwoorden komen niet overeen." };
+  }
+
+  const record = await prisma.passwordResetToken.findUnique({
+    where: { token },
+  });
+  if (!record || record.usedAt) {
+    return { error: "Deze reset-link is ongeldig of al gebruikt." };
+  }
+  if (record.expiresAt < new Date()) {
+    return { error: "Deze reset-link is verlopen. Vraag een nieuwe aan." };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { passwordHash },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() },
+    }),
+  ]);
+
   return { success: true };
 }

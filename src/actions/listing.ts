@@ -24,6 +24,7 @@ import { enrichMethod, deriveListingShippingMethodIds } from "@/lib/shipping/sta
 import { mailboxEligibleType } from "@/lib/listing-types";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
+import { requireEmailVerified } from "@/lib/email-verification";
 import { publish, listingChannel, userChannel } from "@/lib/realtime";
 
 function publishListingChanged(listingId: string, status: string) {
@@ -40,6 +41,9 @@ export async function createListing(formData: FormData) {
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   const listingLimit = await checkListingLimit(session.user.id);
   if (!listingLimit.allowed) {

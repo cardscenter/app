@@ -28,6 +28,7 @@ import { enrichMethod, deriveListingShippingMethodIds } from "@/lib/shipping/sta
 import { mailboxEligibleType } from "@/lib/listing-types";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
+import { requireEmailVerified } from "@/lib/email-verification";
 import { bidPassesVerifiedGate, IP_OVERLAP_LOOKBACK_DAYS } from "@/lib/auction/bid-tiers";
 import { logAdminAction } from "@/lib/admin-audit";
 import { publish, publishMany, userChannel, auctionChannel } from "@/lib/realtime";
@@ -44,6 +45,9 @@ export async function createAuction(formData: FormData) {
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   const limit = await checkAuctionLimit(session.user.id);
   if (!limit.allowed) {

@@ -7,6 +7,7 @@ import { fetchActiveActivity } from "@/lib/dashboard-queries";
 import { getLevel, getNextLevel, getLevelProgress } from "@/lib/seller-levels";
 import { isUserSuspended } from "@/lib/suspension";
 import { SuspensionBanner } from "@/components/dashboard/suspension-banner";
+import { EmailVerificationBanner } from "@/components/dashboard/email-verification-banner";
 import { PageContainer } from "@/components/layout/page-container";
 import { RealtimePageRefresh } from "@/components/providers/realtime-page-refresh";
 
@@ -30,6 +31,7 @@ export default async function DashboardLayout({
       suspendedUntil: true,
       suspensionType: true,
       suspensionReason: true,
+      emailVerifiedAt: true,
     },
   });
 
@@ -71,6 +73,7 @@ export default async function DashboardLayout({
               reason={user.suspensionReason}
             />
           )}
+          {user && !user.emailVerifiedAt && <EmailVerificationBanner />}
           {children}
         </div>
       </div>

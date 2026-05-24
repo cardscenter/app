@@ -6,6 +6,7 @@ import { deductBalance, creditBalance } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
 import { WITHDRAWAL_MIN_AMOUNT } from "@/lib/withdrawal-config";
+import { requireEmailVerified } from "@/lib/email-verification";
 import { publish, userChannel } from "@/lib/realtime";
 import { z } from "zod";
 
@@ -31,6 +32,9 @@ async function requireAdmin() {
 export async function requestWithdrawal(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   const parsed = requestSchema.safeParse({ amount: formData.get("amount") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };

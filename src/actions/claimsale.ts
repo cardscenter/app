@@ -7,6 +7,7 @@ import { deductBalance } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { resolveLocalCardSetId } from "@/lib/card-helpers";
 import { requireNotSuspended } from "@/lib/suspension";
+import { requireEmailVerified } from "@/lib/email-verification";
 import { enrichMethod } from "@/lib/shipping/static-methods";
 import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
 import { deriveClaimsaleStartTime, isClaimsaleScheduled } from "@/lib/claimsale/timing";
@@ -66,6 +67,9 @@ export async function createClaimsale(formData: FormData) {
 
   const susp = await requireNotSuspended(userId);
   if ("error" in susp) return { error: susp.error };
+
+  const verified = await requireEmailVerified(userId);
+  if ("error" in verified) return { error: verified.error };
 
   const limit = await checkClaimsaleLimit(userId);
   if (!limit.allowed) {

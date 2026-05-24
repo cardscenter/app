@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/auth/password-input";
-import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 
 interface LoginFormProps {
   locale: string;
@@ -48,10 +47,7 @@ export function LoginForm({ locale }: LoginFormProps) {
           </p>
         </div>
 
-        {/* Social-login */}
-        <SocialLoginButtons callbackUrl={`/${locale}`} />
-
-        <form action={formAction} className="mt-6 space-y-5">
+        <form action={formAction} className="space-y-5">
           {state?.error && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
