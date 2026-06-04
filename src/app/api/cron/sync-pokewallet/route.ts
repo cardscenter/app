@@ -25,7 +25,13 @@ export async function GET(request: Request) {
   const trigger = await resolveCronTrigger(request);
   if (!trigger) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const result = await withCronLogging("sync-pokewallet", async (run) => {
+  // Sync via cron-jobs registry (admin "Run nu") wacht synchroon en is
+  // bedoeld voor interactief gebruik. Deze HTTP-route is voor externe
+  // schedulers en wordt na 5 min door Railway's upstream proxy gekapt —
+  // dus fire-and-forget: kick het werk in achtergrond en return direct
+  // 200. Resultaten + status zijn alsnog zichtbaar in /dashboard/admin/crons
+  // (CronRun-tabel) zodra het werk klaar is.
+  const work = withCronLogging("sync-pokewallet", async (run) => {
     // Stap 1 — Set-catalogus syncen (mapping + nieuwe sets ontdekken)
     let catalog: Awaited<ReturnType<typeof syncSetCatalog>> | null = null;
     let catalogError: string | null = null;
@@ -81,9 +87,16 @@ export async function GET(request: Request) {
     };
   }, trigger);
 
+  // Niet awaiten — laat het werk doorgaan in achtergrond, log errors
+  // mocht de scheduler ze ergens willen oppikken via Railway-logs.
+  void work.catch((err) => {
+    console.error("[cron/sync-pokewallet] background job faalde:", err);
+  });
+
   return NextResponse.json({
     success: true,
-    ...result,
+    status: "queued",
+    note: "Werk loopt in achtergrond. Status zichtbaar via /dashboard/admin/crons.",
     timestamp: new Date().toISOString(),
   });
 }
