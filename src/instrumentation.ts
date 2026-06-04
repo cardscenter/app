@@ -51,4 +51,17 @@ export async function register() {
     // eslint-disable-next-line no-console
     console.error("[instrumentation] expire-claims scheduler boot failed", err);
   }
+
+  // In-process scheduler voor sync-pokewallet: dagelijks om 03:00 UTC een
+  // prijs-refresh + nieuwe-set-detectie via PokeWallet. Geen externe
+  // scheduler nodig (cron-job.org / Railway-cron) — past in het bestaande
+  // in-process patroon. HTTP-route /api/cron/sync-pokewallet blijft
+  // beschikbaar voor "Run nu" in admin-panel.
+  try {
+    const { startPokewalletScheduler } = await import("@/lib/pokewallet-scheduler");
+    startPokewalletScheduler("boot");
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[instrumentation] pokewallet scheduler boot failed", err);
+  }
 }
