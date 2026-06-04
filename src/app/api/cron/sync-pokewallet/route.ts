@@ -67,7 +67,7 @@ export async function GET(request: Request) {
           OR: [{ priceUpdatedAt: null }, { priceUpdatedAt: { lt: cutoff } }],
         },
       },
-    } as const;
+    };
 
     const totalStaleSets = await prisma.cardSet.count({ where: staleWhere });
     const sets = await prisma.cardSet.findMany({
