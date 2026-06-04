@@ -5,12 +5,21 @@ import { syncSetCatalog } from "@/lib/pokewallet/set-mapping";
 import { withCronLogging } from "@/lib/cron-logging";
 import { resolveCronTrigger } from "@/lib/cron-auth";
 
-// GET /api/cron/sync-pokewallet
+// GET /api/cron/sync-pokewallet[?limit=N]
 //
 // 1. Set-catalogus syncen: PokeWallet /sets ophalen, bestaande DB-sets
 //    aan PW set_ids koppelen, en NIEUWE CardSet-rijen aanmaken voor
 //    PW-sets die nog niemand heeft (onder een "Onbekend"-Series).
-// 2. Voor elke gemapte set met cards: prijs-sync via /search.
+// 2. Voor elke gemapte STALE set met cards: prijs-sync via /search.
+//    "Stale" = minstens 1 card heeft priceUpdatedAt NULL of ouder dan
+//    STALE_AFTER_HOURS. Verse sets worden overgeslagen — idempotent
+//    en lichtgewicht in dezelfde dag, zelf-resumend bij chunk-runs.
+//
+// Optionele `?limit=N` query-param verwerkt maximaal N stale sets per
+// call. Handig om binnen Railway's 5-min HTTP timeout te blijven en
+// in chunks naar een eerste-vulling toe te werken (8 chunks van 20
+// sets dekken ~160 sets binnen ~30 min). Zonder limit: alle stale
+// sets in één pass.
 //
 // Daily run — ~600 API calls voor stap 2 (binnen pro-tier 5k/uur).
 // Nieuwe sets uit stap 1 hebben nog geen cards en worden in stap 2
@@ -18,12 +27,17 @@ import { resolveCronTrigger } from "@/lib/cron-auth";
 // enrichment-stap.
 
 const PER_SET_DELAY_MS = 100;
+const STALE_AFTER_HOURS = 12;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function GET(request: Request) {
   const trigger = await resolveCronTrigger(request);
   if (!trigger) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const limitParam = url.searchParams.get("limit");
+  const limit = limitParam ? Math.max(1, Math.floor(Number(limitParam))) : undefined;
 
   // Sync via cron-jobs registry (admin "Run nu") wacht synchroon en is
   // bedoeld voor interactief gebruik. Deze HTTP-route is voor externe
@@ -41,10 +55,26 @@ export async function GET(request: Request) {
       catalogError = (e as Error).message.slice(0, 200);
     }
 
-    // Stap 2 — Prijs-sync per set
+    // Stap 2 — Prijs-sync per STALE set.
+    // Stale = minstens 1 card met priceUpdatedAt NULL of ouder dan cutoff.
+    // Zelf-resumend: na een onderbroken run pakken volgende chunks
+    // automatisch de niet-verse sets op zonder externe bookkeeping.
+    const cutoff = new Date(Date.now() - STALE_AFTER_HOURS * 60 * 60 * 1000);
+    const staleWhere = {
+      pokewalletSetId: { not: null },
+      cards: {
+        some: {
+          OR: [{ priceUpdatedAt: null }, { priceUpdatedAt: { lt: cutoff } }],
+        },
+      },
+    } as const;
+
+    const totalStaleSets = await prisma.cardSet.count({ where: staleWhere });
     const sets = await prisma.cardSet.findMany({
-      where: { pokewalletSetId: { not: null }, cards: { some: {} } },
+      where: staleWhere,
       select: { id: true, name: true },
+      orderBy: { id: "asc" },
+      ...(limit ? { take: limit } : {}),
     });
 
     let totalUpdated = 0;
@@ -78,7 +108,10 @@ export async function GET(request: Request) {
             needsReview: catalog.needsReview.slice(0, 20),
           }
         : { error: catalogError },
-      totalSets: sets.length,
+      limit: limit ?? null,
+      totalStaleSetsBefore: totalStaleSets,
+      processedSets: sets.length,
+      remainingStaleSets: Math.max(0, totalStaleSets - sets.length),
       setsOk: totalSetsOk,
       totalUpdated,
       totalUnmatched,
