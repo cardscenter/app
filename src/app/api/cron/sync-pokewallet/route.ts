@@ -56,16 +56,18 @@ export async function GET(request: Request) {
     }
 
     // Stap 2 — Prijs-sync per STALE set.
-    // Stale = minstens 1 card met priceUpdatedAt NULL of ouder dan cutoff.
-    // Zelf-resumend: na een onderbroken run pakken volgende chunks
-    // automatisch de niet-verse sets op zonder externe bookkeeping.
+    // Stale = GEEN card in de set heeft priceUpdatedAt binnen de afgelopen
+    // STALE_AFTER_HOURS. Zodra een set in chunk N wordt gesynced, krijgen
+    // alle PW-matchende cards priceUpdatedAt = NOW, dus volgende chunks
+    // slaan deze set over. PokeWallet-unmatchable cards (blijven NULL)
+    // blokkeren een set NIET — anders zou de chunk-runner eindeloos op
+    // dezelfde set spinnen omdat unmatchable cards niet vol te krijgen
+    // zijn. Cron-route is zo zelf-resumend zonder externe bookkeeping.
     const cutoff = new Date(Date.now() - STALE_AFTER_HOURS * 60 * 60 * 1000);
     const staleWhere = {
       pokewalletSetId: { not: null },
       cards: {
-        some: {
-          OR: [{ priceUpdatedAt: null }, { priceUpdatedAt: { lt: cutoff } }],
-        },
+        none: { priceUpdatedAt: { gt: cutoff } },
       },
     };
 

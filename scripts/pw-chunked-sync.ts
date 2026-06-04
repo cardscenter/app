@@ -22,12 +22,19 @@ const MAX_CHUNKS = 30; // safety-cap
 
 async function countStaleSets(client: ReturnType<typeof createClient>, hoursOld = 12): Promise<number> {
   const cutoff = new Date(Date.now() - hoursOld * 60 * 60 * 1000).toISOString();
+  // Stale = sets zonder ENIGE card met recente priceUpdatedAt. Matcht
+  // de server-route filter (`cards: { none: { priceUpdatedAt: gt cutoff } }`).
+  // PokeWallet-unmatchable cards blokkeren een set NIET — zodra 1 card
+  // in de set deze cycle gesynced is, telt 'ie als vers.
   const r = await client.execute({
-    sql: `SELECT COUNT(DISTINCT cs.id) AS n
+    sql: `SELECT COUNT(*) AS n
           FROM CardSet cs
-          JOIN Card c ON c.cardSetId = cs.id
           WHERE cs.pokewalletSetId IS NOT NULL
-            AND (c.priceUpdatedAt IS NULL OR c.priceUpdatedAt < ?)`,
+            AND NOT EXISTS (
+              SELECT 1 FROM Card c
+              WHERE c.cardSetId = cs.id
+                AND c.priceUpdatedAt > ?
+            )`,
     args: [cutoff],
   });
   return Number(r.rows[0]?.n ?? 0);
