@@ -195,46 +195,52 @@ export async function syncSetByPokewalletId(cardSetId: string): Promise<SyncResu
   // Run in batched transactions to avoid SQLite lock contention.
   // Bouw queries opnieuw op binnen elke retry — PrismaPromises kunnen niet
   // hergebruikt worden na een failed transaction.
-  const BATCH = 25;
+  // BATCH klein genoeg om binnen Prisma's transaction-timeout te passen op
+  // remote libsql (Turso): elke operatie kost ~80-200ms aan RTT, dus 10
+  // operaties × 2 (update + history) = 20 ops fits in ~3-4s royaal binnen
+  // de 30s timeout. Lokaal SQLite is veel sneller — geen probleem.
+  const BATCH = 10;
+  const TX_TIMEOUT_MS = 30_000;
   for (let i = 0; i < pendingUpdates.length; i += BATCH) {
     const batch = pendingUpdates.slice(i, i + BATCH);
     await withRetry(() =>
-      prisma.$transaction([
-        ...batch.map((u) => {
-          const data = u.claimed
-            ? { ...u.pricing, priceVariantsJson: u.priceVariantsJson }
-            : { pokewalletId: u.pwId, ...u.pricing, priceVariantsJson: u.priceVariantsJson };
-          return prisma.card.update({ where: { id: u.dbCardId }, data });
-        }),
-        ...batch.map((u) => {
-          // Snapshot the blended Marktprijs (not raw priceAvg) so the chart
-          // shows real daily movement while staying aligned with the UI's
-          // displayed market value. Manual overrides are applied inside
-          // getMarktprijs so snapshots match the displayed value exactly.
-          const snapNormal = getMarktprijs({
-            ...u.pricing,
-            rarity: u.rarity,
-            priceOverrideAvg: u.priceOverrideAvg,
-          });
-          const snapReverse = getMarktprijsReverseHolo({
-            ...u.pricing,
-            priceOverrideReverseAvg: u.priceOverrideReverseAvg,
-          });
-          return prisma.cardPriceHistory.upsert({
-            where: { cardId_date: { cardId: u.dbCardId, date: today } },
-            create: {
-              cardId: u.dbCardId,
-              date: today,
-              priceNormal: snapNormal,
-              priceReverse: snapReverse,
-            },
-            update: {
-              priceNormal: snapNormal,
-              priceReverse: snapReverse,
-            },
-          });
-        }),
-      ]),
+      prisma.$transaction(
+        async (tx) => {
+          for (const u of batch) {
+            const data = u.claimed
+              ? { ...u.pricing, priceVariantsJson: u.priceVariantsJson }
+              : { pokewalletId: u.pwId, ...u.pricing, priceVariantsJson: u.priceVariantsJson };
+            await tx.card.update({ where: { id: u.dbCardId }, data });
+            // Snapshot the blended Marktprijs (not raw priceAvg) so the chart
+            // shows real daily movement while staying aligned with the UI's
+            // displayed market value. Manual overrides are applied inside
+            // getMarktprijs so snapshots match the displayed value exactly.
+            const snapNormal = getMarktprijs({
+              ...u.pricing,
+              rarity: u.rarity,
+              priceOverrideAvg: u.priceOverrideAvg,
+            });
+            const snapReverse = getMarktprijsReverseHolo({
+              ...u.pricing,
+              priceOverrideReverseAvg: u.priceOverrideReverseAvg,
+            });
+            await tx.cardPriceHistory.upsert({
+              where: { cardId_date: { cardId: u.dbCardId, date: today } },
+              create: {
+                cardId: u.dbCardId,
+                date: today,
+                priceNormal: snapNormal,
+                priceReverse: snapReverse,
+              },
+              update: {
+                priceNormal: snapNormal,
+                priceReverse: snapReverse,
+              },
+            });
+          }
+        },
+        { timeout: TX_TIMEOUT_MS },
+      ),
     );
   }
 
@@ -360,31 +366,35 @@ async function syncGallerySubset(
   }
 
   const today = todayUtc();
-  const BATCH = 25;
+  // Zelfde reden als hierboven: kleinere BATCH + interactive transaction
+  // met expliciete timeout voor remote libsql (Turso).
+  const BATCH = 10;
+  const TX_TIMEOUT_MS = 30_000;
   for (let i = 0; i < pending.length; i += BATCH) {
     const batch = pending.slice(i, i + BATCH);
     await withRetry(() =>
-      prisma.$transaction([
-        ...batch.map((u) => {
-          const data = u.claimed
-            ? u.pricing
-            : { pokewalletId: u.pwId, ...u.pricing };
-          return prisma.card.update({ where: { id: u.dbCardId }, data });
-        }),
-        ...batch.map((u) => {
-          const snapNormal = getMarktprijs({
-            ...u.pricing, rarity: u.rarity, priceOverrideAvg: u.priceOverrideAvg,
-          });
-          const snapReverse = getMarktprijsReverseHolo({
-            ...u.pricing, priceOverrideReverseAvg: u.priceOverrideReverseAvg,
-          });
-          return prisma.cardPriceHistory.upsert({
-            where: { cardId_date: { cardId: u.dbCardId, date: today } },
-            create: { cardId: u.dbCardId, date: today, priceNormal: snapNormal, priceReverse: snapReverse },
-            update: { priceNormal: snapNormal, priceReverse: snapReverse },
-          });
-        }),
-      ]),
+      prisma.$transaction(
+        async (tx) => {
+          for (const u of batch) {
+            const data = u.claimed
+              ? u.pricing
+              : { pokewalletId: u.pwId, ...u.pricing };
+            await tx.card.update({ where: { id: u.dbCardId }, data });
+            const snapNormal = getMarktprijs({
+              ...u.pricing, rarity: u.rarity, priceOverrideAvg: u.priceOverrideAvg,
+            });
+            const snapReverse = getMarktprijsReverseHolo({
+              ...u.pricing, priceOverrideReverseAvg: u.priceOverrideReverseAvg,
+            });
+            await tx.cardPriceHistory.upsert({
+              where: { cardId_date: { cardId: u.dbCardId, date: today } },
+              create: { cardId: u.dbCardId, date: today, priceNormal: snapNormal, priceReverse: snapReverse },
+              update: { priceNormal: snapNormal, priceReverse: snapReverse },
+            });
+          }
+        },
+        { timeout: TX_TIMEOUT_MS },
+      ),
     );
   }
 
