@@ -19,10 +19,54 @@ import "dotenv/config";
 import { createClient, type InStatement } from "@libsql/client";
 import { prisma } from "../src/lib/prisma";
 
-const BATCH = 500;
+const BATCH = 250;
+// Royaal — Promise.race annuleert libsql's onderliggende request niet,
+// dus een korte timeout zou alleen dubbel werk op Turso opleveren. Bij
+// een echte hang killt de gebruiker het script handmatig.
+const BATCH_TIMEOUT_MS = 300_000;
+const MAX_RETRIES = 3;
 
 function iso(d: Date | null | undefined): string | null {
   return d ? d.toISOString() : null;
+}
+
+/**
+ * Wrapt client.batch met een per-poging timeout en retry met
+ * exponential backoff. Turso kan af en toe stilvallen op een batch
+ * (netwerk-hiccup of long-poll dat geen response geeft). Retry maakt
+ * dat onzichtbaar.
+ */
+async function batchWithRetry(
+  client: ReturnType<typeof createClient>,
+  stmts: InStatement[],
+  label: string,
+): Promise<void> {
+  let attempt = 0;
+  let lastErr: unknown;
+  while (attempt < MAX_RETRIES) {
+    attempt++;
+    try {
+      await Promise.race([
+        client.batch(stmts, "write"),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`batch timeout na ${BATCH_TIMEOUT_MS}ms`)),
+            BATCH_TIMEOUT_MS,
+          ),
+        ),
+      ]);
+      return;
+    } catch (e) {
+      lastErr = e;
+      const msg = (e as Error).message.slice(0, 120);
+      console.log(`      ⚠  ${label} poging ${attempt}/${MAX_RETRIES} faalde: ${msg}`);
+      if (attempt < MAX_RETRIES) {
+        const delay = 1000 * 2 ** (attempt - 1); // 1s, 2s, 4s
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 async function main() {
@@ -63,12 +107,14 @@ async function main() {
   console.log(`[1/4] Category: ${categories.length} rijen`);
   if (!dryRun && categories.length > 0) {
     const stmts: InStatement[] = categories.map((c) => ({
-      sql: `INSERT INTO Category (id, name, createdAt)
-            VALUES (?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET name = excluded.name`,
-      args: [c.id, c.name, iso(c.createdAt)],
+      sql: `INSERT INTO Category (id, name, slug, createdAt)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              name = excluded.name,
+              slug = excluded.slug`,
+      args: [c.id, c.name, c.slug, iso(c.createdAt)],
     }));
-    await client!.batch(stmts, "write");
+    await batchWithRetry(client!, stmts, "batch");
     console.log(`      ✓ ${categories.length} rijen gepusht`);
   }
 
@@ -86,7 +132,7 @@ async function main() {
               categoryId = excluded.categoryId`,
       args: [s.id, s.name, s.tcgdexSeriesId, s.logoUrl, s.categoryId, iso(s.createdAt)],
     }));
-    await client!.batch(stmts, "write");
+    await batchWithRetry(client!, stmts, "batch");
     console.log(`      ✓ ${series.length} rijen gepusht`);
   }
 
@@ -113,7 +159,7 @@ async function main() {
         s.logoUrl, s.symbolUrl, s.releaseDate, s.cardCount, s.seriesId, iso(s.createdAt),
       ],
     }));
-    await client!.batch(stmts, "write");
+    await batchWithRetry(client!, stmts, "batch");
     console.log(`      ✓ ${sets.length} rijen gepusht`);
   }
 
@@ -203,7 +249,7 @@ async function main() {
           c.priceOverrideAvg, c.priceOverrideReverseAvg, c.priceOverrideReason,
         ],
       }));
-      await client!.batch(stmts, "write");
+      await batchWithRetry(client!, stmts, `Card batch ${batchIdx}/${numBatches}`);
     }
 
     offset += cards.length;
