@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
+import { syncSetCatalog } from "@/lib/pokewallet/set-mapping";
 import { withCronLogging } from "@/lib/cron-logging";
 import { resolveCronTrigger } from "@/lib/cron-auth";
 
 // GET /api/cron/sync-pokewallet
 //
-// Refreshes pricing for all CardSets that have a pokewalletSetId mapping.
-// Runs daily — uses ~600 API calls per full pass (well within 50k/day budget).
+// 1. Set-catalogus syncen: PokeWallet /sets ophalen, bestaande DB-sets
+//    aan PW set_ids koppelen, en NIEUWE CardSet-rijen aanmaken voor
+//    PW-sets die nog niemand heeft (onder een "Onbekend"-Series).
+// 2. Voor elke gemapte set met cards: prijs-sync via /search.
 //
-// Strategy:
-//   - Process all mapped sets sequentially (parallel would risk rate-limiting)
-//   - Each set ~4 calls via /search?q=<set_id>&limit=100 (or N+1 via fallback for new sets)
-//   - Updates CardMarket + TCGPlayer pricing per variant (normal + holo + reverse)
-//   - Snapshots CardPriceHistory for trend charts
+// Daily run — ~600 API calls voor stap 2 (binnen pro-tier 5k/uur).
+// Nieuwe sets uit stap 1 hebben nog geen cards en worden in stap 2
+// overgeslagen — admin vult ze handmatig of via toekomstige
+// enrichment-stap.
 
 const PER_SET_DELAY_MS = 100;
 
@@ -24,6 +26,16 @@ export async function GET(request: Request) {
   if (!trigger) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const result = await withCronLogging("sync-pokewallet", async (run) => {
+    // Stap 1 — Set-catalogus syncen (mapping + nieuwe sets ontdekken)
+    let catalog: Awaited<ReturnType<typeof syncSetCatalog>> | null = null;
+    let catalogError: string | null = null;
+    try {
+      catalog = await syncSetCatalog();
+    } catch (e) {
+      catalogError = (e as Error).message.slice(0, 200);
+    }
+
+    // Stap 2 — Prijs-sync per set
     const sets = await prisma.cardSet.findMany({
       where: { pokewalletSetId: { not: null }, cards: { some: {} } },
       select: { id: true, name: true },
@@ -48,6 +60,18 @@ export async function GET(request: Request) {
 
     run.setItemsProcessed(totalUpdated);
     return {
+      catalog: catalog
+        ? {
+            mapped: catalog.matched,
+            mappedTotal: catalog.total,
+            duplicates: catalog.duplicates.length,
+            unmatched: catalog.unmatched.length,
+            createdCount: catalog.created.length,
+            createdSets: catalog.created.slice(0, 20).map((s) => ({ name: s.name, pokewalletSetId: s.pokewalletSetId })),
+            needsReviewCount: catalog.needsReview.length,
+            needsReview: catalog.needsReview.slice(0, 20),
+          }
+        : { error: catalogError },
       totalSets: sets.length,
       setsOk: totalSetsOk,
       totalUpdated,

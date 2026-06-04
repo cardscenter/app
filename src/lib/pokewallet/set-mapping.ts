@@ -89,6 +89,46 @@ interface MappingResult {
   unmatched: { id: string; name: string; tcgdexSetId: string | null }[];
 }
 
+interface CreatedSet {
+  id: string;
+  name: string;
+  pokewalletSetId: string;
+}
+
+interface UnmatchedPwSet {
+  name: string;
+  pokewalletSetId: string;
+  releaseDate: string | null;
+  reason: string;
+}
+
+/**
+ * Naam voor de fallback-Series waar net-ontdekte PokeWallet-sets onder
+ * komen te hangen. Admin verplaatst ze daarna handmatig via
+ * /dashboard/admin/catalog naar de juiste Era.
+ */
+const FALLBACK_SERIES_NAME = "Onbekend (te categoriseren)";
+
+/**
+ * Hoeveel dagen oud een PW-set maximaal mag zijn om als "echt nieuw" te
+ * gelden. Sets ouder dan dit zijn vrijwel altijd mapping-mismatches met
+ * een set die we al lokaal hebben onder een andere naam — die rapporteren
+ * we wel, maar maken we niet automatisch aan.
+ */
+const NEW_SET_MAX_AGE_DAYS = 90;
+
+/**
+ * PokeWallet retourneert release_date als informele string, bv.
+ * "12th March, 2014" of "31st March, 2023". Strip ordinal-suffixen en
+ * probeer Date.parse. Null bij onparseerbare input.
+ */
+function parsePwReleaseDate(s: string | null): Date | null {
+  if (!s) return null;
+  const cleaned = s.replace(/(\d+)(st|nd|rd|th)/i, "$1").trim();
+  const d = new Date(cleaned);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function normalizeName(s: string): string {
   return s
     .toLowerCase()
@@ -103,9 +143,10 @@ function normalizeName(s: string): string {
     .trim();
 }
 
-export async function refreshSetMapping(): Promise<MappingResult> {
-  const pwResponse = await listAllSets();
-  const pwSets = pwResponse.data;
+export async function refreshSetMapping(
+  pwSetsArg?: PokewalletSetSummary[],
+): Promise<MappingResult> {
+  const pwSets = pwSetsArg ?? (await listAllSets()).data;
 
   // Clear all existing mappings first so we can prefer sets-with-cards
   // when multiple DB sets match the same PokeWallet set_id.
@@ -200,4 +241,137 @@ export async function refreshSetMapping(): Promise<MappingResult> {
   }
 
   return { total: dbSets.length, matched, duplicates, unmatched };
+}
+
+/**
+ * Lazy-find-or-create de fallback-Series waar nieuwe sets onder komen.
+ * Hangt onder de eerste Category (project is Pokémon-only).
+ */
+async function getOrCreateFallbackSeries(): Promise<string> {
+  const existing = await prisma.series.findFirst({
+    where: { name: FALLBACK_SERIES_NAME },
+    select: { id: true },
+  });
+  if (existing) return existing.id;
+
+  const category = await prisma.category.findFirst({ select: { id: true } });
+  if (!category) {
+    throw new Error(
+      "Kan geen Category vinden om fallback-Series onder te hangen — seed eerst de database.",
+    );
+  }
+
+  const created = await prisma.series.create({
+    data: { name: FALLBACK_SERIES_NAME, categoryId: category.id },
+    select: { id: true },
+  });
+  return created.id;
+}
+
+/**
+ * Detecteer PokeWallet-sets die nog niet aan een DB-CardSet gekoppeld zijn.
+ *
+ * Auto-create: alleen voor échte nieuwe sets (release_date binnen
+ * NEW_SET_MAX_AGE_DAYS). Oudere unmatched PW-sets zijn vrijwel altijd
+ * mapping-mismatches met sets die we al hebben onder een andere
+ * naam — die rapporteren we apart als `needsReview` zonder aanmaak,
+ * zodat admin handmatig kan corrigeren via /dashboard/admin/catalog.
+ *
+ * Alleen Engelstalige (of language=null) sets worden geconsidereerd —
+ * andere talen zijn doorgaans regio-varianten van dezelfde set.
+ *
+ * Idempotent: tweede call maakt geen duplicaten dankzij @unique-constraint
+ * op CardSet.pokewalletSetId + de claimed-filter.
+ */
+export async function discoverAndCreateNewSets(
+  pwSetsArg?: PokewalletSetSummary[],
+): Promise<{ created: CreatedSet[]; needsReview: UnmatchedPwSet[] }> {
+  const pwSets = pwSetsArg ?? (await listAllSets()).data;
+
+  // Welke pokewalletSetIds zijn al aan een DB-set gekoppeld?
+  const mappedRows = await prisma.cardSet.findMany({
+    where: { pokewalletSetId: { not: null } },
+    select: { pokewalletSetId: true },
+  });
+  const claimed = new Set<string>();
+  for (const row of mappedRows) if (row.pokewalletSetId) claimed.add(row.pokewalletSetId);
+
+  const candidates = pwSets.filter(
+    (s) =>
+      !claimed.has(s.set_id) &&
+      (s.language === "eng" || s.language === null),
+  );
+
+  if (candidates.length === 0) return { created: [], needsReview: [] };
+
+  const cutoff = Date.now() - NEW_SET_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  const created: CreatedSet[] = [];
+  const needsReview: UnmatchedPwSet[] = [];
+
+  // Eerst splitsen: recente sets (auto-create) vs oudere/onbekend (alleen rapporteren)
+  const toCreate: PokewalletSetSummary[] = [];
+  for (const pw of candidates) {
+    const releaseDate = parsePwReleaseDate(pw.release_date);
+    if (!releaseDate) {
+      needsReview.push({
+        name: pw.name,
+        pokewalletSetId: pw.set_id,
+        releaseDate: pw.release_date,
+        reason: "geen parseerbare release_date — waarschijnlijk legacy/promo, niet auto-aangemaakt",
+      });
+      continue;
+    }
+    if (releaseDate.getTime() < cutoff) {
+      needsReview.push({
+        name: pw.name,
+        pokewalletSetId: pw.set_id,
+        releaseDate: pw.release_date,
+        reason: `release_date ouder dan ${NEW_SET_MAX_AGE_DAYS}d — waarschijnlijk mapping-mismatch, niet auto-aangemaakt`,
+      });
+      continue;
+    }
+    toCreate.push(pw);
+  }
+
+  if (toCreate.length === 0) return { created: [], needsReview };
+
+  const fallbackSeriesId = await getOrCreateFallbackSeries();
+
+  for (const pw of toCreate) {
+    try {
+      const row = await prisma.cardSet.create({
+        data: {
+          name: pw.name,
+          pokewalletSetId: pw.set_id,
+          pokewalletSetCode: pw.set_code,
+          releaseDate: pw.release_date,
+          cardCount: pw.card_count ?? null,
+          seriesId: fallbackSeriesId,
+        },
+        select: { id: true, name: true, pokewalletSetId: true },
+      });
+      created.push({ id: row.id, name: row.name, pokewalletSetId: row.pokewalletSetId! });
+    } catch (e) {
+      // Unique-constraint race (zou niet moeten met de filter, maar safe).
+      console.warn(`[discoverNewSets] kon set ${pw.name} niet aanmaken:`, (e as Error).message);
+    }
+  }
+
+  return { created, needsReview };
+}
+
+/**
+ * Combineert refreshSetMapping (koppel bestaande DB-sets aan PW) en
+ * discoverAndCreateNewSets (maak nieuwe sets aan voor PW-sets die nog
+ * niemand heeft). Eén /sets API-call gedeeld over beide stappen.
+ *
+ * Aanroepen vóór de prijs-sync — anders missen nieuwe sets de eerste run.
+ */
+export async function syncSetCatalog(): Promise<
+  MappingResult & { created: CreatedSet[]; needsReview: UnmatchedPwSet[] }
+> {
+  const pwSets = (await listAllSets()).data;
+  const mapResult = await refreshSetMapping(pwSets);
+  const { created, needsReview } = await discoverAndCreateNewSets(pwSets);
+  return { ...mapResult, created, needsReview };
 }

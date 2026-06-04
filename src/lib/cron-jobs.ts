@@ -11,6 +11,7 @@ import { autoResolveDisputes } from "@/actions/dispute";
 import { checkAndDowngradeExpired } from "@/actions/subscription";
 import { expireClaimedItems } from "@/actions/claimsale";
 import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
+import { syncSetCatalog } from "@/lib/pokewallet/set-mapping";
 import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
@@ -359,7 +360,7 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   },
   "sync-pokewallet": {
     description:
-      "Vernieuwt prijzen voor alle CardSets met een PokeWallet-mapping via de api.pokewallet.io API. Kan enkele minuten duren en doet ~600 API-calls.",
+      "Detecteert nieuwe PokeWallet-sets (en maakt er CardSet-rijen voor aan onder een 'Onbekend'-Series) + vernieuwt prijzen voor alle CardSets met een mapping. ~600 API-calls per pass.",
     schedule: "Dagelijks",
     allowManualRun: true,
     runWarning:
@@ -476,6 +477,16 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     return { itemsProcessed: r.expired, result: r };
   },
   "sync-pokewallet": async () => {
+    // Stap 1 — Set-catalogus: mapping verversen + nieuwe sets ontdekken
+    let catalog: Awaited<ReturnType<typeof syncSetCatalog>> | null = null;
+    let catalogError: string | null = null;
+    try {
+      catalog = await syncSetCatalog();
+    } catch (e) {
+      catalogError = (e as Error).message.slice(0, 200);
+    }
+
+    // Stap 2 — Prijs-sync per gemapte set met cards
     const sets = await prisma.cardSet.findMany({
       where: { pokewalletSetId: { not: null }, cards: { some: {} } },
       select: { id: true, name: true },
@@ -501,6 +512,18 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     return {
       itemsProcessed: totalUpdated,
       result: {
+        catalog: catalog
+          ? {
+              mapped: catalog.matched,
+              mappedTotal: catalog.total,
+              duplicates: catalog.duplicates.length,
+              unmatched: catalog.unmatched.length,
+              createdCount: catalog.created.length,
+              createdSets: catalog.created.slice(0, 20).map((s) => ({ name: s.name, pokewalletSetId: s.pokewalletSetId })),
+              needsReviewCount: catalog.needsReview.length,
+              needsReview: catalog.needsReview.slice(0, 20),
+            }
+          : { error: catalogError },
         totalSets: sets.length,
         setsOk: totalSetsOk,
         totalUpdated,
