@@ -148,11 +148,15 @@ export async function refreshSetMapping(
 ): Promise<MappingResult> {
   const pwSets = pwSetsArg ?? (await listAllSets()).data;
 
-  // Clear all existing mappings first so we can prefer sets-with-cards
-  // when multiple DB sets match the same PokeWallet set_id.
-  await prisma.cardSet.updateMany({
-    data: { pokewalletSetId: null, pokewalletSetCode: null },
-  });
+  // NON-DESTRUCTIEF: bestaande mappings BEHOUDEN. We voegen alleen
+  // nieuwe mappings toe voor DB-sets die er nog geen hebben. Reden:
+  // refreshSetMapping kan door Railway's HTTP-timeout halverwege
+  // worden gekapt, en als we eerst alles clearen, blijven veel sets
+  // ongekoppeld → cron kan niets meer syncen → site stuk.
+  //
+  // Trade-off: als een DB-set ten onrechte aan de verkeerde PW-set
+  // gekoppeld is geraakt, blijft die foutieve mapping tot een admin
+  // 'm handmatig overschrijft via /dashboard/admin/catalog.
 
   // Order: sets WITH cards first, then by name alphabetical.
   // Cards-having sets get first claim on the pokewallet ID.
@@ -192,6 +196,12 @@ export async function refreshSetMapping(
   }
 
   for (const db of dbSets) {
+    // Sla over: deze DB-set heeft al een mapping. Non-destructief.
+    if (db.pokewalletSetId) {
+      matched++;
+      continue;
+    }
+
     let pwId: string | undefined;
 
     // 1. Manual override
