@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cache } from "react";
+import { after } from "next/server";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
@@ -104,10 +105,22 @@ export default async function CardDetailPage({ params }: Props) {
     : null;
   const baseName = basePokemonName(initialCard.name, initialGameplay?.category);
 
+  // `initialCard` (uit lookupCard, findFirst zonder select) is al de volledige
+  // Card-rij — de aparte findUnique hieronder was een dubbele query. De
+  // viewCount-bump is een write die de render niet hoeft te blokkeren: die gaat
+  // naar after() (draait nadat de response weg is).
+  const card = initialCard;
+  after(() =>
+    prisma.card
+      .update({
+        where: { id: initialCard.id },
+        data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
+      })
+      .catch(() => {}),
+  );
+
   // Now everything is pure DB — one query batch, no external API calls.
   const [
-    card,
-    _viewUpdate,
     activeListings,
     activeAuctions,
     activeClaims,
@@ -117,11 +130,6 @@ export default async function CardDetailPage({ params }: Props) {
     priceHistoryRows,
     relatedCardsRaw,
   ] = await Promise.all([
-    prisma.card.findUnique({ where: { id: initialCard.id } }),
-    prisma.card.update({
-      where: { id: initialCard.id },
-      data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
-    }),
     prisma.listing.findMany({
       where: { tcgdexId: initialCard.id, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
       include: { seller: { select: { displayName: true, id: true } } },
@@ -184,7 +192,6 @@ export default async function CardDetailPage({ params }: Props) {
         })
       : Promise.resolve([]),
   ]);
-  if (!card) notFound();
 
   // Parse the cached gameplay blob — no external API calls needed.
   const gameplay = card.gameplayJson ? JSON.parse(card.gameplayJson) as {
