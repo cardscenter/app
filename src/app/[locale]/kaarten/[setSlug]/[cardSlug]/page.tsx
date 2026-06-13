@@ -19,6 +19,7 @@ import {
   findHistoricPrice,
   type SnapshotPoint,
 } from "@/lib/display-price";
+import { hasFeature } from "@/lib/subscription-tiers";
 import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
@@ -93,6 +94,21 @@ export default async function CardDetailPage({ params }: Props) {
   const { card: initialCard, set } = result;
   const session = await auth();
 
+  // Diepe prijshistorie (90d + 1j) is een PRO-functie. FREE/uitgelogd krijgt de
+  // verre snapshots niet eens binnen — server-side gating, niet client-side
+  // verbergen. We halen voor FREE een 35-daagse window op (35 i.p.v. 30 zodat de
+  // 30d-delta-anchor altijd binnen het venster valt), PRO krijgt een vol jaar.
+  const canExtendedHistory = hasFeature(
+    session?.user?.accountType ?? "FREE",
+    "extendedPriceHistory",
+  );
+  const priceHistoryWindowDays = canExtendedHistory ? 366 : 35;
+  const priceHistoryCutoff = (() => {
+    const d = new Date();
+    const utcMidnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    return new Date(utcMidnight - priceHistoryWindowDays * 86400000);
+  })();
+
   // Prices come entirely from the nightly bulk sync (pokewallet-scheduler runs
   // in-process at boot + 03:00 UTC and refreshes every mapped card). No external
   // PokeWallet call on the render path — the page renders purely from DB cache.
@@ -164,10 +180,12 @@ export default async function CardDetailPage({ params }: Props) {
           where: { userId_cardId: { userId: session.user.id, cardId: initialCard.id } },
         })
       : Promise.resolve(null),
+    // Date-bounded i.p.v. `take: 60` — dat laatste pakte met `date: "asc"` juist
+    // de OUDSTE 60 rijen (latente bug zodra een kaart >60 dagen historie heeft).
+    // De `gte`-cutoff begrenst het venster correct (max ~366 rijen, 1 per dag).
     prisma.cardPriceHistory.findMany({
-      where: { cardId: initialCard.id },
+      where: { cardId: initialCard.id, date: { gte: priceHistoryCutoff } },
       orderBy: { date: "asc" },
-      take: 60,
     }),
     // "Meer kaarten van [base]" — runs in the same batch as everything else.
     // Strip suffixes, plus possessive + thematic prefixes so "Team Aqua's
@@ -728,6 +746,7 @@ export default async function CardDetailPage({ params }: Props) {
               history={priceHistory}
               updated={cm?.updated ?? card.priceUpdatedAt?.toISOString() ?? null}
               extraVariants={extraVariants}
+              canExtendedHistory={canExtendedHistory}
             />
           ) : (
             <div className="rounded-2xl border border-border bg-card p-5">

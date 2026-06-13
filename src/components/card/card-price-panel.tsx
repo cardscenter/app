@@ -12,7 +12,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { TrendingDown, TrendingUp, Minus, Lock } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 export interface VariantPricing {
@@ -50,15 +51,32 @@ interface Props {
   history: HistoryPoint[];   // sorted ascending by date
   updated: string | null;
   extraVariants?: ExtraVariant[];
+  /** PRO+ mag 90d + 1j kiezen. FREE krijgt die data niet eens binnen (server
+   *  begrenst het venster op 35 dagen) — de 90d/1j-tabs tonen een slotje. */
+  canExtendedHistory?: boolean;
 }
+
+// Klikbare periodes boven de grafiek. 14d/30d gratis, 90d/1j achter PRO.
+const PERIODS = [
+  { days: 14, label: "14d", pro: false },
+  { days: 30, label: "30d", pro: false },
+  { days: 90, label: "90d", pro: true },
+  { days: 365, label: "1j", pro: true },
+] as const;
 
 function formatEur(n: number | null) {
   if (n === null || n === undefined) return "—";
   return `€${n.toFixed(2)}`;
 }
 
-export function CardPricePanel({ variants, history, updated, extraVariants }: Props) {
+export function CardPricePanel({ variants, history, updated, extraVariants, canExtendedHistory = false }: Props) {
   const [activeKey, setActiveKey] = useState(variants[0]?.key ?? "normal");
+  // Default 30d zodra er genoeg historie is, anders 14d. Span uit de ruwe
+  // history (variant-onafhankelijk) zodat deze initializer stabiel is.
+  const overallSpanDays = history.length >= 2
+    ? Math.round((Date.parse(history[history.length - 1].date) - Date.parse(history[0].date)) / 86400000)
+    : 0;
+  const [periodDays, setPeriodDays] = useState<number>(overallSpanDays >= 14 ? 30 : 14);
   const active = variants.find((v) => v.key === activeKey) ?? variants[0];
   if (!active) return null;
 
@@ -66,9 +84,34 @@ export function CardPricePanel({ variants, history, updated, extraVariants }: Pr
   // if the variant had a value that day — so a fresh variant without history
   // doesn't pollute the chart with nulls.
   const field = active.key === "reverse" ? "reverse" : "normal";
-  const series = history
+  const fullSeries = history
     .map((h) => ({ date: h.date, price: h[field] }))
     .filter((p): p is { date: string; price: number } => p.price !== null);
+
+  // Hoeveel dagen historie heeft DEZE variant? Bepaalt welke periode-tabs nog
+  // iets nieuws tonen (een 90d-tab op 12 dagen data = identieke grafiek).
+  const variantSpanDays = fullSeries.length >= 2
+    ? Math.round((Date.parse(fullSeries[fullSeries.length - 1].date) - Date.parse(fullSeries[0].date)) / 86400000)
+    : 0;
+  const isLocked = (pro: boolean) => pro && !canExtendedHistory;
+  const isRedundant = (days: number) => {
+    if (days === 14) return false;
+    const prev = days === 30 ? 14 : days === 90 ? 30 : 90;
+    return variantSpanDays <= prev;
+  };
+
+  // Klem de actieve periode omlaag als de gekozen tab gelockt/redundant is, zodat
+  // de gemarkeerde tab en de getoonde grafiek nooit uit elkaar lopen.
+  const effectivePeriodDays = (() => {
+    const sel = PERIODS.find((p) => p.days === periodDays);
+    if (sel && !isLocked(sel.pro) && !isRedundant(sel.days)) return sel.days;
+    const fallback = [...PERIODS].reverse().find((p) => !isLocked(p.pro) && !isRedundant(p.days));
+    return fallback?.days ?? 14;
+  })();
+
+  const cutoffMs = Date.now() - effectivePeriodDays * 86400000;
+  const windowed = fullSeries.filter((p) => Date.parse(p.date) >= cutoffMs);
+  const series = windowed.length >= 2 ? windowed : fullSeries;
 
   // Pre-computed by the server using snapshot history. Already apples-to-
   // apples (Marktprijs vs Marktprijs of ~7d ago, or raw vs raw fallback).
@@ -92,6 +135,44 @@ export function CardPricePanel({ variants, history, updated, extraVariants }: Pr
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
+      {hasRealHistory && (
+        <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl border border-border bg-muted/40 p-1 text-xs font-medium">
+          {PERIODS.map((p) => {
+            if (isLocked(p.pro)) {
+              return (
+                <Link
+                  key={p.days}
+                  href="/dashboard/abonnement"
+                  className="flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-muted-foreground/50 transition-colors hover:bg-background/60 hover:text-foreground"
+                >
+                  <Lock className="size-3" />
+                  {p.label}
+                </Link>
+              );
+            }
+            const redundant = isRedundant(p.days);
+            const isActive = p.days === effectivePeriodDays;
+            return (
+              <button
+                key={p.days}
+                type="button"
+                disabled={redundant}
+                onClick={() => setPeriodDays(p.days)}
+                className={cn(
+                  "rounded-lg px-2.5 py-1.5 text-center transition-colors",
+                  isActive
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                  redundant && "cursor-not-allowed opacity-40 hover:text-muted-foreground",
+                )}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground">Marktwaarde</h3>
@@ -167,7 +248,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants }: Pr
                   strokeWidth={2}
                   fill="url(#priceFill)"
                   className="text-primary"
-                  dot={{ r: 2.5 }}
+                  dot={series.length > 45 ? false : { r: 2.5 }}
                 />
               </AreaChart>
             </ResponsiveContainer>

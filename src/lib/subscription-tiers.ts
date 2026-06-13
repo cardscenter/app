@@ -8,6 +8,8 @@ export interface TierFeatures {
   vanityShopSlug: boolean;
   searchBoost: boolean;
   accountManager: boolean;
+  /** Diepe prijshistorie (90d + 1j) op kaart-detailpagina. FREE ziet 14d/30d. */
+  extendedPriceHistory: boolean;
 }
 
 export interface TierLimits {
@@ -54,6 +56,7 @@ export const ACCOUNT_TIERS: Record<TierKey, TierConfig> = {
       vanityShopSlug: false,
       searchBoost: false,
       accountManager: false,
+      extendedPriceHistory: false,
     },
   },
   PRO: {
@@ -79,6 +82,7 @@ export const ACCOUNT_TIERS: Record<TierKey, TierConfig> = {
       vanityShopSlug: false,
       searchBoost: false,
       accountManager: false,
+      extendedPriceHistory: true,
     },
   },
   UNLIMITED: {
@@ -104,6 +108,7 @@ export const ACCOUNT_TIERS: Record<TierKey, TierConfig> = {
       vanityShopSlug: true,
       searchBoost: true,
       accountManager: false,
+      extendedPriceHistory: true,
     },
   },
   ENTERPRISE: {
@@ -129,6 +134,7 @@ export const ACCOUNT_TIERS: Record<TierKey, TierConfig> = {
       vanityShopSlug: true,
       searchBoost: true,
       accountManager: true,
+      extendedPriceHistory: true,
     },
   },
 };
