@@ -247,6 +247,19 @@ await withRetry(() => prisma.$transaction(
 ### Brand-new sets fallback
 PokeWallet's `/search?q=<set_id>` geeft **0 results voor brand-nieuwe sets** (search-index loopt 1-3 weken achter, bv. Perfect Order me03 op release-week). **Fix:** `fetchSetViaCardLookup()` in client.ts gebruikt `/sets/{id}` om card-IDs op te halen, dan `/cards/{id}` per kaart voor pricing. Kost N+1 calls i.p.v. 1, maar werkt voor freshly-released sets.
 
+### Nieuwe set → kaarten aanmaken (KRITISCHE valkuil, 2026-06-13)
+**`sync.ts` doet UITSLUITEND `card.update`, nooit `card.create`.** Het matcht PokeWallet-kaarten tegen *bestaande* DB-Card-rijen. `discoverAndCreateNewSets()` (set-mapping.ts) maakt voor een nieuwe PW-set wél een **lege `CardSet`-shell** aan (pokewalletSetId gezet, 0 cards), maar niets maakte ooit de Card-rijen → de set bleef eeuwig leeg en kreeg dus nooit prijzen (price-sync filtert op `cards: { some: {} }`).
+
+**Oplossing (de ontbrekende schakel):** `src/lib/pokewallet/populate-cards.ts`:
+- **Bron voor de kaartlijst = TCGdex** (gratis, keyless): `src/lib/tcgdex/client.ts` haalt `/sets/{id}` (briefs: id/localId/name/image) + `/cards/{id}` (rarity/variants/hp/types/gameplay). Afbeeldingen komen sowieso van de TCGdex-CDN. **Pricing blijft 100% PokeWallet** — TCGdex wordt nooit voor prijzen gebruikt.
+- `resolveTcgdexSetId(name)` matcht de PW-set-naam tegen de TCGdex set-catalogus (genormaliseerd). `populateSetCards(cardSetId)` maakt de Card-rijen (idempotent op Card.id = TCGdex-id) en backfillt set-meta (tcgdexSetId, logo/symbool, **ISO releaseDate**, official cardCount).
+- `populateEmptyMappedSets()` draait in de daily cron **tussen catalog-sync en price-sync** (`cron-jobs.ts` Stap 1b). Skipt legacy-shells via een `MIN_AUTO_POPULATE_YEAR = 2024`-gate (anders dagelijkse fruitloze retries op W Promotional 1999 / Jumbo 2000 / Radiant Collection 2013 die op TCGdex geen kaartlijst hebben). Cap `MAX_SETS_PER_RUN = 8`.
+- **End-to-end automatisch:** nieuwe set → discover maakt shell → populate maakt kaarten → price-sync prijst, alles in één daily run, géén handmatige stap.
+
+**Reverse-holo op verse sets:** TCGdex zet `variants.reverse: false` op een net-uitgebrachte set (flags nog niet ingevuld). Géén probleem — `hasReverseHoloSignal()` (buyback-pricing.ts) vertrouwt op **moderne** sets (releaseDate ≥ `MODERN_SET_CUTOFF` "2024-01-01") een sterk CardMarket-holo-prijssignaal. Daarom moet `releaseDate` op de set **ISO** zijn (populate zet 'm goed); de informele PW-string ("22nd May, 2026") die discover wegschrijft is fragiel voor de string-vergelijking.
+
+**Handmatig importeren:** `npx tsx scripts/pw-import-set.ts "<naam|tcgdexId|pwId>"` → populate + price-sync in één keer. Bv. Chaos Rising (me04 / 24655): 122 kaarten, 76 met reverse-holo (de base commons/uncommons).
+
 ## DB-state check commands
 
 ```ts
