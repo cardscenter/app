@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { calculateXP, getLevel } from "@/lib/seller-levels";
 import { getRecentlySold } from "@/lib/home-recently-sold";
@@ -32,7 +33,13 @@ export type TopSeller = {
   totalSales: number;
 };
 
-export async function getHomepageData() {
+// Alle data hierin is globaal (geen per-user/session-velden) — counts, carousels,
+// platform-stats, top-sellers, recently-sold. Daardoor kunnen we het hele resultaat
+// cross-request cachen. De homepage zelf blijft dynamisch (auth/saldo/action-items
+// lopen apart in page.tsx), maar deze ~22 queries collapsen naar een cache-hit.
+// 60s revalidate: live-auction-carousels zijn max 1 min stale (de detailpagina's
+// blijven real-time), maar de DB wordt nog maar 1×/minuut bevraagd i.p.v. per request.
+async function fetchHomepageData() {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
@@ -170,6 +177,14 @@ export async function getHomepageData() {
     fiveStarReviewCount,
   };
 }
+
+// Cross-request cache rond de globale homepage-data. keyParts vast (geen args),
+// tag "homepage" zodat we later desgewenst gericht kunnen invalideren.
+export const getHomepageData = unstable_cache(
+  fetchHomepageData,
+  ["homepage-data-v1"],
+  { revalidate: 60, tags: ["homepage"] },
+);
 
 async function getPlatformStats(): Promise<PlatformStats> {
   const [completedBundles, totalMembers, reviewStats] = await Promise.all([
