@@ -6,7 +6,7 @@ import { ZDivider } from "@/components/home/z-divider";
  * Tijdelijke testpagina voor de Z-divider. NIET voor productie — verwijderen
  * zodra de vorm op de homepage staat. Bereikbaar op /test-divider.
  *
- * Desktop = 2 Z-vormen, mobile = 1 Z-vorm (resize het venster om te zien).
+ * Eén Z-vorm (de Beam-blade) op alle schermen.
  */
 export default async function TestDividerPage({
   params,
@@ -18,14 +18,14 @@ export default async function TestDividerPage({
 
   return (
     <div className="flex flex-col">
-      <Label text="Donker → wit · 2 Z-vormen desktop / 1 mobile (maak venster smal om te testen)" />
+      <Label text="Donker → wit · 1 Z-vorm (Beam-blade)" />
 
       {/* Donkere sectie met de Z-divider eronder (gevuld met de witte kleur) */}
       <section className="bg-slate-900 text-white">
         <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10 pt-20 lg:pt-28 pb-10">
           <BandContent
             title="Z-divider"
-            subtitle="Twee Z-vormen op desktop, één op mobile."
+            subtitle="Eén Z-vorm — de Beam-blade."
           />
         </div>
         <ZDivider fillClassName="text-card" height={28} />
@@ -39,7 +39,7 @@ export default async function TestDividerPage({
         </div>
       </section>
 
-      <Label text="Blauwe gradient → wit · 2 Z-vormen desktop / 1 mobile" />
+      <Label text="Blauwe gradient → wit · 1 Z-vorm (Beam-blade)" />
 
       <section className="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white">
         <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10 pt-20 lg:pt-28 pb-10">

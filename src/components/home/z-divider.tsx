@@ -7,7 +7,7 @@ interface ZDividerProps {
   fillClassName?: string;
   /** Hoogte van de divider-strook in px. Beam-original = 24. Default 28. */
   height?: number;
-  /** Aantal Z-vormen op desktop (md en breder). Default 2. */
+  /** Aantal Z-vormen op desktop (md en breder). Default 1. */
   desktopBlades?: number;
   /** Aantal Z-vormen op mobile (< md). Default 1. */
   mobileBlades?: number;
@@ -87,18 +87,35 @@ function Svg({
 /**
  * Z-divider — de Beam "blade"-divider als SVG-path (geen clip-path).
  *
- * Responsive: standaard 2 Z-vormen op desktop en 1 op mobile, zodat het herkenbaar
- * maar geen exacte kopie van Beam is. Plaats deze als LAATSTE kind binnen de
- * bovenste sectie; vul 'm met de kleur van de ONDERSTE sectie via `fillClassName`.
+ * Standaard 1 Z-vorm (exact de Beam-blade) op alle schermen. Wil je responsive
+ * variëren, zet dan `desktopBlades` en `mobileBlades` verschillend; dan rendert
+ * de component twee SVG's met md-breakpoint. Plaats deze als LAATSTE kind binnen
+ * de bovenste sectie; vul 'm met de kleur van de ONDERSTE sectie via
+ * `fillClassName`.
  */
 export function ZDivider({
   fillClassName = "text-card",
   height = 28,
-  desktopBlades = 2,
+  desktopBlades = 1,
   mobileBlades = 1,
   flipX = false,
   className = "",
 }: ZDividerProps) {
+  // Gelijk aantal blades → één SVG (geen onnodige responsive-splitsing).
+  if (desktopBlades === mobileBlades) {
+    return (
+      <div className={className}>
+        <Svg
+          blades={desktopBlades}
+          fillClassName={fillClassName}
+          height={height}
+          flipX={flipX}
+          responsiveClass="block"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={className}>
       <Svg
