@@ -1,8 +1,8 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { RouteLoadingIndicator } from "@/components/ui/route-loading-indicator";
 
-// Laad-feedback bij navigatie naar een set-pagina.
-export default function SetDetailLoading() {
+// Laad-feedback voor de kaarten-database-lijst (zwaarste cold load).
+export default function CardsOverviewLoading() {
   return (
     <PageContainer width="wide" className="py-8">
       <RouteLoadingIndicator />
