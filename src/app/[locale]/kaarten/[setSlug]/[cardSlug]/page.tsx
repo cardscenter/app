@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
@@ -6,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cardSlug, localIdFromSlug } from "@/lib/card-helpers";
-import { syncSingleCard } from "@/lib/pokewallet/sync";
 import { getCardImageUrl } from "@/lib/card-image";
 import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
 import { CardPricePanel, type VariantPricing, type ExtraVariant } from "@/components/card/card-price-panel";
@@ -30,7 +30,10 @@ interface Props {
   params: Promise<{ setSlug: string; cardSlug: string }>;
 }
 
-async function lookupCard(setSlug: string, cardSlug: string) {
+// Wrapped in React `cache()` so the duplicate call from generateMetadata and
+// the page component within a single request shares one result instead of
+// re-running both DB queries (saves 2 Turso round-trips per card view).
+const lookupCard = cache(async (setSlug: string, cardSlug: string) => {
   const localIdLower = localIdFromSlug(cardSlug);
   if (!localIdLower) return null;
 
@@ -57,7 +60,7 @@ async function lookupCard(setSlug: string, cardSlug: string) {
   if (!card) return null;
 
   return { set, card };
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { setSlug, cardSlug } = await params;
@@ -88,16 +91,18 @@ export default async function CardDetailPage({ params }: Props) {
   const { card: initialCard, set } = result;
   const session = await auth();
 
-  // On-demand pricing refresh — only when our cached price is stale (>24h).
-  // Skips silently if the card has no pokewalletId mapping yet.
-  const stale =
-    !initialCard.priceUpdatedAt ||
-    Date.now() - initialCard.priceUpdatedAt.getTime() > 24 * 60 * 60 * 1000;
-  if (stale) {
-    await syncSingleCard(initialCard.id).catch(() => {
-      /* best-effort: don't block page render on a refresh miss */
-    });
-  }
+  // Prices come entirely from the nightly bulk sync (pokewallet-scheduler runs
+  // in-process at boot + 03:00 UTC and refreshes every mapped card). No external
+  // PokeWallet call on the render path — the page renders purely from DB cache.
+
+  // "Meer kaarten van [base]" needs the base Pokémon name, which depends only on
+  // the card's name + gameplay category — both already on initialCard. Compute it
+  // here so the related-cards query can join the main batch below instead of
+  // running sequentially afterwards (saves one Turso round-trip).
+  const initialGameplay = initialCard.gameplayJson
+    ? (JSON.parse(initialCard.gameplayJson) as { category?: string })
+    : null;
+  const baseName = basePokemonName(initialCard.name, initialGameplay?.category);
 
   // Now everything is pure DB — one query batch, no external API calls.
   const [
@@ -110,6 +115,7 @@ export default async function CardDetailPage({ params }: Props) {
     siblingCards,
     isWatched,
     priceHistoryRows,
+    relatedCardsRaw,
   ] = await Promise.all([
     prisma.card.findUnique({ where: { id: initialCard.id } }),
     prisma.card.update({
@@ -154,6 +160,29 @@ export default async function CardDetailPage({ params }: Props) {
       orderBy: { date: "asc" },
       take: 60,
     }),
+    // "Meer kaarten van [base]" — runs in the same batch as everything else.
+    // Strip suffixes, plus possessive + thematic prefixes so "Team Aqua's
+    // Kyogre" etc. find siblings. The `contains` branch is still a table scan;
+    // acceptable for now (parallelising is the win) — could move to `searchName`.
+    baseName.length >= 3
+      ? prisma.card.findMany({
+          where: {
+            id: { not: initialCard.id },
+            // Match either "Name" exactly or "<prefix> Name <suffix>" patterns
+            OR: [
+              { name: { equals: baseName } },
+              { name: { startsWith: `${baseName} ` } },
+              { name: { contains: ` ${baseName} ` } },
+              { name: { endsWith: ` ${baseName}` } },
+              { name: { startsWith: `Mega ${baseName}` } },
+            ],
+          },
+          include: {
+            cardSet: { select: { name: true, tcgdexSetId: true, releaseDate: true } },
+          },
+          take: 40,
+        })
+      : Promise.resolve([]),
   ]);
   if (!card) notFound();
 
@@ -230,29 +259,9 @@ export default async function CardDetailPage({ params }: Props) {
     price: r.priceReverse,
   }));
 
-  // "Meer kaarten van [base]" — strip suffixes, plus possessive + thematic
-  // prefixes for Pokémon cards so "Team Aqua's Kyogre" etc. find siblings.
-  const baseName = basePokemonName(card.name, gameplay?.category);
-  const relatedCardsRaw = baseName.length >= 3
-    ? await prisma.card.findMany({
-        where: {
-          id: { not: card.id },
-          // Match either "Name" exactly or "<prefix> Name <suffix>" patterns
-          OR: [
-            { name: { equals: baseName } },
-            { name: { startsWith: `${baseName} ` } },
-            { name: { contains: ` ${baseName} ` } },
-            { name: { endsWith: ` ${baseName}` } },
-            { name: { startsWith: `Mega ${baseName}` } },
-          ],
-        },
-        include: {
-          cardSet: { select: { name: true, tcgdexSetId: true, releaseDate: true } },
-        },
-        take: 40,
-      })
-    : [];
-  // Sort newest-first by set release-date (string ISO compares lexicographically)
+  // `baseName` + `relatedCardsRaw` are computed above (query joined the main
+  // Promise.all batch). Sort newest-first by set release-date (string ISO
+  // compares lexicographically).
   const relatedCards = relatedCardsRaw
     .sort((a, b) => (b.cardSet.releaseDate ?? "").localeCompare(a.cardSet.releaseDate ?? ""))
     .map((c) => ({
