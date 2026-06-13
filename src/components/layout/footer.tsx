@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ThemeToggle } from "@/components/toggle-theme";
 import { LanguageSwitcher } from "./language-switcher";
 import { PageContainer } from "@/components/layout/page-container";
+import { ZDivider } from "@/components/ui/z-divider";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -13,8 +14,13 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="mt-12 border-t border-border bg-muted/40">
-      <PageContainer width="wide" className="py-10">
+    <>
+      {/* Z-divider boven de footer. Marge erboven (mt-16) geeft een lege
+          bg-background-strook zodat de content erboven niet achter de blade
+          valt; de blade prikt in die strook en sluit naadloos aan op de footer. */}
+      <ZDivider fillClassName="text-muted" height={44} className="mt-16" />
+      <footer className="bg-muted">
+        <PageContainer width="wide" className="py-10">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
           {/* Brand */}
           <div className="sm:col-span-2 md:col-span-1">
@@ -105,6 +111,7 @@ export function Footer() {
           </p>
         </div>
       </PageContainer>
-    </footer>
+      </footer>
+    </>
   );
 }

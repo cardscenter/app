@@ -5,7 +5,7 @@ interface ZDividerProps {
    * "text-card", "text-background" of "text-slate-900".
    */
   fillClassName?: string;
-  /** Hoogte van de divider-strook in px. Beam-original = 24. Default 28. */
+  /** Hoogte van de divider-strook in px. Beam-original = 24. Default 44. */
   height?: number;
   /** Aantal Z-vormen op desktop (md en breder). Default 1. */
   desktopBlades?: number;
@@ -13,6 +13,13 @@ interface ZDividerProps {
   mobileBlades?: number;
   /** Horizontaal spiegelen. Default false. */
   flipX?: boolean;
+  /**
+   * Overlap-modus: trek de divider met negatieve marge over de sectie erboven,
+   * zodat de transparante delen de ECHTE content erboven tonen. Gebruik dit als
+   * de bovenliggende sectie per pagina verschilt (zoals boven de footer). De
+   * blade (fillClassName) is dan de kleur van de sectie ERONDER.
+   */
+  overlap?: boolean;
   className?: string;
 }
 
@@ -95,16 +102,21 @@ function Svg({
  */
 export function ZDivider({
   fillClassName = "text-card",
-  height = 28,
+  height = 44,
   desktopBlades = 1,
   mobileBlades = 1,
   flipX = false,
+  overlap = false,
   className = "",
 }: ZDividerProps) {
+  const style = overlap
+    ? { marginTop: `-${height}px`, position: "relative" as const, zIndex: 1 }
+    : undefined;
+
   // Gelijk aantal blades → één SVG (geen onnodige responsive-splitsing).
   if (desktopBlades === mobileBlades) {
     return (
-      <div className={className}>
+      <div className={className} style={style}>
         <Svg
           blades={desktopBlades}
           fillClassName={fillClassName}
@@ -117,7 +129,7 @@ export function ZDivider({
   }
 
   return (
-    <div className={className}>
+    <div className={className} style={style}>
       <Svg
         blades={mobileBlades}
         fillClassName={fillClassName}

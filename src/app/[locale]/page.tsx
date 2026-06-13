@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { setRequestLocale } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getHomepageData } from "@/lib/homepage-data";
@@ -5,6 +6,7 @@ import { pickDailyBanner } from "@/lib/hero-banners";
 import { getBuyerLocation } from "@/lib/shipping/filter";
 import { fetchActionItems, type ActionItemsCounts } from "@/lib/dashboard-queries";
 import { Tag, Store } from "lucide-react";
+import { ZDivider } from "@/components/ui/z-divider";
 
 import { MarketingHeroV2 } from "@/components/home/marketing-hero-v2";
 import { LoggedInHeroV2 } from "@/components/home/logged-in-hero-v2";
@@ -68,106 +70,149 @@ async function HomePageContent({
   const hasRecentClaimsales = data.recentClaimsales.length > 0;
   const hasRecentListings = data.recentListings.length > 0;
 
-  return (
-    <div className="flex flex-col">
-      {/* 1. Hero (ongewijzigd — Fase 36 raakt deze niet aan) */}
-      {isLoggedIn ? (
-        <LoggedInHeroV2
-          userName={session.user?.name ?? ""}
-          stats={data.stats}
-          bannerSrc={pickDailyBanner()}
-          actionItems={actionItems}
-        />
-      ) : (
-        <MarketingHeroV2
-          stats={data.stats}
-          platformStats={data.platformStats}
-        />
-      )}
+  // Bouw de sectie-lijst met per sectie de surface-kleur. Tussen twee
+  // opeenvolgende secties met VERSCHILLENDE surface zetten we automatisch een
+  // Z-divider (zelfde kleur = geen zichtbare divider nodig). Zo blijven alle
+  // conditionele secties (logged-in/out, FREE-tier) correct werken.
+  const sections: {
+    surface: Surface;
+    node: React.ReactNode;
+    desktopOnly?: boolean;
+  }[] = [];
 
-      {/* 2. 3-paden uitleg (logged-out only) — bg-card */}
-      {!isLoggedIn && <HowItWorksThreePaths stats={data.stats} />}
-
-      {/* 3. Scroll-pinned storytelling (logged-out only) — bg-background */}
-      {!isLoggedIn && <ClaimsalesScrollStory />}
-
-      {/* 4. Sponsored Spotlight — bg-card */}
-      <SponsoredSpotlight
-        auctions={data.sponsoredAuctions}
-        listings={data.sponsoredListings}
-        locale={locale}
-        buyer={buyerLocation}
+  // 1. Hero — bg-slate-950
+  sections.push({
+    surface: "hero",
+    node: isLoggedIn ? (
+      <LoggedInHeroV2
+        userName={session.user?.name ?? ""}
+        stats={data.stats}
+        bannerSrc={pickDailyBanner()}
+        actionItems={actionItems}
       />
+    ) : (
+      <MarketingHeroV2 stats={data.stats} platformStats={data.platformStats} />
+    ),
+  });
 
-      {/* 5. Live veilingen — bg-background (light) / slate-950 (dark forced) */}
-      <LiveAuctionsZone
-        endingSoon={data.endingSoonAuctions}
-        trending={data.trendingAuctions}
-        recent={data.recentAuctions}
+  // 2. 3-paden uitleg (logged-out only) — bg-card
+  if (!isLoggedIn) {
+    sections.push({ surface: "card", node: <HowItWorksThreePaths stats={data.stats} /> });
+  }
+
+  // 3. Scroll-pinned storytelling (logged-out only) — bg-background
+  if (!isLoggedIn) {
+    sections.push({ surface: "bg", node: <ClaimsalesScrollStory /> });
+  }
+
+  // 4. Sponsored Spotlight — bg-card. Alleen tonen als er content is (anders
+  //    rendert de sectie null → zou twee dividers op elkaar geven).
+  const hasSponsored =
+    data.sponsoredAuctions.length > 0 || data.sponsoredListings.length > 0;
+  if (hasSponsored) {
+    sections.push({
+      surface: "card",
+      node: (
+        <SponsoredSpotlight
+          auctions={data.sponsoredAuctions}
+          listings={data.sponsoredListings}
+          locale={locale}
+          buyer={buyerLocation}
+        />
+      ),
+    });
+  }
+
+  // 5. Live veilingen — bg-background (light) / slate-950 (dark). Alleen tonen
+  //    als er veilingen zijn (anders rendert de sectie null).
+  const hasLiveAuctions =
+    data.endingSoonAuctions.length > 0 ||
+    data.trendingAuctions.length > 0 ||
+    data.recentAuctions.length > 0;
+  if (hasLiveAuctions) {
+    sections.push({
+      surface: "live",
+      node: (
+        <LiveAuctionsZone
+          endingSoon={data.endingSoonAuctions}
+          trending={data.trendingAuctions}
+          recent={data.recentAuctions}
+        />
+      ),
+    });
+  }
+
+  // 6. Recent Claimsales — bg-card (of EmptyHomeSection fallback)
+  sections.push({
+    surface: "card",
+    node: hasRecentClaimsales ? (
+      <ItemSection
+        icon={<Tag className="size-4" />}
+        iconClass="bg-amber-50 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+        titleKey="recentClaimsales"
+        href="/claimsales"
+        linkColor="text-amber-600 hover:text-amber-700"
+        bgClass="bg-card"
+      >
+        <HomeCarousel>
+          {data.recentClaimsales.map((claimsale) => (
+            <CarouselSlide key={claimsale.id}>
+              <ClaimsaleCard claimsale={claimsale} buyer={buyerLocation} />
+            </CarouselSlide>
+          ))}
+        </HomeCarousel>
+      </ItemSection>
+    ) : (
+      <EmptyHomeSection
+        icon={<Tag className="size-5" />}
+        iconClass="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+        title={t("emptyRecentClaimsalesTitle")}
+        description={t("emptyRecentClaimsalesDesc")}
+        ctaLabel={t("emptyRecentClaimsalesCta")}
+        ctaHref="/claimsales"
+        bgClass="bg-card"
       />
+    ),
+  });
 
-      {/* 6. Recent Claimsales — bg-card (of EmptyHomeSection fallback) */}
-      {hasRecentClaimsales ? (
-        <ItemSection
-          icon={<Tag className="size-4" />}
-          iconClass="bg-amber-50 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-          titleKey="recentClaimsales"
-          href="/claimsales"
-          linkColor="text-amber-600 hover:text-amber-700"
-          bgClass="bg-card"
-        >
-          <HomeCarousel>
-            {data.recentClaimsales.map((claimsale) => (
-              <CarouselSlide key={claimsale.id}>
-                <ClaimsaleCard claimsale={claimsale} buyer={buyerLocation} />
-              </CarouselSlide>
-            ))}
-          </HomeCarousel>
-        </ItemSection>
-      ) : (
-        <EmptyHomeSection
-          icon={<Tag className="size-5" />}
-          iconClass="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-          title={t("emptyRecentClaimsalesTitle")}
-          description={t("emptyRecentClaimsalesDesc")}
-          ctaLabel={t("emptyRecentClaimsalesCta")}
-          ctaHref="/claimsales"
-          bgClass="bg-card"
-        />
-      )}
+  // 7. Recent Listings — bg-background (of EmptyHomeSection fallback)
+  sections.push({
+    surface: "bg",
+    node: hasRecentListings ? (
+      <ItemSection
+        icon={<Store className="size-4" />}
+        iconClass="bg-emerald-50 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+        titleKey="recentListings"
+        href="/marktplaats"
+        linkColor="text-emerald-600 hover:text-emerald-700"
+        bgClass="bg-background"
+      >
+        <HomeCarousel>
+          {data.recentListings.map((listing) => (
+            <CarouselSlide key={listing.id}>
+              <ListingCard listing={listing} locale={locale} buyer={buyerLocation} />
+            </CarouselSlide>
+          ))}
+        </HomeCarousel>
+      </ItemSection>
+    ) : (
+      <EmptyHomeSection
+        icon={<Store className="size-5" />}
+        iconClass="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+        title={t("emptyRecentListingsTitle")}
+        description={t("emptyRecentListingsDesc")}
+        ctaLabel={t("emptyRecentListingsCta")}
+        ctaHref="/marktplaats"
+        bgClass="bg-background"
+      />
+    ),
+  });
 
-      {/* 7. Recent Listings — bg-background (of EmptyHomeSection fallback) */}
-      {hasRecentListings ? (
-        <ItemSection
-          icon={<Store className="size-4" />}
-          iconClass="bg-emerald-50 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
-          titleKey="recentListings"
-          href="/marktplaats"
-          linkColor="text-emerald-600 hover:text-emerald-700"
-          bgClass="bg-background"
-        >
-          <HomeCarousel>
-            {data.recentListings.map((listing) => (
-              <CarouselSlide key={listing.id}>
-                <ListingCard listing={listing} locale={locale} buyer={buyerLocation} />
-              </CarouselSlide>
-            ))}
-          </HomeCarousel>
-        </ItemSection>
-      ) : (
-        <EmptyHomeSection
-          icon={<Store className="size-5" />}
-          iconClass="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-          title={t("emptyRecentListingsTitle")}
-          description={t("emptyRecentListingsDesc")}
-          ctaLabel={t("emptyRecentListingsCta")}
-          ctaHref="/marktplaats"
-          bgClass="bg-background"
-        />
-      )}
-
-      {/* 8. Recently Sold — bg-card (of EmptyHomeSection bij geen sales) */}
-      {data.recentlySoldItems.length > 0 ? (
+  // 8. Recently Sold — bg-card (of EmptyHomeSection bij geen sales)
+  sections.push({
+    surface: "card",
+    node:
+      data.recentlySoldItems.length > 0 ? (
         <RecentlySoldSection items={data.recentlySoldItems} bgClass="bg-card" />
       ) : (
         <EmptyHomeSection
@@ -179,33 +224,93 @@ async function HomePageContent({
           ctaHref="/veilingen"
           bgClass="bg-card"
         />
-      )}
+      ),
+  });
 
-      {/* 9. Trust Pillars (logged-out only) — bg-background */}
-      {!isLoggedIn && <TrustPillarsSection />}
+  // 9. Trust Pillars (logged-out only) — bg-background
+  if (!isLoggedIn) {
+    sections.push({ surface: "bg", node: <TrustPillarsSection /> });
+  }
 
-      {/* 10. Buyer-Protection deep-dive (logged-out only) — bg-card */}
-      {!isLoggedIn && <BuyerProtectionSection bgClass="bg-card" />}
+  // 10. Buyer-Protection deep-dive (logged-out only) — bg-card
+  if (!isLoggedIn) {
+    sections.push({ surface: "card", node: <BuyerProtectionSection bgClass="bg-card" /> });
+  }
 
-      {/* 11. Tier-benefits — logged-out + logged-in FREE users (upgrade-incentive) */}
-      {showTierComparison && (
-        <TierComparisonHomepage bgClass="section-gradient" isLoggedIn={isLoggedIn} />
-      )}
+  // 11. Tier-benefits — logged-out + logged-in FREE users. Effen bg-background
+  //     i.p.v. section-gradient: een effen Z-divider-blade kan een animerende
+  //     gradient niet matchen → gaf een kleurmismatch op de divider erboven.
+  if (showTierComparison) {
+    sections.push({
+      surface: "bg",
+      node: <TierComparisonHomepage bgClass="bg-background" isLoggedIn={isLoggedIn} />,
+    });
+  }
 
-      {/* 11b. Concurrent-vergelijking — desktop-only, logged-out only.
-          Geen mobile variant: sectie is `hidden md:block`. */}
-      {!isLoggedIn && <CompetitorComparisonSection bgClass="bg-background" locale={locale} />}
+  // 11b. Concurrent-vergelijking — desktop-only, logged-out only. Eigen bg-card
+  //      zodat 'ie contrasteert met Tier (boven) en FAQ (onder). De sectie is
+  //      hidden md:block, dus de dividers eromheen ook (anders stapelen ze op mobile).
+  if (!isLoggedIn) {
+    sections.push({
+      surface: "card",
+      desktopOnly: true,
+      node: <CompetitorComparisonSection bgClass="bg-card" locale={locale} />,
+    });
+  }
 
-      {/* 12. Testimonials (logged-out only, conditional ≥3 5★) — bg-background.
-          Top Sellers + Platform Stats secties zijn (tijdelijk) verborgen in de
-          beginfase — pas terugzetten zodra er echte verkopers/cijfers zijn. */}
-      {!isLoggedIn && <TestimonialsSection fiveStarCount={data.fiveStarReviewCount} />}
+  // 12. Testimonials (logged-out only, alleen bij ≥3 echte 5★-reviews; anders
+  //     rendert de sectie null) — bg-background
+  if (!isLoggedIn && data.fiveStarReviewCount >= 3) {
+    sections.push({
+      surface: "bg",
+      node: <TestimonialsSection fiveStarCount={data.fiveStarReviewCount} />,
+    });
+  }
 
-      {/* 13. FAQ — voor iedereen, ook logged-in users vinden onboarding-info bruikbaar */}
-      <FaqSection bgClass="bg-background" />
+  // 13. FAQ — voor iedereen — bg-background
+  sections.push({ surface: "bg", node: <FaqSection bgClass="bg-background" /> });
+
+  return (
+    <div className="flex flex-col">
+      {sections.map((section, i) => {
+        const prev = sections[i - 1];
+        // Geen Z-divider direct onder de hero (dat is een afbeelding) — daar
+        // scheidt het kleurcontrast de secties al.
+        const needsDivider =
+          prev && prev.surface !== section.surface && prev.surface !== "hero";
+        return (
+          <Fragment key={i}>
+            {needsDivider && (
+              <ZDivider
+                className={`${SURFACE[prev.surface].bg}${
+                  prev.desktopOnly || section.desktopOnly ? " hidden md:block" : ""
+                }`}
+                fillClassName={SURFACE[section.surface].fill}
+              />
+            )}
+            {section.node}
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
+
+/* ── Surface-kleuren voor de Z-dividers ──
+   bg  = achtergrondkleur van de BOVENSTE sectie (wrapper van de divider)
+   fill = vulkleur van de blade = kleur van de ONDERSTE sectie
+   Responsive classes voor secties die in dark mode een andere kleur hebben. */
+type Surface = "hero" | "card" | "bg" | "live";
+
+const SURFACE: Record<Surface, { bg: string; fill: string }> = {
+  hero: { bg: "bg-slate-950", fill: "text-slate-950" },
+  card: { bg: "bg-card", fill: "text-card" },
+  bg: { bg: "bg-background", fill: "text-background" },
+  live: {
+    bg: "bg-background dark:bg-slate-950",
+    fill: "text-background dark:text-slate-950",
+  },
+};
 
 /* ── Item Section Wrapper ── */
 
