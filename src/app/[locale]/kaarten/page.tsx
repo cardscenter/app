@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { KaartenSearch } from "@/components/card/kaarten-search";
 import { PageContainer } from "@/components/layout/page-container";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { DatabaseStats } from "@/components/card/database-stats";
 import { DatabaseMarquee } from "@/components/card/database-marquee";
 import { DatabaseTrending, type TrendingCard } from "@/components/card/database-trending";
@@ -309,6 +310,7 @@ export default async function CardsOverviewPage() {
 
   return (
     <PageContainer width="wide" className="py-8">
+      <ScrollToTop />
       <Breadcrumbs items={[{ label: "Kaarten" }]} />
 
       <header className="mb-6 mt-2">

@@ -45,7 +45,14 @@ function isFoilRarity(rarity: string | null): boolean {
 }
 
 function effectivePrice(c: SearchResult): number | null {
-  if (isFoilRarity(c.rarity)) {
+  // Een foil-rariteit op zich is GEEN bewijs dat er reverse-holo-data klopt:
+  // pokewallet laat soms verouderde priceReverseAvg7/30 staan op kaarten die
+  // helemaal geen reverse-holo print hebben (bv. Rose #71 Shining Fates: echte
+  // marktprijs €1,49, maar een spook-RH van ~€9 in avg7/avg30). Gate daarom op
+  // hasReverseHoloSignal — exact dezelfde controle die de set-grid en de
+  // "Reverse"-regel hieronder al gebruiken — zodat de headline-prijs in de
+  // zoekresultaten overeenkomt met de detailpagina.
+  if (isFoilRarity(c.rarity) && hasReverseHoloSignal(c)) {
     const rh = getMarktprijsReverseHolo(c);
     if (rh !== null) return rh;
   }

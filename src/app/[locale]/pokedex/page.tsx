@@ -8,6 +8,7 @@ import { PokemonTypeBadge } from "@/components/pokedex/pokemon-type-badge";
 import { listSpecies, listAllSpecies, dexIdFromUrl, getPokemon } from "@/lib/pokeapi/client";
 import { pokedexSlug } from "@/lib/pokeapi/slug";
 import { PageContainer } from "@/components/layout/page-container";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 export const revalidate = 604800; // 7d — the species list is essentially static
 
@@ -112,6 +113,7 @@ export default async function PokedexIndexPage({ searchParams }: Props) {
 
   return (
     <PageContainer width="wide" className="py-8">
+      <ScrollToTop />
       <Breadcrumbs items={[{ label: tBc("pokedex") }]} />
 
       <header className="mb-6">

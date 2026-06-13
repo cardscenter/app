@@ -24,6 +24,7 @@ import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
 import { ChevronLeft, ChevronRight, Tag, Hash, Palette, Calendar, Heart } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 export const revalidate = 1800; // re-render every 30min so prices stay fresh
 
@@ -617,6 +618,7 @@ export default async function CardDetailPage({ params }: Props) {
 
   return (
     <PageContainer width="default" className="py-8">
+      <ScrollToTop />
       <Breadcrumbs
         items={[
           { label: "Kaarten", href: "/kaarten" },

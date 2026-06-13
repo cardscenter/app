@@ -8,6 +8,7 @@ import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
 import { hasReverseHoloSignal } from "@/lib/buyback-pricing";
 import { Layers } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 export const revalidate = 3600;
 
@@ -100,6 +101,7 @@ export default async function SetDetailPage({ params }: Props) {
 
   return (
     <PageContainer width="wide" className="py-8">
+      <ScrollToTop />
       <Breadcrumbs
         items={[
           { label: "Kaarten", href: "/kaarten" },

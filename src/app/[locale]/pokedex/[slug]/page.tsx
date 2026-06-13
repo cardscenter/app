@@ -11,6 +11,7 @@ import { parsePokedexSlug } from "@/lib/pokeapi/slug";
 import { getPokemon, getSpecies, getEvolutionChain } from "@/lib/pokeapi/client";
 import { pickFlavorText } from "@/lib/pokeapi/flavor-text";
 import { PageContainer } from "@/components/layout/page-container";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { getCardImageUrl } from "@/lib/card-image";
 
 export const revalidate = 86400; // 1d — species data is immutable upstream
@@ -119,6 +120,7 @@ export default async function PokedexPage({ params }: Props) {
 
   return (
     <PageContainer width="default" className="py-8">
+      <ScrollToTop />
       <Breadcrumbs
         items={[
           { label: tBc("pokedex"), href: "/pokedex" },
