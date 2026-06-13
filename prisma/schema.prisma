@@ -408,7 +408,10 @@ model Card {
   watchlistEntries CardWatchlist[]
   priceHistory    CardPriceHistory[]
 
-  @@index([cardSetId])
+  // Composite covers the card-detail lookup (cardSetId + localId, case-OR) AND
+  // serves cardSetId-only queries via leftmost-prefix, so it supersedes a
+  // standalone [cardSetId] index.
+  @@index([cardSetId, localId])
   @@index([name])
   @@index([searchName])
   @@index([priceUpdatedAt])
