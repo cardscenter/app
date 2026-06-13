@@ -26,11 +26,16 @@ async function pwFetch<T>(path: string, options: FetchOptions = {}): Promise<T> 
   const baseDelay = options.retryDelayMs ?? 1000;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    // Hard 8s per-request timeout so a hanging PokeWallet can never stall the
+    // caller indefinitely (matters for the nightly bulk-sync, which loops over
+    // ~600 calls). A timeout aborts the fetch and surfaces as a thrown error,
+    // handled like any other network failure by the cron's withRetry wrapper.
     const res = await fetch(`${BASE_URL}${path}`, {
       headers: {
         "X-API-Key": getApiKey(),
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (res.status === 429) {
@@ -128,7 +133,10 @@ export async function fetchSetViaCardLookup(
   while (true) {
     const res = await fetch(
       `${BASE_URL}/sets/${encodeURIComponent(setIdOrCode)}?limit=200&page=${page}`,
-      { headers: { "X-API-Key": getApiKey(), "Content-Type": "application/json" } },
+      {
+        headers: { "X-API-Key": getApiKey(), "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(8000),
+      },
     );
     if (!res.ok) throw new Error(`PokeWallet ${res.status} on /sets/${setIdOrCode}`);
     const data = (await res.json()) as {
