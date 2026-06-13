@@ -363,7 +363,7 @@ User-velden toegevoegd in roadmap-werk: `maxRunnerUpAttempts` (Cluster A), `iban
 | `cron/auto-resolve-disputes/route.ts` | Auto-resolve unresponded disputes |
 | `cron/check-subscriptions/route.ts` | Downgrade expired subscriptions to FREE |
 | `cron/expire-claims/route.ts` | Verloop CLAIMED claimsale-items >15min in cart |
-| `cron/sync-pokewallet/route.ts` | Refresh pricing voor alle PokeWallet-gemapte sets (heavy: ~600 API-calls) |
+| `cron/sync-pokewallet/route.ts` | Ontdekt nieuwe sets + vult lege nieuwe sets met kaarten/afbeeldingen uit TCGdex (`src/lib/pokewallet/populate-cards.ts` + `src/lib/tcgdex/client.ts`) + refresht pricing voor alle PokeWallet-gemapte sets (heavy: ~600 API-calls). Prijzen blijven 100% PokeWallet; TCGdex levert alleen de kaartlijst. |
 | `cron/cleanup-archived-chats/route.ts` | Hard-delete conversations >60 dagen ARCHIVED (destructief — manual run geblokkeerd) |
 | `cron/auction-payment-deadline/route.ts` | (post-Fase-33) Pre-emptive flip AWAITING_PAYMENT → AWAITING_RUNNER_UP_DECISION (race-safe vs completeAuctionPayment), strike + 2,9%-fee + €200-borg op wanbetaler (niet-inbare deel naar PendingPlatformFee). Daarna `processRunnerUpDecision` voor offer of finalize PAYMENT_FAILED |
 | `cron/auction-activate/route.ts` | (Fase 34) Flipt SCHEDULED → ACTIVE voor veilingen waarvan `startTime ≤ now`, publisht `auction-started` event, bumpt finalize-scheduler. Race-safe via conditional `updateMany`. Safety-net naast in-process activator-scheduler (sub-seconde precisie). Schedule: elke minuut |
