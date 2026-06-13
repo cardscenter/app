@@ -20,6 +20,7 @@ const MANUAL_SET_MAPPING: Record<string, string> = {
   "me02": "24448", // ME02: Phantasmal Flames
   "me02.5": "24541", // ME: Ascended Heroes
   "me03": "24587", // ME03: Perfect Order
+  "me04": "24655", // ME04: Chaos Rising
   // Sub-sets where pokewallet uses unusual prefixes (SV: instead of SV1:)
   "sv03.5": "23237", // SV: Scarlet & Violet 151 (eng) — was 23599 (JAP)
   "sv04.5": "23353", // SV: Paldean Fates

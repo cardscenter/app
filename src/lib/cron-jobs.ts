@@ -12,6 +12,7 @@ import { checkAndDowngradeExpired } from "@/actions/subscription";
 import { expireClaimedItems } from "@/actions/claimsale";
 import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
 import { syncSetCatalog } from "@/lib/pokewallet/set-mapping";
+import { populateEmptyMappedSets } from "@/lib/pokewallet/populate-cards";
 import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
@@ -360,7 +361,7 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   },
   "sync-pokewallet": {
     description:
-      "Detecteert nieuwe PokeWallet-sets (en maakt er CardSet-rijen voor aan onder een 'Onbekend'-Series) + vernieuwt prijzen voor alle CardSets met een mapping. ~600 API-calls per pass.",
+      "Detecteert nieuwe PokeWallet-sets (maakt er CardSet-rijen voor aan onder een 'Onbekend'-Series), vult lege nieuwe sets met kaarten + afbeeldingen uit TCGdex, en vernieuwt prijzen voor alle CardSets met een mapping. ~600 API-calls per pass.",
     schedule: "Dagelijks",
     allowManualRun: true,
     runWarning:
@@ -486,6 +487,20 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       catalogError = (e as Error).message.slice(0, 200);
     }
 
+    // Stap 1b — Kaarten aanmaken voor net-ontdekte (lege) gemapte sets.
+    // discoverAndCreateNewSets() maakt alleen een lege set-shell; de prijs-sync
+    // doet uitsluitend card.update (nooit create), dus zonder deze stap blijft
+    // een nieuwe set eeuwig leeg. Bron = TCGdex (kaartlijst + afbeeldingen).
+    // Na deze stap valt de set onder `cards: { some: {} }` en wordt 'ie meteen
+    // in dezelfde run geprijsd.
+    let populated: Awaited<ReturnType<typeof populateEmptyMappedSets>> | null = null;
+    let populateError: string | null = null;
+    try {
+      populated = await populateEmptyMappedSets();
+    } catch (e) {
+      populateError = (e as Error).message.slice(0, 200);
+    }
+
     // Stap 2 — Prijs-sync per gemapte set met cards
     const sets = await prisma.cardSet.findMany({
       where: { pokewalletSetId: { not: null }, cards: { some: {} } },
@@ -524,6 +539,13 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
               needsReview: catalog.needsReview.slice(0, 20),
             }
           : { error: catalogError },
+        populate: populated
+          ? {
+              setsPopulated: populated.populated.filter((p) => p.created > 0).length,
+              cardsCreated: populated.populated.reduce((sum, p) => sum + p.created, 0),
+              details: populated.populated.slice(0, 20),
+            }
+          : { error: populateError },
         totalSets: sets.length,
         setsOk: totalSetsOk,
         totalUpdated,
