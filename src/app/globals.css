@@ -612,9 +612,15 @@ body {
 /* ----------------------------------------------------------------------------
    Route-loading-indicator — de balk animeert puur via CSS (width), zodat 'ie
    ALTIJD loopt, óók vóór de JS gehydrateerd is. Loopt naar ~92% en houdt daar —
-   100% komt wanneer de pagina laadt en deze loader vervangt. Het percentage-
-   getal is JS-gedreven (zie route-loading-indicator.tsx): de oude CSS-counter-
-   truc werkte alleen in Chromium, op iOS Safari bleef 'ie op 0% hangen.
+   100% komt wanneer de pagina laadt en deze loader vervangt.
+
+   Het percentage-getal animeert óók via CSS (registered @property + counter):
+   bij een COLD page-load wordt de loader vaak al door de echte pagina vervangen
+   vóór de client-JS hydrateert, dus een JS-gedreven getal bleef op de SSR-waarde
+   (4%) hangen. De CSS-counter loopt zónder JS mee met de balk. In Safari/Firefox
+   her-evalueert counter() niet tijdens een property-animatie — daar blijft 'ie op
+   de initiële 4% tot de JS 'm overneemt (route-loading-indicator.tsx
+   synchroniseert ná hydratie met de balk-animatie via de Web Animations API).
 ---------------------------------------------------------------------------- */
 @keyframes loading-bar-fill {
   from { width: 4%; }
@@ -623,4 +629,21 @@ body {
 .loading-bar-fill {
   width: 4%;
   animation: loading-bar-fill 9s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+}
+
+@property --loading-pct {
+  syntax: "<integer>";
+  initial-value: 4;
+  inherits: false;
+}
+@keyframes loading-pct-count {
+  from { --loading-pct: 4; }
+  to { --loading-pct: 92; }
+}
+.loading-pct-css {
+  counter-reset: loadingpct var(--loading-pct);
+  animation: loading-pct-count 9s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+}
+.loading-pct-css::after {
+  content: counter(loadingpct) "%";
 }
