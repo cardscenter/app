@@ -605,3 +605,35 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* ----------------------------------------------------------------------------
+   Route-loading-indicator — puur-CSS percentage + balk. CSS-gedreven (via
+   @property + counter) zodat het percentage ALTIJD oploopt, óók vóór de JS
+   gehydrateerd is (juist tijdens een cold load is JS nog niet klaar). Loopt naar
+   ~92% en houdt daar — 100% komt wanneer de pagina laadt en deze loader vervangt.
+---------------------------------------------------------------------------- */
+@property --loading-pct {
+  syntax: "<integer>";
+  initial-value: 4;
+  inherits: false;
+}
+@keyframes loading-pct-count {
+  from { --loading-pct: 4; }
+  to { --loading-pct: 92; }
+}
+@keyframes loading-bar-fill {
+  from { width: 4%; }
+  to { width: 92%; }
+}
+.loading-pct {
+  --loading-pct: 4;
+  animation: loading-pct-count 9s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+  counter-reset: loadingpct var(--loading-pct);
+}
+.loading-pct::after {
+  content: counter(loadingpct) "%";
+}
+.loading-bar-fill {
+  width: 4%;
+  animation: loading-bar-fill 9s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+}

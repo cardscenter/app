@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 
 // Pokémon- & TCG-weetjes om de wachttijd bij een cold load leuk te maken.
-// Nederlands, kort genoeg om in één oogopslag te lezen.
 const FACTS: string[] = [
   "Pokémon betekent letterlijk “Pocket Monsters”.",
   "Rhydon was de allereerste Pokémon die ooit getekend werd.",
@@ -23,26 +21,14 @@ const FACTS: string[] = [
 ];
 
 export function RouteLoadingIndicator() {
-  const [pct, setPct] = useState(6);
+  // Percentage + balk lopen puur via CSS (zie globals.css .loading-pct /
+  // .loading-bar-fill) zodat ze ALTIJD animeren — ook vóór de JS gehydrateerd is.
+  // Alleen de roterende weetjes hangen aan JS (degraderen netjes: weetje 0 staat
+  // er al bij SSR).
   const [factIdx, setFactIdx] = useState(0);
 
-  // Willekeurig startweetje (client-side, dus Math.random mag hier).
   useEffect(() => {
-    setFactIdx(Math.floor(Math.random() * FACTS.length));
-  }, []);
-
-  // Indicatief percentage: snel omhoog, daarna afremmend richting 95% (we
-  // weten de echte SSR-voortgang niet — 100% komt vanzelf als de pagina laadt
-  // en deze loader vervangt).
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPct((cur) => (cur >= 95 ? 95 : Math.min(95, cur + Math.max(1, Math.round((95 - cur) * 0.08)))));
-    }, 220);
-    return () => clearInterval(id);
-  }, []);
-
-  // Roteer de weetjes zodat er bij een langere wachttijd steeds iets nieuws staat.
-  useEffect(() => {
+    setFactIdx(Math.floor(Math.random() * FACTS.length)); // willekeurig startweetje
     const id = setInterval(() => {
       setFactIdx((i) => (i + 1) % FACTS.length);
     }, 4000);
@@ -51,15 +37,23 @@ export function RouteLoadingIndicator() {
 
   return (
     <div className="flex min-h-[55vh] flex-col items-center justify-center gap-5 px-6 text-center">
-      <Image
+      {/* Plain <img> + unoptimized-equivalent: statisch bestand laadt direct,
+          óók tijdens een cold render (de image-optimizer-route doet dat niet). */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src="/images/logo-loading.png"
         alt="Cards Center laadt"
         width={88}
         height={88}
-        priority
-        className="animate-spin [animation-duration:1.4s]"
+        className="size-[88px] animate-spin [animation-duration:1.4s]"
       />
-      <p className="text-xl font-bold tabular-nums text-foreground">{pct}%</p>
+
+      <p className="loading-pct text-xl font-bold tabular-nums text-foreground" />
+
+      <div className="h-1.5 w-56 overflow-hidden rounded-full bg-muted">
+        <div className="loading-bar-fill h-full rounded-full bg-primary" />
+      </div>
+
       <div className="min-h-[3.5rem] max-w-sm">
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
           Wist je dat?
