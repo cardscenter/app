@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/prisma";
@@ -23,9 +24,13 @@ export const metadata: Metadata = {
     "Bekijk alle Pokémon kaarten per set. Vergelijk prijzen, zie wat er nu te koop is en zet kaarten op je watchlist.",
 };
 
-export const revalidate = 3600; // re-render hourly
-
-export default async function CardsOverviewPage() {
+// Alle data op deze pagina is semi-statisch (series/sets/aggregaten/trending —
+// verandert alleen bij de nachtelijke sync). De pagina rendert dynamisch (de
+// layout gebruikt auth()), dus page-level ISR/revalidate wordt genegeerd. Daarom
+// cachen we de ~9 zware queries + berekening op query-niveau met unstable_cache:
+// de render wordt een snelle cache-hit i.p.v. 1-8s zware DB-aggregaties.
+const getCardsOverviewData = unstable_cache(
+  async () => {
   // Cutoff for "recente" sets — last 3 years. Older prices can be stale /
   // illiquid on CardMarket so we exclude them from marquee + trending to
   // avoid showing misleading numbers.
@@ -269,6 +274,39 @@ export default async function CardsOverviewPage() {
     sets: s.cardSets.map((set) => ({ id: set.id, name: set.name })),
   }));
 
+    return {
+      totalCards: cardAggregate._count._all,
+      totalSets: setCount,
+      totalMarketValueEur: cardAggregate._sum.priceAvg ?? 0,
+      latestSetName: latestSet?.name ?? null,
+      latestSetSlug: latestSet?.tcgdexSetId ?? null,
+      marqueeItems,
+      risers,
+      fallers,
+      rarityOptions,
+      seriesOptions,
+      sortedSeries,
+    };
+  },
+  ["cards-overview-v1"],
+  { revalidate: 3600, tags: ["cards-catalog"] },
+);
+
+export default async function CardsOverviewPage() {
+  const {
+    totalCards,
+    totalSets,
+    totalMarketValueEur,
+    latestSetName,
+    latestSetSlug,
+    marqueeItems,
+    risers,
+    fallers,
+    rarityOptions,
+    seriesOptions,
+    sortedSeries,
+  } = await getCardsOverviewData();
+
   return (
     <PageContainer width="wide" className="py-8">
       <Breadcrumbs items={[{ label: "Kaarten" }]} />
@@ -289,11 +327,11 @@ export default async function CardsOverviewPage() {
 
       <div className="mb-6">
         <DatabaseStats
-          totalCards={cardAggregate._count._all}
-          totalSets={setCount}
-          totalMarketValueEur={cardAggregate._sum.priceAvg ?? 0}
-          latestSetName={latestSet?.name ?? null}
-          latestSetSlug={latestSet?.tcgdexSetId ?? null}
+          totalCards={totalCards}
+          totalSets={totalSets}
+          totalMarketValueEur={totalMarketValueEur}
+          latestSetName={latestSetName}
+          latestSetSlug={latestSetSlug}
         />
       </div>
 
