@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
 import { UserBalance } from "./user-balance";
-import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { Menu, X, Search, Bell, MessageCircle, ChevronRight } from "lucide-react";
 import { NotificationBell } from "@/components/ui/notification-bell";
@@ -83,15 +82,16 @@ function HeaderContent() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/85">
       <div className="mx-auto flex h-16 w-full max-w-[1680px] items-center gap-4 px-4 sm:px-6 lg:px-8 xl:px-10">
-        {/* Logo */}
+        {/* Logo — plain <img>: de Next image-optimizer faalt op Railway, dus
+            net als elders in de app serveren we het statische bestand direct. */}
         <Link href="/" className="mr-2 flex shrink-0 items-center gap-2 lg:mr-6">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/images/logo-dark-mode.png"
             alt="Cards Center"
             width={160}
             height={45}
             className="h-10 w-auto"
-            priority
           />
         </Link>
 

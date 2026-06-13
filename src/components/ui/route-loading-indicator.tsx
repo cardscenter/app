@@ -21,11 +21,12 @@ const FACTS: string[] = [
 ];
 
 export function RouteLoadingIndicator() {
-  // Percentage + balk lopen puur via CSS (zie globals.css .loading-pct /
-  // .loading-bar-fill) zodat ze ALTIJD animeren — ook vóór de JS gehydrateerd is.
-  // Alleen de roterende weetjes hangen aan JS (degraderen netjes: weetje 0 staat
-  // er al bij SSR).
+  // De balk animeert puur via CSS (.loading-bar-fill in globals.css) zodat 'ie
+  // ALTIJD loopt — ook vóór de JS gehydrateerd is. Het PERCENTAGE-getal is
+  // JS-gedreven: de oude pure-CSS counter-truc (@property + counter()) werkt
+  // alleen in Chromium, op iOS Safari/Firefox bleef 'ie op 0% hangen.
   const [factIdx, setFactIdx] = useState(0);
+  const [pct, setPct] = useState(4);
 
   useEffect(() => {
     setFactIdx(Math.floor(Math.random() * FACTS.length)); // willekeurig startweetje
@@ -33,6 +34,24 @@ export function RouteLoadingIndicator() {
       setFactIdx((i) => (i + 1) % FACTS.length);
     }, 4000);
     return () => clearInterval(id);
+  }, []);
+
+  // Tel 4% → 92% over ~9s met dezelfde easing als de CSS-balk, zodat getal en
+  // balk synchroon lopen. Houdt daarna op 92% — 100% komt wanneer de pagina
+  // geladen is en deze loader vervangt.
+  useEffect(() => {
+    const start = performance.now();
+    const DURATION = 9000;
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / DURATION, 1);
+      // cubic-bezier(0.16, 0.8, 0.3, 1) benaderen met easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setPct(Math.round(4 + eased * (92 - 4)));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   return (
@@ -48,7 +67,7 @@ export function RouteLoadingIndicator() {
         className="size-[88px] animate-spin [animation-duration:1.4s]"
       />
 
-      <p className="loading-pct text-xl font-bold tabular-nums text-foreground" />
+      <p className="text-xl font-bold tabular-nums text-foreground">{pct}%</p>
 
       <div className="h-1.5 w-56 overflow-hidden rounded-full bg-muted">
         <div className="loading-bar-fill h-full rounded-full bg-primary" />
