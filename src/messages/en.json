@@ -2867,6 +2867,8 @@
     "navReports": "Reports",
     "navSellerWarnings": "Unshipped",
     "navEnterpriseRequests": "Enterprise requests",
+    "navEventApprovals": "Events queue",
+    "navEventReports": "Reported events",
     "navBankTransfers": "Bank transfers",
     "navUsers": "Users",
     "navModeration": "Moderation",

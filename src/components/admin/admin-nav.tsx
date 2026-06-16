@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   Building2,
   Truck,
+  CalendarDays,
 } from "lucide-react";
 
 type Section = {
@@ -44,6 +45,8 @@ export function AdminNav({
     reports?: number;
     sellerWarnings?: number;
     enterpriseRequests?: number;
+    eventApprovals?: number;
+    eventReports?: number;
   };
 }) {
   const t = useTranslations("admin");
@@ -69,6 +72,8 @@ export function AdminNav({
         { href: "/dashboard/admin/reports", labelKey: "navReports", icon: Flag, badge: pendingCounts?.reports },
         { href: "/dashboard/admin/seller-warnings", labelKey: "navSellerWarnings", icon: AlertTriangle, badge: pendingCounts?.sellerWarnings },
         { href: "/dashboard/admin/enterprise-requests", labelKey: "navEnterpriseRequests", icon: Building2, badge: pendingCounts?.enterpriseRequests },
+        { href: "/dashboard/admin/event-approvals", labelKey: "navEventApprovals", icon: CalendarDays, badge: pendingCounts?.eventApprovals },
+        { href: "/dashboard/admin/event-reports", labelKey: "navEventReports", icon: Flag, badge: pendingCounts?.eventReports },
         { href: "/dashboard/admin/bank-transfers", labelKey: "navBankTransfers", icon: CreditCard },
       ],
     },
