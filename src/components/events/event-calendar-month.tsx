@@ -1,0 +1,155 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Image from "next/image";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import { EventQuickViewPanel } from "@/components/events/event-quick-view";
+import type { EventListItem } from "@/components/events/event-view-types";
+
+const WEEKDAYS = ["ma", "di", "wo", "do", "vr", "za", "zo"];
+const MONTHS = [
+  "januari", "februari", "maart", "april", "mei", "juni",
+  "juli", "augustus", "september", "oktober", "november", "december",
+];
+
+function pad(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+// Datum-sleutel "yyyy-mm-dd" van een event in z'n eigen tijdzone.
+function dayKeyInTz(iso: string, tz: string): string {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return fmt.format(new Date(iso)); // en-CA → yyyy-mm-dd
+}
+
+export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
+  // Begin op de maand van het eerstvolgende event, anders de huidige maand.
+  const initial = useMemo(() => {
+    if (events.length > 0) {
+      const d = new Date(events[0].startTime);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  }, [events]);
+
+  const [{ year, month }, setMonth] = useState(initial);
+
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, EventListItem[]>();
+    for (const e of events) {
+      const key = dayKeyInTz(e.startTime, e.timezone);
+      const arr = map.get(key) ?? [];
+      arr.push(e);
+      map.set(key, arr);
+    }
+    return map;
+  }, [events]);
+
+  const cells = useMemo(() => {
+    const first = new Date(year, month, 1);
+    const firstWeekday = (first.getDay() + 6) % 7; // maandag = 0
+    const start = new Date(year, month, 1 - firstWeekday);
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      return {
+        y: d.getFullYear(),
+        m: d.getMonth(),
+        d: d.getDate(),
+        inMonth: d.getMonth() === month,
+        key: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      };
+    });
+  }, [year, month]);
+
+  const todayKey = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`;
+  })();
+
+  function prev() {
+    setMonth(({ year, month }) => (month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 }));
+  }
+  function next() {
+    setMonth(({ year, month }) => (month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 }));
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
+      {/* Maand-navigatie */}
+      <div className="mb-3 flex items-center justify-between">
+        <button onClick={prev} className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted" aria-label="Vorige maand">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <h2 className="text-lg font-bold text-foreground">{MONTHS[month]} {year}</h2>
+        <button onClick={next} className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted" aria-label="Volgende maand">
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Weekdag-headers */}
+      <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase text-muted-foreground">
+        {WEEKDAYS.map((w) => (
+          <div key={w} className="py-1">{w}</div>
+        ))}
+      </div>
+
+      {/* Dag-cellen */}
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((cell) => {
+          const dayEvents = eventsByDay.get(cell.key) ?? [];
+          const isToday = cell.key === todayKey;
+          return (
+            <div
+              key={cell.key}
+              className={`relative min-h-[84px] rounded-lg border p-1 sm:min-h-[110px] ${
+                cell.inMonth ? "border-border bg-background" : "border-transparent bg-muted/30"
+              }`}
+            >
+              <div className={`mb-1 text-right text-xs font-medium ${
+                isToday
+                  ? "mx-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                  : cell.inMonth ? "text-foreground" : "text-muted-foreground/50"
+              }`}>
+                {cell.d}
+              </div>
+
+              <div className="space-y-1">
+                {dayEvents.slice(0, 3).map((e) => (
+                  <div key={e.id} className="group/qv relative">
+                    <Link
+                      href={`/evenementen/${e.id}`}
+                      className="flex items-center gap-1 rounded-md bg-indigo-50 p-0.5 text-[10px] font-medium text-indigo-800 transition hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-200 dark:hover:bg-indigo-900"
+                    >
+                      <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded bg-muted">
+                        {e.coverImage ? (
+                          <Image src={e.coverImage} alt="" fill className="object-cover" sizes="20px" unoptimized />
+                        ) : (
+                          <span className="flex h-full items-center justify-center"><Calendar className="h-3 w-3 text-muted-foreground" /></span>
+                        )}
+                      </span>
+                      <span className="truncate">{e.title}</span>
+                    </Link>
+                    {/* Hover quick-view (desktop). Op touch geen hover → tap = link. */}
+                    <div className="pointer-events-none absolute left-1/2 top-full z-50 hidden -translate-x-1/2 pt-1 group-hover/qv:block">
+                      <EventQuickViewPanel event={e} />
+                    </div>
+                  </div>
+                ))}
+                {dayEvents.length > 3 && (
+                  <p className="px-0.5 text-[10px] text-muted-foreground">+{dayEvents.length - 3} meer</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
