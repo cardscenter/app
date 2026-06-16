@@ -91,14 +91,24 @@ export function TicketListEditor({
             return (
               <div key={i} className="rounded-lg border-2 border-dashed border-border bg-muted/40 px-3 py-2.5">
                 {!isEditing ? (
-                  <div className="flex items-start gap-3">
-                    <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div className="flex items-center gap-3">
+                    <Ticket className="h-7 w-7 shrink-0 text-primary" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-base font-semibold text-foreground">{t.name}</p>
-                      {t.description && <p className="mt-0.5 text-xs text-muted-foreground">{t.description}</p>}
+                      {t.description ? (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{t.description}</p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEditing(i)}
+                          className="mt-1 inline-block rounded bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
+                        >
+                          + Beschrijving toevoegen
+                        </button>
+                      )}
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-base font-bold text-foreground">{priceNum === 0 ? "Gratis" : `€ ${priceNum.toFixed(2)}`}</p>
+                      <p className="text-lg font-bold text-foreground">{priceNum === 0 ? "Gratis" : `€ ${priceNum.toFixed(2)}`}</p>
                       {feeNum > 0 && <p className="text-[11px] text-muted-foreground">+ € {feeNum.toFixed(2)} servicekosten</p>}
                     </div>
                     <div className="flex shrink-0 flex-col gap-1">

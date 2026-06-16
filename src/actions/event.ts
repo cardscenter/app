@@ -152,7 +152,8 @@ export async function createEvent(formData: FormData) {
 
   // Tickets + standhouder-opties (beide zelf-gedefinieerde naam/prijs-lijsten).
   const isPaid = data.entryType === "PAID";
-  const ticketTypes = isPaid ? parseTicketTypes(data.ticketTypes) : [];
+  // Tickets oplopend op prijs tonen.
+  const ticketTypes = (isPaid ? parseTicketTypes(data.ticketTypes) : []).sort((a, b) => a.price - b.price);
   const vendorOptions = parseTicketTypes(data.vendorOptions);
 
   // Promotie: uitgelichte banner uit saldo.

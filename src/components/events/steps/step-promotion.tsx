@@ -1,10 +1,10 @@
 "use client";
 
-import { Megaphone, Check } from "lucide-react";
+import { Megaphone, Check, ImageOff } from "lucide-react";
 import {
   calculateEventBannerCost,
-  EVENT_BANNER_MIN_DAYS,
-  EVENT_BANNER_MAX_DAYS,
+  bannerDaysUntil,
+  EVENT_BANNER_DAILY_COST,
 } from "@/lib/events/upsell-config";
 import type { EventFormState, EventFieldSetter } from "@/components/events/event-form-types";
 
@@ -17,8 +17,17 @@ export function StepPromotion({
   set: EventFieldSetter;
   accountType: string;
 }) {
-  const days = Math.max(EVENT_BANNER_MIN_DAYS, Math.min(form.promoteDays, EVENT_BANNER_MAX_DAYS));
+  const hasBanner = !!form.coverImage;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const days = bannerDaysUntil(form.promoteUntil);
   const cost = calculateEventBannerCost(days, accountType);
+
+  function toggle() {
+    if (!hasBanner) return;
+    const next = !form.promote;
+    set("promote", next);
+    if (next && !form.promoteUntil) set("promoteUntil", form.startDate || todayStr);
+  }
 
   return (
     <section className="space-y-5">
@@ -32,11 +41,22 @@ export function StepPromotion({
         </p>
       </div>
 
+      {!hasBanner && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+          <ImageOff className="h-4 w-4 shrink-0" /> Upload eerst een banner-afbeelding (stap Foto) om promotie te kunnen kiezen.
+        </div>
+      )}
+
       <button
         type="button"
-        onClick={() => set("promote", !form.promote)}
+        onClick={toggle}
+        disabled={!hasBanner}
         className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left transition ${
-          form.promote ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-card hover:bg-muted"
+          !hasBanner
+            ? "cursor-not-allowed border-border bg-muted/40 opacity-60"
+            : form.promote
+              ? "border-primary bg-primary/5 ring-1 ring-primary"
+              : "border-border bg-card hover:bg-muted"
         }`}
       >
         <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${form.promote ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
@@ -50,26 +70,26 @@ export function StepPromotion({
         </span>
       </button>
 
-      {form.promote && (
+      {hasBanner && form.promote && (
         <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm text-muted-foreground">
-              Aantal dagen uitgelicht:
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-sm text-muted-foreground" htmlFor="promo-until">Uitgelicht tot en met</label>
               <input
-                type="number"
-                min={EVENT_BANNER_MIN_DAYS}
-                max={EVENT_BANNER_MAX_DAYS}
-                value={form.promoteDays}
-                onChange={(e) => set("promoteDays", Math.max(EVENT_BANNER_MIN_DAYS, Math.min(EVENT_BANNER_MAX_DAYS, Number(e.target.value) || EVENT_BANNER_MIN_DAYS)))}
-                className="ml-2 w-20 rounded-lg border border-border bg-background px-2 py-1 text-base text-foreground"
+                id="promo-until"
+                type="date"
+                min={todayStr}
+                value={form.promoteUntil}
+                onChange={(e) => set("promoteUntil", e.target.value)}
+                className="mt-1 rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground"
               />
-            </label>
-            <span className="text-lg font-bold text-foreground">€{cost.toFixed(2)}</span>
+            </div>
+            <div className="text-sm">
+              <p className="text-muted-foreground">{days} dag{days === 1 ? "" : "en"} × €{EVENT_BANNER_DAILY_COST.toFixed(2)}</p>
+              <p className="text-lg font-bold text-foreground">€{cost.toFixed(2)}</p>
+            </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Wordt afgeschreven van je saldo bij publiceren. Tip: zorg dat je banner-afbeelding een
-            mooie liggende verhouding (3:1) heeft.
-          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Wordt afgeschreven van je saldo bij publiceren.</p>
         </div>
       )}
     </section>

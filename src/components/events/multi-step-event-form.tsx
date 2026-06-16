@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Loader2, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { createEvent } from "@/actions/event";
 import { INITIAL_EVENT_FORM, type EventFormState, type EventFieldSetter } from "@/components/events/event-form-types";
+import { bannerDaysUntil } from "@/lib/events/upsell-config";
 import { EventLivePreview } from "@/components/events/event-live-preview";
 import { StepType } from "@/components/events/steps/step-type";
 import { StepDetails } from "@/components/events/steps/step-details";
@@ -47,6 +48,7 @@ function validateStep(step: number, form: EventFormState): string | null {
       return null;
     case 6:
       if (form.promote && !form.coverImage) return "Upload eerst een banner-afbeelding voor de promotie";
+      if (form.promote && !form.promoteUntil) return "Kies tot welke datum je evenement uitgelicht moet zijn";
       return null;
     default:
       return null;
@@ -134,7 +136,7 @@ export function MultiStepEventForm({ accountType }: { accountType: string }) {
     }
 
     fd.set("promote", form.promote ? "1" : "0");
-    if (form.promote) fd.set("promoteDays", String(form.promoteDays));
+    if (form.promote) fd.set("promoteDays", String(bannerDaysUntil(form.promoteUntil)));
     if (confirm) fd.set("confirmDuplicate", "1");
     return fd;
   }

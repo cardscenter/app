@@ -57,7 +57,7 @@ export interface EventFormState {
   coverImage: string;
 
   promote: boolean;
-  promoteDays: number;
+  promoteUntil: string; // yyyy-MM-dd — banner uitgelicht tot en met deze datum
 }
 
 export const INITIAL_EVENT_FORM: EventFormState = {
@@ -96,7 +96,7 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   maxVisitors: "",
   coverImage: "",
   promote: false,
-  promoteDays: 14,
+  promoteUntil: "",
 };
 
 export type EventFieldSetter = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => void;

@@ -7,7 +7,7 @@ import {
 } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
 import { timezoneForCountry } from "@/lib/events/timezones";
-import { calculateEventBannerCost, EVENT_BANNER_MIN_DAYS, EVENT_BANNER_MAX_DAYS } from "@/lib/events/upsell-config";
+import { calculateEventBannerCost, bannerDaysUntil } from "@/lib/events/upsell-config";
 import { CountryFlag } from "@/components/ui/country-flag";
 import type { EventFormState } from "@/components/events/event-form-types";
 
@@ -24,7 +24,7 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
   const activeFacilities = [...ACTIVITY_KEYS, ...FACILITY_KEYS].filter((k) => form[k as FacilityKey] as boolean) as FacilityKey[];
   const validTickets = form.ticketTypes.filter((t) => t.name.trim());
   const validVendor = form.vendorOptions.filter((t) => t.name.trim());
-  const promoDays = Math.max(EVENT_BANNER_MIN_DAYS, Math.min(form.promoteDays, EVENT_BANNER_MAX_DAYS));
+  const promoDays = bannerDaysUntil(form.promoteUntil);
   const promoCost = form.promote ? calculateEventBannerCost(promoDays, accountType) : 0;
   const fmtPrice = (p: string) => (Number(p || 0) === 0 ? "gratis" : `€${p}`);
 
@@ -98,7 +98,9 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
         {form.promote && (
           <div className="flex items-center gap-2 border-t border-border pt-3 text-sm">
             <Megaphone className="h-4 w-4 text-primary" />
-            <span className="font-medium text-foreground">Uitgelichte banner ({promoDays} d) — €{promoCost.toFixed(2)}</span>
+            <span className="font-medium text-foreground">
+              Uitgelichte banner{form.promoteUntil ? ` tot ${new Date(form.promoteUntil).toLocaleDateString("nl-NL")}` : ""} — €{promoCost.toFixed(2)}
+            </span>
           </div>
         )}
       </div>
