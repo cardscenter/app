@@ -106,18 +106,33 @@ export async function listAllSets(): Promise<PokewalletSetsResponse> {
   return pwFetch<PokewalletSetsResponse>("/sets");
 }
 
-/** Fetch every page of a set in parallel via search endpoint (gives prices). */
+/**
+ * Fetch every page of a set in parallel via search endpoint (gives prices).
+ *
+ * `/search?q=<setId>` is a fuzzy text query, not a strict set filter: for
+ * low-numbered set_ids it also matches cards from OTHER sets whose
+ * card_number contains the same digits (e.g. q=2328 returns "9/214" rows
+ * from unrelated sets). We therefore drop any result whose card_info.set_id
+ * differs from the requested id — keeping only the set we actually asked for.
+ */
 export async function fetchAllPagesForSet(setId: string): Promise<PokewalletCard[]> {
+  const keepOwnSet = (cards: PokewalletCard[]): PokewalletCard[] =>
+    cards.filter((c) => {
+      const sid = c.card_info?.set_id;
+      // Defensive: only drop when set_id is present AND clearly different.
+      return sid == null || String(sid) === String(setId);
+    });
+
   const first = await searchBySetId(setId, 1, 100);
   if (first.results.length === 0) return [];
-  if (first.pagination.total_pages <= 1) return first.results;
+  if (first.pagination.total_pages <= 1) return keepOwnSet(first.results);
 
   const remainingPages = Array.from(
     { length: first.pagination.total_pages - 1 },
     (_, i) => i + 2,
   );
   const rest = await Promise.all(remainingPages.map((p) => searchBySetId(setId, p, 100)));
-  return [...first.results, ...rest.flatMap((r) => r.results)];
+  return keepOwnSet([...first.results, ...rest.flatMap((r) => r.results)]);
 }
 
 /**
@@ -145,10 +160,14 @@ export async function fetchSetViaCardLookup(
     };
     if (!data.cards || data.cards.length === 0) break;
 
-    // Fetch full pricing per card in parallel (max 5 at a time)
+    // Fetch full pricing per card in parallel (max 5 at a time). One retry per
+    // card on transient failure (8s timeout): without it the occasional dropped
+    // /cards lookup leaves a card permanently unpriced (e.g. SM secret rares).
+    const fetchOne = (id: string) =>
+      getCard(id).catch(() => getCard(id).catch(() => null));
     for (let i = 0; i < data.cards.length; i += 5) {
       const batch = data.cards.slice(i, i + 5);
-      const fetched = await Promise.all(batch.map((c) => getCard(c.id).catch(() => null)));
+      const fetched = await Promise.all(batch.map((c) => fetchOne(c.id)));
       for (const f of fetched) if (f) cards.push(f);
     }
     if (page >= data.pagination.total_pages) break;

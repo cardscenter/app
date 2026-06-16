@@ -38,6 +38,19 @@ function pickTp(card: PokewalletCard, sub: string): PokewalletTpPrice | null {
 }
 
 /**
+ * Pick the first matching TCGPlayer sub-type from a preference list.
+ * Used to absorb the WotC-era edition labels ("Unlimited", "1st Edition")
+ * which the modern "Normal"/"Holofoil" buckets don't cover.
+ */
+function pickTpAny(card: PokewalletCard, subs: string[]): PokewalletTpPrice | null {
+  for (const s of subs) {
+    const hit = card.tcgplayer?.prices?.find((p) => p.sub_type_name === s);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
  * Map a PokeWallet card to our DB pricing fields.
  *
  * IMPORTANT: PokeWallet's `variant_type === "holo"` means REVERSE HOLO,
@@ -48,8 +61,14 @@ function pickTp(card: PokewalletCard, sub: string): PokewalletTpPrice | null {
 export function mapPokewalletPricing(card: PokewalletCard): MappedPricing {
   const cmNorm = pickCm(card, "normal");
   const cmHolo = pickCm(card, "holo");
-  const tpNormal = pickTp(card, "Normal");
-  const tpHolo = pickTp(card, "Holofoil");
+  // Modern sub-types first, then the WotC-era edition labels. For old sets
+  // PokeWallet exposes ONLY "Unlimited" / "1st Edition" (+ "… Holofoil") and
+  // no CardMarket data at all — without these fallbacks those ~600 vintage
+  // cards never receive a price signal. Unlimited is the cheaper, far more
+  // commonly-traded print, so it's the representative baseline market price;
+  // 1st Edition is the fallback when an Unlimited quote is missing.
+  const tpNormal = pickTpAny(card, ["Normal", "Unlimited", "1st Edition"]);
+  const tpHolo = pickTpAny(card, ["Holofoil", "Unlimited Holofoil", "1st Edition Holofoil"]);
   const tpReverse = pickTp(card, "Reverse Holofoil");
 
   const cmTimestamps = [cmNorm?.updated_at, cmHolo?.updated_at].filter(Boolean) as string[];
@@ -85,10 +104,22 @@ export function mapPokewalletPricing(card: PokewalletCard): MappedPricing {
   };
 }
 
-/** Strip "/086" suffix and leading zeros from a card number. */
+/**
+ * Strip "/086" suffix and leading zeros from a card number.
+ *
+ * Handles plain numbers ("004/111" → "4") AND alphanumeric promo codes with
+ * an inconsistent zero-pad: our DB stores "BW04" while PokeWallet stores
+ * "BW004" for the same card. We keep the leading-letter prefix but strip the
+ * zero-padding on the numeric part so both sides collapse to "BW4" and match.
+ */
 export function normalizeCardNumber(s: string | null | undefined): string {
   if (!s) return "";
-  return (s.split("/")[0] ?? "").replace(/^0+/, "") || "0";
+  const base = s.split("/")[0] ?? "";
+  // Optional leading-letter prefix + zero-padded number (+ optional trailing
+  // letters, e.g. "XY150a"). Unpad only the numeric block.
+  const m = base.match(/^([A-Za-z]*)0*(\d.*)$/);
+  if (m) return m[1] + m[2];
+  return base.replace(/^0+/, "") || "0";
 }
 
 /** Detect if a PokeWallet card is a special-printing variant (Master/Poke Ball etc). */

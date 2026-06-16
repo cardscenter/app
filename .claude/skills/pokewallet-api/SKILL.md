@@ -183,6 +183,78 @@ Voorbeeld Pawniard BB #142: raw priceAvg=€14,31, raw priceAvg7=€14,31, Markt
 
 **Top 10 stijgers/dalers** (`/kaarten` overview): batch-query `CardPriceHistory` voor ~9 dagen, build `Map<cardId, SnapshotPoint[]>` en geef door aan computeWeeklyDeltaPct. Cards zonder ≥5d-oud snapshot vallen terug op raw fallback met striktere 5%-drempel (i.p.v. 3%).
 
+## Prijs-gat opgelost: 2426 → 42 prijsloze kaarten (2026-06-16)
+
+Grote sweep om álle kaarten een prijs te geven. Van 2426 prijsloze kaarten (12%)
+naar 42 (0,2%). Vijf root-causes gevonden + opgelost (allemaal in `src/lib/pokewallet/`):
+
+### 1. `/search?q=<setId>` is een FUZZY query, geen strikte set-filter
+Voor **lage/korte set_ids** matcht search óók kaarten uit ándere sets waarvan het
+card_number dezelfde cijfers bevat (bv. `q=2328` geeft "9/214"-rijen uit losse
+sets; `q=-16` geeft Chandelure uit set 23627). Grote 5-cijferige ids (24325 BB)
+zijn ongevoelig. **Fix:** `fetchAllPagesForSet` filtert nu op
+`card_info.set_id === setId` (pollution-filter in `client.ts`).
+
+### 2. Negatieve set_ids = CardMarket-only → NIET via /search ophalen
+Negatieve set_ids (`-186` UNM, `-113` LOT) zijn de **CardMarket-EUR**-records
+(mét reverse-holo!). Hun `/search` is structureel vervuild. **Fix:** `sync.ts`
+routeert negatieve sets nu altijd via `fetchSetViaCardLookup` (`/sets/{id}` +
+`/cards/{id}`) → schone CM-data. Kost N+1 calls maar geeft EU-native prijzen.
+
+### 3. Sommige Engelse sets zijn GESPLITST: positief=TP-only, negatief=CM-only
+PokeWallet heeft voor SM11/SM12 e.d. een positieve "SM - Unified Minds" (2464,
+**alleen TCGPlayer**) én een negatieve "Unified Minds" (-186, **alleen CardMarket**).
+Per set de id met beste **CardMarket-dekking** kiezen (wij zijn EU). Geverifieerd
+2026-06-16: SM8/9/10/11/12 → negatief (-113/-173/-185/-186/-16); SM6/SM7/XY9
+(Forbidden Light/Celestial Storm/BREAKpoint) → positief (2209/2278/1701, die
+hebben wél volledige CM+RH). Black & White → 1400 (was JAP 23893). Zie
+`MANUAL_SET_MAPPING`. Tip: vergelijk CM-dekking met een snelle steekproef vóór je
+een set mapt — niet aannemen dat positief=goed.
+
+### 4. WotC TP-subtypes "Unlimited" / "1st Edition" werden genegeerd
+Oude sets (Gym/Neo/Base) hebben GEEN CardMarket en hun TCGPlayer-prijzen staan
+onder `sub_type_name` "Unlimited" / "1st Edition" / "… Holofoil" — niet
+"Normal"/"Holofoil". `mapPokewalletPricing` keek alleen naar de moderne namen →
+~600 vintage-kaarten kregen nooit een prijs. **Fix:** `pickTpAny` met fallback
+`["Normal","Unlimited","1st Edition"]` resp. `["Holofoil","Unlimited Holofoil",
+"1st Edition Holofoil"]`. **Unlimited = representatieve baseline** (goedkoper, veel
+meer verhandeld); 1st Edition is fallback.
+
+### 5. Dubbel card_number met LEEG prijs-record → matcher pakte de lege
+Een set kan twee records met hetzelfde nummer hebben (bv. twee "Ninetales 16" in
+Team Up: één met `avg=null`, één met `avg=1.08`), beide met niet-lege
+`prices`-array. De oude matcher checkte alleen `prices.length > 0` → koos soms de
+lege. **Fix:** `hasCmValue`/`hasTpValue`-helpers in `sync.ts` die op een ECHTE
+waarde (`avg`/`trend`/`low` resp. `market_price` ≠ null) checken; matcher
+prefereert die. Geldt voor beide matchers (hoofdset + gallery).
+
+### Bonus-fixes
+- **`normalizeCardNumber`** strip nu ook zero-padding ná een letter-prefix:
+  DB "BW04" vs PW "BW004" → beide "BW4" (promo-sets).
+- **`fetchSetViaCardLookup`** doet 1 retry per `/cards`-lookup (transiënte 8s
+  timeouts lieten anders losse kaarten permanent prijsloos).
+- **Gallery-subsets** uitgebreid: Shiny Vault (`swsh4.5`→SV/2781), Radiant
+  Collection (`g1`→RC/1729, `bw11`→RC/1465).
+- **Celebrations: Classic Collection** ("107A"-suffix) matcht niet op nummer maar
+  op NAAM tegen PW-set 2931 (eenmalig via `scripts/pw-celebrations-cc.ts`; deze
+  kaarten verversen niet via de cron — aparte freshness-follow-up).
+
+### Resterende 42 prijsloos = geen betrouwbare PokeWallet-bron (NIET force-matchen!)
+Een naam-search vindt vaak een gelijknamige kaart uit een ANDERE set → verkeerde
+prijs. Bewust NIET toegepast (correctheid > dekking). De staart:
+- **Basis-energie** (Sun & Moon #164-172): niet in PokeWallet.
+- **League/staff-promo's** (BW/XY/Nintendo/DP/HGSS Black Star, SVP): andere
+  nummering of geen prijsdata in PW.
+- **Stormfront SH1/SH2 + TRR Mudkip Star #107**: bestaan in PW maar `avg=null`.
+
+### Herbruikbare tooling (`scripts/`)
+`pw-price-gap-audit.ts` (telt prijsloze kaarten per set/rariteit),
+`pw-tail.ts` (lijst exacte resterende kaarten), `pw-apply-remap.ts` (past
+set-remappings toe, conflict-safe), `pw-sync-gaps.ts` (synct alle sets met gaten),
+`pw-test-sync.ts` (sync per set met before/after-dekking),
+`pw-celebrations-cc.ts` (naam-match CC). Draai met
+`DATABASE_URL="libsql://cardscenter-cardscenter.aws-eu-west-1.turso.io"` voor prod.
+
 ## Set-mapping valkuilen (LET OP!)
 
 ### Engelse vs Japanse versies

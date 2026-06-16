@@ -15,6 +15,23 @@ import { GALLERY_SUBSET_MAPPING, type GallerySubset } from "./set-mapping";
 import type { PokewalletCard } from "./types";
 
 /**
+ * A PokeWallet card can carry a CardMarket/TCGPlayer product link with an
+ * EMPTY price (avg/market_price = null) — the product exists but has no sales
+ * data. A naive `prices.length > 0` check treats those as "priced", so when a
+ * card_number has two records (e.g. two "Ninetales 16" in Team Up, one blank,
+ * one €1.08) the matcher can pick the blank one. These helpers check for an
+ * actual usable value so the priced record always wins.
+ */
+function hasCmValue(c: PokewalletCard): boolean {
+  return !!c.cardmarket?.prices?.some(
+    (p) => p.variant_type === "normal" && (p.avg != null || p.trend != null || p.low != null),
+  );
+}
+function hasTpValue(c: PokewalletCard): boolean {
+  return !!c.tcgplayer?.prices?.some((p) => p.market_price != null);
+}
+
+/**
  * Retry-loop voor SQLite locks. Treedt op als de dev-server tegelijk leest:
  * we zien dan SQLITE_BUSY of SocketTimeout. Backoff start op 250ms.
  */
@@ -63,13 +80,22 @@ export async function syncSetByPokewalletId(cardSetId: string): Promise<SyncResu
     throw new Error(`CardSet ${cardSetId} has no pokewalletSetId mapping`);
   }
 
-  let pwCards = await fetchAllPagesForSet(set.pokewalletSetId);
+  let pwCards: PokewalletCard[];
   let fallbackUsed = false;
-  if (pwCards.length === 0) {
-    // /search returned nothing — typical for brand-new sets not yet indexed.
-    // Fall back to /sets endpoint + per-card /cards/:id lookup.
+  if (set.pokewalletSetId.startsWith("-")) {
+    // Negatieve set_ids = CardMarket-only sets. Hun /search is structureel
+    // vervuild (matcht kaartnummers uit andere sets), dus halen we ze altijd
+    // via /sets/{id} + /cards/{id} op — dat geeft schone CardMarket-EUR data.
     pwCards = await fetchSetViaCardLookup(set.pokewalletSetId);
     fallbackUsed = true;
+  } else {
+    pwCards = await fetchAllPagesForSet(set.pokewalletSetId);
+    if (pwCards.length === 0) {
+      // /search returned nothing — typical for brand-new sets not yet indexed.
+      // Fall back to /sets endpoint + per-card /cards/:id lookup.
+      pwCards = await fetchSetViaCardLookup(set.pokewalletSetId);
+      fallbackUsed = true;
+    }
   }
 
   const dbCards = await withRetry(() =>
@@ -157,13 +183,14 @@ export async function syncSetByPokewalletId(cardSetId: string): Promise<SyncResu
       return a.card_info.name.length - b.card_info.name.length;
     });
 
-    let pw = candidates.find(
-      (c) => c.card_info.name === dbCard.name && (c.cardmarket?.prices?.length ?? 0) > 0,
-    );
-    if (!pw)
-      pw = candidates.find(
-        (c) => c.card_info.name.includes(num) && (c.cardmarket?.prices?.length ?? 0) > 0,
-      );
+    // Voorkeur: échte CardMarket-waarde (niet alleen een lege product-link),
+    // eerst exacte naam. Daarna TP-waarde voor TP-only sets (SM-Eng, WotC).
+    // Pas als laatste val terug op een niet-lege prices-array of kandidaat[0].
+    let pw = candidates.find((c) => c.card_info.name === dbCard.name && hasCmValue(c));
+    if (!pw) pw = candidates.find((c) => c.card_info.name.includes(num) && hasCmValue(c));
+    if (!pw) pw = candidates.find((c) => hasCmValue(c));
+    if (!pw) pw = candidates.find((c) => c.card_info.name === dbCard.name && hasTpValue(c));
+    if (!pw) pw = candidates.find((c) => hasTpValue(c));
     if (!pw) pw = candidates.find((c) => (c.cardmarket?.prices?.length ?? 0) > 0);
     pw ??= candidates[0];
 
@@ -346,9 +373,10 @@ async function syncGallerySubset(
     const num = stripPrefix(dbCard.localId);
     const candidates = pwByNum.get(num) ?? [];
     if (candidates.length === 0) { unmatched++; continue; }
-    let pw = candidates.find(
-      (c) => c.card_info.name === dbCard.name && (c.cardmarket?.prices?.length ?? 0) > 0,
-    );
+    let pw = candidates.find((c) => c.card_info.name === dbCard.name && hasCmValue(c));
+    if (!pw) pw = candidates.find((c) => hasCmValue(c));
+    if (!pw) pw = candidates.find((c) => c.card_info.name === dbCard.name && hasTpValue(c));
+    if (!pw) pw = candidates.find((c) => hasTpValue(c));
     if (!pw) pw = candidates.find((c) => (c.cardmarket?.prices?.length ?? 0) > 0);
     pw ??= candidates[0];
     matched++;

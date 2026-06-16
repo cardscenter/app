@@ -60,6 +60,38 @@ const MANUAL_SET_MAPPING: Record<string, string> = {
   // Era promos
   "swshp": "2545", // SWSH: Sword & Shield Promo Cards
   "xyp": "1451",   // XY Promos
+
+  // ── SM-era sets (geverifieerd 2026-06-16 op CardMarket-dekking). PokeWallet
+  // heeft per set vaak twee records: een POSITIEVE Engelse (set_id 2xxx, soms
+  // TCGPlayer-only) en een NEGATIEVE CardMarket-only set. We zijn een EU-markt,
+  // dus kiezen we per set de id met de beste CardMarket-EUR-dekking:
+  //   • sm6/sm7/xy9: de positieve set heeft volledige CM+RH → gebruik die.
+  //   • sm8/sm9/sm10/sm11/sm12: de positieve set is TCGPlayer-only, de
+  //     negatieve set heeft volledige CM-EUR + native reverse-holo → gebruik
+  //     die. De negatieve-id /search is vervuild, maar sync.ts haalt negatieve
+  //     sets nu schoon op via /sets/{id} + /cards/{id} (CardMarket-data).
+  "sm7": "2278",   // SM - Celestial Storm (was 23686 = JAP) — positief heeft CM
+  "sm6": "2209",   // SM - Forbidden Light (was 23685 = JAP) — positief heeft CM
+  "xy9": "1701",   // XY - BREAKpoint (was 2175 stub) — positief heeft CM
+  "sm8": "-113",   // Lost Thunder — CardMarket-only set (positief 2328 is TP-only)
+  "sm9": "-173",   // Team Up — CardMarket-only set
+  "sm10": "-185",  // Unbroken Bonds — CardMarket-only set
+  "sm11": "-186",  // Unified Minds — CardMarket-only set
+  "sm12": "-16",   // Cosmic Eclipse — CardMarket-only set
+
+  // Oude/promo sets die verkeerd of niet gemapt waren
+  "bw1": "1400",     // Black and White (was 23893 = JAP, dekte alleen helft)
+  "ex1": "1393",     // Ruby and Sapphire (was unmapped)
+  "ecard1": "1375",  // Expedition (was -93, CM-only met minder kaarten)
+  "bwp": "1407",     // Black and White Promos (was unmapped)
+  "dpp": "1421",     // Diamond and Pearl Promos (was unmapped)
+  "2011bw": "1401",  // McDonald's Promos 2011 (was -115)
+  "2012bw": "1427",  // McDonald's Promos 2012 (was -116)
+  "basep": "-192",   // Wizards Promos (was -193 = slechts 7 kaarten; -192 dekt #1-53)
+  // Kleine CardMarket-only (negatieve) sets — geen positieve Engelse variant.
+  // De negatieve-id routing in sync.ts haalt ze schoon op via /sets + /cards.
+  "bog": "-8",        // Best of Game Promos
+  "fut2020": "-95",   // Futsal Promo 2020
 };
 
 /**
@@ -81,6 +113,11 @@ export const GALLERY_SUBSET_MAPPING: Record<string, GallerySubset> = {
   swsh11:   { prefix: "TG", pokewalletSetId: "3172" },   // Lost Origin Trainer Gallery
   swsh12:   { prefix: "TG", pokewalletSetId: "17674" },  // Silver Tempest Trainer Gallery
   "swsh12.5": { prefix: "GG", pokewalletSetId: "17689" }, // Crown Zenith: Galarian Gallery
+  // Shiny Vault — SV-prefix cards binnen Shining Fates (PW tracks apart).
+  "swsh4.5": { prefix: "SV", pokewalletSetId: "2781" },  // Shining Fates: Shiny Vault
+  // Radiant Collection — RC-prefix subsets binnen Generations / Legendary Treasures.
+  g1:       { prefix: "RC", pokewalletSetId: "1729" },   // Generations: Radiant Collection
+  bw11:     { prefix: "RC", pokewalletSetId: "1465" },   // Legendary Treasures: Radiant Collection
 };
 
 interface MappingResult {
