@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
 import { syncSetCatalog } from "@/lib/pokewallet/set-mapping";
+import { backfillTcgdexPricing } from "@/lib/pokewallet/tcgdex-pricing";
 import { withCronLogging } from "@/lib/cron-logging";
 import { resolveCronTrigger } from "@/lib/cron-auth";
 
@@ -96,8 +97,25 @@ export async function GET(request: Request) {
       await sleep(PER_SET_DELAY_MS);
     }
 
-    run.setItemsProcessed(totalUpdated);
+    // Stap 3 — TCGdex CardMarket-fallback voor kaarten die PokeWallet niet kan
+    // prijzen (oude promo's, basis-energie, secret holos). Draait NA de PW-sync
+    // zodat een lege PW-prijs deze waarden niet overschrijft. Match op exacte
+    // kaart-id (= TCGdex-id) → variant-veilig. Alleen op de volledige dagrun
+    // (niet tijdens chunked backfills) want het scant alle prijsloze kaarten.
+    let tcgdexFallback: { checked: number; priced: number } | null = null;
+    if (!limit) {
+      try {
+        const r = await backfillTcgdexPricing();
+        tcgdexFallback = { checked: r.checked, priced: r.priced };
+      } catch (e) {
+        tcgdexFallback = { checked: -1, priced: 0 };
+        console.error("[cron/sync-pokewallet] TCGdex-fallback faalde:", (e as Error).message);
+      }
+    }
+
+    run.setItemsProcessed(totalUpdated + (tcgdexFallback?.priced ?? 0));
     return {
+      tcgdexFallback,
       catalog: catalog
         ? {
             mapped: catalog.matched,

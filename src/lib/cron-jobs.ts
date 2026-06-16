@@ -13,6 +13,7 @@ import { expireClaimedItems } from "@/actions/claimsale";
 import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
 import { syncSetCatalog } from "@/lib/pokewallet/set-mapping";
 import { populateEmptyMappedSets } from "@/lib/pokewallet/populate-cards";
+import { backfillTcgdexPricing } from "@/lib/pokewallet/tcgdex-pricing";
 import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
@@ -524,9 +525,22 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       await sleep(100);
     }
 
+    // TCGdex CardMarket-fallback voor kaarten die PokeWallet niet kan prijzen.
+    // NA de PW-sync zodat lege PW-prijzen deze niet overschrijven. Match op
+    // exacte kaart-id (= TCGdex-id) → variant-veilig.
+    let tcgdexFallback: Awaited<ReturnType<typeof backfillTcgdexPricing>> | null = null;
+    try {
+      tcgdexFallback = await backfillTcgdexPricing();
+    } catch (e) {
+      failures.push({ setName: "(tcgdex-fallback)", error: (e as Error).message.slice(0, 200) });
+    }
+
     return {
-      itemsProcessed: totalUpdated,
+      itemsProcessed: totalUpdated + (tcgdexFallback?.priced ?? 0),
       result: {
+        tcgdexFallback: tcgdexFallback
+          ? { checked: tcgdexFallback.checked, priced: tcgdexFallback.priced }
+          : null,
         catalog: catalog
           ? {
               mapped: catalog.matched,

@@ -239,13 +239,28 @@ prefereert die. Geldt voor beide matchers (hoofdset + gallery).
   op NAAM tegen PW-set 2931 (eenmalig via `scripts/pw-celebrations-cc.ts`; deze
   kaarten verversen niet via de cron — aparte freshness-follow-up).
 
-### Resterende 42 prijsloos = geen betrouwbare PokeWallet-bron (NIET force-matchen!)
+### TCGdex CardMarket-fallback voor wat PokeWallet niet kan prijzen (42 → 28)
+`src/lib/pokewallet/tcgdex-pricing.ts` `backfillTcgdexPricing()` vult kaarten
+zonder enig PW-prijssignaal met TCGdex' CardMarket-prijs. **Veilig want match op
+de EXACTE kaart-id** (onze `Card.id` ÍS de TCGdex-id, bv. "dp7-SH1") — geen
+naam-zoektocht, dus geen verkeerde-set/variant-risico. TCGdex' `pricing.cardmarket`
+heeft `{avg,low,trend,avg7,avg30}` (+ `-holo`-suffix = reverse-holo). Draait als
+**stap 3 NA de PW-sync** (in beide cron-paden: route + CRON_JOBS) zodat een lege
+PW-prijs deze niet overschrijft. Prijsde o.a. Stormfront SH1/SH2, 7 basis-energie,
+5 XY-promo's (Champions Festival €420 ✓).
+- **Anti-contaminatie-guard**: basis-energie (Grass/Fire/…/Metal Energy) boven €3
+  wordt geweigerd — CardMarket-idProduct-collision toont 'm soms €8-12 (consistent
+  over alle tijdvensters, maar 100× de siblings, geen TP-cross-check). Een energy
+  is eerder €0,06 dan €12.
+
+### Resterende 28 prijsloos = geen bron in PokeWallet ÉN TCGdex (NIET force-matchen!)
 Een naam-search vindt vaak een gelijknamige kaart uit een ANDERE set → verkeerde
-prijs. Bewust NIET toegepast (correctheid > dekking). De staart:
-- **Basis-energie** (Sun & Moon #164-172): niet in PokeWallet.
-- **League/staff-promo's** (BW/XY/Nintendo/DP/HGSS Black Star, SVP): andere
-  nummering of geen prijsdata in PW.
-- **Stormfront SH1/SH2 + TRR Mudkip Star #107**: bestaan in PW maar `avg=null`.
+prijs. Bewust NIET toegepast (correctheid > dekking). De echte staart (handmatig):
+- **League/staff-promo's** (BW/XY/Nintendo/DP/HGSS Black Star, SVP): Tropical Wind/
+  Beach/Tidal Wave, Champions Festival, Beginning Door — lage liquiditeit, geen
+  CardMarket-listing in PW noch TCGdex.
+- **Sun & Moon Psychic/Metal Energy**: enige TCGdex-bron is vervuild (€8/€12) →
+  bewust leeg gelaten.
 
 ### Herbruikbare tooling (`scripts/`)
 `pw-price-gap-audit.ts` (telt prijsloze kaarten per set/rariteit),
