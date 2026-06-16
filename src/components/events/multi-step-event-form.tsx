@@ -40,8 +40,9 @@ function validateStep(step: number, form: EventFormState): string | null {
       }
       return null;
     case 3:
-      if (form.entryType === "PAID" && !form.ticketTypes.some((t) => t.name.trim())) {
-        return "Voeg minstens één ticket-soort toe (of kies Gratis)";
+      if (form.entryType === "PAID") {
+        if (!form.ticketTypes.some((t) => t.name.trim())) return "Voeg minstens één ticket-soort toe (of kies Gratis)";
+        if (!form.registrationUrl.trim()) return "Vul de link in waar bezoekers tickets kunnen kopen";
       }
       return null;
     case 6:
@@ -98,15 +99,11 @@ export function MultiStepEventForm({ accountType }: { accountType: string }) {
 
     fd.set("entryType", form.entryType);
     if (form.entryType === "PAID") {
-      fd.set("entryCurrency", form.entryCurrency);
       const tickets = form.ticketTypes
         .filter((t) => t.name.trim())
         .map((t) => ({ name: t.name.trim(), price: Number(t.price) || 0 }));
       fd.set("ticketTypes", JSON.stringify(tickets));
       if (form.registrationUrl) fd.set("registrationUrl", form.registrationUrl);
-      if (form.childrenFreeEnabled && form.childrenFreeUntilAge) {
-        fd.set("childrenFreeUntilAge", form.childrenFreeUntilAge);
-      }
     }
 
     const vendor = form.vendorOptions

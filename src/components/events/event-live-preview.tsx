@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, MapPin, Ticket, Megaphone, Store, Baby, CheckCircle2, Users, ExternalLink } from "lucide-react";
+import { Calendar, MapPin, Ticket, Megaphone, Store, CheckCircle2, Users, ExternalLink } from "lucide-react";
 import {
   EVENT_TYPE_LABELS_NL, FACILITY_LABELS_NL, ACTIVITY_KEYS, FACILITY_KEYS,
   type EventType, type FacilityKey,
@@ -26,7 +26,7 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
   const validVendor = form.vendorOptions.filter((t) => t.name.trim());
   const promoDays = Math.max(EVENT_BANNER_MIN_DAYS, Math.min(form.promoteDays, EVENT_BANNER_MAX_DAYS));
   const promoCost = form.promote ? calculateEventBannerCost(promoDays, accountType) : 0;
-  const cur = form.entryCurrency;
+  const fmtPrice = (p: string) => (Number(p || 0) === 0 ? "gratis" : `€${p}`);
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
@@ -71,18 +71,15 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
             {form.entryType === "FREE"
               ? "Gratis entree"
               : validTickets.length
-                ? validTickets.map((t) => `${t.name} ${cur}${Number(t.price || 0) === 0 ? " 0" : ` ${t.price}`}`).join(" · ")
+                ? validTickets.map((t) => `${t.name} ${fmtPrice(t.price)}`).join(" · ")
                 : "Betaald (nog geen tickets)"}
           </Row>
-          {form.entryType === "PAID" && form.childrenFreeEnabled && form.childrenFreeUntilAge && (
-            <Row icon={Baby}>Kinderen t/m {form.childrenFreeUntilAge} jaar gratis</Row>
-          )}
           {form.registrationUrl && validTickets.length > 0 && (
             <Row icon={ExternalLink}>Ticketlink toegevoegd</Row>
           )}
           {validVendor.length > 0 && (
             <Row icon={Store}>
-              Standhouders: {validVendor.map((v) => `${v.name} ${cur} ${v.price || "0"}`).join(" · ")}
+              Standhouders: {validVendor.map((v) => `${v.name} ${fmtPrice(v.price)}`).join(" · ")}
             </Row>
           )}
           {form.maxVisitors && <Row icon={Users}>max. {form.maxVisitors} bezoekers</Row>}

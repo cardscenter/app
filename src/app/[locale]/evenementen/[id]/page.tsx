@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Baby, Store,
+  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store,
   Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -48,7 +48,7 @@ export default async function EventDetailPage({
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
   const dateLabel = formatEventDateRange(start, end, event.timezone, locale === "en" ? "en-GB" : "nl-NL");
-  const cur = event.entryCurrency ?? "EUR";
+  const cur = "€";
 
   const activeFacilities = FACILITY_ORDER.filter((k) => event[k as keyof typeof event] as boolean);
 
@@ -151,12 +151,6 @@ export default async function EventDetailPage({
                   </li>
                 ))}
               </ul>
-            )}
-
-            {event.childrenFreeUntilAge && (
-              <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
-                <Baby className="h-4 w-4" /> Kinderen t/m {event.childrenFreeUntilAge} jaar gratis
-              </p>
             )}
           </div>
 

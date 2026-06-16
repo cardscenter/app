@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EVENT_TYPES, ENTRY_CURRENCIES } from "@/lib/events/types";
+import { EVENT_TYPES } from "@/lib/events/types";
 import { EVENT_COUNTRY_CODES } from "@/lib/events/countries";
 
 const boolField = z
@@ -50,11 +50,9 @@ export const createEventSchema = z
     endDate: dateField.optional(),
     endTime: timeField,
 
-    // Entree — gratis of betaald met zelf-gedefinieerde ticket-soorten.
-    entryType: z.enum(["FREE", "PAID"]).default("FREE"),
-    entryCurrency: z.string().optional(),
+    // Entree — gratis of betaald met zelf-gedefinieerde ticket-soorten (altijd EUR).
+    entryType: z.enum(["FREE", "PAID"]).default("PAID"),
     ticketTypes: z.string().optional(), // JSON [{name, price}]
-    childrenFreeUntilAge: z.coerce.number().int().min(1).max(21).optional(),
 
     // Standhouders — zelf-gedefinieerde opties.
     vendorOptions: z.string().optional(), // JSON [{name, price}]
@@ -91,11 +89,11 @@ export const createEventSchema = z
     }
 
     if (data.entryType === "PAID") {
-      if (!data.entryCurrency || !ENTRY_CURRENCIES.includes(data.entryCurrency as never)) {
-        ctx.addIssue({ code: "custom", message: "Kies een valuta", path: ["entryCurrency"] });
-      }
       if (!hasValidNamePriceList(data.ticketTypes)) {
         ctx.addIssue({ code: "custom", message: "Voeg minstens één ticket-soort met naam en prijs toe", path: ["ticketTypes"] });
+      }
+      if (!data.registrationUrl) {
+        ctx.addIssue({ code: "custom", message: "Vul de link in waar bezoekers tickets kunnen kopen", path: ["registrationUrl"] });
       }
     }
   });

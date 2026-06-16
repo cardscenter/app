@@ -15,13 +15,11 @@ const inputClass =
 export function TicketListEditor({
   items,
   onChange,
-  currency,
   namePlaceholder,
   addLabel,
 }: {
   items: NamePriceInput[];
   onChange: (items: NamePriceInput[]) => void;
-  currency: string;
   namePlaceholder: string;
   addLabel: string;
 }) {
@@ -52,16 +50,19 @@ export function TicketListEditor({
             className={`${inputClass} w-full`}
           />
         </div>
-        <div className="w-28">
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Prijs ({currency})</label>
-          <input
-            type="number" min="0" step="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-            placeholder="0"
-            className={`${inputClass} w-full`}
-          />
+        <div className="w-24">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Prijs</label>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
+            <input
+              type="number" min="0" step="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+              placeholder="0"
+              className={`${inputClass} w-full pl-6`}
+            />
+          </div>
         </div>
         <button
           type="button"
@@ -85,7 +86,7 @@ export function TicketListEditor({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">{t.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {Number(t.price) === 0 ? "Gratis" : `${currency} ${Number(t.price).toFixed(2)}`}
+                  {Number(t.price) === 0 ? "Gratis" : `€ ${Number(t.price).toFixed(2)}`}
                 </p>
               </div>
               <button type="button" onClick={() => remove(i)} className="text-muted-foreground hover:text-rose-500" aria-label="Verwijder">

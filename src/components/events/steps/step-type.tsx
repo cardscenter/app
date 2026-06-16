@@ -6,7 +6,7 @@ import type { EventFormState, EventFieldSetter } from "@/components/events/event
 
 const TYPE_META: Record<EventType, { icon: React.ComponentType<{ className?: string }>; desc: string }> = {
   BEURS: { icon: Store, desc: "Verzamelbeurs met meerdere verkopers" },
-  TRADE_NIGHT: { icon: Users, desc: "Avond om kaarten te ruilen" },
+  TRADE_NIGHT: { icon: Users, desc: "Dag of avond om kaarten te ruilen" },
   OP_TOERNOOI: { icon: Trophy, desc: "Georganiseerd toernooi (TCG+)" },
   RELEASE_EVENT: { icon: Sparkles, desc: "Pre-release of release-feest" },
   MEETUP: { icon: Coffee, desc: "Informele bijeenkomst" },

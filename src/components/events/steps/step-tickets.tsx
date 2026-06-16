@@ -1,7 +1,6 @@
 "use client";
 
-import { Store } from "lucide-react";
-import { ENTRY_CURRENCIES } from "@/lib/events/types";
+import { Store, Users } from "lucide-react";
 import { TicketListEditor } from "@/components/events/ticket-list-editor";
 import type { EventFormState, EventFieldSetter } from "@/components/events/event-form-types";
 
@@ -18,7 +17,7 @@ export function StepTickets({ form, set }: { form: EventFormState; set: EventFie
       <div>
         <p className={labelClass}>Entree</p>
         <div className="mt-2 flex gap-2">
-          {(["FREE", "PAID"] as const).map((opt) => (
+          {(["PAID", "FREE"] as const).map((opt) => (
             <button
               key={opt}
               type="button"
@@ -33,64 +32,28 @@ export function StepTickets({ form, set }: { form: EventFormState; set: EventFie
         </div>
       </div>
 
+      {/* Bezoekers (entree-tickets) */}
       {form.entryType === "PAID" && (
-        <div className="space-y-4 rounded-xl border border-border bg-muted/40 p-4">
-          {/* Valuta */}
-          <div className="sm:max-w-[8rem]">
-            <label className={labelClass} htmlFor="evt-currency">Valuta</label>
-            <select id="evt-currency" value={form.entryCurrency} onChange={(e) => set("entryCurrency", e.target.value)} className={`mt-1 ${inputClass}`}>
-              {ENTRY_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          {/* Ticket-soorten */}
+        <div className="space-y-4 rounded-xl border border-border bg-card p-4">
+          <p className="flex items-center gap-2 font-semibold text-foreground">
+            <Users className="h-4 w-4" /> Bezoekers
+          </p>
           <div>
-            <p className={labelClass}>Ticket-soorten</p>
-            <p className="mb-2 mt-0.5 text-xs text-muted-foreground">
-              Maak je eigen tickets aan, bijvoorbeeld Standaard €5 of VIP €15. Een prijs van 0 betekent gratis.
+            <p className="mb-2 text-xs text-muted-foreground">
+              Maak je eigen tickets aan, bijvoorbeeld Standaard €5, VIP €15 of &ldquo;Kind tot 6 jaar&rdquo; €0.
             </p>
             <TicketListEditor
               items={form.ticketTypes}
               onChange={(items) => set("ticketTypes", items)}
-              currency={form.entryCurrency}
-              namePlaceholder="bv. Standaard, VIP, Kind"
+              namePlaceholder="bv. Standaard, VIP, Kind tot 6 jaar"
               addLabel="Ticket toevoegen"
             />
           </div>
 
-          {/* Ticketlink — alleen tonen zodra er minstens één ticket is */}
-          {form.ticketTypes.length > 0 && (
-            <div>
-              <label className={labelClass} htmlFor="evt-regurl">Link naar tickets (optioneel)</label>
-              <input id="evt-regurl" type="url" value={form.registrationUrl} onChange={(e) => set("registrationUrl", e.target.value)} placeholder="https://…" className={`mt-1 ${inputClass}`} />
-              <p className="mt-1 text-xs text-muted-foreground">Externe pagina waar bezoekers tickets kunnen kopen of zich aanmelden.</p>
-            </div>
-          )}
-
-          {/* Kinderen gratis */}
           <div>
-            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
-              <input
-                type="checkbox"
-                checked={form.childrenFreeEnabled}
-                onChange={(e) => set("childrenFreeEnabled", e.target.checked)}
-                className="h-4 w-4 rounded border-border"
-              />
-              Gratis toegang voor kinderen?
-            </label>
-            {form.childrenFreeEnabled && (
-              <div className="mt-2 sm:max-w-[14rem]">
-                <label className="block text-xs font-medium text-muted-foreground" htmlFor="evt-children">Gratis t/m leeftijd</label>
-                <input
-                  id="evt-children"
-                  type="number" min="1" max="21"
-                  value={form.childrenFreeUntilAge}
-                  onChange={(e) => set("childrenFreeUntilAge", e.target.value)}
-                  placeholder="bv. 12"
-                  className={`mt-1 ${inputClass}`}
-                />
-              </div>
-            )}
+            <label className={labelClass} htmlFor="evt-regurl">Link naar tickets <span className="text-rose-500">*</span></label>
+            <input id="evt-regurl" type="url" value={form.registrationUrl} onChange={(e) => set("registrationUrl", e.target.value)} placeholder="https://…" className={`mt-1 ${inputClass}`} />
+            <p className="mt-1 text-xs text-muted-foreground">De pagina waar bezoekers hun tickets kopen of zich aanmelden.</p>
           </div>
         </div>
       )}
@@ -106,7 +69,6 @@ export function StepTickets({ form, set }: { form: EventFormState; set: EventFie
         <TicketListEditor
           items={form.vendorOptions}
           onChange={(items) => set("vendorOptions", items)}
-          currency={form.entryCurrency}
           namePlaceholder="bv. Tafel, Stoel, Stroom"
           addLabel="Optie toevoegen"
         />

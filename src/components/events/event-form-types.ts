@@ -26,13 +26,10 @@ export interface EventFormState {
   city: string;
   country: string;
 
-  // Entree
+  // Entree (valuta is altijd EUR — heel Europa, geen keuze nodig)
   entryType: "FREE" | "PAID";
-  entryCurrency: string;
-  ticketTypes: NamePriceInput[]; // door organisator zelf gedefinieerd
-  childrenFreeEnabled: boolean;
-  childrenFreeUntilAge: string;
-  registrationUrl: string;
+  ticketTypes: NamePriceInput[]; // bezoekers-tickets, zelf gedefinieerd
+  registrationUrl: string; // verplicht bij betaald — waar tickets gekocht worden
 
   // Standhouders — zelf-gedefinieerde opties
   vendorOptions: NamePriceInput[];
@@ -77,11 +74,8 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   postalCode: "",
   city: "",
   country: "NL",
-  entryType: "FREE",
-  entryCurrency: "EUR",
+  entryType: "PAID", // beurzen hebben bijna altijd tickets
   ticketTypes: [],
-  childrenFreeEnabled: false,
-  childrenFreeUntilAge: "",
   registrationUrl: "",
   vendorOptions: [],
   vendorInfo: "",
