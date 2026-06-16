@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter, Link } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { AlertTriangle, Loader2, Check, ChevronLeft, ChevronRight, MailWarning } from "lucide-react";
@@ -66,14 +66,6 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
 
   const set: EventFieldSetter = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const isLast = step === STEP_LABELS.length - 1;
-
-  // Waarschuw direct bij het openen als het e-mailadres nog niet bevestigd is,
-  // zodat de gebruiker niet het hele formulier invult en pas aan het eind faalt.
-  useEffect(() => {
-    if (!emailVerified) {
-      toast.error("Bevestig eerst je e-mailadres voordat je een evenement kunt publiceren.");
-    }
-  }, [emailVerified]);
 
   function goNext() {
     const err = validateStep(step, form);
