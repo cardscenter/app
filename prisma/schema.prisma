@@ -48,6 +48,10 @@ model User {
   addressVerificationStatus String   @default("NONE") // ADDRESS-status: NONE | PENDING | APPROVED | REJECTED
   // IBAN heeft geen aparte status — gaat automatisch via admin's bank-transfer confirm
 
+  // Evenementenkalender — admin-toggle: events van deze organisator worden
+  // direct gepubliceerd (LIVE) zonder approval-wachtrij.
+  isTrustedEventOrganizer Boolean @default(false)
+
   // Suspension (Fase 8). suspendedUntil null = niet opgeschort.
   // PERMANENT: suspendedUntil heeft geen einddatum-betekenis (datum ver in
   // toekomst gezet voor zoek-eenvoud).
@@ -233,6 +237,12 @@ model User {
   // ShippingIssue (Fase 40) — lightweight admin-tickets voor verloren/vastgelopen pakketten
   shippingIssuesReported   ShippingIssue[] @relation("ShippingIssueReporter")
   shippingIssuesHandled    ShippingIssue[] @relation("ShippingIssueAdmin")
+
+  // Evenementenkalender
+  eventsOrganized   Event[]       @relation("EventOrganizer")
+  eventsReviewed    Event[]       @relation("EventReviewer")
+  eventReportsFiled EventReport[] @relation("EventReporter")
+  eventReportsReviewed EventReport[] @relation("EventReportReviewer")
 }
 
 // ============================================================
@@ -2445,5 +2455,150 @@ model ShippingIssue {
 
   @@index([bundleId])
   @@index([reporterId])
+  @@index([status])
+}
+
+// ============================================================
+// EVENEMENTENKALENDER — Pokémon-beurzen & events (Europa-breed)
+// ============================================================
+
+model Event {
+  id          String   @id @default(cuid())
+
+  title       String
+  description String?
+
+  // BEURS | TRADE_NIGHT | OP_TOERNOOI | RELEASE_EVENT | MEETUP
+  eventType   String
+
+  // Organisator (gekoppeld aan account)
+  organizerId String
+  organizer   User     @relation("EventOrganizer", fields: [organizerId], references: [id])
+
+  // Approval-wachtrij: PENDING (niet publiek) | LIVE | ENDED | REJECTED | DELETED
+  status         String   @default("PENDING")
+  reviewedById   String?
+  reviewedBy     User?    @relation("EventReviewer", fields: [reviewedById], references: [id])
+  reviewedAt     DateTime?
+  rejectionReason String?
+  publishedAt    DateTime?
+
+  // Locatie
+  venueName   String
+  street      String
+  houseNumber String
+  postalCode  String
+  city        String
+  country     String   // ISO-2 landcode
+  lat         Float?   // geocoded via Nominatim (fail-soft → null)
+  lng         Float?
+  timezone    String   // IANA, afgeleid uit land (bv. "Europe/Amsterdam")
+
+  // Tijd — opgeslagen als UTC, ingevoerd als event-lokale wandklok-tijd
+  startTime   DateTime
+  endTime     DateTime
+
+  // Entree
+  entryType     String  @default("FREE") // FREE | PAID
+  entryPrice    Float?
+  entryCurrency String? // EUR | GBP | CHF | ...
+
+  // Activiteiten + faciliteiten
+  canPlay     Boolean @default(false)
+  canTrade    Boolean @default(false)
+  canSell     Boolean @default(false)
+  hasParking  Boolean @default(false)
+  hasFood     Boolean @default(false)
+
+  maxVisitors          Int?
+  registrationRequired Boolean @default(false)
+  registrationUrl      String? // externe aanmeld-/ticketlink
+
+  coverImage  String? // thumbnail/flyer — getoond in kalendercel + quick-view + detail
+
+  // Toernooi-specifiek
+  tournamentFormat String?
+  isSanctioned     Boolean @default(false) // officieel gesanctioneerd (TCG+)
+  prizePool        String?
+
+  // Cards Center "geverifieerd"-badge (admin-settable)
+  isOfficial  Boolean @default(false)
+
+  // Gereserveerd voor toekomst (v1 alleen "eenmalig"): NONE | WEEKLY | MONTHLY
+  recurrence  String  @default("NONE")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  upsells     EventUpsell[]
+  labels      EventLabel[]
+  reports     EventReport[]
+
+  @@index([status, startTime])
+  @@index([organizerId])
+  @@index([country])
+}
+
+model EventUpsell {
+  id        String   @id @default(cuid())
+
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  type      String   // HOMEPAGE_SPOTLIGHT | CATEGORY_HIGHLIGHT
+  startsAt  DateTime @default(now())
+  expiresAt DateTime
+  dailyCost Float
+  totalCost Float
+
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([type, expiresAt])
+}
+
+model EventLabel {
+  id        String   @id @default(cuid())
+
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // BEURS_GROOT | NIEUW | GRATIS_ENTREE | KINDVRIENDELIJK | OFFICIEEL | LAATSTE_PLEKKEN | ...
+  type      String
+
+  // ruby | amber | emerald | sky | violet | rose | indigo | slate | orange | teal
+  colorKey  String
+
+  // Snapshot van prijs op creatiemoment (bundle-tarief: 1=€0,99 / 2=€1,69)
+  cost      Float
+
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+}
+
+model EventReport {
+  id          String   @id @default(cuid())
+
+  reporterId  String
+  reporter    User     @relation("EventReporter", fields: [reporterId], references: [id])
+
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id])
+
+  reason      String   // MISLEADING | OFFENSIVE | SPAM | INAPPROPRIATE | OTHER
+  details     String
+
+  status        String   @default("OPEN") // OPEN | REVIEWING | DISMISSED | ACTION_TAKEN
+  reviewedById  String?
+  reviewedBy    User?    @relation("EventReportReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  adminNote     String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([reporterId])
+  @@index([eventId])
   @@index([status])
 }
