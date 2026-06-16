@@ -23,6 +23,7 @@
     "error": "Er is iets misgegaan",
     "contactSeller": "Contacteer verkoper",
     "marketplace": "Marktplaats",
+    "events": "Beurzen",
     "cards": "Database",
     "customization": "Personalisatie",
     "orderDetail": {
@@ -982,6 +983,7 @@
     "noActiveClaimsales": "Geen actieve claimsales",
     "noPurchases": "Nog geen aankopen",
     "myListings": "Mijn Marktplaats",
+    "myEvents": "Mijn evenementen",
     "myBids": "Live Hub",
     "myWatchlist": "Volglijst",
     "myNotifications": "Meldingen",

@@ -23,6 +23,7 @@
     "error": "Something went wrong",
     "contactSeller": "Contact seller",
     "marketplace": "Marketplace",
+    "events": "Fairs",
     "cards": "Database",
     "customization": "Customization",
     "orderDetail": {
@@ -982,6 +983,7 @@
     "noActiveClaimsales": "No active claimsales",
     "noPurchases": "No purchases yet",
     "myListings": "My Listings",
+    "myEvents": "My events",
     "myBids": "Live Hub",
     "myWatchlist": "Watchlist",
     "myNotifications": "Notifications",

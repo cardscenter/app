@@ -12,6 +12,7 @@ import {
   Tag,
   ShoppingBag,
   Store,
+  CalendarDays,
   Heart,
   Bell,
   Wallet,
@@ -130,6 +131,7 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
           { href: "/dashboard/veilingen", labelKey: "myAuctions", icon: Gavel, badge: counts?.auctions },
           { href: "/dashboard/claimsales", labelKey: "myClaimsales", icon: Tag, badge: counts?.claimsales },
           { href: "/dashboard/marktplaats", labelKey: "myListings", icon: Store, badge: counts?.listings },
+          { href: "/dashboard/evenementen", labelKey: "myEvents", icon: CalendarDays },
         ],
       },
       {

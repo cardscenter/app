@@ -68,15 +68,17 @@ function HeaderContent() {
     { href: "/veilingen" as const, label: t("auctions"),    accent: "blue" as const },
     { href: "/claimsales" as const, label: t("claimsales"), accent: "amber" as const },
     { href: "/marktplaats" as const, label: t("marketplace"), accent: "emerald" as const },
+    { href: "/evenementen" as const, label: t("events"), accent: "indigo" as const },
   ];
   const secondaryLinks = [
     { href: "/kaarten" as const, label: t("cards") },
   ];
 
-  const accentClasses: Record<"blue" | "amber" | "emerald", { active: string; idle: string; dot: string }> = {
+  const accentClasses: Record<"blue" | "amber" | "emerald" | "indigo", { active: string; idle: string; dot: string }> = {
     blue:    { active: "bg-blue-500/15 text-blue-100",       idle: "text-slate-300 hover:bg-blue-500/10 hover:text-blue-200",       dot: "bg-blue-400" },
     amber:   { active: "bg-amber-500/15 text-amber-100",     idle: "text-slate-300 hover:bg-amber-500/10 hover:text-amber-200",     dot: "bg-amber-400" },
     emerald: { active: "bg-emerald-500/15 text-emerald-100", idle: "text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-200", dot: "bg-emerald-400" },
+    indigo:  { active: "bg-indigo-500/15 text-indigo-100",   idle: "text-slate-300 hover:bg-indigo-500/10 hover:text-indigo-200",   dot: "bg-indigo-400" },
   };
 
   return (
