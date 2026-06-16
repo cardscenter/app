@@ -77,7 +77,12 @@ export async function createEvent(formData: FormData) {
   if ("error" in susp) return { error: susp.error };
 
   const verified = await requireEmailVerified(userId);
-  if ("error" in verified) return { error: verified.error };
+  if ("error" in verified) {
+    return {
+      error:
+        "Bevestig eerst je e-mailadres voordat je een evenement kunt aanmaken. Check je inbox of vraag een nieuwe verificatiemail aan in je dashboard.",
+    };
+  }
 
   const raw = {
     title: formData.get("title"),
@@ -94,14 +99,10 @@ export async function createEvent(formData: FormData) {
     endDate: formData.get("endDate") || undefined,
     endTime: formData.get("endTime"),
     entryType: formData.get("entryType") || "FREE",
-    entryPriceMode: formData.get("entryPriceMode") || "SINGLE",
-    entryPrice: formData.get("entryPrice") || undefined,
     entryCurrency: formData.get("entryCurrency") || undefined,
     ticketTypes: formData.get("ticketTypes") || undefined,
     childrenFreeUntilAge: formData.get("childrenFreeUntilAge") || undefined,
-    vendorTablePrice: formData.get("vendorTablePrice") || undefined,
-    vendorChairPrice: formData.get("vendorChairPrice") || undefined,
-    vendorPowerAvailable: formData.get("vendorPowerAvailable") || undefined,
+    vendorOptions: formData.get("vendorOptions") || undefined,
     vendorInfo: formData.get("vendorInfo") || undefined,
     canPlay: formData.get("canPlay") || undefined,
     canTrade: formData.get("canTrade") || undefined,
@@ -114,7 +115,6 @@ export async function createEvent(formData: FormData) {
     wheelchairAccessible: formData.get("wheelchairAccessible") || undefined,
     hasCloakroom: formData.get("hasCloakroom") || undefined,
     maxVisitors: formData.get("maxVisitors") || undefined,
-    registrationRequired: formData.get("registrationRequired") || undefined,
     registrationUrl: formData.get("registrationUrl") || undefined,
     coverImage: formData.get("coverImage") || undefined,
     tournamentFormat: formData.get("tournamentFormat") || undefined,
@@ -146,10 +146,10 @@ export async function createEvent(formData: FormData) {
     if (duplicates.length > 0) return { duplicateWarning: duplicates };
   }
 
-  // Tickets
+  // Tickets + standhouder-opties (beide zelf-gedefinieerde naam/prijs-lijsten).
   const isPaid = data.entryType === "PAID";
-  const isTiers = isPaid && data.entryPriceMode === "TIERS";
-  const ticketTypes = isTiers ? parseTicketTypes(data.ticketTypes) : [];
+  const ticketTypes = isPaid ? parseTicketTypes(data.ticketTypes) : [];
+  const vendorOptions = parseTicketTypes(data.vendorOptions);
 
   // Promotie: uitgelichte banner uit saldo.
   const wantsPromo = data.promote && (data.promoteDays ?? 0) > 0;
@@ -210,18 +210,15 @@ export async function createEvent(formData: FormData) {
         startTime,
         endTime,
         entryType: data.entryType,
-        entryPriceMode: isPaid ? data.entryPriceMode : "SINGLE",
-        entryPrice: isPaid && !isTiers ? data.entryPrice ?? null : null,
+        entryPriceMode: "TIERS",
+        entryPrice: null,
         entryCurrency: isPaid ? data.entryCurrency ?? null : null,
-        ticketTypes: isTiers && ticketTypes.length > 0 ? JSON.stringify(ticketTypes) : null,
-        childrenFreeUntilAge: data.childrenFreeUntilAge ?? null,
-        vendorTablePrice: data.vendorTablePrice ?? null,
-        vendorChairPrice: data.vendorChairPrice ?? null,
-        vendorPowerAvailable: data.vendorPowerAvailable,
+        ticketTypes: isPaid && ticketTypes.length > 0 ? JSON.stringify(ticketTypes) : null,
+        childrenFreeUntilAge: isPaid ? data.childrenFreeUntilAge ?? null : null,
+        vendorOptions: vendorOptions.length > 0 ? JSON.stringify(vendorOptions) : null,
         vendorInfo: data.vendorInfo || null,
         ...facilityData,
         maxVisitors: data.maxVisitors ?? null,
-        registrationRequired: data.registrationRequired,
         registrationUrl: data.registrationUrl || null,
         coverImage: data.coverImage || null,
         tournamentFormat: data.tournamentFormat ?? null,

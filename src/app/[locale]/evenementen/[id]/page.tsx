@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Baby, Store, Zap,
+  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Baby, Store,
   Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -68,7 +68,14 @@ export default async function EventDetailPage({
     return `Entree: ${prefix}${cur} ${event.entryPrice ?? ""}`;
   })();
 
-  const hasVendor = event.vendorTablePrice != null || event.vendorChairPrice != null || event.vendorPowerAvailable || event.vendorInfo;
+  let vendorOptions: { name: string; price: number }[] = [];
+  if (event.vendorOptions) {
+    try {
+      const parsed = JSON.parse(event.vendorOptions);
+      if (Array.isArray(parsed)) vendorOptions = parsed;
+    } catch { /* negeer */ }
+  }
+  const hasVendor = vendorOptions.length > 0 || !!event.vendorInfo;
 
   return (
     <PageContainer width="default" className="py-8">
@@ -174,17 +181,15 @@ export default async function EventDetailPage({
           {hasVendor && (
             <div className="rounded-xl border border-border bg-card p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Store className="h-5 w-5" /> Voor standhouders</h2>
-              <div className="mt-2 flex flex-wrap gap-2 text-sm">
-                {event.vendorTablePrice != null && (
-                  <span className="rounded-full bg-muted px-3 py-1.5 text-foreground">Tafel: {cur} {event.vendorTablePrice.toFixed(2)}</span>
-                )}
-                {event.vendorChairPrice != null && (
-                  <span className="rounded-full bg-muted px-3 py-1.5 text-foreground">Stoel: {cur} {event.vendorChairPrice.toFixed(2)}</span>
-                )}
-                {event.vendorPowerAvailable && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-foreground"><Zap className="h-3.5 w-3.5" /> Stroomaansluiting</span>
-                )}
-              </div>
+              {vendorOptions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                  {vendorOptions.map((v, i) => (
+                    <span key={i} className="rounded-full bg-muted px-3 py-1.5 text-foreground">
+                      {v.name}: {v.price === 0 ? "gratis" : `${cur} ${v.price.toFixed(2)}`}
+                    </span>
+                  ))}
+                </div>
+              )}
               {event.vendorInfo && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{event.vendorInfo}</p>}
             </div>
           )}

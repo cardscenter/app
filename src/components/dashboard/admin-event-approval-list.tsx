@@ -162,7 +162,7 @@ function EventApprovalCard({ event }: { event: EventRow }) {
               {event.lat === null && <span className="text-amber-600 dark:text-amber-400">(geen kaart-pin)</span>}
             </p>
             <p>
-              Entree: {event.entryType === "FREE" ? "Gratis" : `${event.entryCurrency ?? ""} ${event.entryPrice ?? ""}`}
+              Entree: {event.entryType === "FREE" ? "Gratis" : "Betaald (tickets)"}
               {event.registrationUrl && (
                 <a href={event.registrationUrl} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1 text-primary hover:underline">
                   Aanmeldlink <ExternalLink className="h-3 w-3" />

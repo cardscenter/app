@@ -1,0 +1,110 @@
+"use client";
+
+import { Calendar, MapPin, Ticket, Megaphone, Store, Baby, CheckCircle2, Users, ExternalLink } from "lucide-react";
+import {
+  EVENT_TYPE_LABELS_NL, FACILITY_LABELS_NL, ACTIVITY_KEYS, FACILITY_KEYS,
+  type EventType, type FacilityKey,
+} from "@/lib/events/types";
+import { getEventCountryName } from "@/lib/events/countries";
+import { timezoneForCountry } from "@/lib/events/timezones";
+import { calculateEventBannerCost, EVENT_BANNER_MIN_DAYS, EVENT_BANNER_MAX_DAYS } from "@/lib/events/upsell-config";
+import { CountryFlag } from "@/components/ui/country-flag";
+import type { EventFormState } from "@/components/events/event-form-types";
+
+function Row({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+  return (
+    <p className="flex items-start gap-2 text-sm text-foreground">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /> <span className="min-w-0">{children}</span>
+    </p>
+  );
+}
+
+export function EventLivePreview({ form, accountType }: { form: EventFormState; accountType: string }) {
+  const tz = timezoneForCountry(form.country);
+  const activeFacilities = [...ACTIVITY_KEYS, ...FACILITY_KEYS].filter((k) => form[k as FacilityKey] as boolean) as FacilityKey[];
+  const validTickets = form.ticketTypes.filter((t) => t.name.trim());
+  const validVendor = form.vendorOptions.filter((t) => t.name.trim());
+  const promoDays = Math.max(EVENT_BANNER_MIN_DAYS, Math.min(form.promoteDays, EVENT_BANNER_MAX_DAYS));
+  const promoCost = form.promote ? calculateEventBannerCost(promoDays, accountType) : 0;
+  const cur = form.entryCurrency;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
+      {/* Banner */}
+      <div className="aspect-[3/1] w-full bg-muted">
+        {form.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={form.coverImage} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-muted-foreground"><Calendar className="h-8 w-8" /></div>
+        )}
+      </div>
+
+      <div className="space-y-3 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Voorbeeld</p>
+
+        {form.eventType && (
+          <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+            {EVENT_TYPE_LABELS_NL[form.eventType as EventType]}
+          </span>
+        )}
+        <h3 className="text-lg font-bold leading-tight text-foreground">{form.title || "Titel van je evenement"}</h3>
+
+        {form.description && (
+          <div
+            className="prose prose-sm max-w-none text-sm text-muted-foreground dark:prose-invert line-clamp-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+            dangerouslySetInnerHTML={{ __html: form.description }}
+          />
+        )}
+
+        <div className="space-y-1.5 border-t border-border pt-3">
+          {(form.startDate || form.startTime) && (
+            <Row icon={Calendar}>{form.startDate || "datum"} · {form.startTime}–{form.endTime} ({tz})</Row>
+          )}
+          {(form.city || form.venueName) && (
+            <Row icon={MapPin}>
+              {form.venueName && `${form.venueName}, `}{form.city || "plaats"}{" "}
+              <CountryFlag code={form.country} size="xs" /> {getEventCountryName(form.country, "nl")}
+            </Row>
+          )}
+          <Row icon={Ticket}>
+            {form.entryType === "FREE"
+              ? "Gratis entree"
+              : validTickets.length
+                ? validTickets.map((t) => `${t.name} ${cur}${Number(t.price || 0) === 0 ? " 0" : ` ${t.price}`}`).join(" · ")
+                : "Betaald (nog geen tickets)"}
+          </Row>
+          {form.entryType === "PAID" && form.childrenFreeEnabled && form.childrenFreeUntilAge && (
+            <Row icon={Baby}>Kinderen t/m {form.childrenFreeUntilAge} jaar gratis</Row>
+          )}
+          {form.registrationUrl && validTickets.length > 0 && (
+            <Row icon={ExternalLink}>Ticketlink toegevoegd</Row>
+          )}
+          {validVendor.length > 0 && (
+            <Row icon={Store}>
+              Standhouders: {validVendor.map((v) => `${v.name} ${cur} ${v.price || "0"}`).join(" · ")}
+            </Row>
+          )}
+          {form.maxVisitors && <Row icon={Users}>max. {form.maxVisitors} bezoekers</Row>}
+        </div>
+
+        {activeFacilities.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 border-t border-border pt-3">
+            {activeFacilities.map((k) => (
+              <span key={k} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-foreground">
+                <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {FACILITY_LABELS_NL[k]}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {form.promote && (
+          <div className="flex items-center gap-2 border-t border-border pt-3 text-sm">
+            <Megaphone className="h-4 w-4 text-primary" />
+            <span className="font-medium text-foreground">Uitgelichte banner ({promoDays} d) — €{promoCost.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

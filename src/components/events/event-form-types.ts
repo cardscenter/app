@@ -1,6 +1,6 @@
-import type { EventType, EntryPriceMode } from "@/lib/events/types";
+import type { EventType } from "@/lib/events/types";
 
-export interface TicketTypeInput {
+export interface NamePriceInput {
   name: string;
   price: string;
 }
@@ -8,20 +8,17 @@ export interface TicketTypeInput {
 export interface EventFormState {
   eventType: EventType | "";
   title: string;
-  description: string; // HTML uit de rich-text-editor
+  description: string; // HTML
 
-  // Datum/tijd — wandklok in de event-tijdzone (afgeleid uit land).
   startDate: string;
   startTime: string;
   endDate: string;
   endTime: string;
 
-  // Toernooi-specifiek (alleen voor OP_TOERNOOI)
   tournamentFormat: string;
   isSanctioned: boolean;
   prizePool: string;
 
-  // Locatie
   venueName: string;
   street: string;
   houseNumber: string;
@@ -31,16 +28,14 @@ export interface EventFormState {
 
   // Entree
   entryType: "FREE" | "PAID";
-  entryPriceMode: EntryPriceMode;
-  entryPrice: string;
   entryCurrency: string;
-  ticketTypes: TicketTypeInput[];
+  ticketTypes: NamePriceInput[]; // door organisator zelf gedefinieerd
+  childrenFreeEnabled: boolean;
   childrenFreeUntilAge: string;
+  registrationUrl: string;
 
-  // Standhouders
-  vendorTablePrice: string;
-  vendorChairPrice: string;
-  vendorPowerAvailable: boolean;
+  // Standhouders — zelf-gedefinieerde opties
+  vendorOptions: NamePriceInput[];
   vendorInfo: string;
 
   // Activiteiten
@@ -58,13 +53,9 @@ export interface EventFormState {
   hasCloakroom: boolean;
 
   maxVisitors: string;
-  registrationRequired: boolean;
-  registrationUrl: string;
 
-  // Banner/flyer (≈3:1)
   coverImage: string;
 
-  // Promotie (uitgelichte banner)
   promote: boolean;
   promoteDays: number;
 }
@@ -87,14 +78,12 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   city: "",
   country: "NL",
   entryType: "FREE",
-  entryPriceMode: "SINGLE",
-  entryPrice: "",
   entryCurrency: "EUR",
-  ticketTypes: [{ name: "", price: "" }],
+  ticketTypes: [],
+  childrenFreeEnabled: false,
   childrenFreeUntilAge: "",
-  vendorTablePrice: "",
-  vendorChairPrice: "",
-  vendorPowerAvailable: false,
+  registrationUrl: "",
+  vendorOptions: [],
   vendorInfo: "",
   canPlay: false,
   canTrade: false,
@@ -107,8 +96,6 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   wheelchairAccessible: false,
   hasCloakroom: false,
   maxVisitors: "",
-  registrationRequired: false,
-  registrationUrl: "",
   coverImage: "",
   promote: false,
   promoteDays: 14,

@@ -21,7 +21,7 @@ export default async function NewEventPage({
   });
 
   return (
-    <PageContainer width="default" className="py-8">
+    <PageContainer width="wide" className="py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Evenement aanmaken</h1>
         <p className="mt-1 text-sm text-muted-foreground">
