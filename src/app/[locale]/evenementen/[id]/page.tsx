@@ -4,7 +4,7 @@ import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
   Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store,
-  Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy,
+  Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy, Baby,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { PageContainer } from "@/components/layout/page-container";
@@ -17,10 +17,10 @@ import { EventReportButton } from "@/components/events/event-report-button";
 
 const FACILITY_ICONS: Record<FacilityKey, React.ComponentType<{ className?: string }>> = {
   canPlay: Gamepad2, canTrade: Repeat, canSell: Tag, hasParking: Car, hasFood: Coffee,
-  hasToilets: Toilet, hasWifi: Wifi, cardPayment: CreditCard, wheelchairAccessible: Accessibility, hasCloakroom: Shirt,
+  hasToilets: Toilet, hasWifi: Wifi, cardPayment: CreditCard, wheelchairAccessible: Accessibility, hasCloakroom: Shirt, childFriendly: Baby,
 };
 const FACILITY_ORDER: FacilityKey[] = [
-  "canPlay", "canTrade", "canSell", "hasParking", "hasFood", "hasToilets", "hasWifi", "cardPayment", "wheelchairAccessible", "hasCloakroom",
+  "canPlay", "canTrade", "canSell", "hasParking", "hasFood", "hasToilets", "hasWifi", "cardPayment", "wheelchairAccessible", "hasCloakroom", "childFriendly",
 ];
 
 export default async function EventDetailPage({
@@ -53,7 +53,7 @@ export default async function EventDetailPage({
   const activeFacilities = FACILITY_ORDER.filter((k) => event[k as keyof typeof event] as boolean);
 
   // Ticket-soorten (TIERS)
-  let tiers: { name: string; price: number }[] = [];
+  let tiers: { name: string; price: number; description?: string; serviceFee?: number }[] = [];
   if (event.entryType === "PAID" && event.entryPriceMode === "TIERS" && event.ticketTypes) {
     try {
       const parsed = JSON.parse(event.ticketTypes);
@@ -68,7 +68,7 @@ export default async function EventDetailPage({
     return `Entree: ${prefix}${cur} ${event.entryPrice ?? ""}`;
   })();
 
-  let vendorOptions: { name: string; price: number }[] = [];
+  let vendorOptions: { name: string; price: number; description?: string }[] = [];
   if (event.vendorOptions) {
     try {
       const parsed = JSON.parse(event.vendorOptions);
@@ -145,9 +145,17 @@ export default async function EventDetailPage({
             {tiers.length > 0 && (
               <ul className="mt-3 divide-y divide-border border-t border-border">
                 {tiers.map((t, i) => (
-                  <li key={i} className="flex items-center justify-between py-2 text-sm">
-                    <span className="text-foreground">{t.name}</span>
-                    <span className="font-medium text-foreground">{t.price === 0 ? "Gratis" : `${cur} ${t.price.toFixed(2)}`}</span>
+                  <li key={i} className="flex items-start justify-between gap-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground">{t.name}</p>
+                      {t.description && <p className="mt-0.5 text-xs text-muted-foreground">{t.description}</p>}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-base font-bold text-foreground">{t.price === 0 ? "Gratis" : `${cur} ${t.price.toFixed(2)}`}</p>
+                      {t.serviceFee != null && t.serviceFee > 0 && (
+                        <p className="text-[11px] text-muted-foreground">+ {cur} {t.serviceFee.toFixed(2)} servicekosten</p>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -176,13 +184,17 @@ export default async function EventDetailPage({
             <div className="rounded-xl border border-border bg-card p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Store className="h-5 w-5" /> Voor standhouders</h2>
               {vendorOptions.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                <ul className="mt-2 divide-y divide-border">
                   {vendorOptions.map((v, i) => (
-                    <span key={i} className="rounded-full bg-muted px-3 py-1.5 text-foreground">
-                      {v.name}: {v.price === 0 ? "gratis" : `${cur} ${v.price.toFixed(2)}`}
-                    </span>
+                    <li key={i} className="flex items-start justify-between gap-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">{v.name}</p>
+                        {v.description && <p className="text-xs text-muted-foreground">{v.description}</p>}
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-foreground">{v.price === 0 ? "gratis" : `${cur} ${v.price.toFixed(2)}`}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
               {event.vendorInfo && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{event.vendorInfo}</p>}
             </div>

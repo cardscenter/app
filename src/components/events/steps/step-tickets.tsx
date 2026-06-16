@@ -71,6 +71,7 @@ export function StepTickets({ form, set }: { form: EventFormState; set: EventFie
           onChange={(items) => set("vendorOptions", items)}
           namePlaceholder="bv. Tafel, Stoel, Stroom"
           addLabel="Optie toevoegen"
+          showServiceFee={false}
         />
         <div>
           <label className={labelClass} htmlFor="evt-vendorinfo">Extra info voor standhouders</label>

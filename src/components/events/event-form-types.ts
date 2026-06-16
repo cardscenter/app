@@ -3,6 +3,8 @@ import type { EventType } from "@/lib/events/types";
 export interface NamePriceInput {
   name: string;
   price: string;
+  description: string; // extra info (bv. wat zit er bij een VIP-ticket)
+  serviceFee: string; // optionele servicekosten, klein onder de prijs
 }
 
 export interface EventFormState {
@@ -48,6 +50,7 @@ export interface EventFormState {
   cardPayment: boolean;
   wheelchairAccessible: boolean;
   hasCloakroom: boolean;
+  childFriendly: boolean;
 
   maxVisitors: string;
 
@@ -89,6 +92,7 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   cardPayment: false,
   wheelchairAccessible: false,
   hasCloakroom: false,
+  childFriendly: false,
   maxVisitors: "",
   coverImage: "",
   promote: false,

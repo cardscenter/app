@@ -101,18 +101,27 @@ export function MultiStepEventForm({ accountType }: { accountType: string }) {
     if (form.entryType === "PAID") {
       const tickets = form.ticketTypes
         .filter((t) => t.name.trim())
-        .map((t) => ({ name: t.name.trim(), price: Number(t.price) || 0 }));
+        .map((t) => ({
+          name: t.name.trim(),
+          price: Number(t.price) || 0,
+          description: t.description.trim() || undefined,
+          serviceFee: Number(t.serviceFee) > 0 ? Number(t.serviceFee) : undefined,
+        }));
       fd.set("ticketTypes", JSON.stringify(tickets));
       if (form.registrationUrl) fd.set("registrationUrl", form.registrationUrl);
     }
 
     const vendor = form.vendorOptions
       .filter((t) => t.name.trim())
-      .map((t) => ({ name: t.name.trim(), price: Number(t.price) || 0 }));
+      .map((t) => ({
+        name: t.name.trim(),
+        price: Number(t.price) || 0,
+        description: t.description.trim() || undefined,
+      }));
     if (vendor.length) fd.set("vendorOptions", JSON.stringify(vendor));
     if (form.vendorInfo) fd.set("vendorInfo", form.vendorInfo);
 
-    for (const k of ["canPlay", "canTrade", "canSell", "hasParking", "hasFood", "hasToilets", "hasWifi", "cardPayment", "wheelchairAccessible", "hasCloakroom"] as const) {
+    for (const k of ["canPlay", "canTrade", "canSell", "hasParking", "hasFood", "hasToilets", "hasWifi", "cardPayment", "wheelchairAccessible", "hasCloakroom", "childFriendly"] as const) {
       fd.set(k, form[k] ? "1" : "0");
     }
     if (form.maxVisitors) fd.set("maxVisitors", form.maxVisitors);

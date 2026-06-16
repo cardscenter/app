@@ -1,6 +1,6 @@
 "use client";
 
-import { Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt } from "lucide-react";
+import { Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Baby } from "lucide-react";
 import { ACTIVITY_KEYS, FACILITY_KEYS, FACILITY_LABELS_NL, type FacilityKey } from "@/lib/events/types";
 import type { EventFormState, EventFieldSetter } from "@/components/events/event-form-types";
 
@@ -18,6 +18,7 @@ const ICONS: Record<FacilityKey, React.ComponentType<{ className?: string }>> = 
   cardPayment: CreditCard,
   wheelchairAccessible: Accessibility,
   hasCloakroom: Shirt,
+  childFriendly: Baby,
 };
 
 function Chip({ k, form, set }: { k: FacilityKey; form: EventFormState; set: EventFieldSetter }) {

@@ -57,12 +57,17 @@ async function findDuplicateEvents(
 function parseTicketTypes(raw: string | undefined): TicketType[] {
   if (!raw) return [];
   try {
-    const arr = JSON.parse(raw) as Array<{ name?: unknown; price?: unknown }>;
+    const arr = JSON.parse(raw) as Array<{ name?: unknown; price?: unknown; description?: unknown; serviceFee?: unknown }>;
     if (!Array.isArray(arr)) return [];
     return arr
       .filter((t) => typeof t?.name === "string" && (t.name as string).trim().length > 0 && Number.isFinite(Number(t.price)))
-      .map((t) => ({ name: (t.name as string).trim().slice(0, 60), price: Math.max(0, Number(t.price)) }))
-      .slice(0, 10);
+      .map((t) => {
+        const out: TicketType = { name: (t.name as string).trim().slice(0, 60), price: Math.max(0, Number(t.price)) };
+        if (typeof t.description === "string" && t.description.trim()) out.description = t.description.trim().slice(0, 200);
+        if (Number.isFinite(Number(t.serviceFee)) && Number(t.serviceFee) > 0) out.serviceFee = Math.max(0, Number(t.serviceFee));
+        return out;
+      })
+      .slice(0, 12);
   } catch {
     return [];
   }
@@ -113,6 +118,7 @@ export async function createEvent(formData: FormData) {
     cardPayment: formData.get("cardPayment") || undefined,
     wheelchairAccessible: formData.get("wheelchairAccessible") || undefined,
     hasCloakroom: formData.get("hasCloakroom") || undefined,
+    childFriendly: formData.get("childFriendly") || undefined,
     maxVisitors: formData.get("maxVisitors") || undefined,
     coverImage: formData.get("coverImage") || undefined,
     tournamentFormat: formData.get("tournamentFormat") || undefined,

@@ -69,6 +69,7 @@ export const createEventSchema = z
     cardPayment: boolField,
     wheelchairAccessible: boolField,
     hasCloakroom: boolField,
+    childFriendly: boolField,
 
     maxVisitors: z.coerce.number().int().min(1).max(1000000).optional(),
     registrationUrl: z.string().url("Ongeldige link").max(500).optional().or(z.literal("")),

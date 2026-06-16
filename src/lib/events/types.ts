@@ -73,6 +73,8 @@ export const ENTRY_PRICE_MODE_LABELS_NL: Record<EntryPriceMode, string> = {
 export interface TicketType {
   name: string;
   price: number;
+  description?: string;
+  serviceFee?: number;
 }
 
 // Faciliteiten — keys matchen de Boolean-velden op het Event-model.
@@ -86,7 +88,8 @@ export type FacilityKey =
   | "hasWifi"
   | "cardPayment"
   | "wheelchairAccessible"
-  | "hasCloakroom";
+  | "hasCloakroom"
+  | "childFriendly";
 
 export const ACTIVITY_KEYS: FacilityKey[] = ["canPlay", "canTrade", "canSell"];
 export const FACILITY_KEYS: FacilityKey[] = [
@@ -97,6 +100,7 @@ export const FACILITY_KEYS: FacilityKey[] = [
   "cardPayment",
   "wheelchairAccessible",
   "hasCloakroom",
+  "childFriendly",
 ];
 
 export const FACILITY_LABELS_NL: Record<FacilityKey, string> = {
@@ -110,4 +114,5 @@ export const FACILITY_LABELS_NL: Record<FacilityKey, string> = {
   cardPayment: "Pinbetaling mogelijk",
   wheelchairAccessible: "Rolstoeltoegankelijk",
   hasCloakroom: "Garderobe",
+  childFriendly: "Kindvriendelijk",
 };
