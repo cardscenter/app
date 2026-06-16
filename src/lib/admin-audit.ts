@@ -31,7 +31,15 @@ export type AdminAction =
   | "APPROVE_ENTERPRISE_REQUEST"
   | "REJECT_ENTERPRISE_REQUEST"
   // Fase 40 — ShippingIssue admin-tickets
-  | "RESOLVE_SHIPPING_ISSUE";
+  | "RESOLVE_SHIPPING_ISSUE"
+  // Evenementenkalender
+  | "APPROVE_EVENT"
+  | "REJECT_EVENT"
+  | "EDIT_EVENT"
+  | "SET_EVENT_OFFICIAL"
+  | "GRANT_TRUSTED_ORGANIZER"
+  | "REVOKE_TRUSTED_ORGANIZER"
+  | "REVIEW_EVENT_REPORT";
 
 export type AdminTargetType =
   | "USER"
@@ -49,7 +57,9 @@ export type AdminTargetType =
   | "CRON"
   | "REPORT"
   | "ENTERPRISE_REQUEST"
-  | "SHIPPING_ISSUE";
+  | "SHIPPING_ISSUE"
+  | "EVENT"
+  | "EVENT_REPORT";
 
 /**
  * Log an admin or system action.

@@ -24,7 +24,10 @@ export type UploadContext =
   // label, doos-foto). Beide door moderation om misbruik te voorkomen
   // (NSFW/scam-uitingen in plaats van legit bewijs).
   | "dispute"
-  | "shipping";
+  | "shipping"
+  // Evenementenkalender: thumbnail/flyer van een beurs/event. Publiek zichtbaar
+  // → modereren.
+  | "event";
 
 const MODERATED_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
   "listing",
@@ -33,6 +36,7 @@ const MODERATED_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
   "chat",
   "dispute",
   "shipping",
+  "event",
 ]);
 
 export const MODERATION_BLOCKED_PREFIX = "MODERATION_BLOCKED:";
