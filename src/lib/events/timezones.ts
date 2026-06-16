@@ -139,7 +139,8 @@ export function timeZoneAbbreviation(
 
 /**
  * Format een UTC-Date in de event-tijdzone. Voorbeeld:
- * "vrijdag 5 juni · 10:00–17:00 (CEST)".
+ * "vrijdag 5 juni · 10:00–17:00". De tijd staat al in de event-lokale tijd, dus
+ * het tijdzone-label wordt bewust niet getoond.
  */
 export function formatEventDateRange(
   start: Date,
@@ -152,6 +153,7 @@ export function formatEventDateRange(
     weekday: "long",
     day: "numeric",
     month: "long",
+    year: "numeric",
   });
   const timeFmt = new Intl.DateTimeFormat(locale, {
     timeZone,
@@ -159,8 +161,7 @@ export function formatEventDateRange(
     minute: "2-digit",
     hour12: false,
   });
-  const tz = timeZoneAbbreviation(start, timeZone, locale);
-  return `${dateFmt.format(start)} · ${timeFmt.format(start)}–${timeFmt.format(end)} (${tz})`;
+  return `${dateFmt.format(start)} · ${timeFmt.format(start)}–${timeFmt.format(end)}`;
 }
 
 /** Alleen de tijd in event-tijdzone met label, bv. "10:00 (CEST)". */

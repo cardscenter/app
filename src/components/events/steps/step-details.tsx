@@ -1,6 +1,5 @@
 "use client";
 
-import { timezoneForCountry } from "@/lib/events/timezones";
 import { getEventCountryName } from "@/lib/events/countries";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import type { EventFormState, EventFieldSetter } from "@/components/events/event-form-types";
@@ -10,8 +9,6 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-foreground";
 
 export function StepDetails({ form, set }: { form: EventFormState; set: EventFieldSetter }) {
-  const tz = timezoneForCountry(form.country);
-
   return (
     <section data-section="details" className="scroll-mt-32 space-y-4">
       <h2 className="text-lg font-semibold text-foreground">Details</h2>
@@ -88,8 +85,7 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
           </div>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          🕒 Tijden gelden in de lokale tijdzone van het evenement
-          ({getEventCountryName(form.country, "nl")} · {tz}). Bezoekers zien de tijd in hun eigen tijdzone.
+          🕒 Vul de begin- en eindtijd in zoals ze gelden op de locatie ({getEventCountryName(form.country, "nl")}).
         </p>
       </div>
 

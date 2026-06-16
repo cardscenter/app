@@ -6,7 +6,6 @@ import {
   type EventType, type FacilityKey,
 } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
-import { timezoneForCountry } from "@/lib/events/timezones";
 import { calculateEventBannerCost, bannerDaysUntil } from "@/lib/events/upsell-config";
 import { CountryFlag } from "@/components/ui/country-flag";
 import type { EventFormState } from "@/components/events/event-form-types";
@@ -20,7 +19,9 @@ function Row({ icon: Icon, children }: { icon: React.ComponentType<{ className?:
 }
 
 export function EventLivePreview({ form, accountType }: { form: EventFormState; accountType: string }) {
-  const tz = timezoneForCountry(form.country);
+  const dateLabel = form.startDate
+    ? new Date(`${form.startDate}T00:00:00`).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    : "datum";
   const activeFacilities = [...ACTIVITY_KEYS, ...FACILITY_KEYS].filter((k) => form[k as FacilityKey] as boolean) as FacilityKey[];
   const validTickets = form.ticketTypes.filter((t) => t.name.trim());
   const validVendor = form.vendorOptions.filter((t) => t.name.trim());
@@ -59,7 +60,7 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
 
         <div className="space-y-1.5 border-t border-border pt-3">
           {(form.startDate || form.startTime) && (
-            <Row icon={Calendar}>{form.startDate || "datum"} · {form.startTime}–{form.endTime} ({tz})</Row>
+            <Row icon={Calendar}>{dateLabel} · {form.startTime}–{form.endTime}</Row>
           )}
           {(form.city || form.venueName) && (
             <Row icon={MapPin}>
