@@ -10,19 +10,12 @@ import { requireEmailVerified } from "@/lib/email-verification";
 import { timezoneForCountry, zonedWallClockToUtc } from "@/lib/events/timezones";
 import { geocodeAddress } from "@/lib/events/geocoding";
 import {
-  availableEventLabelsFor,
-  calculateEventLabelCost,
-  isValidEventLabelType,
-  isValidLabelColor,
-  MAX_LABELS_PER_EVENT,
-  type EventLabelType,
-  type LabelColor,
-} from "@/lib/events/labels";
-import {
-  calculateEventUpsellCost,
-  isEventUpsellType,
-  type EventUpsellType,
+  EVENT_BANNER_STORED_TYPE,
+  EVENT_BANNER_MIN_DAYS,
+  EVENT_BANNER_MAX_DAYS,
+  calculateEventBannerCost,
 } from "@/lib/events/upsell-config";
+import { FACILITY_KEYS, ACTIVITY_KEYS, type TicketType } from "@/lib/events/types";
 
 interface DuplicateMatch {
   id: string;
@@ -31,11 +24,6 @@ interface DuplicateMatch {
   startTime: string;
 }
 
-/**
- * Simpele dubbel-detectie: bestaand LIVE/PENDING event op dezelfde kalenderdag
- * in dezelfde plaats of postcode. Blokkeert niet — geeft een waarschuwing die
- * de wizard toont; de organisator kan "toch publiceren".
- */
 async function findDuplicateEvents(
   startTime: Date,
   city: string,
@@ -52,10 +40,7 @@ async function findDuplicateEvents(
       id: excludeId ? { not: excludeId } : undefined,
       status: { in: ["PENDING", "LIVE"] },
       startTime: { gte: dayStart, lte: dayEnd },
-      OR: [
-        { city: { equals: city } },
-        { postalCode: { equals: postalCode } },
-      ],
+      OR: [{ city: { equals: city } }, { postalCode: { equals: postalCode } }],
     },
     select: { id: true, title: true, city: true, startTime: true },
     take: 5,
@@ -67,6 +52,20 @@ async function findDuplicateEvents(
     city: m.city,
     startTime: m.startTime.toISOString(),
   }));
+}
+
+function parseTicketTypes(raw: string | undefined): TicketType[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw) as Array<{ name?: unknown; price?: unknown }>;
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((t) => typeof t?.name === "string" && (t.name as string).trim().length > 0 && Number.isFinite(Number(t.price)))
+      .map((t) => ({ name: (t.name as string).trim().slice(0, 60), price: Math.max(0, Number(t.price)) }))
+      .slice(0, 10);
+  } catch {
+    return [];
+  }
 }
 
 export async function createEvent(formData: FormData) {
@@ -95,13 +94,25 @@ export async function createEvent(formData: FormData) {
     endDate: formData.get("endDate") || undefined,
     endTime: formData.get("endTime"),
     entryType: formData.get("entryType") || "FREE",
+    entryPriceMode: formData.get("entryPriceMode") || "SINGLE",
     entryPrice: formData.get("entryPrice") || undefined,
     entryCurrency: formData.get("entryCurrency") || undefined,
+    ticketTypes: formData.get("ticketTypes") || undefined,
+    childrenFreeUntilAge: formData.get("childrenFreeUntilAge") || undefined,
+    vendorTablePrice: formData.get("vendorTablePrice") || undefined,
+    vendorChairPrice: formData.get("vendorChairPrice") || undefined,
+    vendorPowerAvailable: formData.get("vendorPowerAvailable") || undefined,
+    vendorInfo: formData.get("vendorInfo") || undefined,
     canPlay: formData.get("canPlay") || undefined,
     canTrade: formData.get("canTrade") || undefined,
     canSell: formData.get("canSell") || undefined,
     hasParking: formData.get("hasParking") || undefined,
     hasFood: formData.get("hasFood") || undefined,
+    hasToilets: formData.get("hasToilets") || undefined,
+    hasWifi: formData.get("hasWifi") || undefined,
+    cardPayment: formData.get("cardPayment") || undefined,
+    wheelchairAccessible: formData.get("wheelchairAccessible") || undefined,
+    hasCloakroom: formData.get("hasCloakroom") || undefined,
     maxVisitors: formData.get("maxVisitors") || undefined,
     registrationRequired: formData.get("registrationRequired") || undefined,
     registrationUrl: formData.get("registrationUrl") || undefined,
@@ -109,8 +120,8 @@ export async function createEvent(formData: FormData) {
     tournamentFormat: formData.get("tournamentFormat") || undefined,
     isSanctioned: formData.get("isSanctioned") || undefined,
     prizePool: formData.get("prizePool") || undefined,
-    labels: formData.get("labels") || undefined,
-    upsells: formData.get("upsells") || undefined,
+    promote: formData.get("promote") || undefined,
+    promoteDays: formData.get("promoteDays") || undefined,
   };
 
   const parsed = createEventSchema.safeParse(raw);
@@ -119,14 +130,9 @@ export async function createEvent(formData: FormData) {
   }
   const data = parsed.data;
 
-  // Tijdzone uit land + UTC-conversie van de event-lokale wandklok-tijd.
   const timezone = timezoneForCountry(data.country);
   const startTime = zonedWallClockToUtc(data.startDate, data.startTime, timezone);
-  const endTime = zonedWallClockToUtc(
-    data.endDate || data.startDate,
-    data.endTime,
-    timezone,
-  );
+  const endTime = zonedWallClockToUtc(data.endDate || data.startDate, data.endTime, timezone);
   if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
     return { error: "Ongeldige datum/tijd" };
   }
@@ -134,91 +140,37 @@ export async function createEvent(formData: FormData) {
     return { error: "Dit event ligt in het verleden" };
   }
 
-  // Dubbel-detectie (waarschuwing, niet blokkerend).
   const confirmDuplicate = formData.get("confirmDuplicate") === "1";
   if (!confirmDuplicate) {
     const duplicates = await findDuplicateEvents(startTime, data.city, data.postalCode);
-    if (duplicates.length > 0) {
-      return { duplicateWarning: duplicates };
-    }
+    if (duplicates.length > 0) return { duplicateWarning: duplicates };
   }
 
-  // Promotie: upsells + labels (betaald uit saldo, geen tier-gratis-quota).
-  let upsellEntries: { type: EventUpsellType; days: number }[] = [];
-  if (data.upsells) {
-    try {
-      const rawUpsells = JSON.parse(data.upsells) as Array<{ type: string; days: number }>;
-      upsellEntries = rawUpsells
-        .filter((u) => isEventUpsellType(u?.type) && Number(u?.days) > 0)
-        .map((u) => ({ type: u.type as EventUpsellType, days: Math.min(Number(u.days), 60) }));
-    } catch {
-      return { error: "Ongeldige promotie-gegevens" };
-    }
-  }
+  // Tickets
+  const isPaid = data.entryType === "PAID";
+  const isTiers = isPaid && data.entryPriceMode === "TIERS";
+  const ticketTypes = isTiers ? parseTicketTypes(data.ticketTypes) : [];
 
-  // Labels parsen + anti-tamper hercheck.
-  let parsedLabels: { type: EventLabelType; colorKey: LabelColor }[] = [];
-  if (data.labels) {
-    try {
-      const rawLabels = JSON.parse(data.labels) as Array<{ type: string; colorKey: string }>;
-      const cleaned = rawLabels
-        .filter(
-          (l) =>
-            isValidEventLabelType(l?.type) && isValidLabelColor(l?.colorKey),
-        )
-        .slice(0, MAX_LABELS_PER_EVENT) as { type: EventLabelType; colorKey: LabelColor }[];
-
-      const availability = availableEventLabelsFor({
-        entryType: data.entryType,
-        isSanctioned: data.isSanctioned,
-        maxVisitors: data.maxVisitors ?? null,
-        canTrade: data.canTrade,
-      });
-      const availSet = new Set(availability.filter((a) => a.available).map((a) => a.type));
-      for (const l of cleaned) {
-        if (!availSet.has(l.type)) {
-          return { error: `Label "${l.type}" is niet beschikbaar voor dit event` };
-        }
-      }
-      const seen = new Set<EventLabelType>();
-      parsedLabels = cleaned.filter((l) => {
-        if (seen.has(l.type)) return false;
-        seen.add(l.type);
-        return true;
-      });
-    } catch {
-      parsedLabels = [];
-    }
-  }
+  // Promotie: uitgelichte banner uit saldo.
+  const wantsPromo = data.promote && (data.promoteDays ?? 0) > 0;
+  const promoDays = wantsPromo
+    ? Math.max(EVENT_BANNER_MIN_DAYS, Math.min(data.promoteDays ?? 0, EVENT_BANNER_MAX_DAYS))
+    : 0;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      balance: true,
-      reservedBalance: true,
-      accountType: true,
-      isTrustedEventOrganizer: true,
-    },
+    select: { balance: true, reservedBalance: true, accountType: true, isTrustedEventOrganizer: true },
   });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
-  const perUpsellCost = upsellEntries.map((e) =>
-    calculateEventUpsellCost(e.type, e.days, user.accountType),
-  );
-  const totalUpsellCost = Math.round(perUpsellCost.reduce((s, c) => s + c, 0) * 100) / 100;
-  const labelsCost = calculateEventLabelCost(parsedLabels.length);
-  const totalPromotionCost = Math.round((totalUpsellCost + labelsCost) * 100) / 100;
-
-  if (totalPromotionCost > 0) {
+  const promoCost = wantsPromo ? calculateEventBannerCost(promoDays, user.accountType) : 0;
+  if (promoCost > 0) {
     const available = user.balance - user.reservedBalance;
-    if (available < totalPromotionCost) {
-      return {
-        error: `Onvoldoende beschikbaar saldo. Benodigd: €${totalPromotionCost.toFixed(2)}, beschikbaar: €${available.toFixed(2)}`,
-      };
+    if (available < promoCost) {
+      return { error: `Onvoldoende beschikbaar saldo voor de banner. Benodigd: €${promoCost.toFixed(2)}, beschikbaar: €${available.toFixed(2)}` };
     }
   }
 
-  // Geocode (fail-soft → null bij fout/timeout).
   const geo = await geocodeAddress({
     street: data.street,
     houseNumber: data.houseNumber,
@@ -227,9 +179,14 @@ export async function createEvent(formData: FormData) {
     country: data.country,
   });
 
-  // Trusted organisator → direct LIVE; anders approval-wachtrij.
   const autoPublish = user.isTrustedEventOrganizer;
   const status = autoPublish ? "LIVE" : "PENDING";
+
+  // Facility-/activity-booleans uit de geparste data.
+  const facilityData: Record<string, boolean> = {};
+  for (const key of [...ACTIVITY_KEYS, ...FACILITY_KEYS]) {
+    facilityData[key] = Boolean((data as Record<string, unknown>)[key]);
+  }
 
   const event = await prisma.$transaction(async (tx) => {
     const newEvent = await tx.event.create({
@@ -253,13 +210,16 @@ export async function createEvent(formData: FormData) {
         startTime,
         endTime,
         entryType: data.entryType,
-        entryPrice: data.entryType === "PAID" ? data.entryPrice ?? null : null,
-        entryCurrency: data.entryType === "PAID" ? data.entryCurrency ?? null : null,
-        canPlay: data.canPlay,
-        canTrade: data.canTrade,
-        canSell: data.canSell,
-        hasParking: data.hasParking,
-        hasFood: data.hasFood,
+        entryPriceMode: isPaid ? data.entryPriceMode : "SINGLE",
+        entryPrice: isPaid && !isTiers ? data.entryPrice ?? null : null,
+        entryCurrency: isPaid ? data.entryCurrency ?? null : null,
+        ticketTypes: isTiers && ticketTypes.length > 0 ? JSON.stringify(ticketTypes) : null,
+        childrenFreeUntilAge: data.childrenFreeUntilAge ?? null,
+        vendorTablePrice: data.vendorTablePrice ?? null,
+        vendorChairPrice: data.vendorChairPrice ?? null,
+        vendorPowerAvailable: data.vendorPowerAvailable,
+        vendorInfo: data.vendorInfo || null,
+        ...facilityData,
         maxVisitors: data.maxVisitors ?? null,
         registrationRequired: data.registrationRequired,
         registrationUrl: data.registrationUrl || null,
@@ -270,54 +230,30 @@ export async function createEvent(formData: FormData) {
       },
     });
 
-    if (upsellEntries.length > 0) {
+    if (promoCost > 0) {
       const now = new Date();
-      for (let i = 0; i < upsellEntries.length; i++) {
-        const entry = upsellEntries[i];
-        const cost = perUpsellCost[i];
-        await tx.eventUpsell.create({
-          data: {
-            eventId: newEvent.id,
-            type: entry.type,
-            startsAt: now,
-            expiresAt: new Date(now.getTime() + entry.days * 24 * 60 * 60 * 1000),
-            dailyCost: entry.days > 0 ? cost / entry.days : cost,
-            totalCost: cost,
-          },
-        });
-      }
-    }
-
-    if (parsedLabels.length > 0) {
-      const perLabelCost = labelsCost / parsedLabels.length;
-      await tx.eventLabel.createMany({
-        data: parsedLabels.map((l) => ({
+      await tx.eventUpsell.create({
+        data: {
           eventId: newEvent.id,
-          type: l.type,
-          colorKey: l.colorKey,
-          cost: Math.round(perLabelCost * 100) / 100,
-        })),
+          type: EVENT_BANNER_STORED_TYPE,
+          startsAt: now,
+          expiresAt: new Date(now.getTime() + promoDays * 24 * 60 * 60 * 1000),
+          dailyCost: promoCost / promoDays,
+          totalCost: promoCost,
+        },
       });
-    }
 
-    if (totalPromotionCost > 0) {
       const balanceBefore = user.balance;
-      const balanceAfter = Math.round((balanceBefore - totalPromotionCost) * 100) / 100;
+      const balanceAfter = Math.round((balanceBefore - promoCost) * 100) / 100;
       await tx.user.update({ where: { id: userId }, data: { balance: balanceAfter } });
-
-      const parts: string[] = [];
-      if (upsellEntries.length > 0) parts.push(upsellEntries.map((e) => e.type).join(", "));
-      if (parsedLabels.length > 0) {
-        parts.push(`${parsedLabels.length} label${parsedLabels.length === 1 ? "" : "s"}`);
-      }
       await tx.transaction.create({
         data: {
           userId,
           type: "FEE",
-          amount: -totalPromotionCost,
+          amount: -promoCost,
           balanceBefore,
           balanceAfter,
-          description: `Promotiekosten evenement: ${parts.join(" + ")}`,
+          description: `Uitgelichte banner evenement (${promoDays} dagen)`,
         },
       });
     }
@@ -325,7 +261,6 @@ export async function createEvent(formData: FormData) {
     return newEvent;
   });
 
-  // Notificaties.
   if (autoPublish) {
     await createNotification(
       userId,
@@ -342,11 +277,7 @@ export async function createEvent(formData: FormData) {
       `Je evenement "${event.title}" is ingediend en wordt beoordeeld voordat het zichtbaar wordt.`,
       `/dashboard/evenementen`,
     );
-    // Admins op de hoogte stellen van nieuw werk in de wachtrij.
-    const admins = await prisma.user.findMany({
-      where: { accountType: "ADMIN" },
-      select: { id: true },
-    });
+    const admins = await prisma.user.findMany({ where: { accountType: "ADMIN" }, select: { id: true } });
     await Promise.all(
       admins.map((a) =>
         createNotification(
@@ -362,7 +293,6 @@ export async function createEvent(formData: FormData) {
 
   revalidatePath("/evenementen");
   revalidatePath("/dashboard/evenementen");
-
   return { success: true, eventId: event.id, status };
 }
 
@@ -374,16 +304,9 @@ export async function updateEvent(eventId: string, formData: FormData) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
-      organizerId: true,
-      status: true,
-      country: true,
-      timezone: true,
-      startTime: true,
-      endTime: true,
-      street: true,
-      houseNumber: true,
-      postalCode: true,
-      city: true,
+      organizerId: true, status: true, country: true, timezone: true,
+      startTime: true, endTime: true, street: true, houseNumber: true,
+      postalCode: true, city: true,
     },
   });
   if (!event) return { error: "Evenement niet gevonden" };
@@ -409,9 +332,7 @@ export async function updateEvent(eventId: string, formData: FormData) {
     coverImage: formData.get("coverImage") ?? undefined,
   };
   const parsed = updateEventSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Ongeldige gegevens" };
-  }
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Ongeldige gegevens" };
   const data = parsed.data;
 
   const updateData: Record<string, unknown> = {};
@@ -419,14 +340,10 @@ export async function updateEvent(eventId: string, formData: FormData) {
     if (data[key] !== undefined) updateData[key] = data[key] || null;
   }
 
-  // Adres gewijzigd → opnieuw geocoden + tijdzone herbepalen.
   const newCountry = data.country ?? event.country;
   const addressChanged =
-    data.street !== undefined ||
-    data.houseNumber !== undefined ||
-    data.postalCode !== undefined ||
-    data.city !== undefined ||
-    data.country !== undefined;
+    data.street !== undefined || data.houseNumber !== undefined ||
+    data.postalCode !== undefined || data.city !== undefined || data.country !== undefined;
   if (addressChanged) {
     const timezone = timezoneForCountry(newCountry);
     updateData.timezone = timezone;
@@ -441,7 +358,6 @@ export async function updateEvent(eventId: string, formData: FormData) {
     updateData.lng = geo?.lng ?? null;
   }
 
-  // Tijd gewijzigd → herbereken UTC.
   if (data.startDate || data.startTime || data.endDate || data.endTime) {
     const timezone = (updateData.timezone as string) ?? event.timezone;
     const startDate = data.startDate ?? toLocalDate(event.startTime, timezone);
@@ -458,7 +374,6 @@ export async function updateEvent(eventId: string, formData: FormData) {
   }
 
   await prisma.event.update({ where: { id: eventId }, data: updateData });
-
   revalidatePath(`/evenementen/${eventId}`);
   revalidatePath("/dashboard/evenementen");
   return { success: true };
@@ -475,30 +390,15 @@ export async function deleteEvent(eventId: string) {
   if (!event) return { error: "Evenement niet gevonden" };
   if (event.organizerId !== session.user.id) return { error: "Niet bevoegd" };
 
-  await prisma.event.update({
-    where: { id: eventId },
-    data: { status: "DELETED" },
-  });
-
+  await prisma.event.update({ where: { id: eventId }, data: { status: "DELETED" } });
   revalidatePath("/evenementen");
   revalidatePath("/dashboard/evenementen");
   return { success: true };
 }
 
-// Helpers om een UTC-Date terug te formatteren naar wandklok-strings in tz.
 function toLocalDate(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 function toLocalTime(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
+  return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
 }

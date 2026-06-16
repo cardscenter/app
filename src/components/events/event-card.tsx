@@ -7,7 +7,6 @@ import { Link } from "@/i18n/navigation";
 import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, type EventType } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
-import { EVENT_LABEL_TEXT_NL, COLOR_CLASSES, type EventLabelType, type LabelColor } from "@/lib/events/labels";
 import { CountryFlag } from "@/components/ui/country-flag";
 import type { EventListItem } from "@/components/events/event-view-types";
 
@@ -42,11 +41,11 @@ export function EventCard({ event }: { event: EventListItem }) {
           <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${EVENT_TYPE_PILL_CLASSES[event.eventType as EventType] ?? "bg-muted"}`}>
             {getEventTypeLabel(event.eventType, locale)}
           </span>
-          {event.labels.map((l) => (
-            <span key={l.type} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${COLOR_CLASSES[l.colorKey as LabelColor] ?? "bg-slate-700 text-white"}`}>
-              {EVENT_LABEL_TEXT_NL[l.type as EventLabelType] ?? l.type}
+          {event.entryType === "FREE" && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+              Gratis entree
             </span>
-          ))}
+          )}
         </div>
 
         <h3 className="text-base font-bold leading-snug text-foreground group-hover:text-primary">{event.title}</h3>
@@ -64,6 +63,31 @@ export function EventCard({ event }: { event: EventListItem }) {
             {event.entryType === "FREE" ? "Gratis entree" : `${event.entryCurrency ?? ""} ${event.entryPrice ?? ""}`}
           </span>
         </p>
+      </div>
+    </Link>
+  );
+}
+
+/** Brede uitgelichte banner (betaalde promotie) — ≈3:1, voor de Uitgelicht-rij. */
+export function EventBanner({ event }: { event: EventListItem }) {
+  const locale = useLocale();
+  const start = new Date(event.startTime);
+  return (
+    <Link
+      href={`/evenementen/${event.id}`}
+      className="group relative block aspect-[3/1] w-full overflow-hidden rounded-xl border border-border bg-muted shadow-card transition hover:shadow-card-hover"
+    >
+      {event.coverImage ? (
+        <Image src={event.coverImage} alt={event.title} fill className="object-cover transition group-hover:scale-[1.02]" sizes="(max-width:1024px) 90vw, 700px" unoptimized />
+      ) : (
+        <div className="flex h-full items-center justify-center text-muted-foreground"><Calendar className="h-10 w-10" /></div>
+      )}
+      {/* Onderkant-gradient met titel */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+        <p className="text-xs font-medium text-white/80">
+          {start.toLocaleDateString(locale === "en" ? "en-GB" : "nl-NL", { day: "numeric", month: "long" })} · {event.city}
+        </p>
+        <h3 className="text-lg font-bold leading-tight text-white">{event.title}</h3>
       </div>
     </Link>
   );

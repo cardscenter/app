@@ -8,7 +8,7 @@ import { parseEventFilters, buildEventFilterWhere, countActiveEventFilters } fro
 import { getBlockedUserIds } from "@/lib/blocking";
 import { EventTabs, EventViewToggle } from "@/components/events/event-controls";
 import { EventFilterSidebar } from "@/components/events/event-filter-sidebar";
-import { EventCard, EventEmptyState } from "@/components/events/event-card";
+import { EventCard, EventEmptyState, EventBanner } from "@/components/events/event-card";
 import { EventCalendarMonth } from "@/components/events/event-calendar-month";
 import { EventMap } from "@/components/events/event-map";
 import type { EventListItem } from "@/components/events/event-view-types";
@@ -36,12 +36,11 @@ export default async function EventsPage({
 
   const rows = await prisma.event.findMany({
     where,
-    include: { labels: { select: { type: true, colorKey: true } } },
     orderBy: { startTime: "asc" },
     take: 300,
   });
 
-  const events: EventListItem[] = rows.map((e) => ({
+  const toItem = (e: (typeof rows)[number]): EventListItem => ({
     id: e.id,
     title: e.title,
     eventType: e.eventType,
@@ -58,40 +57,19 @@ export default async function EventsPage({
     isOfficial: e.isOfficial,
     lat: e.lat,
     lng: e.lng,
-    labels: e.labels,
-  }));
+  });
 
-  // "Uitgelicht" — events met een actieve upsell, alleen op pagina zonder filters.
+  const events: EventListItem[] = rows.map(toItem);
+
+  // "Uitgelicht" — events met een actieve banner-upsell, alleen op pagina zonder filters.
   let featured: EventListItem[] = [];
   if (activeFilters === 0) {
     const featuredRows = await prisma.event.findMany({
-      where: {
-        ...where,
-        upsells: { some: { expiresAt: { gt: now } } },
-      },
-      include: { labels: { select: { type: true, colorKey: true } } },
+      where: { ...where, upsells: { some: { expiresAt: { gt: now } } } },
       orderBy: { startTime: "asc" },
-      take: 6,
+      take: 5,
     });
-    featured = featuredRows.map((e) => ({
-      id: e.id,
-      title: e.title,
-      eventType: e.eventType,
-      venueName: e.venueName,
-      city: e.city,
-      country: e.country,
-      startTime: e.startTime.toISOString(),
-      endTime: e.endTime.toISOString(),
-      timezone: e.timezone,
-      coverImage: e.coverImage,
-      entryType: e.entryType,
-      entryPrice: e.entryPrice,
-      entryCurrency: e.entryCurrency,
-      isOfficial: e.isOfficial,
-      lat: e.lat,
-      lng: e.lng,
-      labels: e.labels,
-    }));
+    featured = featuredRows.map(toItem);
   }
 
   const tabLabel = filters.tab === "beurzen" ? "beurzen" : "evenementen";
@@ -125,8 +103,8 @@ export default async function EventsPage({
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Uitgelicht</h2>
           <div className="flex gap-4 overflow-x-auto pb-2">
             {featured.map((e) => (
-              <div key={e.id} className="w-80 shrink-0">
-                <EventCard event={e} />
+              <div key={e.id} className="w-[85vw] shrink-0 sm:w-[28rem]">
+                <EventBanner event={e} />
               </div>
             ))}
           </div>

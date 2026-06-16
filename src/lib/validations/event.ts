@@ -1,10 +1,8 @@
 import { z } from "zod";
-import { EVENT_TYPES } from "@/lib/events/types";
+import { EVENT_TYPES, ENTRY_CURRENCIES, ENTRY_PRICE_MODES } from "@/lib/events/types";
 import { EVENT_COUNTRY_CODES } from "@/lib/events/countries";
-import { ENTRY_CURRENCIES } from "@/lib/events/types";
 
-// FormData levert checkboxes als "1"/"0" (door de wizard gezet). Eén helper
-// zodat de booleans consistent parsen.
+// FormData levert checkboxes als "1"/"0" (door de wizard gezet).
 const boolField = z
   .union([z.literal("0"), z.literal("1"), z.literal("true"), z.literal("false")])
   .optional()
@@ -16,7 +14,8 @@ const timeField = z.string().regex(/^\d{2}:\d{2}$/, "Ongeldige tijd");
 export const createEventSchema = z
   .object({
     title: z.string().min(3, "Titel is te kort").max(120),
-    description: z.string().max(5000).optional(),
+    description: z.string().max(8000).optional(), // HTML uit de rich-text-editor
+
     eventType: z.enum(EVENT_TYPES),
 
     // Locatie
@@ -25,12 +24,9 @@ export const createEventSchema = z
     houseNumber: z.string().min(1, "Huisnummer is verplicht").max(20),
     postalCode: z.string().min(2, "Postcode is verplicht").max(20),
     city: z.string().min(1, "Plaats is verplicht").max(100),
-    country: z
-      .string()
-      .refine((c) => EVENT_COUNTRY_CODES.includes(c), "Onbekend land"),
+    country: z.string().refine((c) => EVENT_COUNTRY_CODES.includes(c), "Onbekend land"),
 
-    // Tijd — wandklok in de event-tijdzone. endDate optioneel (default = startDate)
-    // zodat meerdaagse beurzen kunnen.
+    // Tijd — wandklok in de event-tijdzone. endDate optioneel (default = startDate).
     startDate: dateField,
     startTime: timeField,
     endDate: dateField.optional(),
@@ -38,8 +34,17 @@ export const createEventSchema = z
 
     // Entree
     entryType: z.enum(["FREE", "PAID"]).default("FREE"),
+    entryPriceMode: z.enum(ENTRY_PRICE_MODES).default("SINGLE"),
     entryPrice: z.coerce.number().min(0).max(10000).optional(),
     entryCurrency: z.string().optional(),
+    ticketTypes: z.string().optional(), // JSON [{name, price}]
+    childrenFreeUntilAge: z.coerce.number().int().min(1).max(21).optional(),
+
+    // Standhouders
+    vendorTablePrice: z.coerce.number().min(0).max(10000).optional(),
+    vendorChairPrice: z.coerce.number().min(0).max(10000).optional(),
+    vendorPowerAvailable: boolField,
+    vendorInfo: z.string().max(1000).optional(),
 
     // Activiteiten + faciliteiten
     canPlay: boolField,
@@ -47,6 +52,11 @@ export const createEventSchema = z
     canSell: boolField,
     hasParking: boolField,
     hasFood: boolField,
+    hasToilets: boolField,
+    hasWifi: boolField,
+    cardPayment: boolField,
+    wheelchairAccessible: boolField,
+    hasCloakroom: boolField,
 
     maxVisitors: z.coerce.number().int().min(1).max(1000000).optional(),
     registrationRequired: boolField,
@@ -59,49 +69,49 @@ export const createEventSchema = z
     isSanctioned: boolField,
     prizePool: z.string().max(300).optional(),
 
-    // Promotie (JSON-arrays, verder gevalideerd in de action via anti-tamper)
-    labels: z.string().optional(),
-    upsells: z.string().optional(),
+    // Promotie (betaalde uitgelichte banner)
+    promote: boolField,
+    promoteDays: z.coerce.number().int().min(1).max(60).optional(),
   })
   .superRefine((data, ctx) => {
-    // Eindtijd moet na begintijd liggen (zelfde tijdzone → lexicografische
-    // ISO-vergelijking volstaat).
     const endDate = data.endDate || data.startDate;
-    const startKey = `${data.startDate}T${data.startTime}`;
-    const endKey = `${endDate}T${data.endTime}`;
-    if (endKey <= startKey) {
-      ctx.addIssue({
-        code: "custom",
-        message: "De eindtijd moet na de begintijd liggen",
-        path: ["endTime"],
-      });
+    if (`${endDate}T${data.endTime}` <= `${data.startDate}T${data.startTime}`) {
+      ctx.addIssue({ code: "custom", message: "De eindtijd moet na de begintijd liggen", path: ["endTime"] });
     }
 
-    // Betaalde entree vereist prijs + valuta.
     if (data.entryType === "PAID") {
-      if (!data.entryPrice || data.entryPrice <= 0) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Vul een entreeprijs in",
-          path: ["entryPrice"],
-        });
+      const currencyOk = data.entryCurrency && ENTRY_CURRENCIES.includes(data.entryCurrency as never);
+      if (!currencyOk) {
+        ctx.addIssue({ code: "custom", message: "Kies een valuta", path: ["entryCurrency"] });
       }
-      if (!data.entryCurrency || !ENTRY_CURRENCIES.includes(data.entryCurrency as never)) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Kies een valuta",
-          path: ["entryCurrency"],
-        });
+      if (data.entryPriceMode === "TIERS") {
+        // Minstens één geldige ticket-soort met naam + prijs.
+        let tiers: unknown;
+        try {
+          tiers = data.ticketTypes ? JSON.parse(data.ticketTypes) : [];
+        } catch {
+          tiers = null;
+        }
+        const valid =
+          Array.isArray(tiers) &&
+          tiers.length > 0 &&
+          tiers.every(
+            (t) =>
+              t && typeof (t as { name?: unknown }).name === "string" &&
+              (t as { name: string }).name.trim().length > 0 &&
+              Number.isFinite(Number((t as { price?: unknown }).price)) &&
+              Number((t as { price: number }).price) >= 0,
+          );
+        if (!valid) {
+          ctx.addIssue({ code: "custom", message: "Voeg minstens één ticket-soort met naam en prijs toe", path: ["ticketTypes"] });
+        }
+      } else if (!data.entryPrice || data.entryPrice <= 0) {
+        ctx.addIssue({ code: "custom", message: "Vul een entreeprijs in", path: ["entryPrice"] });
       }
     }
 
-    // Inschrijving vereist → externe link verplicht.
     if (data.registrationRequired && !data.registrationUrl) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Vul de aanmeld-/ticketlink in",
-        path: ["registrationUrl"],
-      });
+      ctx.addIssue({ code: "custom", message: "Vul de aanmeld-/ticketlink in", path: ["registrationUrl"] });
     }
   });
 
@@ -110,7 +120,7 @@ export type CreateEventInput = z.infer<typeof createEventSchema>;
 // Update: alle velden optioneel; alleen wat meegestuurd wordt muteert.
 export const updateEventSchema = z.object({
   title: z.string().min(3).max(120).optional(),
-  description: z.string().max(5000).optional(),
+  description: z.string().max(8000).optional(),
   venueName: z.string().min(2).max(150).optional(),
   street: z.string().min(1).max(150).optional(),
   houseNumber: z.string().min(1).max(20).optional(),
@@ -125,7 +135,6 @@ export const updateEventSchema = z.object({
   coverImage: z.string().optional(),
 });
 
-// Event-report (Meld dit event).
 export const reportEventSchema = z.object({
   reason: z.enum(["MISLEADING", "OFFENSIVE", "SPAM", "INAPPROPRIATE", "OTHER"]),
   details: z.string().min(10, "Geef wat meer details (min. 10 tekens)").max(1000),

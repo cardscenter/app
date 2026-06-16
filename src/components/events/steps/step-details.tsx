@@ -2,6 +2,7 @@
 
 import { timezoneForCountry } from "@/lib/events/timezones";
 import { getEventCountryName } from "@/lib/events/countries";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import type { EventFormState, EventFieldSetter } from "@/components/events/event-form-types";
 
 const inputClass =
@@ -29,16 +30,15 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
       </div>
 
       <div>
-        <label className={labelClass} htmlFor="evt-desc">Beschrijving</label>
-        <textarea
-          id="evt-desc"
-          value={form.description}
-          onChange={(e) => set("description", e.target.value)}
-          maxLength={5000}
-          rows={5}
-          placeholder="Wat kunnen bezoekers verwachten?"
-          className={`mt-1 ${inputClass}`}
-        />
+        <label className={labelClass}>Beschrijving</label>
+        <div className="mt-1">
+          <RichTextEditor
+            value={form.description}
+            onChange={(html) => set("description", html)}
+            rows={6}
+            placeholder="Wat kunnen bezoekers verwachten? Vertel over de sfeer, verkopers, activiteiten…"
+          />
+        </div>
       </div>
 
       {/* Datum / tijd */}

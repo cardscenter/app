@@ -1,16 +1,19 @@
-import type { EventType } from "@/lib/events/types";
-import type { EventUpsellType } from "@/lib/events/upsell-config";
-import type { EventLabelType, LabelColor } from "@/lib/events/labels";
+import type { EventType, EntryPriceMode } from "@/lib/events/types";
+
+export interface TicketTypeInput {
+  name: string;
+  price: string;
+}
 
 export interface EventFormState {
   eventType: EventType | "";
   title: string;
-  description: string;
+  description: string; // HTML uit de rich-text-editor
 
   // Datum/tijd — wandklok in de event-tijdzone (afgeleid uit land).
-  startDate: string; // yyyy-MM-dd
-  startTime: string; // HH:mm
-  endDate: string; // optioneel; leeg = zelfde dag als start
+  startDate: string;
+  startTime: string;
+  endDate: string;
   endTime: string;
 
   // Toernooi-specifiek (alleen voor OP_TOERNOOI)
@@ -24,30 +27,46 @@ export interface EventFormState {
   houseNumber: string;
   postalCode: string;
   city: string;
-  country: string; // ISO-2
+  country: string;
 
   // Entree
   entryType: "FREE" | "PAID";
+  entryPriceMode: EntryPriceMode;
   entryPrice: string;
   entryCurrency: string;
+  ticketTypes: TicketTypeInput[];
+  childrenFreeUntilAge: string;
 
-  // Activiteiten + faciliteiten
+  // Standhouders
+  vendorTablePrice: string;
+  vendorChairPrice: string;
+  vendorPowerAvailable: boolean;
+  vendorInfo: string;
+
+  // Activiteiten
   canPlay: boolean;
   canTrade: boolean;
   canSell: boolean;
+
+  // Faciliteiten
   hasParking: boolean;
   hasFood: boolean;
+  hasToilets: boolean;
+  hasWifi: boolean;
+  cardPayment: boolean;
+  wheelchairAccessible: boolean;
+  hasCloakroom: boolean;
 
   maxVisitors: string;
   registrationRequired: boolean;
   registrationUrl: string;
 
-  // Foto (thumbnail/flyer) — één afbeelding
+  // Banner/flyer (≈3:1)
   coverImage: string;
 
-  // Promotie
-  upsells: { type: EventUpsellType; days: number }[];
-  labels: { type: EventLabelType; colorKey: LabelColor }[];
+  // Promotie (uitgelichte banner)
+  promote: boolean;
+  promoteDays: number;
 }
 
 export const INITIAL_EVENT_FORM: EventFormState = {
@@ -68,22 +87,31 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   city: "",
   country: "NL",
   entryType: "FREE",
+  entryPriceMode: "SINGLE",
   entryPrice: "",
   entryCurrency: "EUR",
+  ticketTypes: [{ name: "", price: "" }],
+  childrenFreeUntilAge: "",
+  vendorTablePrice: "",
+  vendorChairPrice: "",
+  vendorPowerAvailable: false,
+  vendorInfo: "",
   canPlay: false,
   canTrade: false,
   canSell: false,
   hasParking: false,
   hasFood: false,
+  hasToilets: false,
+  hasWifi: false,
+  cardPayment: false,
+  wheelchairAccessible: false,
+  hasCloakroom: false,
   maxVisitors: "",
   registrationRequired: false,
   registrationUrl: "",
   coverImage: "",
-  upsells: [],
-  labels: [],
+  promote: false,
+  promoteDays: 14,
 };
 
-export type EventFieldSetter = <K extends keyof EventFormState>(
-  field: K,
-  value: EventFormState[K],
-) => void;
+export type EventFieldSetter = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => void;

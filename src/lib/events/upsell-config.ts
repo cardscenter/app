@@ -39,3 +39,20 @@ export function calculateEventUpsellCost(
   const discount = getUpsellDiscount(accountType);
   return Math.round(baseCost * (1 - discount) * 100) / 100;
 }
+
+// Uitgelichte banner — de enige betaalde promotie voor events. Een brede
+// banner (≈3:1) bovenaan de evenementenpagina (Uitgelicht-rij). Gratis events
+// verschijnen als gewone vermelding; betaald = grote banner. Opgeslagen als
+// EventUpsell met type "CATEGORY_HIGHLIGHT" zodat de bestaande Uitgelicht-query
+// werkt.
+export const EVENT_BANNER_STORED_TYPE: EventUpsellType = "CATEGORY_HIGHLIGHT";
+export const EVENT_BANNER_DAILY_COST = 0.99;
+export const EVENT_BANNER_MIN_DAYS = 3;
+export const EVENT_BANNER_MAX_DAYS = 60;
+
+export function calculateEventBannerCost(days: number, accountType: string): number {
+  const clampedDays = Math.max(EVENT_BANNER_MIN_DAYS, Math.min(days, EVENT_BANNER_MAX_DAYS));
+  const baseCost = EVENT_BANNER_DAILY_COST * clampedDays;
+  const discount = getUpsellDiscount(accountType);
+  return Math.round(baseCost * (1 - discount) * 100) / 100;
+}

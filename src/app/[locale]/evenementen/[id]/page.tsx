@@ -3,18 +3,25 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users,
-  Car, Coffee, Gamepad2, Repeat, Tag, Trophy,
+  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Baby, Store, Zap,
+  Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { PageContainer } from "@/components/layout/page-container";
-import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, type EventType } from "@/lib/events/types";
+import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, FACILITY_LABELS_NL, type EventType, type FacilityKey } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
-import { EVENT_LABEL_TEXT_NL, COLOR_CLASSES, type EventLabelType, type LabelColor } from "@/lib/events/labels";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EventMap } from "@/components/events/event-map";
 import { EventReportButton } from "@/components/events/event-report-button";
+
+const FACILITY_ICONS: Record<FacilityKey, React.ComponentType<{ className?: string }>> = {
+  canPlay: Gamepad2, canTrade: Repeat, canSell: Tag, hasParking: Car, hasFood: Coffee,
+  hasToilets: Toilet, hasWifi: Wifi, cardPayment: CreditCard, wheelchairAccessible: Accessibility, hasCloakroom: Shirt,
+};
+const FACILITY_ORDER: FacilityKey[] = [
+  "canPlay", "canTrade", "canSell", "hasParking", "hasFood", "hasToilets", "hasWifi", "cardPayment", "wheelchairAccessible", "hasCloakroom",
+];
 
 export default async function EventDetailPage({
   params,
@@ -27,7 +34,6 @@ export default async function EventDetailPage({
   const event = await prisma.event.findUnique({
     where: { id },
     include: {
-      labels: { select: { type: true, colorKey: true } },
       organizer: {
         select: {
           id: true, displayName: true, isVerified: true, isIbanVerified: true,
@@ -42,27 +48,38 @@ export default async function EventDetailPage({
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
   const dateLabel = formatEventDateRange(start, end, event.timezone, locale === "en" ? "en-GB" : "nl-NL");
+  const cur = event.entryCurrency ?? "EUR";
 
-  const facilities = [
-    event.canPlay && { icon: Gamepad2, label: "Spelen mogelijk" },
-    event.canTrade && { icon: Repeat, label: "Ruilen mogelijk" },
-    event.canSell && { icon: Tag, label: "Verkopen mogelijk" },
-    event.hasParking && { icon: Car, label: "Parkeergelegenheid" },
-    event.hasFood && { icon: Coffee, label: "Eten & drinken" },
-  ].filter(Boolean) as { icon: React.ComponentType<{ className?: string }>; label: string }[];
+  const activeFacilities = FACILITY_ORDER.filter((k) => event[k as keyof typeof event] as boolean);
+
+  // Ticket-soorten (TIERS)
+  let tiers: { name: string; price: number }[] = [];
+  if (event.entryType === "PAID" && event.entryPriceMode === "TIERS" && event.ticketTypes) {
+    try {
+      const parsed = JSON.parse(event.ticketTypes);
+      if (Array.isArray(parsed)) tiers = parsed;
+    } catch { /* negeer */ }
+  }
+
+  const entryLine = (() => {
+    if (event.entryType === "FREE") return "Gratis entree";
+    if (event.entryPriceMode === "TIERS") return null; // toont aparte lijst
+    const prefix = event.entryPriceMode === "FROM" ? "vanaf " : "";
+    return `Entree: ${prefix}${cur} ${event.entryPrice ?? ""}`;
+  })();
+
+  const hasVendor = event.vendorTablePrice != null || event.vendorChairPrice != null || event.vendorPowerAvailable || event.vendorInfo;
 
   return (
     <PageContainer width="default" className="py-8">
       <Link href="/evenementen" className="text-sm text-muted-foreground hover:text-foreground">← Terug naar evenementen</Link>
 
-      {/* Cover */}
-      <div className="relative mt-3 aspect-[21/9] w-full overflow-hidden rounded-2xl bg-muted">
+      {/* Banner */}
+      <div className="relative mt-3 aspect-[3/1] w-full overflow-hidden rounded-2xl bg-muted">
         {event.coverImage ? (
           <Image src={event.coverImage} alt={event.title} fill className="object-cover" sizes="100vw" unoptimized priority />
         ) : (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <Calendar className="h-16 w-16" />
-          </div>
+          <div className="flex h-full items-center justify-center text-muted-foreground"><Calendar className="h-16 w-16" /></div>
         )}
         <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${EVENT_TYPE_PILL_CLASSES[event.eventType as EventType] ?? "bg-muted"}`}>
@@ -73,11 +90,6 @@ export default async function EventDetailPage({
               <ShieldCheck className="h-3.5 w-3.5" /> Geverifieerd door Cards Center
             </span>
           )}
-          {event.labels.map((l) => (
-            <span key={l.type} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${COLOR_CLASSES[l.colorKey as LabelColor] ?? "bg-slate-700 text-white"}`}>
-              {EVENT_LABEL_TEXT_NL[l.type as EventLabelType] ?? l.type}
-            </span>
-          ))}
         </div>
       </div>
 
@@ -98,43 +110,59 @@ export default async function EventDetailPage({
           {event.description && (
             <div>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Over dit evenement</h2>
-              <p className="whitespace-pre-wrap text-foreground/90">{event.description}</p>
+              <div
+                className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+                dangerouslySetInnerHTML={{ __html: event.description }}
+              />
             </div>
           )}
 
-          {/* Entree + inschrijving */}
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
-            <Ticket className="h-5 w-5 text-muted-foreground" />
-            <span className="font-medium text-foreground">
-              {event.entryType === "FREE" ? "Gratis entree" : `Entree: ${event.entryCurrency ?? ""} ${event.entryPrice ?? ""}`}
-            </span>
-            {event.maxVisitors && (
-              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" /> max. {event.maxVisitors} bezoekers
-              </span>
+          {/* Entree + tickets */}
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Ticket className="h-5 w-5 text-muted-foreground" />
+              {entryLine && <span className="font-medium text-foreground">{entryLine}</span>}
+              {event.maxVisitors && (
+                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" /> max. {event.maxVisitors} bezoekers
+                </span>
+              )}
+              {event.registrationUrl && (
+                <a href={event.registrationUrl} target="_blank" rel="noopener noreferrer"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                  Aanmelden / tickets <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+
+            {tiers.length > 0 && (
+              <ul className="mt-3 divide-y divide-border border-t border-border">
+                {tiers.map((t, i) => (
+                  <li key={i} className="flex items-center justify-between py-2 text-sm">
+                    <span className="text-foreground">{t.name}</span>
+                    <span className="font-medium text-foreground">{t.price === 0 ? "Gratis" : `${cur} ${t.price.toFixed(2)}`}</span>
+                  </li>
+                ))}
+              </ul>
             )}
-            {event.registrationUrl && (
-              <a
-                href={event.registrationUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
-              >
-                Aanmelden / tickets <ExternalLink className="h-4 w-4" />
-              </a>
+
+            {event.childrenFreeUntilAge && (
+              <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                <Baby className="h-4 w-4" /> Kinderen t/m {event.childrenFreeUntilAge} jaar gratis
+              </p>
             )}
           </div>
 
           {/* Faciliteiten */}
-          {facilities.length > 0 && (
+          {activeFacilities.length > 0 && (
             <div>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Faciliteiten</h2>
               <div className="flex flex-wrap gap-2">
-                {facilities.map((f) => {
-                  const Icon = f.icon;
+                {activeFacilities.map((k) => {
+                  const Icon = FACILITY_ICONS[k];
                   return (
-                    <span key={f.label} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
-                      <Icon className="h-4 w-4" /> {f.label}
+                    <span key={k} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                      <Icon className="h-4 w-4" /> {FACILITY_LABELS_NL[k]}
                     </span>
                   );
                 })}
@@ -142,12 +170,29 @@ export default async function EventDetailPage({
             </div>
           )}
 
+          {/* Standhouders */}
+          {hasVendor && (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Store className="h-5 w-5" /> Voor standhouders</h2>
+              <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                {event.vendorTablePrice != null && (
+                  <span className="rounded-full bg-muted px-3 py-1.5 text-foreground">Tafel: {cur} {event.vendorTablePrice.toFixed(2)}</span>
+                )}
+                {event.vendorChairPrice != null && (
+                  <span className="rounded-full bg-muted px-3 py-1.5 text-foreground">Stoel: {cur} {event.vendorChairPrice.toFixed(2)}</span>
+                )}
+                {event.vendorPowerAvailable && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-foreground"><Zap className="h-3.5 w-3.5" /> Stroomaansluiting</span>
+                )}
+              </div>
+              {event.vendorInfo && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{event.vendorInfo}</p>}
+            </div>
+          )}
+
           {/* Toernooi */}
           {event.eventType === "OP_TOERNOOI" && (event.tournamentFormat || event.prizePool || event.isSanctioned) && (
             <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-950/30">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                <Trophy className="h-5 w-5" /> Toernooi-informatie
-              </h2>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Trophy className="h-5 w-5" /> Toernooi-informatie</h2>
               <dl className="mt-2 space-y-1 text-sm">
                 {event.tournamentFormat && <div><dt className="inline font-medium text-foreground">Format: </dt><dd className="inline text-muted-foreground">{event.tournamentFormat}</dd></div>}
                 {event.prizePool && <div><dt className="inline font-medium text-foreground">Prijzenpot: </dt><dd className="inline text-muted-foreground">{event.prizePool}</dd></div>}

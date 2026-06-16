@@ -18,5 +18,4 @@ export interface EventListItem {
   isOfficial: boolean;
   lat: number | null;
   lng: number | null;
-  labels: { type: string; colorKey: string }[];
 }

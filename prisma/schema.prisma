@@ -2499,22 +2499,39 @@ model Event {
   endTime     DateTime
 
   // Entree
-  entryType     String  @default("FREE") // FREE | PAID
-  entryPrice    Float?
-  entryCurrency String? // EUR | GBP | CHF | ...
+  entryType      String  @default("FREE") // FREE | PAID
+  // SINGLE = één vaste prijs | FROM = "vanaf"-prijs | TIERS = meerdere tickets
+  entryPriceMode String  @default("SINGLE")
+  entryPrice     Float?  // bij SINGLE/FROM
+  entryCurrency  String? // EUR | GBP | CHF | ...
+  ticketTypes    String? // JSON [{name, price}] bij TIERS (bv. Standaard/VIP)
+  childrenFreeUntilAge Int? // kinderen t/m deze leeftijd gratis (null = n.v.t.)
 
-  // Activiteiten + faciliteiten
+  // Standhouder-/verkoperinfo (vooral voor beurzen)
+  vendorTablePrice    Float?   // prijs per tafel
+  vendorChairPrice    Float?   // prijs per stoel
+  vendorPowerAvailable Boolean @default(false) // stroomaansluiting beschikbaar
+  vendorInfo          String?  // extra info / hoe aanmelden als standhouder
+
+  // Activiteiten
   canPlay     Boolean @default(false)
   canTrade    Boolean @default(false)
   canSell     Boolean @default(false)
-  hasParking  Boolean @default(false)
-  hasFood     Boolean @default(false)
+
+  // Faciliteiten
+  hasParking          Boolean @default(false)
+  hasFood             Boolean @default(false)
+  hasToilets          Boolean @default(false)
+  hasWifi             Boolean @default(false)
+  cardPayment         Boolean @default(false) // pinbetaling mogelijk
+  wheelchairAccessible Boolean @default(false)
+  hasCloakroom        Boolean @default(false) // garderobe
 
   maxVisitors          Int?
   registrationRequired Boolean @default(false)
   registrationUrl      String? // externe aanmeld-/ticketlink
 
-  coverImage  String? // thumbnail/flyer — getoond in kalendercel + quick-view + detail
+  coverImage  String? // brede banner/flyer (≈3:1) — thumbnail in kalender + banner in Uitgelicht + detail
 
   // Toernooi-specifiek
   tournamentFormat String?
@@ -2531,7 +2548,6 @@ model Event {
   updatedAt   DateTime @updatedAt
 
   upsells     EventUpsell[]
-  labels      EventLabel[]
   reports     EventReport[]
 
   @@index([status, startTime])
@@ -2555,26 +2571,6 @@ model EventUpsell {
 
   @@index([eventId])
   @@index([type, expiresAt])
-}
-
-model EventLabel {
-  id        String   @id @default(cuid())
-
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  // BEURS_GROOT | NIEUW | GRATIS_ENTREE | KINDVRIENDELIJK | OFFICIEEL | LAATSTE_PLEKKEN | ...
-  type      String
-
-  // ruby | amber | emerald | sky | violet | rose | indigo | slate | orange | teal
-  colorKey  String
-
-  // Snapshot van prijs op creatiemoment (bundle-tarief: 1=€0,99 / 2=€1,69)
-  cost      Float
-
-  createdAt DateTime @default(now())
-
-  @@index([eventId])
 }
 
 model EventReport {

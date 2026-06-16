@@ -20,7 +20,6 @@ export default async function AdminEventApprovalsPage() {
           isTrustedEventOrganizer: true,
         },
       },
-      labels: true,
     },
     orderBy: { createdAt: "asc" },
   });
@@ -50,7 +49,6 @@ export default async function AdminEventApprovalsPage() {
     isSanctioned: e.isSanctioned,
     createdAt: e.createdAt.toISOString(),
     organizer: e.organizer,
-    labels: e.labels.map((l) => ({ type: l.type, colorKey: l.colorKey })),
   }));
 
   return (

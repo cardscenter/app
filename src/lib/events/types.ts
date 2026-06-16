@@ -21,7 +21,7 @@ export const OTHER_EVENT_TYPES: EventType[] = [
 
 export const EVENT_TYPE_LABELS_NL: Record<EventType, string> = {
   BEURS: "Beurs",
-  TRADE_NIGHT: "Trade night",
+  TRADE_NIGHT: "Ruildag",
   OP_TOERNOOI: "OP-toernooi",
   RELEASE_EVENT: "Release-event",
   MEETUP: "Meetup",
@@ -29,7 +29,7 @@ export const EVENT_TYPE_LABELS_NL: Record<EventType, string> = {
 
 export const EVENT_TYPE_LABELS_EN: Record<EventType, string> = {
   BEURS: "Fair",
-  TRADE_NIGHT: "Trade night",
+  TRADE_NIGHT: "Trade day",
   OP_TOERNOOI: "OP tournament",
   RELEASE_EVENT: "Release event",
   MEETUP: "Meetup",
@@ -58,3 +58,56 @@ export type EventStatus = "PENDING" | "LIVE" | "ENDED" | "REJECTED" | "DELETED";
 
 export const ENTRY_CURRENCIES = ["EUR", "GBP", "CHF", "PLN", "SEK", "DKK", "NOK", "CZK"] as const;
 export type EntryCurrency = (typeof ENTRY_CURRENCIES)[number];
+
+// Entree-prijsmodel: één vaste prijs, een "vanaf"-prijs, of meerdere
+// ticket-soorten (bv. Standaard + VIP).
+export const ENTRY_PRICE_MODES = ["SINGLE", "FROM", "TIERS"] as const;
+export type EntryPriceMode = (typeof ENTRY_PRICE_MODES)[number];
+
+export const ENTRY_PRICE_MODE_LABELS_NL: Record<EntryPriceMode, string> = {
+  SINGLE: "Eén vaste prijs",
+  FROM: "Vanaf-prijs",
+  TIERS: "Meerdere tickets (bv. VIP)",
+};
+
+export interface TicketType {
+  name: string;
+  price: number;
+}
+
+// Faciliteiten — keys matchen de Boolean-velden op het Event-model.
+export type FacilityKey =
+  | "canPlay"
+  | "canTrade"
+  | "canSell"
+  | "hasParking"
+  | "hasFood"
+  | "hasToilets"
+  | "hasWifi"
+  | "cardPayment"
+  | "wheelchairAccessible"
+  | "hasCloakroom";
+
+export const ACTIVITY_KEYS: FacilityKey[] = ["canPlay", "canTrade", "canSell"];
+export const FACILITY_KEYS: FacilityKey[] = [
+  "hasParking",
+  "hasFood",
+  "hasToilets",
+  "hasWifi",
+  "cardPayment",
+  "wheelchairAccessible",
+  "hasCloakroom",
+];
+
+export const FACILITY_LABELS_NL: Record<FacilityKey, string> = {
+  canPlay: "Spelen mogelijk",
+  canTrade: "Ruilen mogelijk",
+  canSell: "Verkopen mogelijk",
+  hasParking: "Parkeergelegenheid",
+  hasFood: "Eten & drinken",
+  hasToilets: "Toiletten",
+  hasWifi: "Wifi",
+  cardPayment: "Pinbetaling mogelijk",
+  wheelchairAccessible: "Rolstoeltoegankelijk",
+  hasCloakroom: "Garderobe",
+};

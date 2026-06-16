@@ -22,7 +22,6 @@ import {
 import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, type EventType } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
-import { EVENT_LABEL_TEXT_NL, COLOR_CLASSES, type EventLabelType, type LabelColor } from "@/lib/events/labels";
 import { CountryFlag } from "@/components/ui/country-flag";
 
 interface OrganizerInfo {
@@ -61,7 +60,6 @@ interface EventRow {
   isSanctioned: boolean;
   createdAt: string;
   organizer: OrganizerInfo;
-  labels: { type: string; colorKey: string }[];
 }
 
 export function AdminEventApprovalList({ events }: { events: EventRow[] }) {
@@ -148,11 +146,6 @@ function EventApprovalCard({ event }: { event: EventRow }) {
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${EVENT_TYPE_PILL_CLASSES[event.eventType as EventType] ?? "bg-muted text-muted-foreground"}`}>
               {getEventTypeLabel(event.eventType, locale)}
             </span>
-            {event.labels.map((l) => (
-              <span key={l.type} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${COLOR_CLASSES[l.colorKey as LabelColor] ?? "bg-slate-700 text-white"}`}>
-                {EVENT_LABEL_TEXT_NL[l.type as EventLabelType] ?? l.type}
-              </span>
-            ))}
           </div>
 
           <h3 className="mt-1.5 text-base font-bold text-foreground">{event.title}</h3>
