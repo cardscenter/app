@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "@/i18n/navigation";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter, Link } from "@/i18n/navigation";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, Loader2, Check, ChevronLeft, ChevronRight, MailWarning } from "lucide-react";
 import { createEvent } from "@/actions/event";
 import { INITIAL_EVENT_FORM, type EventFormState, type EventFieldSetter } from "@/components/events/event-form-types";
 import { bannerDaysUntil } from "@/lib/events/upsell-config";
@@ -55,7 +55,7 @@ function validateStep(step: number, form: EventFormState): string | null {
   }
 }
 
-export function MultiStepEventForm({ accountType }: { accountType: string }) {
+export function MultiStepEventForm({ accountType, emailVerified }: { accountType: string; emailVerified: boolean }) {
   const router = useRouter();
   const [form, setForm] = useState<EventFormState>(INITIAL_EVENT_FORM);
   const [step, setStep] = useState(0);
@@ -66,6 +66,14 @@ export function MultiStepEventForm({ accountType }: { accountType: string }) {
 
   const set: EventFieldSetter = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const isLast = step === STEP_LABELS.length - 1;
+
+  // Waarschuw direct bij het openen als het e-mailadres nog niet bevestigd is,
+  // zodat de gebruiker niet het hele formulier invult en pas aan het eind faalt.
+  useEffect(() => {
+    if (!emailVerified) {
+      toast.error("Bevestig eerst je e-mailadres voordat je een evenement kunt publiceren.");
+    }
+  }, [emailVerified]);
 
   function goNext() {
     const err = validateStep(step, form);
@@ -171,6 +179,13 @@ export function MultiStepEventForm({ accountType }: { accountType: string }) {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
       {/* Linkerkolom: stepper + actieve stap + navigatie */}
       <div>
+        {!emailVerified && (
+          <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+            <MailWarning className="h-4 w-4 shrink-0" />
+            <span>Bevestig eerst je e-mailadres — anders kun je dit evenement niet publiceren.</span>
+            <Link href="/dashboard" className="font-semibold underline underline-offset-2">Naar dashboard</Link>
+          </div>
+        )}
         <div className="mb-6">
           <div className="flex items-center justify-between text-sm">
             <span className="font-semibold text-foreground">Stap {step + 1} van {STEP_LABELS.length}</span>

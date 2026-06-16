@@ -17,7 +17,7 @@ export default async function NewEventPage({
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { accountType: true },
+    select: { accountType: true, emailVerifiedAt: true },
   });
 
   return (
@@ -29,7 +29,7 @@ export default async function NewEventPage({
           worden eerst gecontroleerd voordat ze publiek zichtbaar zijn.
         </p>
       </div>
-      <MultiStepEventForm accountType={user?.accountType ?? "FREE"} />
+      <MultiStepEventForm accountType={user?.accountType ?? "FREE"} emailVerified={!!user?.emailVerifiedAt} />
     </PageContainer>
   );
 }

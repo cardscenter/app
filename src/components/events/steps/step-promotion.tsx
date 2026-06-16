@@ -79,10 +79,12 @@ export function StepPromotion({
                 id="promo-until"
                 type="date"
                 min={todayStr}
+                max={form.startDate || undefined}
                 value={form.promoteUntil}
                 onChange={(e) => set("promoteUntil", e.target.value)}
                 className="mt-1 rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground"
               />
+              {form.startDate && <p className="mt-1 text-xs text-muted-foreground">Maximaal tot de evenementdatum ({new Date(`${form.startDate}T00:00:00`).toLocaleDateString("nl-NL")}).</p>}
             </div>
             <div className="text-sm">
               <p className="text-muted-foreground">{days} dag{days === 1 ? "" : "en"} × €{EVENT_BANNER_DAILY_COST.toFixed(2)}</p>
