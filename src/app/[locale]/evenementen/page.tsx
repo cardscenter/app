@@ -8,6 +8,7 @@ import { parseEventFilters, buildEventFilterWhere, countActiveEventFilters } fro
 import { getBlockedUserIds } from "@/lib/blocking";
 import { getBuyerLocation } from "@/lib/shipping/filter";
 import { coordForPostcode, haversineDistanceKm } from "@/lib/distance";
+import { plainTextSnippet } from "@/lib/events/text";
 import { EventTabs, EventViewToggle } from "@/components/events/event-controls";
 import { EventFilterSidebar } from "@/components/events/event-filter-sidebar";
 import { EventCard, EventEmptyState, EventBanner } from "@/components/events/event-card";
@@ -57,12 +58,16 @@ export default async function EventsPage({
     title: e.title,
     eventType: e.eventType,
     venueName: e.venueName,
+    street: e.street,
+    houseNumber: e.houseNumber,
+    postalCode: e.postalCode,
     city: e.city,
     country: e.country,
     startTime: e.startTime.toISOString(),
     endTime: e.endTime.toISOString(),
     timezone: e.timezone,
     coverImage: e.coverImage,
+    shortDescription: plainTextSnippet(e.description, 40),
     entryType: e.entryType,
     entryPrice: e.entryPrice,
     entryCurrency: e.entryCurrency,
@@ -162,7 +167,20 @@ export default async function EventsPage({
               locale={locale}
               events={events
                 .filter((e) => e.lat != null && e.lng != null)
-                .map((e) => ({ id: e.id, title: e.title, lat: e.lat as number, lng: e.lng as number, city: e.city, startTime: e.startTime }))}
+                .map((e) => ({
+                  id: e.id,
+                  title: e.title,
+                  lat: e.lat as number,
+                  lng: e.lng as number,
+                  venueName: e.venueName,
+                  street: e.street,
+                  houseNumber: e.houseNumber,
+                  postalCode: e.postalCode,
+                  city: e.city,
+                  coverImage: e.coverImage,
+                  shortDescription: e.shortDescription,
+                  startTime: e.startTime,
+                }))}
             />
           ) : (
             <div className="space-y-3">

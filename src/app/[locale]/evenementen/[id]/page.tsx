@@ -12,6 +12,7 @@ import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, FACILITY_LABELS_NL, type Ev
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
 import { parseEventVideo } from "@/lib/events/video";
+import { plainTextSnippet } from "@/lib/events/text";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EventMap } from "@/components/events/event-map";
 import { EventGallery } from "@/components/events/event-gallery";
@@ -91,6 +92,19 @@ export default async function EventDetailPage({
 
   const organizerDisplay = event.organizerName?.trim() || event.organizer.displayName || "Onbekend";
   const hasOrganizerOverride = !!event.organizerName?.trim();
+
+  // Andere lopende events van dezelfde organisator (account).
+  const otherEvents = await prisma.event.findMany({
+    where: {
+      organizerId: event.organizer.id,
+      status: "LIVE",
+      endTime: { gte: new Date() },
+      id: { not: event.id },
+    },
+    orderBy: { startTime: "asc" },
+    take: 4,
+    select: { id: true, title: true, startTime: true, timezone: true, coverImage: true, city: true },
+  });
 
   return (
     <PageContainer width="default" className="py-8">
@@ -256,7 +270,23 @@ export default async function EventDetailPage({
           {event.lat !== null && event.lng !== null && (
             <div>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Locatie op de kaart</h2>
-              <EventMap locale={locale} events={[{ id: event.id, title: event.title, lat: event.lat, lng: event.lng, city: event.city, startTime: event.startTime.toISOString() }]} />
+              <EventMap
+                locale={locale}
+                events={[{
+                  id: event.id,
+                  title: event.title,
+                  lat: event.lat,
+                  lng: event.lng,
+                  venueName: event.venueName,
+                  street: event.street,
+                  houseNumber: event.houseNumber,
+                  postalCode: event.postalCode,
+                  city: event.city,
+                  coverImage: event.coverImage,
+                  shortDescription: plainTextSnippet(event.description, 40),
+                  startTime: event.startTime.toISOString(),
+                }]}
+              />
             </div>
           )}
         </div>
@@ -303,6 +333,36 @@ export default async function EventDetailPage({
               </Link>
             )}
           </div>
+
+          {/* Andere events van deze organisator */}
+          {otherEvents.length > 0 && (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Andere events van {organizerDisplay}
+              </p>
+              <ul className="space-y-2">
+                {otherEvents.map((o) => (
+                  <li key={o.id}>
+                    <Link href={`/evenementen/${o.id}`} className="group flex items-center gap-3">
+                      <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                        {o.coverImage ? (
+                          <Image src={o.coverImage} alt="" fill className="object-cover" sizes="48px" unoptimized />
+                        ) : (
+                          <span className="flex h-full items-center justify-center"><Calendar className="h-5 w-5 text-muted-foreground" /></span>
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground group-hover:text-primary">{o.title}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "nl-NL", { timeZone: o.timezone, day: "numeric", month: "short" }).format(o.startTime)} · {o.city}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <EventReportButton eventId={event.id} />
         </aside>

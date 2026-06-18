@@ -12,7 +12,13 @@ export interface MapEvent {
   title: string;
   lat: number;
   lng: number;
+  venueName: string;
+  street: string;
+  houseNumber: string;
+  postalCode: string;
   city: string;
+  coverImage: string | null;
+  shortDescription: string | null;
   startTime: string;
 }
 
@@ -65,11 +71,22 @@ function ClusterLayer({ events, locale }: { events: MapEvent[]; locale: string }
         day: "numeric",
         month: "long",
       });
+      const address = `${e.street} ${e.houseNumber}, ${e.postalCode} ${e.city}`.trim();
+      const thumb = e.coverImage
+        ? `<img src="${encodeURI(e.coverImage)}" alt="" style="width:100%;height:96px;object-fit:cover;border-radius:6px;margin-bottom:6px" />`
+        : "";
+      const desc = e.shortDescription
+        ? `<p style="color:#475569;margin:0 0 4px;font-size:12px">${escapeHtml(e.shortDescription)}</p>`
+        : "";
       const marker = L.marker([e.lat, e.lng], { icon: pinIcon });
       marker.bindPopup(
-        `<div style="min-width:160px">
+        `<div style="min-width:190px;max-width:220px">
+          ${thumb}
           <p style="font-weight:600;margin:0 0 2px">${escapeHtml(e.title)}</p>
-          <p style="color:#64748b;margin:0 0 6px;font-size:12px">${escapeHtml(e.city)} · ${dateStr}</p>
+          ${desc}
+          <p style="color:#64748b;margin:0 0 1px;font-size:12px">${escapeHtml(e.venueName)}</p>
+          <p style="color:#64748b;margin:0 0 4px;font-size:12px">${escapeHtml(address)}</p>
+          <p style="color:#64748b;margin:0 0 6px;font-size:12px">${dateStr}</p>
           <a href="/${locale}/evenementen/${e.id}" style="color:#4f46e5;text-decoration:underline;font-size:13px">Bekijk details</a>
         </div>`,
       );

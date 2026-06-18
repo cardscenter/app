@@ -6,12 +6,16 @@ export interface EventListItem {
   title: string;
   eventType: string;
   venueName: string;
+  street: string;
+  houseNumber: string;
+  postalCode: string;
   city: string;
   country: string;
   startTime: string; // ISO
   endTime: string; // ISO
   timezone: string;
   coverImage: string | null;
+  shortDescription: string | null; // korte platte-tekst-snippet (kaart-popup)
   entryType: string;
   entryPrice: number | null;
   entryCurrency: string | null;
