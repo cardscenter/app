@@ -54,6 +54,20 @@ async function findDuplicateEvents(
   }));
 }
 
+function parseGalleryImages(raw: string | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((u): u is string => typeof u === "string" && u.trim().length > 0)
+      .map((u) => u.trim())
+      .slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
 function parseTicketTypes(raw: string | undefined): TicketType[] {
   if (!raw) return [];
   try {
@@ -99,6 +113,8 @@ export async function createEvent(formData: FormData) {
     postalCode: formData.get("postalCode"),
     city: formData.get("city"),
     country: formData.get("country"),
+    organizerName: formData.get("organizerName") || undefined,
+    organizerWebsite: formData.get("organizerWebsite") || undefined,
     startDate: formData.get("startDate"),
     startTime: formData.get("startTime"),
     endDate: formData.get("endDate") || undefined,
@@ -121,6 +137,8 @@ export async function createEvent(formData: FormData) {
     childFriendly: formData.get("childFriendly") || undefined,
     maxVisitors: formData.get("maxVisitors") || undefined,
     coverImage: formData.get("coverImage") || undefined,
+    galleryImages: formData.get("galleryImages") || undefined,
+    videoUrl: formData.get("videoUrl") || undefined,
     tournamentFormat: formData.get("tournamentFormat") || undefined,
     isSanctioned: formData.get("isSanctioned") || undefined,
     prizePool: formData.get("prizePool") || undefined,
@@ -155,6 +173,7 @@ export async function createEvent(formData: FormData) {
   // Tickets oplopend op prijs tonen.
   const ticketTypes = (isPaid ? parseTicketTypes(data.ticketTypes) : []).sort((a, b) => a.price - b.price);
   const vendorOptions = parseTicketTypes(data.vendorOptions);
+  const galleryImages = parseGalleryImages(data.galleryImages);
 
   // Promotie: uitgelichte banner uit saldo.
   const wantsPromo = data.promote && (data.promoteDays ?? 0) > 0;
@@ -226,6 +245,10 @@ export async function createEvent(formData: FormData) {
         maxVisitors: data.maxVisitors ?? null,
         registrationUrl: data.registrationUrl || null,
         coverImage: data.coverImage || null,
+        galleryImages: galleryImages.length > 0 ? JSON.stringify(galleryImages) : null,
+        videoUrl: data.videoUrl || null,
+        organizerName: data.organizerName?.trim() || null,
+        organizerWebsite: data.organizerWebsite || null,
         tournamentFormat: data.tournamentFormat ?? null,
         isSanctioned: data.isSanctioned,
         prizePool: data.prizePool ?? null,

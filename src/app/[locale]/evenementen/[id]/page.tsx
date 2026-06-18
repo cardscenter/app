@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store,
+  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe,
   Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy, Baby,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -11,8 +11,10 @@ import { PageContainer } from "@/components/layout/page-container";
 import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, FACILITY_LABELS_NL, type EventType, type FacilityKey } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
+import { parseEventVideo } from "@/lib/events/video";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EventMap } from "@/components/events/event-map";
+import { EventGallery } from "@/components/events/event-gallery";
 import { EventReportButton } from "@/components/events/event-report-button";
 
 const FACILITY_ICONS: Record<FacilityKey, React.ComponentType<{ className?: string }>> = {
@@ -77,6 +79,19 @@ export default async function EventDetailPage({
   }
   const hasVendor = vendorOptions.length > 0 || !!event.vendorInfo;
 
+  const video = parseEventVideo(event.videoUrl);
+
+  let galleryImages: string[] = [];
+  if (event.galleryImages) {
+    try {
+      const parsed = JSON.parse(event.galleryImages);
+      if (Array.isArray(parsed)) galleryImages = parsed.filter((u): u is string => typeof u === "string");
+    } catch { /* negeer */ }
+  }
+
+  const organizerDisplay = event.organizerName?.trim() || event.organizer.displayName || "Onbekend";
+  const hasOrganizerOverride = !!event.organizerName?.trim();
+
   return (
     <PageContainer width="default" className="py-8">
       <Link href="/evenementen" className="text-sm text-muted-foreground hover:text-foreground">← Terug naar evenementen</Link>
@@ -121,6 +136,31 @@ export default async function EventDetailPage({
                 className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
                 dangerouslySetInnerHTML={{ __html: event.description }}
               />
+            </div>
+          )}
+
+          {/* Video */}
+          {video && (
+            <div>
+              <h2 className="mb-2 text-lg font-semibold text-foreground">Video</h2>
+              <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
+                <iframe
+                  src={video.embedUrl}
+                  title="Evenement-video"
+                  className="absolute inset-0 h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Impressiefoto's */}
+          {galleryImages.length > 0 && (
+            <div>
+              <h2 className="mb-2 text-lg font-semibold text-foreground">Impressie</h2>
+              <EventGallery images={galleryImages} />
             </div>
           )}
 
@@ -225,9 +265,25 @@ export default async function EventDetailPage({
         <aside className="mt-6 space-y-4 lg:mt-0">
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Organisator</p>
-            <Link href={`/verkoper/${event.organizer.id}`} className="mt-1 block font-semibold text-foreground hover:text-primary">
-              {event.organizer.displayName ?? "Onbekend"}
-            </Link>
+            {hasOrganizerOverride ? (
+              <p className="mt-1 font-semibold text-foreground">{organizerDisplay}</p>
+            ) : (
+              <Link href={`/verkoper/${event.organizer.id}`} className="mt-1 block font-semibold text-foreground hover:text-primary">
+                {organizerDisplay}
+              </Link>
+            )}
+
+            {event.organizerWebsite && (
+              <a
+                href={event.organizerWebsite}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="mt-1 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                <Globe className="h-3.5 w-3.5" /> Website <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+
             <div className="mt-2 flex flex-wrap gap-1.5">
               {event.organizer.isTrustedEventOrganizer && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
@@ -240,6 +296,12 @@ export default async function EventDetailPage({
                 </span>
               )}
             </div>
+
+            {hasOrganizerOverride && (
+              <Link href={`/verkoper/${event.organizer.id}`} className="mt-2 block text-xs text-muted-foreground hover:text-foreground">
+                Geplaatst via {event.organizer.displayName ?? "account"}
+              </Link>
+            )}
           </div>
 
           <EventReportButton eventId={event.id} />

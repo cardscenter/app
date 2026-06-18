@@ -94,6 +94,8 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
     fd.set("postalCode", form.postalCode);
     fd.set("city", form.city);
     fd.set("country", form.country);
+    if (form.organizerName.trim()) fd.set("organizerName", form.organizerName.trim());
+    if (form.organizerWebsite.trim()) fd.set("organizerWebsite", form.organizerWebsite.trim());
     fd.set("startDate", form.startDate);
     fd.set("startTime", form.startTime);
     if (form.endDate) fd.set("endDate", form.endDate);
@@ -128,6 +130,8 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
     }
     if (form.maxVisitors) fd.set("maxVisitors", form.maxVisitors);
     if (form.coverImage) fd.set("coverImage", form.coverImage);
+    if (form.galleryImages.length) fd.set("galleryImages", JSON.stringify(form.galleryImages));
+    if (form.videoUrl.trim()) fd.set("videoUrl", form.videoUrl.trim());
 
     if (form.eventType === "OP_TOERNOOI") {
       if (form.tournamentFormat) fd.set("tournamentFormat", form.tournamentFormat);

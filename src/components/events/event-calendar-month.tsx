@@ -2,10 +2,17 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { EventQuickViewPanel } from "@/components/events/event-quick-view";
 import type { EventListItem } from "@/components/events/event-view-types";
+
+// Uitgelichte (gepromote) events eerst, daarna op tijd. De array komt al
+// chronologisch binnen, dus een stabiele sort op `featured` volstaat.
+function orderDayEvents(arr: EventListItem[]): EventListItem[] {
+  return [...arr].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+}
 
 const WEEKDAYS = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 const MONTHS = [
@@ -40,6 +47,16 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
   }, [events]);
 
   const [{ year, month }, setMonth] = useState(initial);
+  const sp = useSearchParams();
+
+  // "+N meer" → open die ene dag in de lijstweergave, met de huidige tab/filters.
+  function dayHref(key: string): string {
+    const params = new URLSearchParams(sp.toString());
+    params.set("view", "list");
+    params.set("date_from", key);
+    params.set("date_to", key);
+    return `/evenementen?${params.toString()}`;
+  }
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, EventListItem[]>();
@@ -103,18 +120,20 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
       {/* Dag-cellen */}
       <div className="grid grid-cols-7 gap-1">
         {cells.map((cell) => {
-          const dayEvents = eventsByDay.get(cell.key) ?? [];
+          const dayEvents = orderDayEvents(eventsByDay.get(cell.key) ?? []);
           const isToday = cell.key === todayKey;
           return (
             <div
               key={cell.key}
               className={`relative min-h-[84px] rounded-lg border p-1 sm:min-h-[110px] ${
-                cell.inMonth ? "border-border bg-background" : "border-transparent bg-muted/30"
+                isToday
+                  ? "border-blue-500 bg-background ring-1 ring-blue-500"
+                  : cell.inMonth ? "border-border bg-background" : "border-transparent bg-muted/30"
               }`}
             >
               <div className={`mb-1 text-right text-xs font-medium ${
                 isToday
-                  ? "mx-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                  ? "mx-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white"
                   : cell.inMonth ? "text-foreground" : "text-muted-foreground/50"
               }`}>
                 {cell.d}
@@ -125,7 +144,11 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
                   <div key={e.id} className="group/qv relative">
                     <Link
                       href={`/evenementen/${e.id}`}
-                      className="flex items-center gap-1 rounded-md bg-indigo-50 p-0.5 text-[10px] font-medium text-indigo-800 transition hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-200 dark:hover:bg-indigo-900"
+                      className={`flex items-center gap-1 rounded-md p-0.5 text-[10px] font-medium transition ${
+                        e.featured
+                          ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-900"
+                          : "bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-200 dark:hover:bg-indigo-900"
+                      }`}
                     >
                       <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded bg-muted">
                         {e.coverImage ? (
@@ -136,14 +159,24 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
                       </span>
                       <span className="truncate">{e.title}</span>
                     </Link>
-                    {/* Hover quick-view (desktop). Op touch geen hover → tap = link. */}
-                    <div className="pointer-events-none absolute left-1/2 top-full z-50 hidden -translate-x-1/2 pt-1 group-hover/qv:block">
+                    {/* Hover quick-view (desktop). pointer-events-auto + geen gap
+                        zodat je met de muis naar het paneel kunt en het klikbaar
+                        is. Op touch geen hover → tap = link. */}
+                    <Link
+                      href={`/evenementen/${e.id}`}
+                      className="absolute left-1/2 top-full z-50 hidden -translate-x-1/2 pt-1 group-hover/qv:block"
+                    >
                       <EventQuickViewPanel event={e} />
-                    </div>
+                    </Link>
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
-                  <p className="px-0.5 text-[10px] text-muted-foreground">+{dayEvents.length - 3} meer</p>
+                  <Link
+                    href={dayHref(cell.key)}
+                    className="block rounded-md px-1 py-0.5 text-[10px] font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  >
+                    +{dayEvents.length - 3} meer
+                  </Link>
                 )}
               </div>
             </div>

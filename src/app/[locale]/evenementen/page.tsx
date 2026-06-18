@@ -49,6 +49,7 @@ export default async function EventsPage({
     where,
     orderBy: { startTime: "asc" },
     take: 300,
+    include: { upsells: { where: { expiresAt: { gt: now } }, select: { id: true }, take: 1 } },
   });
 
   const toItem = (e: (typeof rows)[number]): EventListItem => ({
@@ -68,6 +69,7 @@ export default async function EventsPage({
     isOfficial: e.isOfficial,
     lat: e.lat,
     lng: e.lng,
+    featured: e.upsells.length > 0,
   });
 
   let events: EventListItem[] = rows.map(toItem);
@@ -91,6 +93,7 @@ export default async function EventsPage({
       where: { ...where, upsells: { some: { expiresAt: { gt: now } } } },
       orderBy: { startTime: "asc" },
       take: 5,
+      include: { upsells: { where: { expiresAt: { gt: now } }, select: { id: true }, take: 1 } },
     });
     featured = featuredRows.map(toItem);
   }

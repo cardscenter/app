@@ -89,6 +89,39 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
         </p>
       </div>
 
+      {/* Organisator */}
+      <div className="rounded-xl border border-border bg-muted/40 p-4">
+        <p className="text-sm font-medium text-foreground">Organisator</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Wordt het evenement door een bedrijf georganiseerd? Vul dan hier de naam in — anders tonen we je accountnaam.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className={labelClass} htmlFor="evt-orgname">Naam organisator</label>
+            <input
+              id="evt-orgname"
+              value={form.organizerName}
+              onChange={(e) => set("organizerName", e.target.value)}
+              maxLength={100}
+              placeholder="Laat leeg om je accountnaam te gebruiken"
+              className={`mt-1 ${inputClass}`}
+            />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="evt-orgsite">Website (optioneel)</label>
+            <input
+              id="evt-orgsite"
+              type="url"
+              inputMode="url"
+              value={form.organizerWebsite}
+              onChange={(e) => set("organizerWebsite", e.target.value)}
+              placeholder="https://…"
+              className={`mt-1 ${inputClass}`}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Toernooi-specifiek */}
       {form.eventType === "OP_TOERNOOI" && (
         <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-950/30">

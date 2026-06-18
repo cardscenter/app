@@ -18,4 +18,5 @@ export interface EventListItem {
   isOfficial: boolean;
   lat: number | null;
   lng: number | null;
+  featured?: boolean; // actieve banner-upsell — krijgt voorrang in de kalender
 }

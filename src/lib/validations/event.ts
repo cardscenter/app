@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EVENT_TYPES } from "@/lib/events/types";
 import { EVENT_COUNTRY_CODES } from "@/lib/events/countries";
+import { isSupportedVideoUrl } from "@/lib/events/video";
 
 const boolField = z
   .union([z.literal("0"), z.literal("1"), z.literal("true"), z.literal("false")])
@@ -45,6 +46,9 @@ export const createEventSchema = z
     city: z.string().min(1, "Plaats is verplicht").max(100),
     country: z.string().refine((c) => EVENT_COUNTRY_CODES.includes(c), "Onbekend land"),
 
+    organizerName: z.string().max(100).optional(),
+    organizerWebsite: z.string().url("Ongeldige website-link").max(500).optional().or(z.literal("")),
+
     startDate: dateField,
     startTime: timeField,
     endDate: dateField.optional(),
@@ -75,6 +79,8 @@ export const createEventSchema = z
     registrationUrl: z.string().url("Ongeldige link").max(500).optional().or(z.literal("")),
 
     coverImage: z.string().optional(),
+    galleryImages: z.string().optional(), // JSON [url]
+    videoUrl: z.string().max(500).optional().or(z.literal("")),
 
     tournamentFormat: z.string().max(100).optional(),
     isSanctioned: boolField,
@@ -96,6 +102,10 @@ export const createEventSchema = z
       if (!data.registrationUrl) {
         ctx.addIssue({ code: "custom", message: "Vul de link in waar bezoekers tickets kunnen kopen", path: ["registrationUrl"] });
       }
+    }
+
+    if (data.videoUrl && !isSupportedVideoUrl(data.videoUrl)) {
+      ctx.addIssue({ code: "custom", message: "Gebruik een geldige YouTube- of Vimeo-link", path: ["videoUrl"] });
     }
   });
 

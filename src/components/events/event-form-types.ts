@@ -28,6 +28,10 @@ export interface EventFormState {
   city: string;
   country: string;
 
+  // Organisator (bedrijf kan afwijken van de account-houder)
+  organizerName: string; // weergavenaam-override (leeg = accountnaam)
+  organizerWebsite: string;
+
   // Entree (valuta is altijd EUR — heel Europa, geen keuze nodig)
   entryType: "FREE" | "PAID";
   ticketTypes: NamePriceInput[]; // bezoekers-tickets, zelf gedefinieerd
@@ -55,6 +59,8 @@ export interface EventFormState {
   maxVisitors: string;
 
   coverImage: string;
+  galleryImages: string[]; // impressiefoto's van eerdere jaargangen
+  videoUrl: string; // YouTube/Vimeo-link (optioneel)
 
   promote: boolean;
   promoteUntil: string; // yyyy-MM-dd — banner uitgelicht tot en met deze datum
@@ -77,6 +83,8 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   postalCode: "",
   city: "",
   country: "NL",
+  organizerName: "",
+  organizerWebsite: "",
   entryType: "PAID", // beurzen hebben bijna altijd tickets
   ticketTypes: [],
   registrationUrl: "",
@@ -95,6 +103,8 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   childFriendly: false,
   maxVisitors: "",
   coverImage: "",
+  galleryImages: [],
+  videoUrl: "",
   promote: false,
   promoteUntil: "",
 };

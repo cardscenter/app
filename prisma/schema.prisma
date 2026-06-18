@@ -2529,6 +2529,12 @@ model Event {
   registrationUrl String? // externe aanmeld-/ticketlink (getoond als er tickets zijn)
 
   coverImage  String? // brede banner/flyer (≈3:1) — thumbnail in kalender + banner in Uitgelicht + detail
+  galleryImages String? // JSON [url] — impressiefoto's van eerdere jaargangen (detailpagina)
+  videoUrl    String? // YouTube/Vimeo-link — embed via iframe (geen eigen opslag)
+
+  // Organisator-weergave: soms organiseert een bedrijf het, niet de account-houder
+  organizerName    String? // weergavenaam-override (leeg = account-displayName)
+  organizerWebsite String? // externe website van de organisator
 
   // Toernooi-specifiek
   tournamentFormat String?

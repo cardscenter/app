@@ -59,7 +59,7 @@ export function EventViewToggle() {
 
   const views = [
     { key: "list" as const, label: "Lijst", icon: List },
-    { key: "month" as const, label: "Maand", icon: CalendarDays },
+    { key: "month" as const, label: "Kalender", icon: CalendarDays },
     { key: "map" as const, label: "Kaart", icon: MapIcon },
   ];
 
