@@ -12,7 +12,6 @@ import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, FACILITY_LABELS_NL, type Ev
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
 import { parseEventVideo } from "@/lib/events/video";
-import { plainTextSnippet } from "@/lib/events/text";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EventMap } from "@/components/events/event-map";
 import { EventGallery } from "@/components/events/event-gallery";
@@ -282,9 +281,9 @@ export default async function EventDetailPage({
                   houseNumber: event.houseNumber,
                   postalCode: event.postalCode,
                   city: event.city,
-                  coverImage: event.coverImage,
-                  shortDescription: plainTextSnippet(event.description, 40),
                   startTime: event.startTime.toISOString(),
+                  endTime: event.endTime.toISOString(),
+                  timezone: event.timezone,
                 }]}
               />
             </div>

@@ -15,7 +15,6 @@ export interface EventListItem {
   endTime: string; // ISO
   timezone: string;
   coverImage: string | null;
-  shortDescription: string | null; // korte platte-tekst-snippet (kaart-popup)
   entryType: string;
   entryPrice: number | null;
   entryCurrency: string | null;

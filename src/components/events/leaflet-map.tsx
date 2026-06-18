@@ -17,9 +17,9 @@ export interface MapEvent {
   houseNumber: string;
   postalCode: string;
   city: string;
-  coverImage: string | null;
-  shortDescription: string | null;
   startTime: string;
+  endTime: string;
+  timezone: string;
 }
 
 // Custom div-icon pin — vermijdt het bekende Leaflet-marker-asset-pad-probleem
@@ -68,25 +68,25 @@ function ClusterLayer({ events, locale }: { events: MapEvent[]; locale: string }
 
     for (const e of events) {
       const dateStr = new Date(e.startTime).toLocaleDateString("nl-NL", {
+        timeZone: e.timezone,
         day: "numeric",
         month: "long",
       });
+      const tf = new Intl.DateTimeFormat("nl-NL", {
+        timeZone: e.timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      const timeStr = `${tf.format(new Date(e.startTime))}–${tf.format(new Date(e.endTime))}`;
       const address = `${e.street} ${e.houseNumber}, ${e.postalCode} ${e.city}`.trim();
-      const thumb = e.coverImage
-        ? `<img src="${encodeURI(e.coverImage)}" alt="" style="width:100%;height:96px;object-fit:cover;border-radius:6px;margin-bottom:6px" />`
-        : "";
-      const desc = e.shortDescription
-        ? `<p style="color:#475569;margin:0 0 4px;font-size:12px">${escapeHtml(e.shortDescription)}</p>`
-        : "";
       const marker = L.marker([e.lat, e.lng], { icon: pinIcon });
       marker.bindPopup(
-        `<div style="min-width:190px;max-width:220px">
-          ${thumb}
+        `<div style="min-width:180px;max-width:220px">
           <p style="font-weight:600;margin:0 0 2px">${escapeHtml(e.title)}</p>
-          ${desc}
           <p style="color:#64748b;margin:0 0 1px;font-size:12px">${escapeHtml(e.venueName)}</p>
           <p style="color:#64748b;margin:0 0 4px;font-size:12px">${escapeHtml(address)}</p>
-          <p style="color:#64748b;margin:0 0 6px;font-size:12px">${dateStr}</p>
+          <p style="color:#64748b;margin:0 0 6px;font-size:12px">${dateStr} · ${timeStr}</p>
           <a href="/${locale}/evenementen/${e.id}" style="color:#4f46e5;text-decoration:underline;font-size:13px">Bekijk details</a>
         </div>`,
       );

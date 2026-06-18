@@ -8,7 +8,6 @@ import { parseEventFilters, buildEventFilterWhere, countActiveEventFilters } fro
 import { getBlockedUserIds } from "@/lib/blocking";
 import { getBuyerLocation } from "@/lib/shipping/filter";
 import { coordForPostcode, haversineDistanceKm } from "@/lib/distance";
-import { plainTextSnippet } from "@/lib/events/text";
 import { EventTabs, EventViewToggle } from "@/components/events/event-controls";
 import { EventFilterSidebar } from "@/components/events/event-filter-sidebar";
 import { EventCard, EventEmptyState, EventBanner } from "@/components/events/event-card";
@@ -67,7 +66,6 @@ export default async function EventsPage({
     endTime: e.endTime.toISOString(),
     timezone: e.timezone,
     coverImage: e.coverImage,
-    shortDescription: plainTextSnippet(e.description, 40),
     entryType: e.entryType,
     entryPrice: e.entryPrice,
     entryCurrency: e.entryCurrency,
@@ -177,9 +175,9 @@ export default async function EventsPage({
                   houseNumber: e.houseNumber,
                   postalCode: e.postalCode,
                   city: e.city,
-                  coverImage: e.coverImage,
-                  shortDescription: e.shortDescription,
                   startTime: e.startTime,
+                  endTime: e.endTime,
+                  timezone: e.timezone,
                 }))}
             />
           ) : (
