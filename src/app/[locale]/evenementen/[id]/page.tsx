@@ -161,27 +161,29 @@ export default async function EventDetailPage({
               <div className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {ticketList.map((t, i) => (
-                    <div key={i} className="relative flex rounded-xl border border-border bg-card shadow-card">
-                      {/* hoofd: naam + beschrijving + evt. servicekosten */}
-                      <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500">
-                          <Ticket className="h-4 w-4" />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-foreground">{t.name}</p>
-                          {t.description && <p className="mt-0.5 text-sm text-muted-foreground">{t.description}</p>}
+                    <div key={i} className="relative aspect-[847/350] w-full overflow-hidden">
+                      {/* ticket-achtergrond (perforatie op ~70%) */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/images/cosmetics/blank-ticket.webp"
+                        alt=""
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 h-full w-full select-none"
+                      />
+                      <div className="absolute inset-0 flex items-stretch">
+                        {/* hoofdgedeelte: naam + beschrijving + servicekosten */}
+                        <div className="flex min-w-0 basis-[70%] flex-col justify-center gap-0.5 py-3 pl-[8%] pr-2">
+                          <p className="truncate text-base font-bold text-slate-900">{t.name}</p>
+                          {t.description && <p className="line-clamp-2 text-xs leading-snug text-slate-600">{t.description}</p>}
                           {t.serviceFee != null && t.serviceFee > 0 && (
-                            <p className="mt-0.5 text-xs text-muted-foreground">+ {formatEuro(t.serviceFee)} servicekosten</p>
+                            <p className="text-[11px] text-slate-500">+ {formatEuro(t.serviceFee)} servicekosten</p>
                           )}
                         </div>
+                        {/* stub: prijs */}
+                        <div className="flex basis-[30%] items-center justify-center pr-[4%]">
+                          <p className="text-lg font-extrabold leading-tight text-slate-900">{formatEuro(t.price)}</p>
+                        </div>
                       </div>
-                      {/* stub met vaste breedte → perforatie altijd op dezelfde plek, alleen de prijs */}
-                      <div className="flex w-24 shrink-0 flex-col items-center justify-center rounded-r-xl border-l border-dashed border-border bg-muted/40 px-2 text-center">
-                        <p className="text-lg font-bold text-foreground">{formatEuro(t.price)}</p>
-                      </div>
-                      {/* perforatie-gaten, geankerd op de stub-grens (right-24) */}
-                      <span className="pointer-events-none absolute right-24 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background" />
-                      <span className="pointer-events-none absolute bottom-0 right-24 h-3 w-3 -translate-x-1/2 translate-y-1/2 rounded-full border border-border bg-background" />
                     </div>
                   ))}
                 </div>
