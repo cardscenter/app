@@ -6,6 +6,8 @@ import { Link } from "@/i18n/navigation";
 import { PageContainer } from "@/components/layout/page-container";
 import { parseEventFilters, buildEventFilterWhere, countActiveEventFilters } from "@/lib/event-filters";
 import { getBlockedUserIds } from "@/lib/blocking";
+import { getBuyerLocation } from "@/lib/shipping/filter";
+import { coordForPostcode, haversineDistanceKm } from "@/lib/distance";
 import { EventTabs, EventViewToggle } from "@/components/events/event-controls";
 import { EventFilterSidebar } from "@/components/events/event-filter-sidebar";
 import { EventCard, EventEmptyState, EventBanner } from "@/components/events/event-card";
@@ -14,17 +16,26 @@ import { EventMap } from "@/components/events/event-map";
 import type { EventListItem } from "@/components/events/event-view-types";
 
 export default async function EventsPage({
+  params,
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { locale } = await params;
   const sp = await searchParams;
   const filters = parseEventFilters(sp);
   const activeFilters = countActiveEventFilters(filters);
 
   const session = await auth();
   const blocked = await getBlockedUserIds(session?.user?.id);
+
+  // Buyer-locatie voor de afstand-filter. Alleen bruikbaar als we de postcode
+  // naar een coördinaat kunnen omzetten (momenteel NL-dataset).
+  const buyerLoc = await getBuyerLocation();
+  const buyerCoord = buyerLoc
+    ? coordForPostcode(buyerLoc.country, buyerLoc.postalCode)
+    : null;
 
   const now = new Date();
   const where: Prisma.EventWhereInput = {
@@ -59,7 +70,19 @@ export default async function EventsPage({
     lng: e.lng,
   });
 
-  const events: EventListItem[] = rows.map(toItem);
+  let events: EventListItem[] = rows.map(toItem);
+
+  // Afstand-filter (post-filter in JS — SQLite kent geen haversine). Vereist een
+  // buyer-coördinaat; events zonder geocode vallen buiten een radius-selectie.
+  if (filters.radius && buyerCoord) {
+    const max = filters.radius;
+    events = events.filter(
+      (e) =>
+        e.lat != null &&
+        e.lng != null &&
+        haversineDistanceKm(buyerCoord, [e.lat, e.lng]) <= max,
+    );
+  }
 
   // "Uitgelicht" — events met een actieve banner-upsell, alleen op pagina zonder filters.
   let featured: EventListItem[] = [];
@@ -115,7 +138,7 @@ export default async function EventsPage({
       <div className="mt-6 lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
         <aside className="mb-6 lg:mb-0">
           <div className="lg:sticky lg:top-20">
-            <EventFilterSidebar />
+            <EventFilterSidebar buyerHasPostcode={!!buyerCoord} />
           </div>
         </aside>
 
@@ -132,7 +155,12 @@ export default async function EventsPage({
           ) : filters.view === "month" ? (
             <EventCalendarMonth events={events} />
           ) : filters.view === "map" ? (
-            <EventMap events={events.map((e) => ({ id: e.id, title: e.title, lat: e.lat ?? 0, lng: e.lng ?? 0, city: e.city, startTime: e.startTime }))} />
+            <EventMap
+              locale={locale}
+              events={events
+                .filter((e) => e.lat != null && e.lng != null)
+                .map((e) => ({ id: e.id, title: e.title, lat: e.lat as number, lng: e.lng as number, city: e.city, startTime: e.startTime }))}
+            />
           ) : (
             <div className="space-y-3">
               {events.map((e) => (

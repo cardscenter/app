@@ -69,3 +69,27 @@ export function formatDistance(km: number): string {
   return `${Math.round(km)} km`;
 }
 
+/** [lat, lng]-centroïde voor een postcode binnen een land, of null als niet
+ *  beschikbaar (land niet in dataset of postcode onbekend). Momenteel alleen
+ *  NL — drop-in uitbreidbaar zodra er meer postcode-datasets zijn. */
+export function coordForPostcode(
+  country: string | null | undefined,
+  postalCode: string | null | undefined,
+): [number, number] | null {
+  if (!country) return null;
+  const table = COORD_TABLES[country];
+  if (!table) return null;
+  const code = pc4(postalCode);
+  if (!code) return null;
+  return table[code] ?? null;
+}
+
+/** Vogelvlucht-afstand in km tussen twee [lat, lng]-punten. Werkt cross-border
+ *  (events hebben echte geocoded coördinaten, geen postcode-tabel nodig). */
+export function haversineDistanceKm(
+  a: [number, number],
+  b: [number, number],
+): number {
+  return haversineKm(a, b);
+}
+

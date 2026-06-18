@@ -216,7 +216,7 @@ export default async function EventDetailPage({
           {event.lat !== null && event.lng !== null && (
             <div>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Locatie op de kaart</h2>
-              <EventMap events={[{ id: event.id, title: event.title, lat: event.lat, lng: event.lng, city: event.city, startTime: event.startTime.toISOString() }]} />
+              <EventMap locale={locale} events={[{ id: event.id, title: event.title, lat: event.lat, lng: event.lng, city: event.city, startTime: event.startTime.toISOString() }]} />
             </div>
           )}
         </div>

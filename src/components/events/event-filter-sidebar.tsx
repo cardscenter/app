@@ -4,8 +4,9 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { EVENT_COUNTRIES } from "@/lib/events/countries";
 import { OTHER_EVENT_TYPES, EVENT_TYPE_LABELS_NL, type EventType } from "@/lib/events/types";
+import { EVENT_RADIUS_OPTIONS } from "@/lib/event-filters";
 
-export function EventFilterSidebar() {
+export function EventFilterSidebar({ buyerHasPostcode = false }: { buyerHasPostcode?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -14,8 +15,8 @@ export function EventFilterSidebar() {
   const country = sp.get("country") ?? "";
   const dateFrom = sp.get("date_from") ?? "";
   const dateTo = sp.get("date_to") ?? "";
-  const official = sp.get("official") === "1";
   const free = sp.get("free") === "1";
+  const radius = Number(sp.get("radius")) || null;
   const selectedTypes = new Set((sp.get("type") ?? "").split(",").filter(Boolean));
 
   function update(mut: (params: URLSearchParams) => void) {
@@ -36,7 +37,7 @@ export function EventFilterSidebar() {
   }
 
   const activeCount =
-    (country ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (official ? 1 : 0) + (free ? 1 : 0) + selectedTypes.size;
+    (country ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (free ? 1 : 0) + (radius ? 1 : 0) + selectedTypes.size;
 
   function clearAll() {
     const params = new URLSearchParams();
@@ -105,12 +106,39 @@ export function EventFilterSidebar() {
         </div>
       </div>
 
-      {/* Toggles */}
+      {/* Afstand — alleen voor ingelogde users met een postcode in hun profiel */}
+      {buyerHasPostcode && (
+        <div>
+          <p className={labelClass}>Afstand</p>
+          <div className="mt-2 space-y-1.5">
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="radio"
+                name="radius"
+                checked={radius === null}
+                onChange={() => setParam("radius", "")}
+                className="h-4 w-4 border-border"
+              />
+              Alle afstanden
+            </label>
+            {EVENT_RADIUS_OPTIONS.map((km) => (
+              <label key={km} className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="radio"
+                  name="radius"
+                  checked={radius === km}
+                  onChange={() => setParam("radius", String(km))}
+                  className="h-4 w-4 border-border"
+                />
+                Binnen {km} km
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Entree */}
       <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm text-foreground">
-          <input type="checkbox" checked={official} onChange={(e) => update((p) => (e.target.checked ? p.set("official", "1") : p.delete("official")))} className="h-4 w-4 rounded border-border" />
-          Alleen geverifieerd (Cards Center)
-        </label>
         <label className="flex items-center gap-2 text-sm text-foreground">
           <input type="checkbox" checked={free} onChange={(e) => update((p) => (e.target.checked ? p.set("free", "1") : p.delete("free")))} className="h-4 w-4 rounded border-border" />
           Alleen gratis entree

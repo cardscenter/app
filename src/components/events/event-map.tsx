@@ -15,7 +15,7 @@ const LeafletMap = dynamic(() => import("@/components/events/leaflet-map"), {
   ),
 });
 
-export function EventMap({ events }: { events: MapEvent[] }) {
+export function EventMap({ events, locale }: { events: MapEvent[]; locale: string }) {
   const withCoords = events.filter((e) => Number.isFinite(e.lat) && Number.isFinite(e.lng));
 
   if (withCoords.length === 0) {
@@ -27,5 +27,5 @@ export function EventMap({ events }: { events: MapEvent[] }) {
     );
   }
 
-  return <LeafletMap events={withCoords} />;
+  return <LeafletMap events={withCoords} locale={locale} />;
 }
