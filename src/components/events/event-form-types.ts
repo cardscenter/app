@@ -35,7 +35,8 @@ export interface EventFormState {
   // Entree (valuta is altijd EUR — heel Europa, geen keuze nodig)
   entryType: "FREE" | "PAID";
   ticketTypes: NamePriceInput[]; // bezoekers-tickets, zelf gedefinieerd
-  registrationUrl: string; // verplicht bij betaald — waar tickets gekocht worden
+  ticketSaleMode: "ONLINE" | "DOOR"; // online ticketlink of alleen aan de deur
+  registrationUrl: string; // verplicht bij ONLINE — waar tickets gekocht worden
 
   // Standhouders — zelf-gedefinieerde opties
   vendorOptions: NamePriceInput[];
@@ -87,6 +88,7 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   organizerWebsite: "",
   entryType: "PAID", // beurzen hebben bijna altijd tickets
   ticketTypes: [],
+  ticketSaleMode: "ONLINE",
   registrationUrl: "",
   vendorOptions: [],
   vendorInfo: "",

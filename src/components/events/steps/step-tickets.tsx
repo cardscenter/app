@@ -51,10 +51,37 @@ export function StepTickets({ form, set }: { form: EventFormState; set: EventFie
           </div>
 
           <div>
-            <label className={labelClass} htmlFor="evt-regurl">Link naar tickets <span className="text-rose-500">*</span></label>
-            <input id="evt-regurl" type="url" value={form.registrationUrl} onChange={(e) => set("registrationUrl", e.target.value)} placeholder="https://…" className={`mt-1 ${inputClass}`} />
-            <p className="mt-1 text-xs text-muted-foreground">De pagina waar bezoekers hun tickets kopen of zich aanmelden.</p>
+            <p className={labelClass}>Hoe worden tickets verkocht?</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {([
+                ["ONLINE", "Online (link)"],
+                ["DOOR", "Alleen aan de deur"],
+              ] as const).map(([opt, label]) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => set("ticketSaleMode", opt)}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                    form.ticketSaleMode === opt ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {form.ticketSaleMode === "ONLINE" ? (
+            <div>
+              <label className={labelClass} htmlFor="evt-regurl">Link naar tickets <span className="text-rose-500">*</span></label>
+              <input id="evt-regurl" type="url" value={form.registrationUrl} onChange={(e) => set("registrationUrl", e.target.value)} placeholder="https://…" className={`mt-1 ${inputClass}`} />
+              <p className="mt-1 text-xs text-muted-foreground">De pagina waar bezoekers hun tickets kopen of zich aanmelden.</p>
+            </div>
+          ) : (
+            <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              Bezoekers kopen hun tickets aan de deur — geen online link nodig. Dit tonen we zo op de evenementpagina.
+            </p>
+          )}
         </div>
       )}
 

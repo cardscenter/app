@@ -43,7 +43,7 @@ function validateStep(step: number, form: EventFormState): string | null {
     case 3:
       if (form.entryType === "PAID") {
         if (!form.ticketTypes.some((t) => t.name.trim())) return "Voeg minstens één ticket-soort toe (of kies Gratis)";
-        if (!form.registrationUrl.trim()) return "Vul de link in waar bezoekers tickets kunnen kopen";
+        if (form.ticketSaleMode === "ONLINE" && !form.registrationUrl.trim()) return "Vul de link in waar bezoekers tickets kunnen kopen (of kies 'Alleen aan de deur')";
       }
       return null;
     case 6:
@@ -112,7 +112,7 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
           serviceFee: Number(t.serviceFee) > 0 ? Number(t.serviceFee) : undefined,
         }));
       fd.set("ticketTypes", JSON.stringify(tickets));
-      if (form.registrationUrl) fd.set("registrationUrl", form.registrationUrl);
+      if (form.ticketSaleMode === "ONLINE" && form.registrationUrl) fd.set("registrationUrl", form.registrationUrl);
     }
 
     const vendor = form.vendorOptions

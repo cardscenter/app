@@ -99,9 +99,8 @@ export const createEventSchema = z
       if (!hasValidNamePriceList(data.ticketTypes)) {
         ctx.addIssue({ code: "custom", message: "Voeg minstens één ticket-soort met naam en prijs toe", path: ["ticketTypes"] });
       }
-      if (!data.registrationUrl) {
-        ctx.addIssue({ code: "custom", message: "Vul de link in waar bezoekers tickets kunnen kopen", path: ["registrationUrl"] });
-      }
+      // registrationUrl is optioneel: een betaald event mag ook "alleen aan de
+      // deur" verkopen (dan blijft de link leeg).
     }
 
     if (data.videoUrl && !isSupportedVideoUrl(data.videoUrl)) {
