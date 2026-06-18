@@ -8,7 +8,6 @@ import { useState, useEffect, useRef } from "react";
 import { Menu, X, Search, Bell, MessageCircle, ChevronRight } from "lucide-react";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { MessageIcon } from "@/components/ui/message-icon";
-import { SearchBar } from "@/components/search/search-bar";
 import { CartIcon } from "@/components/ui/cart-icon";
 import { AdminShield } from "@/components/layout/admin-shield";
 import { getUnreadCount } from "@/actions/notification";
@@ -137,19 +136,10 @@ function HeaderContent() {
           })}
         </nav>
 
-        {/* Search bar — inline on xl+, takes available space.
-            Below xl the inline bar is hidden; HeaderSearchToggle below renders
-            an icon that expands into a search input. */}
-        <div className="mx-6 hidden flex-1 justify-center xl:flex">
-          <div className="w-full max-w-xl">
-            <SearchBar variant="header" />
-          </div>
-        </div>
-
-        {/* Right side — ml-auto zodat het rechts uitlijnt ook als de middelste
-            zoekbalk verborgen is (onder xl) */}
+        {/* Right side — ml-auto duwt alles naar rechts; de nav neemt links de
+            ruimte. De zoekbalk is een loep-icoon dat naar links openklapt. */}
         <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-1.5">
-          {/* Search toggle (md→lg widths only — inline bar takes over at lg+) */}
+          {/* Zoeken: loep-icoon dat over de nav heen naar links uitklapt (md+) */}
           <HeaderSearchToggle />
 
           {session?.user ? (
@@ -441,7 +431,8 @@ function MobileSearchBar() {
   );
 }
 
-// Click-to-expand search for md→lg widths waar de inline-bar geen ruimte heeft
+// Zoek-loep die op desktop (md+) naar links openklapt over de nav heen.
+// Klik buiten de balk of Escape klapt 'm weer in.
 function HeaderSearchToggle() {
   const t = useTranslations("search");
   const router = useRouter();
@@ -482,42 +473,46 @@ function HeaderSearchToggle() {
   }
 
   return (
-    <div ref={wrapperRef} className="relative hidden md:block xl:hidden">
+    <div ref={wrapperRef} className="relative hidden md:flex md:items-center">
+      {/* Loep-trigger — verborgen zodra de balk open is zodat alleen de balk telt */}
       <button
         type="button"
-        onClick={() => setOpen((s) => !s)}
-        className="rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+        onClick={() => setOpen(true)}
         aria-label={t("placeholder")}
+        className={`rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${
+          open ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
       >
         <Search className="h-5 w-5" />
       </button>
 
-      {open && (
-        <form
-          onSubmit={handleSubmit}
-          className="absolute right-0 top-full z-50 mt-1 w-[420px] max-w-[80vw]"
+      {/* Uitklappende zoekbalk — geanimeerd naar links, over de nav heen */}
+      <form
+        onSubmit={handleSubmit}
+        className={`absolute right-0 top-1/2 z-50 flex -translate-y-1/2 items-center overflow-hidden rounded-lg bg-slate-800/95 shadow-lg ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300 ease-out ${
+          open ? "w-[min(70vw,400px)] opacity-100" : "pointer-events-none w-0 opacity-0"
+        }`}
+      >
+        <Search className="ml-3 h-4 w-4 shrink-0 text-slate-400" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={t("placeholder")}
+          tabIndex={open ? 0 : -1}
+          className="min-w-0 flex-1 bg-transparent px-2 py-2 text-base text-white placeholder:text-slate-400 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => { setOpen(false); setValue(""); }}
+          tabIndex={open ? 0 : -1}
+          aria-label="Sluit"
+          className="mr-1 shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
         >
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={t("placeholder")}
-              className="w-full rounded-lg bg-slate-800/95 pl-9 pr-9 py-2 text-base text-white shadow-lg ring-1 ring-white/20 placeholder:text-slate-400 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Sluit"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </form>
-      )}
+          <X className="h-4 w-4" />
+        </button>
+      </form>
     </div>
   );
 }
