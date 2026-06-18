@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, MapPin, Ticket, Megaphone, Store, CheckCircle2, Users, ExternalLink, Building2, Images } from "lucide-react";
+import { Calendar, MapPin, Ticket, Megaphone, Store, CheckCircle2, Users, ExternalLink, Building2, Images, Table2 } from "lucide-react";
 import {
   EVENT_TYPE_LABELS_NL, FACILITY_LABELS_NL, ACTIVITY_KEYS, FACILITY_KEYS,
   type EventType, type FacilityKey,
@@ -87,6 +87,7 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
             </Row>
           )}
           {form.maxVisitors && <Row icon={Users}>max. {form.maxVisitors} bezoekers</Row>}
+          {form.totalTables && <Row icon={Table2}>{form.totalTables} tafels</Row>}
           {form.organizerName.trim() && <Row icon={Building2}>Door {form.organizerName.trim()}</Row>}
           {(form.galleryImages.length > 0 || form.videoUrl.trim().length > 0) && (
             <Row icon={Images}>

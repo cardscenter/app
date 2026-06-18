@@ -58,6 +58,7 @@ export interface EventFormState {
   childFriendly: boolean;
 
   maxVisitors: string;
+  totalTables: string; // totaal aantal tafels (standhouder-capaciteit)
 
   coverImage: string;
   galleryImages: string[]; // impressiefoto's van eerdere jaargangen
@@ -104,6 +105,7 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   hasCloakroom: false,
   childFriendly: false,
   maxVisitors: "",
+  totalTables: "",
   coverImage: "",
   galleryImages: [],
   videoUrl: "",

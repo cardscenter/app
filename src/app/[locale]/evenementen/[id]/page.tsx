@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe,
+  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2,
   Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy, Baby,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -158,38 +158,40 @@ export default async function EventDetailPage({
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {ticketList.map((t, i) => (
-                  <div key={i} className="relative flex overflow-hidden rounded-xl border border-border bg-card shadow-card">
-                    {/* gekleurde ticket-stub */}
-                    <div className="w-1.5 shrink-0 bg-indigo-500" />
-                    <div className="flex flex-1 items-center gap-3 py-4 pl-4 pr-3">
-                      <Ticket className="h-5 w-5 shrink-0 text-indigo-500" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-foreground">{t.name}</p>
-                        {t.description && <p className="mt-0.5 text-sm text-muted-foreground">{t.description}</p>}
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {ticketList.map((t, i) => (
+                    <div key={i} className="relative flex rounded-xl border border-border bg-card shadow-card">
+                      {/* hoofd: naam + beschrijving + evt. servicekosten */}
+                      <div className="flex min-w-0 flex-1 items-center gap-3 p-4">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500">
+                          <Ticket className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground">{t.name}</p>
+                          {t.description && <p className="mt-0.5 text-sm text-muted-foreground">{t.description}</p>}
+                          {t.serviceFee != null && t.serviceFee > 0 && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">+ {formatEuro(t.serviceFee)} servicekosten</p>
+                          )}
+                        </div>
                       </div>
-                      {/* perforatie-scheiding */}
-                      <div className="relative mx-1 self-stretch border-l border-dashed border-border">
-                        <span className="absolute -left-1.5 -top-2 h-3 w-3 rounded-full bg-background" />
-                        <span className="absolute -bottom-2 -left-1.5 h-3 w-3 rounded-full bg-background" />
+                      {/* stub met vaste breedte → perforatie altijd op dezelfde plek, alleen de prijs */}
+                      <div className="flex w-24 shrink-0 flex-col items-center justify-center rounded-r-xl border-l border-dashed border-border bg-muted/40 px-2 text-center">
+                        <p className="text-lg font-bold text-foreground">{formatEuro(t.price)}</p>
                       </div>
-                      <div className="shrink-0 pl-1 text-right">
-                        <p className="text-xl font-bold text-foreground">{formatEuro(t.price)}</p>
-                        {t.serviceFee != null && t.serviceFee > 0 && (
-                          <p className="text-[11px] text-muted-foreground">+ {formatEuro(t.serviceFee)} servicekosten</p>
-                        )}
-                      </div>
+                      {/* perforatie-gaten, geankerd op de stub-grens (right-24) */}
+                      <span className="pointer-events-none absolute right-24 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background" />
+                      <span className="pointer-events-none absolute bottom-0 right-24 h-3 w-3 -translate-x-1/2 translate-y-1/2 rounded-full border border-border bg-background" />
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
 
                 {event.registrationUrl ? (
                   <a
                     href={event.registrationUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
                   >
                     Tickets kopen <ExternalLink className="h-4 w-4" />
                   </a>
@@ -199,10 +201,20 @@ export default async function EventDetailPage({
               </div>
             )}
 
-            {event.maxVisitors && (
-              <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" /> Maximaal {event.maxVisitors} bezoekers
-              </p>
+            {/* Praktische capaciteit-info */}
+            {(event.maxVisitors || event.totalTables) && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {event.maxVisitors && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                    <Users className="h-4 w-4 text-muted-foreground" /> Max. {event.maxVisitors} bezoekers
+                  </span>
+                )}
+                {event.totalTables && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                    <Table2 className="h-4 w-4 text-muted-foreground" /> {event.totalTables} tafels
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

@@ -23,7 +23,7 @@ export function EventTabs() {
 
   const tabs = [
     { key: "beurzen" as const, label: "Beurzen", icon: Store },
-    { key: "events" as const, label: "Events", icon: Sparkles },
+    { key: "events" as const, label: "Evenementen", icon: Sparkles },
   ];
 
   return (

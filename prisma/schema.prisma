@@ -2526,6 +2526,7 @@ model Event {
   childFriendly       Boolean @default(false) // kindvriendelijk
 
   maxVisitors     Int?
+  totalTables     Int?    // totaal aantal tafels (capaciteit voor standhouders)
   registrationUrl String? // externe aanmeld-/ticketlink (getoond als er tickets zijn)
 
   coverImage  String? // brede banner/flyer (≈3:1) — thumbnail in kalender + banner in Uitgelicht + detail
