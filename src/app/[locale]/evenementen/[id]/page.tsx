@@ -12,6 +12,7 @@ import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, FACILITY_LABELS_NL, type Ev
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
 import { parseEventVideo } from "@/lib/events/video";
+import { formatEuro } from "@/lib/events/format";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EventMap } from "@/components/events/event-map";
 import { EventGallery } from "@/components/events/event-gallery";
@@ -50,25 +51,23 @@ export default async function EventDetailPage({
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
   const dateLabel = formatEventDateRange(start, end, event.timezone, locale === "en" ? "en-GB" : "nl-NL");
-  const cur = "€";
 
   const activeFacilities = FACILITY_ORDER.filter((k) => event[k as keyof typeof event] as boolean);
 
-  // Ticket-soorten (TIERS)
+  // Ticket-soorten (TIERS) + fallback voor legacy enkele prijs.
   let tiers: { name: string; price: number; description?: string; serviceFee?: number }[] = [];
-  if (event.entryType === "PAID" && event.entryPriceMode === "TIERS" && event.ticketTypes) {
+  if (event.entryType === "PAID" && event.ticketTypes) {
     try {
       const parsed = JSON.parse(event.ticketTypes);
       if (Array.isArray(parsed)) tiers = parsed;
     } catch { /* negeer */ }
   }
-
-  const entryLine = (() => {
-    if (event.entryType === "FREE") return "Gratis entree";
-    if (event.entryPriceMode === "TIERS") return null; // toont aparte lijst
-    const prefix = event.entryPriceMode === "FROM" ? "vanaf " : "";
-    return `Entree: ${prefix}${cur} ${event.entryPrice ?? ""}`;
-  })();
+  const ticketList =
+    tiers.length > 0
+      ? tiers
+      : event.entryType === "PAID" && event.entryPrice != null
+        ? [{ name: "Entree", price: event.entryPrice }]
+        : [];
 
   let vendorOptions: { name: string; price: number; description?: string }[] = [];
   if (event.vendorOptions) {
@@ -142,6 +141,71 @@ export default async function EventDetailPage({
       <div className="mt-6 lg:grid lg:grid-cols-[1fr_320px] lg:gap-8">
         {/* Main */}
         <div className="space-y-6">
+          {/* Tickets — belangrijkste blok */}
+          <div>
+            <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
+              <Ticket className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /> Tickets
+            </h2>
+
+            {event.entryType === "FREE" ? (
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                  <Ticket className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="font-semibold text-foreground">Gratis entree</p>
+                  <p className="text-sm text-muted-foreground">Je hebt geen ticket nodig — kom langs!</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {ticketList.map((t, i) => (
+                  <div key={i} className="relative flex overflow-hidden rounded-xl border border-border bg-card shadow-card">
+                    {/* gekleurde ticket-stub */}
+                    <div className="w-1.5 shrink-0 bg-indigo-500" />
+                    <div className="flex flex-1 items-center gap-3 py-4 pl-4 pr-3">
+                      <Ticket className="h-5 w-5 shrink-0 text-indigo-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-foreground">{t.name}</p>
+                        {t.description && <p className="mt-0.5 text-sm text-muted-foreground">{t.description}</p>}
+                      </div>
+                      {/* perforatie-scheiding */}
+                      <div className="relative mx-1 self-stretch border-l border-dashed border-border">
+                        <span className="absolute -left-1.5 -top-2 h-3 w-3 rounded-full bg-background" />
+                        <span className="absolute -bottom-2 -left-1.5 h-3 w-3 rounded-full bg-background" />
+                      </div>
+                      <div className="shrink-0 pl-1 text-right">
+                        <p className="text-xl font-bold text-foreground">{formatEuro(t.price)}</p>
+                        {t.serviceFee != null && t.serviceFee > 0 && (
+                          <p className="text-[11px] text-muted-foreground">+ {formatEuro(t.serviceFee)} servicekosten</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {event.registrationUrl ? (
+                  <a
+                    href={event.registrationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                  >
+                    Tickets kopen <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Tickets zijn aan de deur verkrijgbaar.</p>
+                )}
+              </div>
+            )}
+
+            {event.maxVisitors && (
+              <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" /> Maximaal {event.maxVisitors} bezoekers
+              </p>
+            )}
+          </div>
+
           {event.description && (
             <div>
               <h2 className="mb-2 text-lg font-semibold text-foreground">Over dit evenement</h2>
@@ -177,44 +241,6 @@ export default async function EventDetailPage({
             </div>
           )}
 
-          {/* Entree + tickets */}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Ticket className="h-5 w-5 text-muted-foreground" />
-              {entryLine && <span className="font-medium text-foreground">{entryLine}</span>}
-              {event.maxVisitors && (
-                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" /> max. {event.maxVisitors} bezoekers
-                </span>
-              )}
-              {event.registrationUrl && (
-                <a href={event.registrationUrl} target="_blank" rel="noopener noreferrer"
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700">
-                  Aanmelden / tickets <ExternalLink className="h-4 w-4" />
-                </a>
-              )}
-            </div>
-
-            {tiers.length > 0 && (
-              <ul className="mt-3 divide-y divide-border border-t border-border">
-                {tiers.map((t, i) => (
-                  <li key={i} className="flex items-start justify-between gap-3 py-2.5">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-foreground">{t.name}</p>
-                      {t.description && <p className="mt-0.5 text-xs text-muted-foreground">{t.description}</p>}
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-base font-bold text-foreground">{t.price === 0 ? "Gratis" : `${cur} ${t.price.toFixed(2)}`}</p>
-                      {t.serviceFee != null && t.serviceFee > 0 && (
-                        <p className="text-[11px] text-muted-foreground">+ {cur} {t.serviceFee.toFixed(2)} servicekosten</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
           {/* Faciliteiten */}
           {activeFacilities.length > 0 && (
             <div>
@@ -244,7 +270,7 @@ export default async function EventDetailPage({
                         <p className="text-sm font-medium text-foreground">{v.name}</p>
                         {v.description && <p className="text-xs text-muted-foreground">{v.description}</p>}
                       </div>
-                      <span className="shrink-0 text-sm font-semibold text-foreground">{v.price === 0 ? "gratis" : `${cur} ${v.price.toFixed(2)}`}</span>
+                      <span className="shrink-0 text-sm font-semibold text-foreground">{formatEuro(v.price)}</span>
                     </li>
                   ))}
                 </ul>
