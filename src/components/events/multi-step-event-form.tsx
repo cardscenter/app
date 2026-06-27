@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Loader2, Check, ChevronLeft, ChevronRight, MailWarning } from "lucide-react";
 import { createEvent } from "@/actions/event";
 import { INITIAL_EVENT_FORM, type EventFormState, type EventFieldSetter } from "@/components/events/event-form-types";
-import { bannerDaysUntil } from "@/lib/events/upsell-config";
+import { bannerDaysUntil, eventUpsellDaysUntil, EVENT_SPOTLIGHT_STORED_TYPE } from "@/lib/events/upsell-config";
 import { EventLivePreview } from "@/components/events/event-live-preview";
 import { StepType } from "@/components/events/steps/step-type";
 import { StepDetails } from "@/components/events/steps/step-details";
@@ -47,8 +47,9 @@ function validateStep(step: number, form: EventFormState): string | null {
       }
       return null;
     case 6:
-      if (form.promote && !form.coverImage) return "Upload eerst een banner-afbeelding voor de promotie";
+      if ((form.promote || form.spotlight) && !form.coverImage) return "Upload eerst een banner-afbeelding voor de promotie";
       if (form.promote && !form.promoteUntil) return "Kies tot welke datum je evenement uitgelicht moet zijn";
+      if (form.spotlight && !form.spotlightUntil) return "Kies tot welke datum je evenement op de homepage moet staan";
       return null;
     default:
       return null;
@@ -142,6 +143,8 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
 
     fd.set("promote", form.promote ? "1" : "0");
     if (form.promote) fd.set("promoteDays", String(bannerDaysUntil(form.promoteUntil)));
+    fd.set("spotlight", form.spotlight ? "1" : "0");
+    if (form.spotlight) fd.set("spotlightDays", String(eventUpsellDaysUntil(form.spotlightUntil, EVENT_SPOTLIGHT_STORED_TYPE)));
     if (confirm) fd.set("confirmDuplicate", "1");
     return fd;
   }

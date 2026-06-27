@@ -66,6 +66,9 @@ export interface EventFormState {
 
   promote: boolean;
   promoteUntil: string; // yyyy-MM-dd — banner uitgelicht tot en met deze datum
+
+  spotlight: boolean; // homepage-spotlight (op de hoofd-homepage van de site)
+  spotlightUntil: string; // yyyy-MM-dd — spotlight tot en met deze datum
 }
 
 export const INITIAL_EVENT_FORM: EventFormState = {
@@ -111,6 +114,8 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   videoUrl: "",
   promote: false,
   promoteUntil: "",
+  spotlight: false,
+  spotlightUntil: "",
 };
 
 export type EventFieldSetter = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => void;

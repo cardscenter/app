@@ -66,3 +66,26 @@ export function bannerDaysUntil(dateStr: string): number {
   if (!Number.isFinite(ms) || ms <= 0) return 0;
   return Math.max(EVENT_BANNER_MIN_DAYS, Math.min(Math.ceil(ms / 86_400_000), EVENT_BANNER_MAX_DAYS));
 }
+
+// Homepage-spotlight — tweede promotie: het event verschijnt in een rij op de
+// hoofd-homepage van Cards Center (waar het meeste verkeer zit). Opgeslagen als
+// EventUpsell met type "HOMEPAGE_SPOTLIGHT".
+export const EVENT_SPOTLIGHT_STORED_TYPE: EventUpsellType = "HOMEPAGE_SPOTLIGHT";
+export const EVENT_SPOTLIGHT_DAILY_COST = EVENT_UPSELL_PRICING.HOMEPAGE_SPOTLIGHT.dailyCost;
+export const EVENT_SPOTLIGHT_MIN_DAYS = EVENT_UPSELL_PRICING.HOMEPAGE_SPOTLIGHT.minDays;
+export const EVENT_SPOTLIGHT_MAX_DAYS = EVENT_UPSELL_PRICING.HOMEPAGE_SPOTLIGHT.maxDays;
+
+export function calculateEventSpotlightCost(days: number, accountType: string): number {
+  return calculateEventUpsellCost(EVENT_SPOTLIGHT_STORED_TYPE, days, accountType);
+}
+
+/** Aantal dagen tot het einde van de gekozen datum, geklemd op de min/max van
+ *  een gegeven upsell-type. 0 als geen/verleden datum. */
+export function eventUpsellDaysUntil(dateStr: string, type: EventUpsellType): number {
+  if (!dateStr) return 0;
+  const end = new Date(`${dateStr}T23:59:59`);
+  const ms = end.getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  const { minDays, maxDays } = EVENT_UPSELL_PRICING[type];
+  return Math.max(minDays, Math.min(Math.ceil(ms / 86_400_000), maxDays));
+}

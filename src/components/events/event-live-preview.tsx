@@ -6,7 +6,13 @@ import {
   type EventType, type FacilityKey,
 } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
-import { calculateEventBannerCost, bannerDaysUntil } from "@/lib/events/upsell-config";
+import {
+  calculateEventBannerCost,
+  bannerDaysUntil,
+  calculateEventSpotlightCost,
+  eventUpsellDaysUntil,
+  EVENT_SPOTLIGHT_STORED_TYPE,
+} from "@/lib/events/upsell-config";
 import { CountryFlag } from "@/components/ui/country-flag";
 import type { EventFormState } from "@/components/events/event-form-types";
 
@@ -27,6 +33,8 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
   const validVendor = form.vendorOptions.filter((t) => t.name.trim());
   const promoDays = bannerDaysUntil(form.promoteUntil);
   const promoCost = form.promote ? calculateEventBannerCost(promoDays, accountType) : 0;
+  const spotlightDays = eventUpsellDaysUntil(form.spotlightUntil, EVENT_SPOTLIGHT_STORED_TYPE);
+  const spotlightCost = form.spotlight ? calculateEventSpotlightCost(spotlightDays, accountType) : 0;
   const fmtPrice = (p: string) => (Number(p || 0) === 0 ? "gratis" : `€${p}`);
 
   return (
@@ -109,12 +117,24 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
           </div>
         )}
 
-        {form.promote && (
-          <div className="flex items-center gap-2 border-t border-border pt-3 text-sm">
-            <Megaphone className="h-4 w-4 text-primary" />
-            <span className="font-medium text-foreground">
-              Uitgelichte banner{form.promoteUntil ? ` tot ${new Date(form.promoteUntil).toLocaleDateString("nl-NL")}` : ""} — €{promoCost.toFixed(2)}
-            </span>
+        {(form.promote || form.spotlight) && (
+          <div className="space-y-1.5 border-t border-border pt-3 text-sm">
+            {form.promote && (
+              <div className="flex items-center gap-2">
+                <Megaphone className="h-4 w-4 text-primary" />
+                <span className="font-medium text-foreground">
+                  Uitgelichte banner{form.promoteUntil ? ` tot ${new Date(form.promoteUntil).toLocaleDateString("nl-NL")}` : ""} — €{promoCost.toFixed(2)}
+                </span>
+              </div>
+            )}
+            {form.spotlight && (
+              <div className="flex items-center gap-2">
+                <Megaphone className="h-4 w-4 text-indigo-500" />
+                <span className="font-medium text-foreground">
+                  Homepage-spotlight{form.spotlightUntil ? ` tot ${new Date(form.spotlightUntil).toLocaleDateString("nl-NL")}` : ""} — €{spotlightCost.toFixed(2)}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

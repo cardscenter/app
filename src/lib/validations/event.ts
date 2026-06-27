@@ -88,7 +88,9 @@ export const createEventSchema = z
     prizePool: z.string().max(300).optional(),
 
     promote: boolField,
-    promoteDays: z.coerce.number().int().min(1).max(60).optional(),
+    promoteDays: z.coerce.number().int().min(1).max(90).optional(),
+    spotlight: boolField,
+    spotlightDays: z.coerce.number().int().min(1).max(60).optional(),
   })
   .superRefine((data, ctx) => {
     const endDate = data.endDate || data.startDate;

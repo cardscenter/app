@@ -14,6 +14,10 @@ import {
   EVENT_BANNER_MIN_DAYS,
   EVENT_BANNER_MAX_DAYS,
   calculateEventBannerCost,
+  EVENT_SPOTLIGHT_STORED_TYPE,
+  EVENT_SPOTLIGHT_MIN_DAYS,
+  EVENT_SPOTLIGHT_MAX_DAYS,
+  calculateEventSpotlightCost,
 } from "@/lib/events/upsell-config";
 import { FACILITY_KEYS, ACTIVITY_KEYS, type TicketType } from "@/lib/events/types";
 
@@ -145,6 +149,8 @@ export async function createEvent(formData: FormData) {
     prizePool: formData.get("prizePool") || undefined,
     promote: formData.get("promote") || undefined,
     promoteDays: formData.get("promoteDays") || undefined,
+    spotlight: formData.get("spotlight") || undefined,
+    spotlightDays: formData.get("spotlightDays") || undefined,
   };
 
   const parsed = createEventSchema.safeParse(raw);
@@ -176,23 +182,36 @@ export async function createEvent(formData: FormData) {
   const vendorOptions = parseTicketTypes(data.vendorOptions);
   const galleryImages = parseGalleryImages(data.galleryImages);
 
-  // Promotie: uitgelichte banner uit saldo.
-  const wantsPromo = data.promote && (data.promoteDays ?? 0) > 0;
-  const promoDays = wantsPromo
-    ? Math.max(EVENT_BANNER_MIN_DAYS, Math.min(data.promoteDays ?? 0, EVENT_BANNER_MAX_DAYS))
-    : 0;
-
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { balance: true, reservedBalance: true, accountType: true, isTrustedEventOrganizer: true },
   });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
+  // Promotie uit saldo — twee mogelijke upsells: de banner op de
+  // evenementenpagina (CATEGORY_HIGHLIGHT) en/of de homepage-spotlight
+  // (HOMEPAGE_SPOTLIGHT). Server-side anti-tamper hercheck van dagen + kosten.
+  const wantsPromo = data.promote && (data.promoteDays ?? 0) > 0;
+  const promoDays = wantsPromo
+    ? Math.max(EVENT_BANNER_MIN_DAYS, Math.min(data.promoteDays ?? 0, EVENT_BANNER_MAX_DAYS))
+    : 0;
   const promoCost = wantsPromo ? calculateEventBannerCost(promoDays, user.accountType) : 0;
-  if (promoCost > 0) {
+
+  const wantsSpotlight = data.spotlight && (data.spotlightDays ?? 0) > 0;
+  const spotlightDays = wantsSpotlight
+    ? Math.max(EVENT_SPOTLIGHT_MIN_DAYS, Math.min(data.spotlightDays ?? 0, EVENT_SPOTLIGHT_MAX_DAYS))
+    : 0;
+  const spotlightCost = wantsSpotlight ? calculateEventSpotlightCost(spotlightDays, user.accountType) : 0;
+
+  const promoItems: Array<{ type: string; days: number; cost: number; label: string }> = [];
+  if (promoCost > 0) promoItems.push({ type: EVENT_BANNER_STORED_TYPE, days: promoDays, cost: promoCost, label: "Uitgelichte banner evenement" });
+  if (spotlightCost > 0) promoItems.push({ type: EVENT_SPOTLIGHT_STORED_TYPE, days: spotlightDays, cost: spotlightCost, label: "Homepage-spotlight evenement" });
+
+  const totalPromoCost = Math.round((promoCost + spotlightCost) * 100) / 100;
+  if (totalPromoCost > 0) {
     const available = user.balance - user.reservedBalance;
-    if (available < promoCost) {
-      return { error: `Onvoldoende beschikbaar saldo voor de banner. Benodigd: €${promoCost.toFixed(2)}, beschikbaar: €${available.toFixed(2)}` };
+    if (available < totalPromoCost) {
+      return { error: `Onvoldoende beschikbaar saldo voor de promotie. Benodigd: €${totalPromoCost.toFixed(2)}, beschikbaar: €${available.toFixed(2)}` };
     }
   }
 
@@ -257,32 +276,36 @@ export async function createEvent(formData: FormData) {
       },
     });
 
-    if (promoCost > 0) {
+    if (promoItems.length > 0) {
       const now = new Date();
-      await tx.eventUpsell.create({
-        data: {
-          eventId: newEvent.id,
-          type: EVENT_BANNER_STORED_TYPE,
-          startsAt: now,
-          expiresAt: new Date(now.getTime() + promoDays * 24 * 60 * 60 * 1000),
-          dailyCost: promoCost / promoDays,
-          totalCost: promoCost,
-        },
-      });
+      let running = user.balance;
+      for (const item of promoItems) {
+        await tx.eventUpsell.create({
+          data: {
+            eventId: newEvent.id,
+            type: item.type,
+            startsAt: now,
+            expiresAt: new Date(now.getTime() + item.days * 24 * 60 * 60 * 1000),
+            dailyCost: item.cost / item.days,
+            totalCost: item.cost,
+          },
+        });
 
-      const balanceBefore = user.balance;
-      const balanceAfter = Math.round((balanceBefore - promoCost) * 100) / 100;
-      await tx.user.update({ where: { id: userId }, data: { balance: balanceAfter } });
-      await tx.transaction.create({
-        data: {
-          userId,
-          type: "FEE",
-          amount: -promoCost,
-          balanceBefore,
-          balanceAfter,
-          description: `Uitgelichte banner evenement (${promoDays} dagen)`,
-        },
-      });
+        const balanceBefore = running;
+        const balanceAfter = Math.round((balanceBefore - item.cost) * 100) / 100;
+        running = balanceAfter;
+        await tx.transaction.create({
+          data: {
+            userId,
+            type: "FEE",
+            amount: -item.cost,
+            balanceBefore,
+            balanceAfter,
+            description: `${item.label} (${item.days} dagen)`,
+          },
+        });
+      }
+      await tx.user.update({ where: { id: userId }, data: { balance: running } });
     }
 
     return newEvent;
