@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useTransition, type ReactNode } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ChevronDown, X } from "lucide-react";
+import { X } from "lucide-react";
+import { FilterSection, CheckboxRow, RadioRow } from "@/components/ui/filter-section";
 import {
   AUCTION_CONDITION_OPTIONS,
   AUCTION_DURATIONS,
@@ -48,7 +49,7 @@ export function VeilingenFilterSidebar({
     mutator(next);
     next.delete("page");
     startTransition(() => {
-      router.push(`${pathname}?${next.toString()}`);
+      router.push(`${pathname}?${next.toString()}`, { scroll: false });
     });
   }
 
@@ -85,7 +86,7 @@ export function VeilingenFilterSidebar({
       if (view) preserve.set("view", view);
       if (sort) preserve.set("sort", sort);
       const qs = preserve.toString();
-      router.push(qs ? `${pathname}?${qs}` : pathname);
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     });
   }
 
@@ -149,7 +150,7 @@ export function VeilingenFilterSidebar({
         )}
 
         {/* Huidig bod */}
-        <FilterSection title="Huidig bod" defaultOpen>
+        <FilterSection title="Huidig bod" description="Filter op het hoogste bod tot nu toe (€)." defaultOpen>
           <div className="flex items-center gap-2">
             <div className="flex flex-1 items-center rounded-lg border border-border bg-background px-2">
               <span className="text-sm text-muted-foreground">€</span>
@@ -186,6 +187,7 @@ export function VeilingenFilterSidebar({
         {/* Type veiling */}
         <FilterSection
           title="Type veiling"
+          description="Wat er geveild wordt."
           count={filters.types.length}
           defaultOpen
         >
@@ -202,7 +204,7 @@ export function VeilingenFilterSidebar({
         </FilterSection>
 
         {/* Conditie */}
-        <FilterSection title="Conditie" count={filters.conditions.length}>
+        <FilterSection title="Conditie" description="Staat van de kaart(en)." count={filters.conditions.length}>
           <div className="space-y-1.5">
             {AUCTION_CONDITION_OPTIONS.map((condition) => (
               <CheckboxRow
@@ -216,7 +218,7 @@ export function VeilingenFilterSidebar({
         </FilterSection>
 
         {/* Looptijd */}
-        <FilterSection title="Looptijd" count={filters.durations.length}>
+        <FilterSection title="Looptijd" description="Totale duur van de veiling." count={filters.durations.length}>
           <div className="space-y-1.5">
             {AUCTION_DURATIONS.map((days) => (
               <CheckboxRow
@@ -232,6 +234,7 @@ export function VeilingenFilterSidebar({
         {/* Reserve / Direct kopen */}
         <FilterSection
           title="Veiling-type"
+          description="Zonder reserveprijs of met een directe-koopoptie."
           count={(filters.noReserve ? 1 : 0) + (filters.hasBuyNow ? 1 : 0)}
         >
           <div className="space-y-1.5">
@@ -251,6 +254,7 @@ export function VeilingenFilterSidebar({
         {/* Heeft biedingen */}
         <FilterSection
           title="Biedingen"
+          description="Al biedingen ontvangen of nog geen."
           count={filters.hasBids !== null ? 1 : 0}
         >
           <div className="space-y-1.5">
@@ -276,6 +280,7 @@ export function VeilingenFilterSidebar({
         {buyerHasPostcode && (
           <FilterSection
             title="Afstand"
+            description="Binnen hoeveel km van jouw postcode."
             count={filters.radius !== null ? 1 : 0}
           >
             <div className="space-y-1.5">
@@ -297,7 +302,7 @@ export function VeilingenFilterSidebar({
         )}
 
         {/* Verkoper */}
-        <FilterSection title="Verkoper" count={filters.verifiedOnly ? 1 : 0}>
+        <FilterSection title="Verkoper" description="Toon alleen ID-geverifieerde verkopers." count={filters.verifiedOnly ? 1 : 0}>
           <CheckboxRow
             label="Alleen geverifieerde verkopers"
             checked={filters.verifiedOnly}
@@ -308,6 +313,7 @@ export function VeilingenFilterSidebar({
         {/* Aangeboden sinds */}
         <FilterSection
           title="Aangeboden sinds"
+          description="Hoe recent de veiling gestart is."
           count={filters.since !== "all" ? 1 : 0}
         >
           <div className="space-y-1.5">
@@ -335,89 +341,5 @@ export function VeilingenFilterSidebar({
         </FilterSection>
       </div>
     </aside>
-  );
-}
-
-interface FilterSectionProps {
-  title: string;
-  count?: number;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}
-
-function FilterSection({
-  title,
-  count = 0,
-  defaultOpen = false,
-  children,
-}: FilterSectionProps) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <details
-      open={open}
-      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
-      className="border-t border-border first:border-t-0 py-3"
-    >
-      <summary className="flex cursor-pointer items-center justify-between text-sm font-medium text-foreground list-none">
-        <span className="flex items-center gap-2">
-          {title}
-          {count > 0 && (
-            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-              {count}
-            </span>
-          )}
-        </span>
-        <ChevronDown
-          className={`size-4 text-muted-foreground transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </summary>
-      <div className="mt-3">{children}</div>
-    </details>
-  );
-}
-
-function CheckboxRow({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-foreground hover:bg-muted">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="size-4 rounded border-border text-primary focus:ring-primary"
-      />
-      <span className="flex-1">{label}</span>
-    </label>
-  );
-}
-
-function RadioRow({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm text-foreground hover:bg-muted">
-      <input
-        type="radio"
-        checked={checked}
-        onChange={onChange}
-        className="size-4 border-border text-primary focus:ring-primary"
-      />
-      <span className="flex-1">{label}</span>
-    </label>
   );
 }
