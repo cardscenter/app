@@ -19,7 +19,7 @@ export function SearchSortBar({ resultCount, query }: SearchSortBarProps) {
   function handleSortChange(sort: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", sort);
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   return (

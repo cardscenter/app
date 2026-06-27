@@ -20,7 +20,7 @@ export function ListingViewToggle() {
     // Page reset zodat je niet midden in een lege grid eindigt.
     params.delete("page");
     startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`);
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     });
   }
 

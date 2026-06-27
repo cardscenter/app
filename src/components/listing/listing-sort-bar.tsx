@@ -25,7 +25,7 @@ export function ListingSortBar({ currentSort }: { currentSort: string }) {
       params.set("sort", sort);
     }
     params.delete("page");
-    router.push(`?${params.toString()}`);
+    router.push(`?${params.toString()}`, { scroll: false });
   }
 
   return (

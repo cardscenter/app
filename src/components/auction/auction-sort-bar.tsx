@@ -23,7 +23,7 @@ export function AuctionSortBar({ currentSort, seed }: { currentSort: string; see
     params.set("sort", sort);
     params.set("seed", String(seed));
     params.delete("page");
-    router.push(`?${params.toString()}`);
+    router.push(`?${params.toString()}`, { scroll: false });
   }
 
   return (

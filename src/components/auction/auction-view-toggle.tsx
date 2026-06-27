@@ -19,7 +19,7 @@ export function AuctionViewToggle() {
     else params.set("view", "grid");
     params.delete("page");
     startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`);
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     });
   }
 

@@ -18,7 +18,7 @@ export function EventTabs() {
     const params = new URLSearchParams(sp.toString());
     params.set("tab", value);
     params.delete("type"); // type-filter verschilt per tab
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   const tabs = [
@@ -54,7 +54,7 @@ export function EventViewToggle() {
   function setView(value: "list" | "month" | "map") {
     const params = new URLSearchParams(sp.toString());
     params.set("view", value);
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   const views = [
