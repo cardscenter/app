@@ -1,149 +1,255 @@
 "use client";
 
+import { useState, useEffect, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
+import { FilterSection, CheckboxRow, RadioRow } from "@/components/ui/filter-section";
 import { EVENT_COUNTRIES } from "@/lib/events/countries";
-import { OTHER_EVENT_TYPES, EVENT_TYPE_LABELS_NL, type EventType } from "@/lib/events/types";
-import { EVENT_RADIUS_OPTIONS } from "@/lib/event-filters";
+import {
+  OTHER_EVENT_TYPES,
+  EVENT_TYPE_LABELS_NL,
+  ACTIVITY_KEYS,
+  FACILITY_LABELS_NL,
+  type EventType,
+  type FacilityKey,
+} from "@/lib/events/types";
+import {
+  EVENT_RADIUS_OPTIONS,
+  EVENT_DATE_PRESETS,
+  EVENT_DATE_PRESET_LABELS_NL,
+  parseEventFilters,
+  countActiveEventFilters,
+} from "@/lib/event-filters";
 
 export function EventFilterSidebar({ buyerHasPostcode = false }: { buyerHasPostcode?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
-  const tab = sp.get("tab") === "events" ? "events" : "beurzen";
-  const country = sp.get("country") ?? "";
-  const dateFrom = sp.get("date_from") ?? "";
-  const dateTo = sp.get("date_to") ?? "";
-  const free = sp.get("free") === "1";
-  const radius = Number(sp.get("radius")) || null;
-  const selectedTypes = new Set((sp.get("type") ?? "").split(",").filter(Boolean));
+  const filters = parseEventFilters(Object.fromEntries(sp.entries()) as Record<string, string>);
+  const activeCount = countActiveEventFilters(filters);
 
-  function update(mut: (params: URLSearchParams) => void) {
-    const params = new URLSearchParams(sp.toString());
-    mut(params);
-    router.push(`${pathname}?${params.toString()}`);
+  // Lokale custom-datum-state (alleen toegepast op blur/change).
+  const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? "");
+  const [dateTo, setDateTo] = useState(filters.dateTo ?? "");
+  useEffect(() => {
+    setDateFrom(filters.dateFrom ?? "");
+    setDateTo(filters.dateTo ?? "");
+  }, [filters.dateFrom, filters.dateTo]);
+
+  function updateParams(mutator: (params: URLSearchParams) => void) {
+    const next = new URLSearchParams(sp.toString());
+    mutator(next);
+    next.delete("page");
+    startTransition(() => {
+      router.push(`${pathname}?${next.toString()}`, { scroll: false });
+    });
   }
 
-  function setParam(key: string, value: string) {
-    update((p) => (value ? p.set(key, value) : p.delete(key)));
+  function setSingleParam(key: string, value: string | null) {
+    updateParams((p) => {
+      if (value === null || value === "") p.delete(key);
+      else p.set(key, value);
+    });
   }
 
-  function toggleType(type: EventType) {
-    const next = new Set(selectedTypes);
-    if (next.has(type)) next.delete(type);
-    else next.add(type);
-    update((p) => (next.size ? p.set("type", [...next].join(",")) : p.delete("type")));
+  function toggleListParam(key: string, value: string) {
+    updateParams((p) => {
+      const current = (p.get(key) ?? "").split(",").filter(Boolean);
+      const idx = current.indexOf(value);
+      if (idx === -1) current.push(value);
+      else current.splice(idx, 1);
+      if (current.length === 0) p.delete(key);
+      else p.set(key, current.join(","));
+    });
   }
 
-  const activeCount =
-    (country ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (free ? 1 : 0) + (radius ? 1 : 0) + selectedTypes.size;
+  // Preset zetten wist de custom-range, en omgekeerd (UI laat één van beide toe).
+  function setPreset(value: string | null) {
+    updateParams((p) => {
+      p.delete("date_from");
+      p.delete("date_to");
+      if (value) p.set("date_preset", value);
+      else p.delete("date_preset");
+    });
+  }
+
+  function commitCustomDates() {
+    updateParams((p) => {
+      p.delete("date_preset");
+      if (dateFrom) p.set("date_from", dateFrom);
+      else p.delete("date_from");
+      if (dateTo) p.set("date_to", dateTo);
+      else p.delete("date_to");
+    });
+  }
 
   function clearAll() {
-    const params = new URLSearchParams();
-    params.set("tab", tab);
-    const view = sp.get("view");
-    if (view) params.set("view", view);
-    router.push(`${pathname}?${params.toString()}`);
+    startTransition(() => {
+      const preserve = new URLSearchParams();
+      preserve.set("tab", filters.tab);
+      const view = sp.get("view");
+      if (view) preserve.set("view", view);
+      router.push(`${pathname}?${preserve.toString()}`, { scroll: false });
+    });
   }
 
-  const labelClass = "block text-sm font-semibold text-foreground";
-  const inputClass = "mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground";
+  const hasCustomRange = !!(filters.dateFrom || filters.dateTo);
 
   return (
-    <div className="space-y-5 rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-bold text-foreground">Filters</h3>
-        {activeCount > 0 && (
-          <button onClick={clearAll} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <X className="h-3 w-3" /> Wis ({activeCount})
-          </button>
-        )}
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-foreground">Verfijn resultaten</h2>
+          {activeCount > 0 && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {activeCount}
+            </span>
+          )}
+        </div>
       </div>
 
+      {activeCount > 0 && (
+        <button
+          type="button"
+          onClick={clearAll}
+          disabled={isPending}
+          className="mb-4 w-full rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+        >
+          Wis alle filters
+        </button>
+      )}
+
       {/* Land */}
-      <div>
-        <label className={labelClass} htmlFor="filter-country">Land</label>
+      <FilterSection title="Land" description="Land waar het evenement plaatsvindt." defaultOpen count={filters.country ? 1 : 0}>
         <select
-          id="filter-country"
-          value={country}
-          onChange={(e) => setParam("country", e.target.value)}
-          className={inputClass}
+          value={filters.country ?? ""}
+          onChange={(e) => setSingleParam("country", e.target.value || null)}
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+          aria-label="Land"
         >
           <option value="">Alle landen</option>
           {EVENT_COUNTRIES.map((c) => (
             <option key={c.code} value={c.code}>{c.nameNl}</option>
           ))}
         </select>
-      </div>
+      </FilterSection>
 
-      {/* Type (alleen op de Events-tab; Beurzen toont per definitie alleen beurzen) */}
-      {tab === "events" && (
-        <div>
-          <p className={labelClass}>Type</p>
-          <div className="mt-2 space-y-1.5">
-            {OTHER_EVENT_TYPES.map((type) => (
-              <label key={type} className="flex items-center gap-2 text-sm text-foreground">
-                <input
-                  type="checkbox"
-                  checked={selectedTypes.has(type)}
-                  onChange={() => toggleType(type)}
-                  className="h-4 w-4 rounded border-border"
-                />
-                {EVENT_TYPE_LABELS_NL[type]}
-              </label>
+      {/* Type — alleen op de Events-tab; de Beurzen-tab toont per definitie alleen beurzen. */}
+      {filters.tab === "events" && (
+        <FilterSection title="Type" description="Soort evenement." defaultOpen count={filters.types.length}>
+          <div className="space-y-1.5">
+            {OTHER_EVENT_TYPES.map((type: EventType) => (
+              <CheckboxRow
+                key={type}
+                label={EVENT_TYPE_LABELS_NL[type]}
+                checked={filters.types.includes(type)}
+                onChange={() => toggleListParam("type", type)}
+              />
             ))}
           </div>
-        </div>
+        </FilterSection>
       )}
 
-      {/* Datum */}
-      <div>
-        <p className={labelClass}>Datum</p>
-        <div className="mt-1 space-y-2">
-          <input type="date" value={dateFrom} onChange={(e) => setParam("date_from", e.target.value)} className={inputClass} aria-label="Vanaf" />
-          <input type="date" value={dateTo} onChange={(e) => setParam("date_to", e.target.value)} className={inputClass} aria-label="Tot" />
+      {/* Wanneer — snel-presets + optionele custom range */}
+      <FilterSection
+        title="Wanneer"
+        description="Periode waarin het evenement valt."
+        defaultOpen
+        count={(filters.datePreset ? 1 : 0) + (filters.dateFrom ? 1 : 0) + (filters.dateTo ? 1 : 0)}
+      >
+        <div className="space-y-1.5">
+          <RadioRow
+            label="Alles"
+            checked={!filters.datePreset && !hasCustomRange}
+            onChange={() => setPreset(null)}
+          />
+          {EVENT_DATE_PRESETS.map((preset) => (
+            <RadioRow
+              key={preset}
+              label={EVENT_DATE_PRESET_LABELS_NL[preset]}
+              checked={filters.datePreset === preset}
+              onChange={() => setPreset(preset)}
+            />
+          ))}
         </div>
-      </div>
+        <details open={hasCustomRange} className="mt-2">
+          <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+            Aangepaste periode
+          </summary>
+          <div className="mt-2 space-y-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              onBlur={commitCustomDates}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+              aria-label="Vanaf"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              onBlur={commitCustomDates}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+              aria-label="Tot"
+            />
+          </div>
+        </details>
+      </FilterSection>
+
+      {/* Activiteiten */}
+      <FilterSection
+        title="Activiteiten"
+        description="Wat je er kunt doen."
+        count={filters.activities.length}
+      >
+        <div className="space-y-1.5">
+          {ACTIVITY_KEYS.map((key: FacilityKey) => (
+            <CheckboxRow
+              key={key}
+              label={FACILITY_LABELS_NL[key]}
+              checked={filters.activities.includes(key)}
+              onChange={() => toggleListParam("activities", key)}
+            />
+          ))}
+        </div>
+      </FilterSection>
 
       {/* Afstand — alleen voor ingelogde users met een postcode in hun profiel */}
       {buyerHasPostcode && (
-        <div>
-          <p className={labelClass}>Afstand</p>
-          <div className="mt-2 space-y-1.5">
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <input
-                type="radio"
-                name="radius"
-                checked={radius === null}
-                onChange={() => setParam("radius", "")}
-                className="h-4 w-4 border-border"
-              />
-              Alle afstanden
-            </label>
+        <FilterSection
+          title="Afstand"
+          description="Binnen hoeveel km van jouw postcode."
+          count={filters.radius !== null ? 1 : 0}
+        >
+          <div className="space-y-1.5">
+            <RadioRow
+              label="Alle afstanden"
+              checked={filters.radius === null}
+              onChange={() => setSingleParam("radius", null)}
+            />
             {EVENT_RADIUS_OPTIONS.map((km) => (
-              <label key={km} className="flex items-center gap-2 text-sm text-foreground">
-                <input
-                  type="radio"
-                  name="radius"
-                  checked={radius === km}
-                  onChange={() => setParam("radius", String(km))}
-                  className="h-4 w-4 border-border"
-                />
-                Binnen {km} km
-              </label>
+              <RadioRow
+                key={km}
+                label={`Binnen ${km} km`}
+                checked={filters.radius === km}
+                onChange={() => setSingleParam("radius", String(km))}
+              />
             ))}
           </div>
-        </div>
+        </FilterSection>
       )}
 
       {/* Entree */}
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm text-foreground">
-          <input type="checkbox" checked={free} onChange={(e) => update((p) => (e.target.checked ? p.set("free", "1") : p.delete("free")))} className="h-4 w-4 rounded border-border" />
-          Alleen gratis entree
-        </label>
-      </div>
+      <FilterSection title="Entree" description="Gratis of betaalde toegang." count={filters.freeOnly ? 1 : 0}>
+        <CheckboxRow
+          label="Alleen gratis entree"
+          checked={filters.freeOnly}
+          onChange={() => setSingleParam("free", filters.freeOnly ? null : "1")}
+        />
+      </FilterSection>
     </div>
   );
 }
