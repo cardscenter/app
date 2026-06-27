@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { calculateXP, getLevel } from "@/lib/seller-levels";
 import { getRecentlySold } from "@/lib/home-recently-sold";
+import type { EventListItem } from "@/components/events/event-view-types";
 
 export type HomepageStats = {
   activeAuctions: number;
@@ -55,6 +56,7 @@ async function fetchHomepageData() {
     trendingAuctions,
     sponsoredAuctions,
     sponsoredListings,
+    spotlightEventsRaw,
     platformStatsRaw,
   ] = await Promise.all([
     // Counts
@@ -144,9 +146,43 @@ async function fetchHomepageData() {
       },
     }),
 
+    // Spotlight events — LIVE events met een actieve HOMEPAGE_SPOTLIGHT-upsell.
+    prisma.event.findMany({
+      where: {
+        status: "LIVE",
+        endTime: { gte: now },
+        upsells: { some: { type: "HOMEPAGE_SPOTLIGHT", expiresAt: { gt: now } } },
+      },
+      orderBy: { startTime: "asc" },
+      take: 8,
+    }),
+
     // Platform stats
     getPlatformStats(),
   ]);
+
+  const spotlightEvents: EventListItem[] = spotlightEventsRaw.map((e) => ({
+    id: e.id,
+    title: e.title,
+    eventType: e.eventType,
+    venueName: e.venueName,
+    street: e.street,
+    houseNumber: e.houseNumber,
+    postalCode: e.postalCode,
+    city: e.city,
+    country: e.country,
+    startTime: e.startTime.toISOString(),
+    endTime: e.endTime.toISOString(),
+    timezone: e.timezone,
+    coverImage: e.coverImage,
+    entryType: e.entryType,
+    entryPrice: e.entryPrice,
+    entryCurrency: e.entryCurrency,
+    isOfficial: e.isOfficial,
+    lat: e.lat,
+    lng: e.lng,
+    featured: true,
+  }));
 
   // Fase 36 additions: recently-sold-for + testimonials gating count
   const [recentlySoldItems, fiveStarReviewCount] = await Promise.all([
@@ -171,6 +207,7 @@ async function fetchHomepageData() {
     trendingAuctions: filteredTrending,
     sponsoredAuctions,
     sponsoredListings,
+    spotlightEvents,
     topSellers,
     platformStats: platformStatsRaw,
     recentlySoldItems,

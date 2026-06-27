@@ -21,6 +21,7 @@ import { AnimatedSection } from "@/components/home/animated-section";
 import { HomeCarousel, CarouselSlide } from "@/components/home/home-carousel";
 import { EmptyHomeSection } from "@/components/home/empty-home-section";
 import { RecentlySoldSection } from "@/components/home/recently-sold-section";
+import { SpotlightEvents } from "@/components/home/spotlight-events";
 import { BuyerProtectionSection } from "@/components/home/buyer-protection-section";
 import { TierComparisonHomepage } from "@/components/home/tier-comparison-homepage";
 import { CompetitorComparisonSection } from "@/components/home/competitor-comparison-section";
@@ -120,6 +121,15 @@ async function HomePageContent({
           buyer={buyerLocation}
         />
       ),
+    });
+  }
+
+  // 4b. Uitgelichte evenementen — bg-background. Alleen tonen als er events met
+  //     een actieve HOMEPAGE_SPOTLIGHT-upsell zijn (anders rendert de sectie null).
+  if (data.spotlightEvents.length > 0) {
+    sections.push({
+      surface: "bg",
+      node: <SpotlightEvents items={data.spotlightEvents} locale={locale} bgClass="bg-background" />,
     });
   }
 
