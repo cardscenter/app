@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Calendar, MapPin, Ticket, ShieldCheck, Users } from "lucide-react";
+import { Calendar, MapPin, Ticket, ShieldCheck, Users, Sparkles } from "lucide-react";
 import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, type EventType } from "@/lib/events/types";
@@ -19,7 +19,11 @@ export function EventCard({ event }: { event: EventListItem }) {
   return (
     <Link
       href={`/evenementen/${event.id}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card transition hover:shadow-card-hover sm:flex-row"
+      className={`group flex flex-col overflow-hidden rounded-xl border bg-card shadow-card transition hover:shadow-card-hover sm:flex-row ${
+        event.featured
+          ? "border-amber-300 ring-1 ring-amber-300 dark:border-amber-500/60 dark:ring-amber-500/40"
+          : "border-border"
+      }`}
     >
       <div className="relative h-40 w-full shrink-0 bg-muted sm:h-auto sm:w-52">
         {event.coverImage ? (
@@ -38,6 +42,11 @@ export function EventCard({ event }: { event: EventListItem }) {
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-4">
         <div className="flex flex-wrap items-center gap-1.5">
+          {event.featured && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+              <Sparkles className="h-3 w-3" /> Uitgelicht
+            </span>
+          )}
           <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${EVENT_TYPE_PILL_CLASSES[event.eventType as EventType] ?? "bg-muted"}`}>
             {getEventTypeLabel(event.eventType, locale)}
           </span>

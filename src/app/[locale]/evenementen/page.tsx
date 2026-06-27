@@ -4,7 +4,8 @@ import type { Prisma } from "@prisma/client";
 import { Plus } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { PageContainer } from "@/components/layout/page-container";
-import { parseEventFilters, buildEventFilterWhere, countActiveEventFilters } from "@/lib/event-filters";
+import { parseEventFilters, buildEventFilterWhere } from "@/lib/event-filters";
+import { EVENT_BANNER_STORED_TYPE } from "@/lib/events/upsell-config";
 import { getBlockedUserIds } from "@/lib/blocking";
 import { getBuyerLocation } from "@/lib/shipping/filter";
 import { coordForPostcode, haversineDistanceKm } from "@/lib/distance";
@@ -25,7 +26,6 @@ export default async function EventsPage({
   const { locale } = await params;
   const sp = await searchParams;
   const filters = parseEventFilters(sp);
-  const activeFilters = countActiveEventFilters(filters);
 
   const session = await auth();
   const blocked = await getBlockedUserIds(session?.user?.id);
@@ -49,7 +49,15 @@ export default async function EventsPage({
     where,
     orderBy: { startTime: "asc" },
     take: 300,
-    include: { upsells: { where: { expiresAt: { gt: now } }, select: { id: true }, take: 1 } },
+    // "Featured" op /evenementen = een actieve banner-upsell (CATEGORY_HIGHLIGHT).
+    // De homepage-spotlight (HOMEPAGE_SPOTLIGHT) telt hier bewust niet mee.
+    include: {
+      upsells: {
+        where: { type: EVENT_BANNER_STORED_TYPE, expiresAt: { gt: now } },
+        select: { id: true },
+        take: 1,
+      },
+    },
   });
 
   const toItem = (e: (typeof rows)[number]): EventListItem => ({
@@ -89,17 +97,10 @@ export default async function EventsPage({
     );
   }
 
-  // "Uitgelicht" — events met een actieve banner-upsell, alleen op pagina zonder filters.
-  let featured: EventListItem[] = [];
-  if (activeFilters === 0) {
-    const featuredRows = await prisma.event.findMany({
-      where: { ...where, upsells: { some: { expiresAt: { gt: now } } } },
-      orderBy: { startTime: "asc" },
-      take: 5,
-      include: { upsells: { where: { expiresAt: { gt: now } }, select: { id: true }, take: 1 } },
-    });
-    featured = featuredRows.map(toItem);
-  }
+  // "Uitgelicht" — events met een actieve banner-upsell. Afgeleid uit de reeds
+  // gefilterde lijst (dus ook radius-correct) zodat een betaald event zichtbaar
+  // blijft wanneer een bezoeker filtert — mits het binnen het filter past.
+  const featured: EventListItem[] = events.filter((e) => e.featured).slice(0, 8);
 
   const tabLabel = filters.tab === "beurzen" ? "beurzen" : "evenementen";
 
@@ -178,6 +179,7 @@ export default async function EventsPage({
                   startTime: e.startTime,
                   endTime: e.endTime,
                   timezone: e.timezone,
+                  featured: e.featured,
                 }))}
             />
           ) : (

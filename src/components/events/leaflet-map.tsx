@@ -20,20 +20,27 @@ export interface MapEvent {
   startTime: string;
   endTime: string;
   timezone: string;
+  featured?: boolean;
 }
 
 // Custom div-icon pin — vermijdt het bekende Leaflet-marker-asset-pad-probleem
 // in bundlers (geen png-imports nodig) en houdt één consistente icoonstijl.
-const pinIcon = L.divIcon({
-  className: "",
-  html: `<svg viewBox="0 0 24 24" width="24" height="24" fill="#6366f1" stroke="#ffffff" stroke-width="1.5">
-    <path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/>
-    <circle cx="12" cy="9" r="2.5" fill="#ffffff" stroke="none"/>
-  </svg>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 24],
-  popupAnchor: [0, -22],
-});
+// Betaalde (featured) events krijgen een amber pin zodat ze ook op de kaart
+// opvallen; de rest is indigo.
+function makePin(color: string) {
+  return L.divIcon({
+    className: "",
+    html: `<svg viewBox="0 0 24 24" width="24" height="24" fill="${color}" stroke="#ffffff" stroke-width="1.5">
+      <path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/>
+      <circle cx="12" cy="9" r="2.5" fill="#ffffff" stroke="none"/>
+    </svg>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -22],
+  });
+}
+const pinIcon = makePin("#6366f1");
+const featuredPinIcon = makePin("#f59e0b");
 
 function escapeHtml(s: string): string {
   return s
@@ -80,7 +87,7 @@ function ClusterLayer({ events, locale }: { events: MapEvent[]; locale: string }
       });
       const timeStr = `${tf.format(new Date(e.startTime))}–${tf.format(new Date(e.endTime))}`;
       const address = `${e.street} ${e.houseNumber}, ${e.postalCode} ${e.city}`.trim();
-      const marker = L.marker([e.lat, e.lng], { icon: pinIcon });
+      const marker = L.marker([e.lat, e.lng], { icon: e.featured ? featuredPinIcon : pinIcon });
       marker.bindPopup(
         `<div style="min-width:180px;max-width:220px">
           <p style="font-weight:600;margin:0 0 2px">${escapeHtml(e.title)}</p>
