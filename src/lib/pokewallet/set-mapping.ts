@@ -145,7 +145,7 @@ interface UnmatchedPwSet {
  * komen te hangen. Admin verplaatst ze daarna handmatig via
  * /dashboard/admin/catalog naar de juiste Era.
  */
-const FALLBACK_SERIES_NAME = "Onbekend (te categoriseren)";
+export const FALLBACK_SERIES_NAME = "Onbekend (te categoriseren)";
 
 /**
  * Hoeveel dagen oud een PW-set maximaal mag zijn om als "echt nieuw" te
@@ -317,6 +317,84 @@ async function getOrCreateFallbackSeries(): Promise<string> {
 }
 
 /**
+ * Zoek (of maak) de juiste Era-Series voor een TCGdex-set aan de hand van
+ * z'n `serie: { id, name }`. Zo landen nieuw-ontdekte sets automatisch onder
+ * de juiste Era (bv. Chaos Rising → Mega Evolution) i.p.v. permanent onder de
+ * fallback "Onbekend".
+ *
+ * Volgorde:
+ *   1. Match op `tcgdexSeriesId === serie.id` (uniek, meest betrouwbaar).
+ *   2. Match op genormaliseerde naam; backfill dan de ontbrekende tcgdexSeriesId.
+ *   3. Anders: maak een nieuwe Series aan (naam + tcgdexSeriesId) onder de
+ *      eerste Category.
+ *
+ * Retourneert de seriesId, of null als er geen bruikbare serie-info is.
+ */
+export async function resolveOrCreateSeriesForTcgdex(
+  serie: { id?: string | null; name?: string | null } | null | undefined,
+): Promise<string | null> {
+  const serieId = serie?.id?.trim();
+  const serieName = serie?.name?.trim();
+  if (!serieId && !serieName) return null;
+
+  // 1. Op tcgdexSeriesId (uniek)
+  if (serieId) {
+    const byId = await prisma.series.findUnique({
+      where: { tcgdexSeriesId: serieId },
+      select: { id: true },
+    });
+    if (byId) return byId.id;
+  }
+
+  // 2. Op genormaliseerde naam — backfill tcgdexSeriesId als die ontbreekt.
+  if (serieName) {
+    const target = normalizeName(serieName);
+    const candidates = await prisma.series.findMany({
+      select: { id: true, name: true, tcgdexSeriesId: true },
+    });
+    const match = candidates.find((s) => normalizeName(s.name) === target);
+    if (match) {
+      if (serieId && !match.tcgdexSeriesId) {
+        try {
+          await prisma.series.update({
+            where: { id: match.id },
+            data: { tcgdexSeriesId: serieId },
+          });
+        } catch {
+          // tcgdexSeriesId al geclaimd door een andere rij — laat 'm zoals 'ie is.
+        }
+      }
+      return match.id;
+    }
+  }
+
+  // 3. Nieuwe Era aanmaken onder de eerste Category.
+  const category = await prisma.category.findFirst({ select: { id: true } });
+  if (!category) return null;
+  try {
+    const created = await prisma.series.create({
+      data: {
+        name: serieName || serieId!,
+        tcgdexSeriesId: serieId ?? null,
+        categoryId: category.id,
+      },
+      select: { id: true },
+    });
+    return created.id;
+  } catch {
+    // Race op de @unique tcgdexSeriesId — lees 'm terug.
+    if (serieId) {
+      const raced = await prisma.series.findUnique({
+        where: { tcgdexSeriesId: serieId },
+        select: { id: true },
+      });
+      if (raced) return raced.id;
+    }
+    return null;
+  }
+}
+
+/**
  * Detecteer PokeWallet-sets die nog niet aan een DB-CardSet gekoppeld zijn.
  *
  * Auto-create: alleen voor échte nieuwe sets (release_date binnen
@@ -375,6 +453,17 @@ export async function discoverAndCreateNewSets(
         pokewalletSetId: pw.set_id,
         releaseDate: pw.release_date,
         reason: `release_date ouder dan ${NEW_SET_MAX_AGE_DAYS}d — waarschijnlijk mapping-mismatch, niet auto-aangemaakt`,
+      });
+      continue;
+    }
+    // Toekomstige releases (bv. een aangekondigde-maar-nog-niet-uitgebrachte set)
+    // NIET aanmaken. Alleen rapporteren zodat admin ziet dat 'ie eraan komt.
+    if (releaseDate.getTime() > Date.now()) {
+      needsReview.push({
+        name: pw.name,
+        pokewalletSetId: pw.set_id,
+        releaseDate: pw.release_date,
+        reason: "release_date in de toekomst — nog niet uitgebracht, niet auto-aangemaakt",
       });
       continue;
     }

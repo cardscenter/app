@@ -16,6 +16,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { normalizeForSearch } from "@/lib/search-utils";
+import { FALLBACK_SERIES_NAME, resolveOrCreateSeriesForTcgdex } from "@/lib/pokewallet/set-mapping";
 import {
   fetchTcgdexCard,
   fetchTcgdexSet,
@@ -125,7 +126,7 @@ export interface PopulateResult {
 export async function populateSetCards(cardSetId: string): Promise<PopulateResult> {
   const set = await prisma.cardSet.findUnique({
     where: { id: cardSetId },
-    select: { id: true, name: true, tcgdexSetId: true },
+    select: { id: true, name: true, tcgdexSetId: true, seriesId: true, series: { select: { name: true } } },
   });
   if (!set) return { cardSetId, name: "?", tcgdexSetId: null, created: 0, skipped: 0, error: "CardSet not found" };
 
@@ -137,6 +138,20 @@ export async function populateSetCards(cardSetId: string): Promise<PopulateResul
   const tcgSet = await fetchTcgdexSet(tcgId);
   if (!tcgSet) {
     return { cardSetId, name: set.name, tcgdexSetId: tcgId, created: 0, skipped: 0, error: `TCGdex set ${tcgId} not found` };
+  }
+
+  // Hang de set onder de juiste Era zodra we die van TCGdex kennen — maar
+  // ALLEEN als 'ie nu nog onder de fallback "Onbekend" hangt, zodat we een
+  // handmatige admin-indeling nooit overschrijven.
+  if (tcgSet.serie && set.series?.name === FALLBACK_SERIES_NAME) {
+    try {
+      const seriesId = await resolveOrCreateSeriesForTcgdex(tcgSet.serie);
+      if (seriesId && seriesId !== set.seriesId) {
+        await prisma.cardSet.update({ where: { id: cardSetId }, data: { seriesId } });
+      }
+    } catch (e) {
+      console.warn(`[populateSetCards] kon set ${set.name} niet herindelen:`, (e as Error).message);
+    }
   }
 
   // Backfill set metadata. tcgdexSetId is @unique — only claim it if free.
@@ -227,10 +242,15 @@ export async function populateEmptyMappedSets(): Promise<{ populated: PopulateRe
     select: { id: true, releaseDate: true },
   });
   // Skip ancient legacy shells TCGdex can't fill; keep undated (likely brand new).
+  // Skip ook toekomstige releases (nog niet uitgebracht) — defensief, voor het
+  // geval een future-set toch als shell is aangemaakt buiten discover om.
   const empties = allEmpties
     .filter((s) => {
       const y = extractYear(s.releaseDate);
-      return y === null || y >= MIN_AUTO_POPULATE_YEAR;
+      if (y !== null && y < MIN_AUTO_POPULATE_YEAR) return false;
+      const rd = s.releaseDate ? new Date(s.releaseDate.replace(/(\d+)(st|nd|rd|th)/i, "$1").trim()) : null;
+      if (rd && !isNaN(rd.getTime()) && rd.getTime() > Date.now()) return false;
+      return true;
     })
     .slice(0, MAX_SETS_PER_RUN);
 
