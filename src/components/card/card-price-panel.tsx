@@ -26,12 +26,12 @@ export interface VariantPricing {
   avg7: number | null;
   avg30: number | null;
   /**
-   * Server-computed delta on Marktprijs vs ~7-day-old snapshot. Apples-to-
-   * apples — both sides go through the same outlier-filter. Falls back to
-   * raw priceAvg vs priceAvg7 when no snapshot history exists yet.
+   * Server-computed Marktprijs-delta per periode (dagen: 7/14/30/90/365).
+   * Apples-to-apples — beide kanten door dezelfde outlier-filter. Voor 7 en 30
+   * dagen is er een raw priceAvg/avg7/avg30-fallback; 14/90/365 zijn puur
+   * snapshot-gebaseerd (null als er nog geen historie ~N dagen terug is).
    */
-  delta7d: number | null;
-  delta30d: number | null;
+  deltas: Record<number, number | null>;
 }
 
 export interface HistoryPoint {
@@ -56,13 +56,23 @@ interface Props {
   canExtendedHistory?: boolean;
 }
 
-// Klikbare periodes boven de grafiek. 14d/30d gratis, 90d/1j achter PRO.
+// Klikbare periodes boven de grafiek. 7d/14d/30d gratis, 90d/365d achter PRO.
 const PERIODS = [
+  { days: 7, label: "7d", pro: false },
   { days: 14, label: "14d", pro: false },
   { days: 30, label: "30d", pro: false },
   { days: 90, label: "90d", pro: true },
-  { days: 365, label: "1j", pro: true },
+  { days: 365, label: "365d", pro: true },
 ] as const;
+
+// Delta-label per periode (getoond naast het percentage onder Marktwaarde).
+const DELTA_LABELS: Record<number, string> = {
+  7: "7 dagen",
+  14: "14 dagen",
+  30: "30 dagen",
+  90: "90 dagen",
+  365: "365 dagen",
+};
 
 function formatEur(n: number | null) {
   if (n === null || n === undefined) return "—";
@@ -76,7 +86,9 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   const overallSpanDays = history.length >= 2
     ? Math.round((Date.parse(history[history.length - 1].date) - Date.parse(history[0].date)) / 86400000)
     : 0;
-  const [periodDays, setPeriodDays] = useState<number>(overallSpanDays >= 14 ? 30 : 14);
+  const [periodDays, setPeriodDays] = useState<number>(
+    overallSpanDays >= 14 ? 30 : overallSpanDays >= 7 ? 14 : 7,
+  );
   const active = variants.find((v) => v.key === activeKey) ?? variants[0];
   if (!active) return null;
 
@@ -95,9 +107,12 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
     : 0;
   const isLocked = (pro: boolean) => pro && !canExtendedHistory;
   const isRedundant = (days: number) => {
-    if (days === 14) return false;
-    const prev = days === 30 ? 14 : days === 90 ? 30 : 90;
-    return variantSpanDays <= prev;
+    // Een langere tab is redundant als DEZE variant niet eens tot de vorige
+    // tab-grens aan historie heeft (zelfde grafiek). Kortste tab (7d) nooit.
+    const ladder = [7, 14, 30, 90, 365];
+    const idx = ladder.indexOf(days);
+    if (idx <= 0) return false;
+    return variantSpanDays <= ladder[idx - 1];
   };
 
   // Klem de actieve periode omlaag als de gekozen tab gelockt/redundant is, zodat
@@ -114,20 +129,21 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   const series = windowed.length >= 2 ? windowed : fullSeries;
 
   // Pre-computed by the server using snapshot history. Already apples-to-
-  // apples (Marktprijs vs Marktprijs of ~7d ago, or raw vs raw fallback).
-  const deltaVs7d = active.delta7d;
-  const deltaVs30d = active.delta30d;
+  // apples (Marktprijs vs Marktprijs of ~N days ago, or raw vs raw fallback).
+  // De getoonde delta volgt de actieve periode-tab (7d vs 7d terug, enz.).
+  const activeDelta = active.deltas[effectivePeriodDays] ?? null;
+  const deltaVs30d = active.deltas[30] ?? null;
 
   const trendIcon =
-    deltaVs7d === null ? <Minus className="size-4" /> :
-    deltaVs7d > 0.5 ? <TrendingUp className="size-4" /> :
-    deltaVs7d < -0.5 ? <TrendingDown className="size-4" /> :
+    activeDelta === null ? <Minus className="size-4" /> :
+    activeDelta > 0.5 ? <TrendingUp className="size-4" /> :
+    activeDelta < -0.5 ? <TrendingDown className="size-4" /> :
     <Minus className="size-4" />;
 
   const trendColor =
-    deltaVs7d === null ? "text-muted-foreground" :
-    deltaVs7d > 0.5 ? "text-emerald-600 dark:text-emerald-400" :
-    deltaVs7d < -0.5 ? "text-red-600 dark:text-red-400" :
+    activeDelta === null ? "text-muted-foreground" :
+    activeDelta > 0.5 ? "text-emerald-600 dark:text-emerald-400" :
+    activeDelta < -0.5 ? "text-red-600 dark:text-red-400" :
     "text-muted-foreground";
 
   const hasRealHistory = series.length >= 2;
@@ -136,7 +152,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       {hasRealHistory && (
-        <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl border border-border bg-muted/40 p-1 text-xs font-medium">
+        <div className="mb-4 grid grid-cols-5 gap-1 rounded-xl border border-border bg-muted/40 p-1 text-xs font-medium">
           {PERIODS.map((p) => {
             if (isLocked(p.pro)) {
               return (
@@ -179,8 +195,8 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
           <p className="mt-1 text-3xl font-bold text-foreground">{formatEur(active.avg)}</p>
           <div className={cn("mt-1 flex items-center gap-1 text-sm font-medium", trendColor)}>
             {trendIcon}
-            {deltaVs7d !== null
-              ? <span>{deltaVs7d > 0 ? "+" : ""}{deltaVs7d.toFixed(1)}% · 7 dagen</span>
+            {activeDelta !== null
+              ? <span>{activeDelta > 0 ? "+" : ""}{activeDelta.toFixed(1)}% · {DELTA_LABELS[effectivePeriodDays] ?? `${effectivePeriodDays} dagen`}</span>
               : <span>—</span>}
           </div>
         </div>
