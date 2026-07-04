@@ -338,11 +338,11 @@ export default async function CardDetailPage({ params }: Props) {
     return ((rawCurrent - rawPast) / rawPast) * 100;
   };
 
-  // Delta per periode-tab (7/14/30/90/365 dagen), zodat het percentage onder
+  // Delta per periode-tab (7/14/30/60/120/365 dagen), zodat het percentage onder
   // Marktwaarde meebeweegt met de gekozen grafiek-periode. Raw rolling-avg
-  // fallback bestaat alleen voor 7 en 30 dagen; 14/90/365 zijn puur snapshot-
+  // fallback bestaat alleen voor 7 en 30 dagen; 14/60/120/365 zijn puur snapshot-
   // gebaseerd (null → "—" als er nog geen historie ~N dagen terug is).
-  const DELTA_PERIODS = [7, 14, 30, 90, 365];
+  const DELTA_PERIODS = [7, 14, 30, 60, 120, 365];
   const buildDeltas = (
     current: number | null,
     history: SnapshotPoint[],

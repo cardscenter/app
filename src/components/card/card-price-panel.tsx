@@ -56,12 +56,13 @@ interface Props {
   canExtendedHistory?: boolean;
 }
 
-// Klikbare periodes boven de grafiek. 7d/14d/30d gratis, 90d/365d achter PRO.
+// Klikbare periodes boven de grafiek. 7d/14d/30d gratis, 60d/120d/365d achter PRO.
 const PERIODS = [
   { days: 7, label: "7d", pro: false },
   { days: 14, label: "14d", pro: false },
   { days: 30, label: "30d", pro: false },
-  { days: 90, label: "90d", pro: true },
+  { days: 60, label: "60d", pro: true },
+  { days: 120, label: "120d", pro: true },
   { days: 365, label: "365d", pro: true },
 ] as const;
 
@@ -70,7 +71,8 @@ const DELTA_LABELS: Record<number, string> = {
   7: "7 dagen",
   14: "14 dagen",
   30: "30 dagen",
-  90: "90 dagen",
+  60: "60 dagen",
+  120: "120 dagen",
   365: "365 dagen",
 };
 
@@ -109,7 +111,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   const isRedundant = (days: number) => {
     // Een langere tab is redundant als DEZE variant niet eens tot de vorige
     // tab-grens aan historie heeft (zelfde grafiek). Kortste tab (7d) nooit.
-    const ladder = [7, 14, 30, 90, 365];
+    const ladder = [7, 14, 30, 60, 120, 365];
     const idx = ladder.indexOf(days);
     if (idx <= 0) return false;
     return variantSpanDays <= ladder[idx - 1];
@@ -152,7 +154,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       {hasRealHistory && (
-        <div className="mb-4 grid grid-cols-5 gap-1 rounded-xl border border-border bg-muted/40 p-1 text-xs font-medium">
+        <div className="mb-4 grid grid-cols-6 gap-1 rounded-xl border border-border bg-muted/40 p-1 text-xs font-medium">
           {PERIODS.map((p) => {
             if (isLocked(p.pro)) {
               return (
