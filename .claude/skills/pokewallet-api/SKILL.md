@@ -62,10 +62,55 @@ Document elk update met datum + bron van het inzicht zodat we de evolutie kunnen
 ## Status APIs (per 2026-04-19) — ALLEEN POKEWALLET
 
 PokeWallet is **de enige pricing-bron**. Alle andere APIs zijn verwijderd:
-- ❌ TCGdex API (verwijderd — image URLs in DB blijven werken via TCGdex CDN, geen calls meer)
+- ⚠️ TCGdex API (geen pricing-calls meer) — **MAAR image-URLs in de DB hotlinken naar `assets.tcgdex.net`, en dat bleek 2026-07-04 een single-point-of-failure: volledige TCGdex-storing → ~90% van de kaarten zonder beeld.** Migratieplan: beelden naar PokeWallet (`/images/:id`) + R2. Zie sectie "Weerbaarheid & periode-strategie".
 - ❌ pokemontcg.io (verwijderd)
 - ❌ tcggo (was niet geactiveerd, weg)
 - ❌ PriceCharting (verwijderd, ook variants scrape weg)
+
+## Weerbaarheid & periode-strategie (beslissingen 2026-07-04)
+
+### Budget-beslissing
+Dagelijkse **volledige** price-refresh via `/search?q=<set_id>` (~600 calls, 1,2% van Pro-budget)
+is akkoord bevonden — ruim binnen budget, mag elke nacht. (De goedkopere `/prices/:setCode`
+= ~135 calls blijft een optie voor later, maar mist `pokewalletId`/`rarity` — zie dat endpoint.)
+
+### Beeld-onafhankelijkheid (weg van TCGdex)
+- **Kaarten:** `GET /images/:id` (99,9% dekking via `pokewalletId`). **Set-logo's:** `GET /sets/:id/image`.
+- Beide vereisen de API-key (401 zonder) → **niet hotlinkbaar**; mirror één keer naar **R2** (high+low) of proxy via eigen backend-route. Placeholder-fallback voor de ~21 kaarten zonder `pokewalletId`.
+
+### Periode-strategie voor de kaart-detail grafiek — KRITISCHE REGEL
+Gewenste tabs: **7 / 14 / 30 / 60 / 120 / 365 dagen**.
+- **Deltas + grafieklijn ALTIJD uit onze eigen `CardPriceHistory`-snapshots** (dagelijkse snapshot
+  van de **gefilterde Marktprijs**), via `findHistoricPrice(history, daysAgo)` per venster.
+- **NOOIT PokeWallet's rauwe `change_7d/…/change_120d` gebruiken voor de getoonde delta.** Die zijn
+  op ONGEFILTERDE CM/TP-data → herintroduceren precies de absurde sprongen die onze
+  Marktprijs-formule (excludeHighSpike + TP-cross-check + snapshot-anchor) juist wegfiltert. De
+  regel "een prijsverschuiving moet altijd een menselijke beweging blijven" blijft leidend; die
+  leeft in de gefilterde snapshot, niet in de PokeWallet-history.
+- **De periodes kosten GEEN extra API-calls** — ze lezen bestaande snapshots. De dagelijkse
+  price-cron is de enige feeder: die schrijft elke nacht de gefilterde snapshot weg (`getMarktprijs`
+  / `getMarktprijsReverseHolo`, vandaag uitgesloten om feedback-loop te vermijden). Coupling bestaat
+  dus al; er hoeft niets aan de cron te veranderen behalve blijven draaien.
+- ⚠️ **History-diepte-caveat (live DB, gemeten 2026-07-04):** snapshots lopen pas vanaf **2026-06-04**
+  (~30 distinct dagen). Dus **60d wordt gevuld ~2026-08-03, 120d ~2026-10-02, 365d ~2027-06-04**;
+  tot dan tonen die vensters een kortere lijn + "—"-delta (net als PokeWallet's eigen "null tot
+  genoeg snapshots"). Diepte groeit vanzelf met de dagelijkse cron. **Niet** seeden met PokeWallet's
+  rauwe history om het gat te vullen — dat vervuilt de gefilterde reeks met ongecorrigeerde punten.
+
+### Kan TCGdex volledig weg? (status 2026-07-04)
+PokeWallet **dekt**: kaart-beelden, set-logo's, prijzen, kaartlijst voor nieuwe sets (`/search`|`/sets`),
+set-meta (release_date/card_count). PokeWallet **dekt NIET** (blijft TCGdex of alternatief vergen):
+1. **Gameplay-richness** — `abilities`, `evolveFrom`, `dexId` (Pokédex-nr), `regulationMark`,
+   `legal` (standard/expanded). PokeWallet `card_info` heeft alleen attacks/weakness/resistance/
+   retreat/hp/stage/card_text. → gameplay-blok op de kaartpagina verliest velden.
+2. **Set-symbolen** (`symbolUrl`) — PokeWallet serveert alleen logo's.
+3. **Prijs-fallback** voor de ~28 kaarten die PokeWallet niet kan prijzen (`backfillTcgdexPricing`).
+4. **Card.id-schema** — alle ~20k cards zijn gekeyd op TCGdex-style ids ("base1-4"); `populate-cards`
+   maakt nieuwe-set-rows met de TCGdex-id. PokeWallet loslaten vergt een id-strategie voor nieuwe sets.
+- **Type-icoons zijn GÉÉN TCGdex-dep** — al self-hosted onder `public/images/sets/types/*.png`.
+- **Verdict:** voor images+prijzen+sets kun je TCGdex-onafhankelijk worden (lost de storings-risico op);
+  "letterlijk alles" is het (nog) niet — punt 1 is een echte feature-downgrade tenzij de PokeWallet-
+  subset volstaat. Productbeslissing voor de gebruiker.
 
 ## Marktprijs-formule (4 lagen, laatst uitgebreid 2026-04-29)
 
@@ -424,6 +469,24 @@ curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/search?q=24325&limit=100&pa
 
 **Per-set call-budget vuistregel:** `Math.ceil(total_cards / 100)` calls per set. Voor 150 sets ≈ 600 calls per full DB refresh (1.2% van Pro tier).
 
+#### `GET /prices/:setCode` 🆕 PRO — goedkoopste bulk-pricing (geverifieerd 2026-07-04)
+Platte lijst van prijzen voor élke kaart in een set, **één rij per (card_number, variant)**, in
+**één enkele call** (geen paginatie — `/prices/23237` gaf 361 rijen in 1 request). Zit in onze
+Pro-tier (200, geen trial nodig). Response **15 min gecached**.
+
+```bash
+curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/prices/23237"          # beide bronnen
+curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/prices/MEW?source=cm"  # alleen CardMarket
+```
+
+- `:setCode` = set_code (`MEW`, case-insensitive) **of** numeric group_id (`23237`, `-188`). **Gebruik altijd de numeric group_id** — een set_code kan een **300 disambiguation** geven (meerdere talen); numeric id niet.
+- `source`: `tcg` | `cm` | weglaten voor beide. `source=tcg` op een CM-only set (group_id < 0) → **404**.
+- **Rij-shape:** `{ card_number, name, variant, tcgplayer, cardmarket }`. `variant` ∈ `"Normal" | "Holofoil" | "Reverse Holofoil"`. **Reverse Holofoil-rijen bevatten wél CardMarket-data** (geverifieerd: Bulbasaur 151 RH → cm.avg 0.34) — schoner dan `/search` waar RH onder `cardmarket.prices[].variant_type="holo"` verstopt zit.
+- ⚠️ **BELANGRIJKE BEPERKING — geen `id`, geen `rarity`, geen `set_id` per rij.** Daarom **geen volwaardige vervanger van `/search`** voor onze sync:
+  - We hebben `pokewalletId` nodig (voor `claimedPwIds`-matching én het `/images/:id`-endpoint). Die staat NIET in `/prices`.
+  - Onze Marktprijs-formule is **rariteit-aware** (`euTierAdjustment`); rarity staat NIET in `/prices` (komt wel uit onze eigen `Card.rarity`, dus voor een *daily price-refresh* niet blokkerend).
+- **Waar het wél voor deugt:** een goedkopere **daily price-refresh** van sets waarvan de kaarten al een `pokewalletId` + `rarity` in onze DB hebben (match op `card_number` + `variant`). Budget: **~135 calls** voor de hele DB (1 per set) i.p.v. ~600 via `/search` — ~4,5× minder. Voor **initiële mapping / nieuwe kaarten / id-toewijzing** blijft `/search` (of `/cards/:id`) nodig omdat alleen die de `pk_xxx`-id + rarity leveren. Overweging voor later; nu nog niet geïntegreerd.
+
 #### `GET /cards/:id`
 Single card lookup — voor on-demand refresh of als gebruiker een specifieke kaart bekijkt.
 
@@ -462,32 +525,46 @@ Volledige TCGPlayer + CardMarket time-series met pre-computed % change fields. P
 curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/cards/pk_xxx/price-history"
 ```
 
-**Response shape:**
+**⚠️ SHAPE GEWIJZIGD sinds april — geverifieerd live 2026-07-04.** De oude platte
+`tcgplayer.history.*`-vorm bestaat niet meer. Nu **genest per variant**, `current` is een
+object, en `change_*` zijn **strings** (`"+3.4%"`), niet getallen. Ook 60d/120d toegevoegd.
+
+**Actuele response shape (geverifieerd):**
 ```jsonc
 {
-  "success": true,
-  "card_id": "pk_xxx",
+  "id": "pk_xxx",
+  "card_name": "Klink",
   "tcgplayer": {
-    "current": 5.26,
-    "history": {
-      "price_7d": 4.93,  "price_14d": 5.10,
-      "price_30d": null, "price_60d": null, "price_120d": null,
-      "change_7d": 6.69, "change_14d": 3.14,
-      "change_30d": null, "change_60d": null, "change_120d": null
+    "variants": {                          // keys: "Normal" | "Holofoil" | "Reverse Holofoil"
+      "Holofoil": {
+        "current": { "market": 9.23, "low": 8.85, "mid": 13.1, "high": 62.74, "direct_low": null },
+        "price_7d": 8.93, "price_14d": 6.34, "price_30d": 6.47, "price_60d": 5.84, "price_120d": null,
+        "change_7d": "+3.4%", "change_14d": "+45.6%", "change_30d": "+42.7%",
+        "change_60d": "+58.0%", "change_120d": null,
+        "last_updated": "2026-07-04T07:38:01.216224"
+      }
     }
   },
   "cardmarket": {
-    "current": 4.52,
-    "history": { /* same shape */ }
+    "variants": {                          // keys: "normal" | "holo" (= REVERSE HOLO!)
+      "normal": {
+        "current": { "avg": 6.25, "low": 2.9, "trend": 6.47 },
+        "avg_1d": 6, "avg_7d": 6, "avg_30d": 5.99,
+        "price_7d": 5.59, "price_14d": 5.59, "price_30d": 5.17, "price_60d": 4.82, "price_120d": null,
+        "change_7d": "+11.8%", "change_14d": "...", /* ... */ "last_updated": "..."
+      }
+    }
   }
 }
 ```
 
 **Important:**
-- 7d/14d windows zijn nu live; **30d/60d/120d rollen geleidelijk uit** — altijd null-checken.
-- 1 call per fetch — gebruik on-demand (detail-pagina charts), NIET bulk-sync. Voor 18.350 cards = 18.350 calls = 37% van Pro budget per dag.
-- Onze `CardPriceHistory` snapshot-tabel blijft primaire bron voor delta-berekening omdat die op de gefilterde Marktprijs is gebaseerd; pokewallet's history geeft rauwe CM/TP data zonder onze outlier-correctie.
-- `getCardPriceHistory(pokewalletId)` in `client.ts` is de Typed wrapper.
+- `change_*` zijn **percentage-STRINGS** (`"+3.4%"`). Parse met `parseFloat(s)` als je een getal wilt. `price_*`/`avg_*`/`current.*` zijn wél getallen.
+- `price_30d`/`price_60d`/`price_120d` (en hun `change_`) zijn **null tot genoeg wekelijkse snapshots** zijn opgebouwd — altijd null-checken. `price_7d` beschikbaar vanaf 16-04-2026.
+- Variant-keys verschillen per bron: TCGPlayer `"Normal"/"Holofoil"/"Reverse Holofoil"` (Title-Case), CardMarket `"normal"/"holo"` (waar **`holo` = reverse holo**, zoals overal in deze API).
+- 1 call per fetch — on-demand (detail-pagina charts), NIET bulk-sync. Voor ~20k cards = ~20k calls = ~17% van Pro budget/dag.
+- Onze `CardPriceHistory` snapshot-tabel blijft primaire bron voor delta-berekening (werkt op de gefilterde Marktprijs); pokewallet's history is rauwe CM/TP zonder onze outlier-correctie.
+- ⚠️ **`getCardPriceHistory(pokewalletId)` in `client.ts` + het type in `types.ts` zijn STALE** (nog de oude platte shape). **Momenteel nergens aangeroepen** → geen productie-breuk, maar herschrijf ze naar bovenstaande genest-per-variant shape vóór je dit endpoint ooit integreert.
 
 #### `GET /analytics/top-cards` 🆕 v1.3.0 (2026-04-29)
 Top N cards globally door price of growth. Pro-only.
@@ -500,6 +577,12 @@ curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/analytics/top-cards?metric=
 - `metric=price` (default) of `metric=growth` (7-day delta)
 - `source=tcg` of `source=cm`
 - `limit=1-100`
+
+**Geverifieerd 2026-07-04:** werkt op onze Pro-tier (200, geen trial-headers). Response-rij:
+`{ id (pk_xxx), card_info, current_price, change_7d ("+150.0%") }`. Bij trial-toegang komen
+`X-Trial-Expires-At` + `X-Trial-Days-Remaining` mee; 403 `{error:"Trial not activated", redeem_url}`
+of `{error:"Pro plan required", upgrade_url}` als het plan het niet dekt. `metric=growth` sluit
+kaarten zonder 7d-history uit.
 
 **Status onze project:** niet geïntegreerd. Onze eigen Top 10 stijgers/dalers gebruikt CardPriceHistory snapshot-deltas die op de gefilterde Marktprijs werken — preciezer voor onze marktplaats-context dan rauwe CM/TP-deltas. Endpoint is geen prioriteit zolang onze snapshot-data groeit.
 
@@ -535,8 +618,30 @@ Geschatte kosten om hele set te completen (low/avg/trend). Per rarity breakdown.
 
 **404** retourneert hij voor CardMarket-only sets (negatieve set_id).
 
-### Niet gebruikt
-- `GET /sets/:setCode/image` — wij gebruiken TCGdex set-logos die we al hebben
+### Beeld-endpoints (geverifieerd live 2026-07-04) — onafhankelijk van TCGdex
+
+Beide geven **binaire beelddata** (geen JSON, geen URL) en vereisen de `X-API-Key`-header
+(zonder key → **HTTP 401**). Gevolg: **niet hotlinkbaar** in een browser-`<img src>` (dat zou
+de key lekken). Gebruik ze om beelden **één keer naar Cloudflare R2 te mirroren** (of via een
+eigen backend-proxy-route). Dit is de weg om TCGdex volledig los te laten.
+
+#### `GET /images/:id` ⭐ KAART-AFBEELDINGEN (verving TCGdex-CDN)
+Kaartafbeelding als JPEG/PNG met ingebouwd fallback-systeem. Werkt voor TCG-cards (`pk_xxx`)
+én CardMarket-only cards (pure hex-hash).
+
+```bash
+curl -H "X-API-Key: $KEY" "https://api.pokewallet.io/images/pk_xxx?size=high" --output card.jpg
+```
+
+- `size`: `low` (~500px, ~17-50KB) of `high` (~1000px, ~65-200KB). Default `low`.
+- **Geverifieerd 2026-07-04:** `pk_da3ec…` (Klink BB #139) → `size=high` 200/JPEG/73KB, `size=low` 200/JPEG/18KB. CM-only voorbeeld-hash → 200/JPEG/65KB. Werkte tijdens een **volledige TCGdex-storing** → PokeWallet serveert eigen bytes.
+- **Dekking (live DB):** 20.261/20.282 cards (**99,9%**) hebben een `pokewalletId`. De 21 zonder id (+ 1 edge) kunnen dit endpoint niet gebruiken → hebben een placeholder/fallback nodig.
+- **Bonus:** 581 van de 582 cards die nu géén `imageUrl` in de DB hebben, hebben wél een `pokewalletId` — PokeWallet heeft dus beelden voor sets die TCGdex nooit leverde (Shining Legends, Dragon Majesty, McDonald's-collecties, div. promos).
+- ⚠️ Sommige gedocumenteerde voorbeeld-`pk_`-ids geven 404 (stale in hun docs) — test altijd met een id uit je eigen `/search`/DB, niet met een doc-voorbeeld.
+
+#### `GET /sets/:setCode/image` — SET-LOGO
+Set-logo als PNG. Geverifieerd 2026-07-04: `/sets/24325/image` → 200/`image/png`. Onafhankelijke
+bron voor set-logo's; vult ook de 9 sets die in onze DB nooit een `logoUrl` kregen.
 
 ## Data structuur — Card response
 
@@ -719,7 +824,7 @@ for (const dbCard of dbCards) {
 **Let op:** Klink #139 in BB heet `"Klink - 139/086"` in pokewallet (NIET `"Klink"`), dus exact-name-match faalt voor sommige IRs. Voeg substring-match toe als naam de card_number bevat: `c.card_info.name.includes(num)` als alternatieve match.
 
 ### Wat we behouden van TCGdex
-- **Card images** (TCGdex CDN is gratis en betrouwbaar)
+- ~~**Card images**~~ — **ACHTERHAALD (2026-07-04):** TCGdex-CDN bleek een single-point-of-failure (volledige storing → ~90% van de kaarten zonder beeld, want álle `imageUrl`s hotlinken naar `assets.tcgdex.net`). PokeWallet `/images/:id` is nu de bron (99,9% dekking). Doel: TCGdex volledig loslaten door beelden naar R2 te mirroren.
 - **Gameplay-fallback** als pokewallet's `card_info.attacks` ooit gaten heeft (zeldzaam)
 - **Reverse-holo fallback** (alleen als pokewallet down is)
 
@@ -769,13 +874,13 @@ export const KNOWN_CARDS = {
 10. **`card_text` met HTML** — `<br>`, `<strong>`, `<em>` etc. zitten erin. Sanitize voor display of behoud raw met dangerouslySetInnerHTML in een veilige context.
 11. **`cardmarket_id: null` in pokewallet response** — pokewallet heeft geen CardMarket linking voor die kaart. Vaak voor 151 commons. Gevolg: de avg-data die wel in response staat is corrupt (wijst naar een ander product). **Onze Marktprijs-formule corrigeert dit automatisch via de extreme-discrepancy check (>5× TP).**
 12. **Naam-pattern voor Special Arts**: pokewallet labelt secret rares als `"Klink - 139/086"` (met card_number suffix in name) i.p.v. plain `"Klink"`. Onze matching gebruikt `c.card_info.name.includes(num)` als fallback voor exact-name-match.
-13. **GEEN image-URL veld** in pokewallet response. Top-level keys zijn alleen `id, card_info, tcgplayer, cardmarket`. Voor images blijven we TCGdex CDN gebruiken (URLs al in DB).
+13. **Geen image-URL veld IN de card-response** — top-level keys zijn alleen `id, card_info, tcgplayer, cardmarket`. MAAR er is een apart **`GET /images/:id`**-endpoint dat de kaartafbeelding als binaire JPEG/PNG teruggeeft (zie endpoint-sectie hieronder). Sinds 2026-07-04 is dat onze weerbaarheids-route weg van TCGdex — 99,9% van onze cards heeft een `pokewalletId` om het mee aan te roepen.
 
 ## Wat NIET in pokewallet zit
 
 - **Per-land EU prijzen** (DE/FR/ES/IT lows) — alleen tcggo had dat. Niet kritisch.
 - **Graded prijzen** (PSA/BGS/CGC) — alleen tcggo had dat. Niet kritisch.
-- **Card images** — gebruik TCGdex CDN.
+- ~~**Card images**~~ — **ACHTERHAALD (2026-07-04):** PokeWallet levert kaart- én set-afbeeldingen wél, via `GET /images/:id` (kaart) en `GET /sets/:id/image` (set-logo). Zie endpoint-sectie.
 
 ## Snel-start commando's voor debugging
 
