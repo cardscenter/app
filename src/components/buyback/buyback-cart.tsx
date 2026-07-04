@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Trash2, Plus, Minus, ShoppingBag, AlertTriangle } from "lucide-react";
 import Image from "next/image";
-import { upscaleCardImageUrl } from "@/lib/card-image";
 import {
   cardVariantKey,
   CARD_CONDITIONS,
@@ -191,7 +190,7 @@ function CartImage({ imageUrl, name }: { imageUrl: string | null; name: string }
           style={{ top: pos.top, left: pos.left }}
         >
           <Image
-            src={upscaleCardImageUrl(imageUrl)}
+            src={imageUrl.replace("/low.", "/high.")}
             alt={name}
             width={320}
             height={448}

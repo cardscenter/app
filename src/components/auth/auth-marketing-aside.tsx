@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { ShieldCheck, Coins, MessageSquare, Globe2 } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 
 interface AuthMarketingAsideProps {
   variant?: "login" | "register" | "default";
@@ -18,6 +19,12 @@ interface AuthMarketingAsideProps {
  */
 export async function AuthMarketingAside({ variant = "default" }: AuthMarketingAsideProps) {
   const t = await getTranslations("auth");
+
+  // Live platform-stats voor de "X+ leden" sociaal-bewijs onderaan.
+  const [totalMembers, completedSales] = await Promise.all([
+    prisma.user.count(),
+    prisma.shippingBundle.count({ where: { status: "COMPLETED" } }),
+  ]);
 
   const eyebrow =
     variant === "login"
@@ -48,7 +55,7 @@ export async function AuthMarketingAside({ variant = "default" }: AuthMarketingA
   ] as const;
 
   return (
-    <aside className="relative hidden overflow-hidden bg-slate-950 text-white lg:flex lg:flex-col">
+    <aside className="relative hidden overflow-y-auto bg-slate-950 text-white lg:flex lg:flex-col">
       {/* Dark gradient + ambient glows */}
       <div
         aria-hidden
@@ -59,7 +66,7 @@ export async function AuthMarketingAside({ variant = "default" }: AuthMarketingA
         }}
       />
 
-      <div className="relative flex flex-1 flex-col justify-center gap-10 px-10 py-12 xl:px-16 xl:py-16">
+      <div className="relative flex flex-1 flex-col justify-between px-10 py-12 xl:px-16 xl:py-16">
         {/* Header — logo + eyebrow */}
         <div>
           <Image
@@ -82,7 +89,7 @@ export async function AuthMarketingAside({ variant = "default" }: AuthMarketingA
         </div>
 
         {/* Trust-pills grid */}
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 xl:gap-4">
+        <div className="mt-10 grid grid-cols-1 gap-3 xl:grid-cols-2 xl:gap-4">
           {pills.map((p) => (
             <div
               key={p.titleKey}
@@ -96,8 +103,27 @@ export async function AuthMarketingAside({ variant = "default" }: AuthMarketingA
             </div>
           ))}
         </div>
+
+        {/* Stat-strip — verborgen op register-page (lage launch-cijfers
+            kunnen averechts werken bij conversie). */}
+        {variant !== "register" && (
+          <div className="mt-10 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-sm">
+            <Stat value={`${totalMembers.toLocaleString("nl-NL")}+`} label={t("asideStatMembers")} />
+            <div className="h-8 w-px bg-white/10" aria-hidden />
+            <Stat value={`${completedSales.toLocaleString("nl-NL")}+`} label={t("asideStatSales")} />
+          </div>
+        )}
       </div>
     </aside>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div>
+      <div className="text-xl font-bold tracking-tight text-white">{value}</div>
+      <div className="mt-0.5 text-[11px] uppercase tracking-wide text-slate-400">{label}</div>
+    </div>
   );
 }
 

@@ -10,7 +10,7 @@ import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { DatabaseStats } from "@/components/card/database-stats";
 import { DatabaseMarquee } from "@/components/card/database-marquee";
 import { DatabaseTrending, type TrendingCard } from "@/components/card/database-trending";
-import { getCardImageUrl, getSetLogoUrl } from "@/lib/card-image";
+import { getCardImageUrl } from "@/lib/card-image";
 import {
   getDisplayPrice,
   getMarktprijs,
@@ -68,7 +68,6 @@ const getCardsOverviewData = unstable_cache(
             name: true,
             tcgdexSetId: true,
             logoUrl: true,
-            logoMirrorKey: true,
             releaseDate: true,
             cardCount: true,
           },
@@ -116,7 +115,7 @@ const getCardsOverviewData = unstable_cache(
         priceAvg: true, priceAvg7: true, priceAvg30: true, priceTrend: true,
         priceLow: true,
         priceTcgplayerHolofoilMarket: true, priceTcgplayerNormalMarket: true,
-        imageUrl: true, imageUrlFull: true, imageMirrorKey: true,
+        imageUrl: true, imageUrlFull: true,
         cardSet: { select: { name: true, tcgdexSetId: true } },
       },
     }),
@@ -135,18 +134,6 @@ const getCardsOverviewData = unstable_cache(
   // reliably). Most-recent series first.
   // Within each series: pin the Promo set first, then the rest by release date desc.
   const isPromoSet = (name: string) => /\bpromo/i.test(name);
-  const isMcdonaldsSet = (name: string) => name.startsWith("McDonald");
-  // McDonald's-sets + POP Series horen onderaan de catalogus, ongeacht release-
-  // datum. McDonald's = losse CardSets (naam), POP = een hele Series.
-  const isPopSeries = (s: { tcgdexSeriesId: string | null; name: string }) =>
-    s.tcgdexSeriesId === "pop" || s.name.startsWith("POP Series");
-  const isMcdonaldsSeries = (s: { cardSets: { name: string }[] }) =>
-    s.cardSets.length > 0 && s.cardSets.every((x) => isMcdonaldsSet(x.name));
-  // Serie-rang: 0 normaal · 1 POP · 2 McDonald's (helemaal onderaan).
-  const seriesRank = (s: { tcgdexSeriesId: string | null; name: string; cardSets: { name: string }[] }) =>
-    isMcdonaldsSeries(s) ? 2 : isPopSeries(s) ? 1 : 0;
-  // Set-rang binnen een serie: 0 normaal · 1 promo · 2 McDonald's (laatst).
-  const setRank = (name: string) => (isMcdonaldsSet(name) ? 2 : isPromoSet(name) ? 1 : 0);
 
   const sortedSeries = series
     .map((s) => {
@@ -155,21 +142,16 @@ const getCardsOverviewData = unstable_cache(
         return d > max ? d : max;
       }, "");
       const cardSets = [...s.cardSets].sort((a, b) => {
-        const ar = setRank(a.name);
-        const br = setRank(b.name);
-        if (ar !== br) return ar - br; // promo's + McDonald's naar achteren
+        const ap = isPromoSet(a.name);
+        const bp = isPromoSet(b.name);
+        if (ap !== bp) return ap ? 1 : -1; // promos last (= oldest in the series chronology)
         const ad = a.releaseDate ?? "";
         const bd = b.releaseDate ?? "";
         return bd.localeCompare(ad); // newer first
       });
       return { ...s, cardSets, latestRelease: latest || "0000-00-00" };
     })
-    .sort((a, b) => {
-      const ra = seriesRank(a);
-      const rb = seriesRank(b);
-      if (ra !== rb) return ra - rb; // normaal → POP → McDonald's
-      return b.latestRelease.localeCompare(a.latestRelease); // nieuwste era eerst
-    });
+    .sort((a, b) => b.latestRelease.localeCompare(a.latestRelease));
 
   // Marquee: compute Marktprijs per candidate so corrupted idProduct
   // mappings (raw priceAvg €54 → real €0.02) don't show up as fake chase
@@ -307,7 +289,7 @@ const getCardsOverviewData = unstable_cache(
       sortedSeries,
     };
   },
-  ["cards-overview-v3"],
+  ["cards-overview-v1"],
   { revalidate: 3600, tags: ["cards-catalog"] },
 );
 
@@ -420,9 +402,9 @@ export default async function CardsOverviewPage() {
                     className="glass-subtle group flex flex-col gap-3 rounded-2xl p-4 transition-all hover:ring-2 hover:ring-primary/30"
                   >
                     <div className="relative flex h-32 items-center justify-center rounded-xl bg-muted/40 p-3">
-                      {getSetLogoUrl(set) ? (
+                      {set.logoUrl ? (
                         <Image
-                          src={getSetLogoUrl(set)!}
+                          src={set.logoUrl}
                           alt={set.name}
                           width={200}
                           height={110}

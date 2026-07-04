@@ -15,7 +15,6 @@ export interface SetCard {
   rarity: string | null;
   imageUrl: string | null;
   imageUrlFull: string | null;
-  imageMirrorKey: string | null;
   variants: string | null;
   /** Pre-computed outlier-resistant Marktprijs (server-side). */
   marktprijs: number | null;

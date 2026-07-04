@@ -18,7 +18,6 @@ interface SearchResult extends BuybackPriceFields {
   setName: string;
   setSlug: string;
   imageUrl: string | null;
-  imageUrlHigh: string | null;
   releaseDate: string | null;
 }
 
@@ -290,7 +289,7 @@ function CardImage({ card }: { card: SearchResult }) {
           style={{ top: pos.top, left: pos.left }}
         >
           <Image
-            src={card.imageUrlHigh ?? card.imageUrl}
+            src={card.imageUrl.replace("/low.", "/high.")}
             alt={card.name}
             width={320}
             height={448}

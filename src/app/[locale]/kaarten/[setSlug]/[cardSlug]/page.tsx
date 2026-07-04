@@ -303,6 +303,9 @@ export default async function CardDetailPage({ params }: Props) {
 
   const types: string[] = card.types ? JSON.parse(card.types) : [];
   const variants: Record<string, boolean> = card.variants ? JSON.parse(card.variants) : {};
+  const variantLabels = Object.entries(variants)
+    .filter(([, v]) => v)
+    .map(([k]) => ({ holo: "Holo", normal: "Normal", reverse: "Reverse Holo", firstEdition: "1st Edition", wPromo: "W Promo" }[k] ?? k));
 
   // `cm` already fetched in the big Promise.all above.
   //
@@ -336,26 +339,6 @@ export default async function CardDetailPage({ params }: Props) {
     if (rawCurrent == null || rawCurrent <= 0) return null;
     if (rawPast == null || rawPast <= 0) return null;
     return ((rawCurrent - rawPast) / rawPast) * 100;
-  };
-
-  // Delta per periode-tab (7/14/30/60/120/365 dagen), zodat het percentage onder
-  // Marktwaarde meebeweegt met de gekozen grafiek-periode. Raw rolling-avg
-  // fallback bestaat alleen voor 7 en 30 dagen; 14/60/120/365 zijn puur snapshot-
-  // gebaseerd (null → "—" als er nog geen historie ~N dagen terug is).
-  const DELTA_PERIODS = [7, 14, 30, 60, 120, 365];
-  const buildDeltas = (
-    current: number | null,
-    history: SnapshotPoint[],
-    raw: number | null | undefined,
-    raw7: number | null | undefined,
-    raw30: number | null | undefined,
-  ): Record<number, number | null> => {
-    const out: Record<number, number | null> = {};
-    for (const days of DELTA_PERIODS) {
-      const rawPast = days === 7 ? raw7 : days === 30 ? raw30 : undefined;
-      out[days] = computeDelta(current, history, days, raw, rawPast);
-    }
-    return out;
   };
 
   const pricingVariants: VariantPricing[] = [];
@@ -459,7 +442,8 @@ export default async function CardDetailPage({ params }: Props) {
           avg1: corrupted ? null : cm["avg1-holo"],
           avg7: corrupted ? null : cm["avg7-holo"],
           avg30: corrupted ? null : cm["avg30-holo"],
-          deltas: buildDeltas(finalAvg, reverseDeltaHistory, cm["avg-holo"], cm["avg7-holo"], cm["avg30-holo"]),
+          delta7d: computeDelta(finalAvg, reverseDeltaHistory, 7, cm["avg-holo"], cm["avg7-holo"]),
+          delta30d: computeDelta(finalAvg, reverseDeltaHistory, 30, cm["avg-holo"], cm["avg30-holo"]),
         });
       } else if (hasBase) {
         const baseDisplay = getMarktprijs({
@@ -485,7 +469,8 @@ export default async function CardDetailPage({ params }: Props) {
           avg1: corrupted ? null : cm.avg1,
           avg7: corrupted ? null : cm.avg7,
           avg30: corrupted ? null : cm.avg30,
-          deltas: buildDeltas(finalAvg, normalDeltaHistory, cm.avg, cm.avg7, cm.avg30),
+          delta7d: computeDelta(finalAvg, normalDeltaHistory, 7, cm.avg, cm.avg7),
+          delta30d: computeDelta(finalAvg, normalDeltaHistory, 30, cm.avg, cm.avg30),
         });
       } else {
         // No CardMarket data at all — common for older Rare Holo / Holo Rare
@@ -505,7 +490,8 @@ export default async function CardDetailPage({ params }: Props) {
             avg: tpOnlyDisplay,
             low: null, trend: null, avg1: null, avg7: null, avg30: null,
             // No CM rolling-avg history available for TP-only fallback.
-            deltas: {},
+            delta7d: null,
+            delta30d: null,
           });
         }
       }
@@ -537,7 +523,8 @@ export default async function CardDetailPage({ params }: Props) {
             avg1: corrupted ? null : cm["avg1-holo"],
             avg7: corrupted ? null : cm["avg7-holo"],
             avg30: corrupted ? null : cm["avg30-holo"],
-            deltas: buildDeltas(reverseDisplay, reverseDeltaHistory, cm["avg-holo"], cm["avg7-holo"], cm["avg30-holo"]),
+            delta7d: computeDelta(reverseDisplay, reverseDeltaHistory, 7, cm["avg-holo"], cm["avg7-holo"]),
+            delta30d: computeDelta(reverseDisplay, reverseDeltaHistory, 30, cm["avg-holo"], cm["avg30-holo"]),
           });
         }
       }
@@ -569,7 +556,8 @@ export default async function CardDetailPage({ params }: Props) {
           avg1: corrupted ? null : cm.avg1,
           avg7: corrupted ? null : cm.avg7,
           avg30: corrupted ? null : cm.avg30,
-          deltas: buildDeltas(finalAvg, normalDeltaHistory, cm.avg, cm.avg7, cm.avg30),
+          delta7d: computeDelta(finalAvg, normalDeltaHistory, 7, cm.avg, cm.avg7),
+          delta30d: computeDelta(finalAvg, normalDeltaHistory, 30, cm.avg, cm.avg30),
         });
       }
       if (hasFoil) {
@@ -605,7 +593,8 @@ export default async function CardDetailPage({ params }: Props) {
           avg1: corrupted ? null : cm["avg1-holo"],
           avg7: corrupted ? null : cm["avg7-holo"],
           avg30: corrupted ? null : cm["avg30-holo"],
-          deltas: buildDeltas(reverseDisplay, reverseDeltaHistory, cm["avg-holo"], cm["avg7-holo"], cm["avg30-holo"]),
+          delta7d: computeDelta(reverseDisplay, reverseDeltaHistory, 7, cm["avg-holo"], cm["avg7-holo"]),
+          delta30d: computeDelta(reverseDisplay, reverseDeltaHistory, 30, cm["avg-holo"], cm["avg30-holo"]),
         });
       }
     }
@@ -743,6 +732,11 @@ export default async function CardDetailPage({ params }: Props) {
             </div>
               );
             })()}
+            {variantLabels.length > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Beschikbare varianten: {variantLabels.join(", ")}
+              </p>
+            )}
           </header>
 
           {/* Pricing */}

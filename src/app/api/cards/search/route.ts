@@ -215,7 +215,6 @@ export async function GET(request: Request) {
       setSlug: card.cardSet.tcgdexSetId,
       releaseDate: card.cardSet.releaseDate,
       imageUrl: getCardImageUrl(card, "low"),
-      imageUrlHigh: getCardImageUrl(card, "high"),
       // CardMarket normal — voor Marktprijs-formule
       priceAvg: card.priceAvg,
       priceLow: card.priceLow,

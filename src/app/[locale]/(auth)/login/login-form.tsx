@@ -32,7 +32,7 @@ export function LoginForm({ locale }: LoginFormProps) {
   );
 
   return (
-    <div className="flex h-full items-start justify-center overflow-y-auto bg-background px-4 pb-12 pt-16 sm:px-8 lg:px-12 lg:pt-[12vh]">
+    <div className="flex h-full items-center justify-center overflow-y-auto bg-background px-4 py-12 sm:px-8 lg:px-12">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-8 text-center lg:text-left">

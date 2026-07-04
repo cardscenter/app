@@ -55,13 +55,6 @@ export function RouteLoadingIndicator() {
   const [hydrated, setHydrated] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
-  // Scroll naar boven zodra de loader verschijnt. De loader zit in een
-  // min-h-[55vh]-box en kan anders onder beeld vallen als je al gescrold was
-  // (elke loading.tsx-boundary remount 'm, dus dit vuurt op het juiste moment).
-  useEffect(() => {
-    requestAnimationFrame(() => window.scrollTo(0, 0));
-  }, []);
-
   useEffect(() => {
     setFactIdx(Math.floor(Math.random() * FACTS.length)); // willekeurig startweetje
     const id = setInterval(() => {

@@ -14,7 +14,6 @@ import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
 import { syncSetCatalog } from "@/lib/pokewallet/set-mapping";
 import { populateEmptyMappedSets } from "@/lib/pokewallet/populate-cards";
 import { backfillTcgdexPricing } from "@/lib/pokewallet/tcgdex-pricing";
-import { mirrorCardImage, mirrorSetLogo, mapPaced } from "@/lib/pokewallet/mirror-images";
 import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
@@ -363,11 +362,11 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   },
   "sync-pokewallet": {
     description:
-      "Detecteert nieuwe PokeWallet-sets (maakt er CardSet-rijen voor aan onder een 'Onbekend'-Series), vult lege nieuwe sets met kaarten + afbeeldingen uit TCGdex, vernieuwt prijzen voor alle CardSets met een mapping, en mirrort tot 300 nog niet gemirrorde kaartafbeeldingen + set-logo's naar R2/schijf (weerbaarheid tegen TCGdex-storing). ~600 prijs-calls + tot ~600 beeld-calls per pass.",
+      "Detecteert nieuwe PokeWallet-sets (maakt er CardSet-rijen voor aan onder een 'Onbekend'-Series), vult lege nieuwe sets met kaarten + afbeeldingen uit TCGdex, en vernieuwt prijzen voor alle CardSets met een mapping. ~600 API-calls per pass.",
     schedule: "Dagelijks",
     allowManualRun: true,
     runWarning:
-      "Heavy job: ~600 prijs-calls + tot ~600 beeld-mirror-calls naar PokeWallet, kan 5+ minuten duren. Raakt rate-limit-budget. Alleen draaien als prijzen écht stale zijn.",
+      "Heavy job: ~600 API-calls naar PokeWallet, kan 5+ minuten duren. Raakt rate-limit-budget. Alleen draaien als prijzen écht stale zijn.",
   },
   "auction-payment-deadline": {
     description:
@@ -526,56 +525,6 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       await sleep(100);
     }
 
-    // Stap 2b — Beeld-mirror (PokeWallet → R2/schijf) voor kaarten/sets die nog
-    // geen mirror-key hebben. Weerbaarheid tegen TCGdex-storing. Gecapt zodat de
-    // dagelijkse job bounded blijft; de eenmalige bulk-lading doet
-    // scripts/pw-mirror-images.ts. pokewalletId is in stap 2 al toegekend.
-    let mirror: { cards: number; logos: number; cardsFailed: number } | null = null;
-    try {
-      const MIRROR_CARDS_PER_RUN = 300;
-      const cardsToMirror = await prisma.card.findMany({
-        where: { pokewalletId: { not: null }, imageMirrorKey: null },
-        select: { id: true, pokewalletId: true },
-        orderBy: { id: "asc" },
-        take: MIRROR_CARDS_PER_RUN,
-      });
-      let mirroredCards = 0;
-      let cardsFailed = 0;
-      await mapPaced(
-        cardsToMirror,
-        async (c) => {
-          const stem = await mirrorCardImage(c);
-          if (stem) {
-            await prisma.card.update({ where: { id: c.id }, data: { imageMirrorKey: stem } });
-            mirroredCards++;
-          } else {
-            cardsFailed++;
-          }
-        },
-        { concurrency: 3, sleepMs: 400 },
-      );
-
-      const setsToMirror = await prisma.cardSet.findMany({
-        where: { pokewalletSetId: { not: null }, logoMirrorKey: null },
-        select: { id: true, pokewalletSetId: true },
-      });
-      let mirroredLogos = 0;
-      await mapPaced(
-        setsToMirror,
-        async (s) => {
-          const stem = await mirrorSetLogo(s);
-          if (stem) {
-            await prisma.cardSet.update({ where: { id: s.id }, data: { logoMirrorKey: stem } });
-            mirroredLogos++;
-          }
-        },
-        { concurrency: 3, sleepMs: 400 },
-      );
-      mirror = { cards: mirroredCards, logos: mirroredLogos, cardsFailed };
-    } catch (e) {
-      failures.push({ setName: "(image-mirror)", error: (e as Error).message.slice(0, 200) });
-    }
-
     // TCGdex CardMarket-fallback voor kaarten die PokeWallet niet kan prijzen.
     // NA de PW-sync zodat lege PW-prijzen deze niet overschrijven. Match op
     // exacte kaart-id (= TCGdex-id) → variant-veilig.
@@ -587,12 +536,8 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     }
 
     return {
-      itemsProcessed:
-        totalUpdated +
-        (tcgdexFallback?.priced ?? 0) +
-        (mirror ? mirror.cards + mirror.logos : 0),
+      itemsProcessed: totalUpdated + (tcgdexFallback?.priced ?? 0),
       result: {
-        mirror,
         tcgdexFallback: tcgdexFallback
           ? { checked: tcgdexFallback.checked, priced: tcgdexFallback.priced }
           : null,

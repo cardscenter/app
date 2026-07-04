@@ -322,7 +322,6 @@ model CardSet {
   pokewalletSetId   String?  @unique      // PokeWallet numeric set_id (e.g. "24325" for Black Bolt)
   pokewalletSetCode String?               // PokeWallet set_code (e.g. "BLK") — can be null for promos
   logoUrl      String?                     // Set logo URL (TCGdex CDN, static)
-  logoMirrorKey String?                    // R2/disk mirror stem (bv. "set-24325") — render bouwt /api/uploads/{stem}.png. Null = niet gemirrord, val terug op logoUrl. Bron: PokeWallet /sets/:id/image
   symbolUrl    String?                     // Set symbol URL (TCGdex CDN, static)
   releaseDate  String?                     // ISO date string (e.g. "1999-01-09")
   cardCount    Int?                        // Total cards in set (official count)
@@ -359,7 +358,6 @@ model Card {
   variants        String?                    // JSON: {firstEdition, holo, normal, reverse, wPromo}
   imageUrl        String?                    // TCGdex CDN base URL (append /high.webp at render time)
   imageUrlFull    String?                    // Full image URL from fallback source — used when TCGdex has no image
-  imageMirrorKey  String?                    // R2/disk mirror stem (bv. "card-base1-4") — render bouwt /api/uploads/{stem}-{low|high}.jpg. Null = niet gemirrord, val terug op imageUrl. Bron: PokeWallet /images/:id (weerbaarheid tegen TCGdex-storing)
 
   // CardMarket EUR pricing — refreshed by PokeWallet sync (variant_type=normal)
   priceAvg        Float?
