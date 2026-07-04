@@ -10,7 +10,7 @@ import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { DatabaseStats } from "@/components/card/database-stats";
 import { DatabaseMarquee } from "@/components/card/database-marquee";
 import { DatabaseTrending, type TrendingCard } from "@/components/card/database-trending";
-import { getCardImageUrl } from "@/lib/card-image";
+import { getCardImageUrl, getSetLogoUrl } from "@/lib/card-image";
 import {
   getDisplayPrice,
   getMarktprijs,
@@ -68,6 +68,7 @@ const getCardsOverviewData = unstable_cache(
             name: true,
             tcgdexSetId: true,
             logoUrl: true,
+            logoMirrorKey: true,
             releaseDate: true,
             cardCount: true,
           },
@@ -115,7 +116,7 @@ const getCardsOverviewData = unstable_cache(
         priceAvg: true, priceAvg7: true, priceAvg30: true, priceTrend: true,
         priceLow: true,
         priceTcgplayerHolofoilMarket: true, priceTcgplayerNormalMarket: true,
-        imageUrl: true, imageUrlFull: true,
+        imageUrl: true, imageUrlFull: true, imageMirrorKey: true,
         cardSet: { select: { name: true, tcgdexSetId: true } },
       },
     }),
@@ -306,7 +307,7 @@ const getCardsOverviewData = unstable_cache(
       sortedSeries,
     };
   },
-  ["cards-overview-v2"],
+  ["cards-overview-v3"],
   { revalidate: 3600, tags: ["cards-catalog"] },
 );
 
@@ -419,9 +420,9 @@ export default async function CardsOverviewPage() {
                     className="glass-subtle group flex flex-col gap-3 rounded-2xl p-4 transition-all hover:ring-2 hover:ring-primary/30"
                   >
                     <div className="relative flex h-32 items-center justify-center rounded-xl bg-muted/40 p-3">
-                      {set.logoUrl ? (
+                      {getSetLogoUrl(set) ? (
                         <Image
-                          src={set.logoUrl}
+                          src={getSetLogoUrl(set)!}
                           alt={set.name}
                           width={200}
                           height={110}

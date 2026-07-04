@@ -52,7 +52,7 @@ export async function submitCollectionBuyback(formData: FormData) {
 
     const card = await prisma.card.findUnique({
       where: { id: item.cardId },
-      select: { name: true, localId: true, rarity: true, imageUrl: true, imageUrlFull: true, cardSet: { select: { name: true, releaseDate: true } } },
+      select: { name: true, localId: true, rarity: true, imageUrl: true, imageUrlFull: true, imageMirrorKey: true, cardSet: { select: { name: true, releaseDate: true } } },
     });
     if (!card) return { error: `Kaart ${item.cardId} niet gevonden` };
 
