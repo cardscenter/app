@@ -12,7 +12,7 @@ export interface TrendingCard {
   imageUrl: string | null;
   priceAvg: number;
   priceAvg7: number;
-  deltaPct: number; // Pre-computed: (priceAvg - priceAvg7) / priceAvg7 * 100
+  deltaPct: number; // Pre-computed: begin→eind van de 7-dagen-trendfit (fallback: snapshot-delta)
 }
 
 interface Props {

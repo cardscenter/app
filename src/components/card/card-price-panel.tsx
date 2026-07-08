@@ -16,6 +16,7 @@ import {
 import { TrendingDown, TrendingUp, Minus, Lock } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { quadraticTrend } from "@/lib/price-trend";
 
 export interface VariantPricing {
   key: string;              // "normal" | "reverse"
@@ -31,6 +32,8 @@ export interface VariantPricing {
    * Apples-to-apples — beide kanten door dezelfde outlier-filter. Voor 7 en 30
    * dagen is er een raw priceAvg/avg7/avg30-fallback; 14/90/365 zijn puur
    * snapshot-gebaseerd (null als er nog geen historie ~N dagen terug is).
+   * Sinds de trend-percentages is dit de FALLBACK — het getoonde percentage
+   * komt primair uit de trendlijn-fit over de getoonde grafiekreeks.
    */
   deltas: Record<number, number | null>;
 }
@@ -82,34 +85,8 @@ function formatEur(n: number | null) {
   return `€${n.toFixed(2)}`;
 }
 
-/**
- * Kwadratische kleinste-kwadraten-fit (a + b·x + c·x²) over de getoonde reeks —
- * een stijve, licht buigende trendlijn van begin tot eind van de grafiek.
- * Bewust maar 3 vrijheidsgraden zodat 'ie de ruis niet volgt. Null bij te
- * weinig punten of een numeriek ontaarde fit.
- */
-function quadraticTrend(values: number[]): number[] | null {
-  const n = values.length;
-  if (n < 5) return null;
-  // x genormaliseerd naar [0,1] voor numerieke stabiliteit
-  const xs = values.map((_, i) => i / (n - 1));
-  let s1 = 0, s2 = 0, s3 = 0, s4 = 0, t0 = 0, t1 = 0, t2 = 0;
-  for (let i = 0; i < n; i++) {
-    const x = xs[i], y = values[i];
-    s1 += x; s2 += x * x; s3 += x * x * x; s4 += x * x * x * x;
-    t0 += y; t1 += x * y; t2 += x * x * y;
-  }
-  const det3 = (m: number[][]) =>
-    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
-    m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
-    m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
-  const D = det3([[n, s1, s2], [s1, s2, s3], [s2, s3, s4]]);
-  if (Math.abs(D) < 1e-12) return null;
-  const a = det3([[t0, s1, s2], [t1, s2, s3], [t2, s3, s4]]) / D;
-  const b = det3([[n, t0, s2], [s1, t1, s3], [s2, t2, s4]]) / D;
-  const c = det3([[n, s1, t0], [s1, s2, t1], [s2, s3, t2]]) / D;
-  return xs.map((x) => a + b * x + c * x * x);
-}
+// Trendlijn-fit gedeeld met de /kaarten stijgers-berekening (server) zodat
+// grafiek-lijn en percentages overal dezelfde wiskunde gebruiken.
 
 export function CardPricePanel({ variants, history, updated, extraVariants, canExtendedHistory = false }: Props) {
   const [activeKey, setActiveKey] = useState(variants[0]?.key ?? "normal");
@@ -169,10 +146,18 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   const windowed = fullSeries.filter((p) => Date.parse(p.date) >= cutoffMs);
   const series = windowed.length >= 2 ? windowed : fullSeries;
 
-  // Pre-computed by the server using snapshot history. Already apples-to-
-  // apples (Marktprijs vs Marktprijs of ~N days ago, or raw vs raw fallback).
-  // De getoonde delta volgt de actieve periode-tab (7d vs 7d terug, enz.).
-  const activeDelta = active.deltas[effectivePeriodDays] ?? null;
+  // Trendlijn over de getoonde reeks — voor ALLE periodes. Vanaf 30d prominent
+  // (amber), bij 7d/14d subtiel lichtgrijs (voegt daar visueel weinig toe maar
+  // is wél de bron van het percentage). Het getoonde percentage = begin→eind
+  // van deze lijn, zodat één toevallige piek/dip aan een venstergrens geen
+  // absurde delta's meer geeft en grafiek + getal altijd hetzelfde vertellen.
+  const trendVals = quadraticTrend(series.map((p) => p.price));
+  const trendDelta = trendVals && trendVals[0] > 0
+    ? ((trendVals[trendVals.length - 1] - trendVals[0]) / trendVals[0]) * 100
+    : null;
+  // Fallback bij te weinig punten voor een fit: de server-berekende
+  // snapshot-delta (Marktprijs vandaag vs ~N dagen terug, apples-to-apples).
+  const activeDelta = trendDelta ?? active.deltas[effectivePeriodDays] ?? null;
   const deltaVs30d = active.deltas[30] ?? null;
 
   const trendIcon =
@@ -190,12 +175,11 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   const hasRealHistory = series.length >= 2;
   const firstDate = series[0]?.date;
 
-  // Trendlijn vanaf de 30d-periode (30/60/120/365): stijve, licht buigende
-  // fit over de getoonde reeks. Korte periodes (7/14d) blijven puur de data.
-  const trendVals = effectivePeriodDays >= 30 ? quadraticTrend(series.map((p) => p.price)) : null;
   const chartData = trendVals
     ? series.map((p, i) => ({ ...p, trend: trendVals[i] }))
     : series;
+  // Bij korte periodes is de lijn een subtiel hulpmiddel, geen blikvanger.
+  const subtleTrendLine = effectivePeriodDays < 30;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
@@ -244,7 +228,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
           <div className={cn("mt-1 flex items-center gap-1 text-sm font-medium", trendColor)}>
             {trendIcon}
             {activeDelta !== null
-              ? <span>{activeDelta > 0 ? "+" : ""}{activeDelta.toFixed(1)}% · {DELTA_LABELS[effectivePeriodDays] ?? `${effectivePeriodDays} dagen`}</span>
+              ? <span>{activeDelta > 0 ? "+" : ""}{activeDelta.toFixed(1)}% · {trendDelta !== null ? "trend " : ""}{DELTA_LABELS[effectivePeriodDays] ?? `${effectivePeriodDays} dagen`}</span>
               : <span>—</span>}
           </div>
         </div>
@@ -320,9 +304,11 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
                     type="monotone"
                     dataKey="trend"
                     stroke="currentColor"
-                    strokeWidth={2}
+                    strokeWidth={subtleTrendLine ? 1.5 : 2}
                     strokeDasharray="6 4"
-                    className="text-amber-500 dark:text-amber-400"
+                    className={subtleTrendLine
+                      ? "text-slate-400/70 dark:text-slate-500/70"
+                      : "text-amber-500 dark:text-amber-400"}
                     dot={false}
                     activeDot={false}
                   />

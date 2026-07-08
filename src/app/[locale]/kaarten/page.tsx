@@ -17,6 +17,7 @@ import {
   computeWeeklyDeltaPct,
   type SnapshotPoint,
 } from "@/lib/display-price";
+import { trendDeltaPct } from "@/lib/price-trend";
 import { Layers, BookOpen, Banknote, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -192,9 +193,13 @@ const getCardsOverviewData = unstable_cache(
   }
   const marqueeItems = shuffled.slice(0, 40);
 
-  // Trending: snapshot-based delta. Apples-to-apples: Marktprijs(today) vs
-  // Marktprijs(7d-old snapshot). Both sides go through the outlier filter,
-  // so we never see fake -54% drops from idProduct corruption alone.
+  // Trending: trend-gebaseerde delta. We fitten een 7-dagen-trendlijn over
+  // ALLE snapshots in het venster (+ de huidige Marktprijs als eindpunt) en
+  // nemen begin→eind van die fit als percentage — zelfde wiskunde als de
+  // trendlijn op de kaart-detailpagina. Dat voorkomt absurde percentages
+  // wanneer er toevallig een piek of dip op precies de venstergrens lag.
+  // Fallback (te weinig snapshots voor een fit): de oude snapshot-delta
+  // (Marktprijs vandaag vs ~7d-oude snapshot, beide door de outlier-filter).
   //
   // Two queries: candidate pool (priceAvg≥€10 + 3y cutoff) → fetch last
   // ~9 days of CardPriceHistory rows for those candidates → build a per-
@@ -238,7 +243,24 @@ const getCardsOverviewData = unstable_cache(
         .slice(-7)
         .map((s) => s.price);
       const displayPrice = getDisplayPrice({ ...c, recentSnapshots }) ?? c.priceAvg;
-      const deltaPct = computeWeeklyDeltaPct({ ...c, recentSnapshots, snapshotHistory });
+      // 7-dagen-trendfit: alle snapshots binnen het venster (excl. vandaag —
+      // de huidige Marktprijs wordt als eindpunt aangehecht), oplopend op datum.
+      const sevenDayWindowMs = todayUtcMs - 7 * 24 * 60 * 60 * 1000;
+      const trendSeries = (snapshotHistory ?? [])
+        .map((s) => ({
+          t: s.date instanceof Date ? s.date.getTime() : new Date(s.date).getTime(),
+          price: s.price,
+        }))
+        .filter((s): s is { t: number; price: number } =>
+          s.price != null && s.price > 0 && s.t >= sevenDayWindowMs && s.t < todayUtcMs)
+        .sort((a, b) => a.t - b.t)
+        .map((s) => s.price);
+      const trendPct = displayPrice != null && displayPrice > 0
+        ? trendDeltaPct([...trendSeries, displayPrice])
+        : null;
+      const snapshotPct = computeWeeklyDeltaPct({ ...c, recentSnapshots, snapshotHistory });
+      const deltaPct = trendPct ?? snapshotPct;
+      const trendBased = trendPct != null;
       // Flag corrupted idProduct mappings (raw priceAvg >> Marktprijs):
       // even with snapshot-based delta we want to hide these because the
       // displayed price itself is unreliable until pokewallet's mapping
@@ -266,15 +288,16 @@ const getCardsOverviewData = unstable_cache(
         priceAvg7: c.priceAvg7,
         deltaPct: deltaPct ?? 0,
         corrupted,
+        trendBased,
         hasSnapshotBaseline,
       };
     })
     // Require non-trivial movement AND no corruption-correction noise.
-    // Snapshot-baseline ≥3%, raw fallback ≥5% (less precise so we want
-    // a stronger signal).
+    // Trend-fit of snapshot-baseline ≥3%, raw fallback ≥5% (less precise
+    // so we want a stronger signal).
     .filter((c) => {
       if (c.corrupted) return false;
-      const threshold = c.hasSnapshotBaseline ? 3 : 5;
+      const threshold = c.trendBased || c.hasSnapshotBaseline ? 3 : 5;
       return Math.abs(c.deltaPct) >= threshold;
     });
   const risers: TrendingCard[] = [...withDelta].sort((a, b) => b.deltaPct - a.deltaPct).slice(0, 10);
@@ -307,7 +330,7 @@ const getCardsOverviewData = unstable_cache(
       sortedSeries,
     };
   },
-  ["cards-overview-v4"],
+  ["cards-overview-v5"],
   { revalidate: 3600, tags: ["cards-catalog"] },
 );
 
