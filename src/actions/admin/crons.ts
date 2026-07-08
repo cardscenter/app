@@ -19,6 +19,21 @@ export async function runCronManually(jobName: string) {
     return { error: `Manual run niet toegestaan voor "${jobName}". ${meta.runWarning ?? ""}`.trim() };
   }
 
+  // Concurrency-guard: weiger als er al een run van deze job bezig is —
+  // dubbel draaien geeft dubbele API-calls en race-condities op writes.
+  // RUNNING-rijen ouder dan 2u beschouwen we als stale (container-restart
+  // tijdens een run laat een RUNNING-rij achter zonder finishedAt).
+  const staleCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const activeRun = await prisma.cronRun.findFirst({
+    where: { jobName, status: "RUNNING", startedAt: { gte: staleCutoff } },
+    select: { startedAt: true },
+  });
+  if (activeRun) {
+    return {
+      error: `"${jobName}" draait al (gestart ${activeRun.startedAt.toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam" })}). Wacht tot deze run klaar is.`,
+    };
+  }
+
   const runner = CRON_JOBS[jobName as CronJobName];
 
   try {

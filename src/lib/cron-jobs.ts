@@ -12,7 +12,7 @@ import { checkAndDowngradeExpired } from "@/actions/subscription";
 import { expireClaimedItems } from "@/actions/claimsale";
 import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
 import { syncSetCatalog } from "@/lib/pokewallet/set-mapping";
-import { populateEmptyMappedSets } from "@/lib/pokewallet/populate-cards";
+import { populateEmptyMappedSets, topUpGrowingSets } from "@/lib/pokewallet/populate-cards";
 import { backfillTcgdexPricing } from "@/lib/pokewallet/tcgdex-pricing";
 import { mirrorCardImage, mirrorSetLogo, mapPaced } from "@/lib/pokewallet/mirror-images";
 import { createNotification } from "@/actions/notification";
@@ -503,6 +503,17 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       populateError = (e as Error).message.slice(0, 200);
     }
 
+    // Stap 1c — Top-up voor groeiende sets (promo's + recente releases):
+    // nieuwe kaarten aanvullen + imageUrl-refresh voor kaarten waarvan TCGdex
+    // inmiddels wél een scan heeft. Idempotent, max 10 sets per run.
+    let toppedUp: Awaited<ReturnType<typeof topUpGrowingSets>> | null = null;
+    let topUpError: string | null = null;
+    try {
+      toppedUp = await topUpGrowingSets();
+    } catch (e) {
+      topUpError = (e as Error).message.slice(0, 200);
+    }
+
     // Stap 2 — Prijs-sync per gemapte set met cards
     const sets = await prisma.cardSet.findMany({
       where: { pokewalletSetId: { not: null }, cards: { some: {} } },
@@ -632,6 +643,13 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
               details: populated.populated.slice(0, 20),
             }
           : { error: populateError },
+        topUp: toppedUp
+          ? {
+              setsToppedUp: toppedUp.toppedUp.length,
+              cardsCreated: toppedUp.toppedUp.reduce((sum, p) => sum + p.created, 0),
+              details: toppedUp.toppedUp.slice(0, 20),
+            }
+          : { error: topUpError },
         totalSets: sets.length,
         setsOk: totalSetsOk,
         totalUpdated,

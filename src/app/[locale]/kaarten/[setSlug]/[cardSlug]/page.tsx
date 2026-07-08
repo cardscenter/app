@@ -610,6 +610,33 @@ export default async function CardDetailPage({ params }: Props) {
         });
       }
     }
+
+    // TCGPlayer-only fallback voor de REGULIERE branch. De inherently-foil
+    // branch had deze al, maar niet-foil kaarten zonder enige CardMarket-data
+    // (bv. XY Black Star Promos: alleen priceTcgplayerHolofoilMarket gevuld)
+    // vielen hier doorheen — de set-pagina toonde wél een Marktprijs (via de
+    // TP-fallback in getMarktprijs) maar de detailpagina zei "geen prijsdata".
+    if (pricingVariants.length === 0) {
+      const tpOnlyDisplay = getMarktprijs({
+        priceAvg: null,
+        priceTcgplayerHolofoilMarket: card.priceTcgplayerHolofoilMarket,
+        priceTcgplayerNormalMarket: card.priceTcgplayerNormalMarket,
+        rarity: card.rarity,
+        priceOverrideAvg: card.priceOverrideAvg,
+      });
+      if (tpOnlyDisplay != null && tpOnlyDisplay > 0) {
+        pricingVariants.push({
+          key: "normal",
+          label: "Normal",
+          avg: tpOnlyDisplay,
+          low: null, trend: null, avg1: null, avg7: null, avg30: null,
+          // Snapshot-gebaseerde deltas werken zodra er CardPriceHistory is
+          // (de sync schrijft óók voor TP-only kaarten een dagelijkse
+          // Marktprijs-snapshot); raw-fallback bestaat hier niet.
+          deltas: buildDeltas(tpOnlyDisplay, normalDeltaHistory, null, null, null),
+        });
+      }
+    }
   }
 
   // Special-variant pricing (Master Ball / Poke Ball patterns).

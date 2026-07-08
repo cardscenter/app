@@ -158,6 +158,12 @@ export default async function AdminCronsPage() {
                 jobName={job.name}
                 allowManualRun={job.allowManualRun}
                 runWarning={job.runWarning}
+                isRunning={
+                  job.latest?.status === "RUNNING" &&
+                  // Stale-guard: RUNNING ouder dan 2u = achtergebleven rij na
+                  // een container-restart — knop dan niet blokkeren.
+                  Date.now() - new Date(job.latest.startedAt).getTime() < 2 * 60 * 60 * 1000
+                }
               />
             </div>
 

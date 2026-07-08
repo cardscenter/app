@@ -3,16 +3,19 @@
 import { useTransition, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { runCronManually } from "@/actions/admin/crons";
-import { Play, Lock } from "lucide-react";
+import { Play, Lock, Loader2 } from "lucide-react";
 
 export function CronRunNowButton({
   jobName,
   allowManualRun,
   runWarning,
+  isRunning = false,
 }: {
   jobName: string;
   allowManualRun: boolean;
   runWarning: string | null;
+  /** Laatste run staat op RUNNING — knop disabled tot 'ie klaar is. */
+  isRunning?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +30,20 @@ export function CronRunNowButton({
         >
           <Lock className="h-3 w-3" />
           Alleen scheduler
+        </span>
+      </div>
+    );
+  }
+
+  if (isRunning) {
+    return (
+      <div className="space-y-1">
+        <span
+          title="Deze job draait op dit moment — wacht tot de run klaar is."
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
+        >
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Draait nu…
         </span>
       </div>
     );

@@ -19,7 +19,11 @@ export function getCardImageUrl(
   if (card.imageMirrorKey) {
     return `/api/uploads/${card.imageMirrorKey}-${quality}.jpg`;
   }
-  if (card.imageUrlFull) {
+  // PriceCharting-thumbnails zijn 240px — te slecht als primaire bron. Alleen
+  // als laatste redmiddel, zodat een TCGdex-scan (imageUrl) wint zodra die er
+  // is (promo-kaarten worden vaak later gescand dan gelist).
+  const fullIsLowRes = card.imageUrlFull?.includes("images.pricecharting.com") ?? false;
+  if (card.imageUrlFull && !fullIsLowRes) {
     if (card.imageUrlFull.includes("pokemontcg.io")) {
       return quality === "high"
         ? `${card.imageUrlFull}_hires.png`
@@ -29,6 +33,9 @@ export function getCardImageUrl(
   }
   if (card.imageUrl) {
     return `${card.imageUrl}/${quality}.webp`;
+  }
+  if (card.imageUrlFull) {
+    return card.imageUrlFull;
   }
   return null;
 }

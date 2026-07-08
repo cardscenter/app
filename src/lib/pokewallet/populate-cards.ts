@@ -187,10 +187,23 @@ export async function populateSetCards(cardSetId: string): Promise<PopulateResul
 
   const existing = await prisma.card.findMany({
     where: { cardSetId },
-    select: { id: true },
+    select: { id: true, imageUrl: true },
   });
   const existingIds = new Set(existing.map((c) => c.id));
   const newBriefs = briefs.filter((b) => !existingIds.has(b.id));
+
+  // Image-refresh voor BESTAANDE kaarten zonder TCGdex-scan: promo-kaarten
+  // worden vaak eerder gelist dan gescand, dus een kaart die bij aanmaak geen
+  // image had (imageUrl null → viel terug op een low-res bron zoals
+  // PriceCharting 240px) krijgt 'm hier alsnog zodra TCGdex de scan uploadt.
+  const briefImageById = new Map(briefs.map((b) => [b.id, b.image ?? null]));
+  for (const c of existing) {
+    if (c.imageUrl) continue;
+    const img = briefImageById.get(c.id);
+    if (img) {
+      await prisma.card.update({ where: { id: c.id }, data: { imageUrl: img } });
+    }
+  }
 
   if (newBriefs.length === 0) {
     return { cardSetId, name: set.name, tcgdexSetId: tcgId, created: 0, skipped: briefs.length };
@@ -266,4 +279,63 @@ export async function populateEmptyMappedSets(): Promise<{ populated: PopulateRe
     }
   }
   return { populated };
+}
+
+/** Max groeiende sets die per run een top-up krijgen. */
+const MAX_TOPUP_SETS_PER_RUN = 10;
+
+/**
+ * Top-up voor GROEIENDE sets: promo-sets (krijgen doorlopend nieuwe kaarten
+ * bij elke productrelease) + recente sets. populateEmptyMappedSets pakt alleen
+ * lege shells — een set die ooit met 27 kaarten gevuld is maar waar TCGdex er
+ * inmiddels 60 kent, groeide vóór deze functie nooit meer mee.
+ *
+ * Per kandidaat één goedkope TCGdex set-fetch; alleen bij een verschil
+ * (nieuwe kaarten óf bestaande kaarten zonder scan die er nu wel is) draait
+ * de idempotente populateSetCards, die ook de image-refresh doet.
+ */
+export async function topUpGrowingSets(): Promise<{ toppedUp: PopulateResult[] }> {
+  const sets = await prisma.cardSet.findMany({
+    where: { tcgdexSetId: { not: null }, cards: { some: {} } },
+    select: {
+      id: true, name: true, tcgdexSetId: true, releaseDate: true,
+      _count: { select: { cards: true } },
+    },
+  });
+  const nowYear = new Date().getFullYear();
+  const candidates = sets.filter((s) => {
+    if (/promo/i.test(s.name)) return true;
+    const y = extractYear(s.releaseDate);
+    return y !== null && y >= nowYear - 1;
+  });
+
+  const toppedUp: PopulateResult[] = [];
+  for (const s of candidates) {
+    if (toppedUp.length >= MAX_TOPUP_SETS_PER_RUN) break;
+    try {
+      const tcgSet = await fetchTcgdexSet(s.tcgdexSetId!);
+      const briefs = tcgSet?.cards ?? [];
+      if (briefs.length === 0) continue;
+      const hasNewCards = briefs.length > s._count.cards;
+      let hasNewImages = false;
+      if (!hasNewCards) {
+        // Alleen als er geen nieuwe kaarten zijn: check of TCGdex inmiddels
+        // scans heeft voor kaarten die bij ons nog imageUrl=null hebben.
+        const missingImg = await prisma.card.count({
+          where: { cardSetId: s.id, imageUrl: null },
+        });
+        if (missingImg > 0) {
+          hasNewImages = briefs.some((b) => b.image != null);
+        }
+      }
+      if (!hasNewCards && !hasNewImages) continue;
+      toppedUp.push(await populateSetCards(s.id));
+    } catch (e) {
+      toppedUp.push({
+        cardSetId: s.id, name: s.name, tcgdexSetId: s.tcgdexSetId, created: 0, skipped: 0,
+        error: (e as Error).message.slice(0, 200),
+      });
+    }
+  }
+  return { toppedUp };
 }
