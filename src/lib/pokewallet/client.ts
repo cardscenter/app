@@ -175,3 +175,70 @@ export async function fetchSetViaCardLookup(
   }
   return cards;
 }
+
+// ── Binaire beeld-endpoints (weerbaarheid tegen TCGdex-storing) ──────────────
+// PokeWallet serveert kaart- en set-beelden vanaf eigen infra. Deze endpoints
+// geven binaire data terug (geen JSON), dus ze gebruiken hun eigen raw-fetch
+// i.p.v. pwFetch (die res.json() doet). Fail-soft: null bij 404/error zodat een
+// enkele ontbrekende kaart de bulk-mirror niet laat crashen.
+
+export interface PokewalletImage {
+  buffer: Buffer;
+  contentType: string;
+}
+
+async function fetchBinary(path: string, retries = 3): Promise<PokewalletImage | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        headers: { "X-API-Key": getApiKey() },
+        signal: AbortSignal.timeout(8000),
+      });
+      // 429: respecteer Retry-After / backoff en probeer opnieuw i.p.v. het beeld
+      // stil te droppen — cruciaal voor de bulk-mirror (~40k calls).
+      if (res.status === 429) {
+        if (attempt >= retries) return null;
+        const retryAfter = res.headers.get("Retry-After");
+        const delayMs = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : Math.min(1000 * 2 ** attempt, 60000);
+        await new Promise((r) => setTimeout(r, delayMs));
+        continue;
+      }
+      if (res.status === 404) return null; // echt geen beeld voor deze id
+      if (!res.ok) {
+        if (attempt >= retries) return null;
+        await new Promise((r) => setTimeout(r, Math.min(500 * 2 ** attempt, 8000)));
+        continue;
+      }
+      const contentType = res.headers.get("content-type") ?? "application/octet-stream";
+      const buffer = Buffer.from(await res.arrayBuffer());
+      if (buffer.byteLength === 0) return null;
+      return { buffer, contentType };
+    } catch {
+      // timeout / netwerkfout → backoff + retry
+      if (attempt >= retries) return null;
+      await new Promise((r) => setTimeout(r, Math.min(500 * 2 ** attempt, 8000)));
+    }
+  }
+  return null;
+}
+
+/**
+ * Kaartafbeelding via `GET /images/:id?size={low|high}`. `pokewalletId` is
+ * `Card.pokewalletId` (pk_xxx of hex). Levert JPEG. Null bij 404/error.
+ */
+export function fetchCardImage(
+  pokewalletId: string,
+  size: "low" | "high",
+): Promise<PokewalletImage | null> {
+  return fetchBinary(`/images/${encodeURIComponent(pokewalletId)}?size=${size}`);
+}
+
+/**
+ * Set-logo via `GET /sets/:id/image`. `pokewalletSetId` is
+ * `CardSet.pokewalletSetId` (numeriek). Levert PNG. Null bij 404/error.
+ */
+export function fetchSetLogo(pokewalletSetId: string): Promise<PokewalletImage | null> {
+  return fetchBinary(`/sets/${encodeURIComponent(pokewalletSetId)}/image`);
+}

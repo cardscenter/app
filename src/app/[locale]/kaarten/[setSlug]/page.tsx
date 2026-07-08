@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { SetCardsGrid } from "@/components/card/set-cards-grid";
 import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
+import { getSetLogoUrl } from "@/lib/card-image";
 import { hasReverseHoloSignal } from "@/lib/buyback-pricing";
 import { Layers } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
@@ -44,6 +45,7 @@ export default async function SetDetailPage({ params }: Props) {
           rarity: true,
           imageUrl: true,
           imageUrlFull: true,
+          imageMirrorKey: true,
           variants: true,
           gameplayJson: true,
           // Velden voor de Marktprijs-formule
@@ -89,6 +91,7 @@ export default async function SetDetailPage({ params }: Props) {
     rarity: c.rarity,
     imageUrl: c.imageUrl,
     imageUrlFull: c.imageUrlFull,
+    imageMirrorKey: c.imageMirrorKey,
     variants: c.variants,
     marktprijs: getMarktprijs(c),
     // Alleen RH-prijs tonen als er een echt reverse-holo printing bestaat
@@ -110,10 +113,10 @@ export default async function SetDetailPage({ params }: Props) {
       />
 
       <header className="mb-8 mt-2 flex items-start gap-5">
-        {set.logoUrl ? (
+        {getSetLogoUrl(set) ? (
           <div className="flex h-24 items-center rounded-2xl bg-muted/40 px-5">
             <Image
-              src={set.logoUrl}
+              src={getSetLogoUrl(set)!}
               alt={set.name}
               width={200}
               height={80}
