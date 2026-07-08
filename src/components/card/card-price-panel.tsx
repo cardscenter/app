@@ -114,9 +114,18 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   // if the variant had a value that day — so a fresh variant without history
   // doesn't pollute the chart with nulls.
   const field = active.key === "reverse" ? "reverse" : "normal";
-  const fullSeries = history
+  const snapshotSeries = history
     .map((h) => ({ date: h.date, price: h[field] }))
     .filter((p): p is { date: string; price: number } => p.price !== null);
+  // Hecht de huidige Marktprijs aan als "vandaag"-punt wanneer het laatste
+  // snapshot ouder is (bv. gemiste sync-nachten). Grafiek, trendlijn én
+  // percentage lopen dan tot NU — consistent met de stijgers/dalers op
+  // /kaarten, die ook de live Marktprijs als eindpunt gebruiken.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const lastSnapshotDate = snapshotSeries[snapshotSeries.length - 1]?.date;
+  const fullSeries = active.avg !== null && lastSnapshotDate && lastSnapshotDate < todayIso
+    ? [...snapshotSeries, { date: todayIso, price: active.avg }]
+    : snapshotSeries;
 
   // Hoeveel dagen historie heeft DEZE variant? Bepaalt welke periode-tabs nog
   // iets nieuws tonen (een 90d-tab op 12 dagen data = identieke grafiek).
