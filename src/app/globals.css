@@ -655,8 +655,13 @@ body {
    animerend (langzame diagonale shift); uit bij prefers-reduced-motion.
 ---------------------------------------------------------------------------- */
 @keyframes holo-shift {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 100% 100%; }
+  /* Meerdere waypoints = de glans wisselt onderweg van richting, zoals echte
+     foil die je kantelt. Elke "poot" duurt ~1,5s — vlotter dan de oude sweep. */
+  0%   { background-position: 0% 0%; }
+  28%  { background-position: 85% 30%; }
+  52%  { background-position: 45% 100%; }
+  76%  { background-position: 100% 60%; }
+  100% { background-position: 0% 0%; }
 }
 .holo-overlay {
   /* Geen mix-blend-mode: die dempte het effect afhankelijk van de kaartkleuren.
@@ -673,7 +678,18 @@ body {
     transparent 96%
   );
   background-size: 200% 200%;
-  animation: holo-shift 5s ease-in-out infinite alternate;
+  animation: holo-shift 6s ease-in-out infinite;
+  /* Zoals bij een échte reverse holo: de foil bedekt de kaart behalve het
+     artwork-venster. Rechthoekig gat (evenodd) op de vaste plek van de
+     illustratie in het standaard kaart-frame (~8%→92% breed, ~10,5%→47% hoog).
+     Full-art-kaarten hebben geen reverse holo-variant, dus de vaste uitsnede
+     klopt voor alle relevante kaarten. Browsers zonder evenodd-support
+     negeren de clip-path → volledige overlay (nette degradatie). */
+  clip-path: polygon(
+    evenodd,
+    0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%,
+    8% 10.5%, 92% 10.5%, 92% 47.2%, 8% 47.2%, 8% 10.5%
+  );
 }
 @media (prefers-reduced-motion: reduce) {
   .holo-overlay { animation: none; background-position: 50% 50%; }
