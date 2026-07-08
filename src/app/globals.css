@@ -659,19 +659,21 @@ body {
   100% { background-position: 100% 100%; }
 }
 .holo-overlay {
+  /* Geen mix-blend-mode: die dempte het effect afhankelijk van de kaartkleuren.
+     Normale compositing met stevige alpha's = op élke kaart duidelijk zichtbaar,
+     kaart blijft eronder leesbaar. */
   background-image: linear-gradient(
     115deg,
-    transparent 18%,
-    rgba(255, 60, 172, 0.28) 32%,
-    rgba(255, 214, 0, 0.22) 42%,
-    rgba(64, 255, 170, 0.22) 52%,
-    rgba(56, 182, 255, 0.28) 62%,
-    rgba(186, 85, 255, 0.24) 72%,
-    transparent 86%
+    transparent 4%,
+    rgba(255, 60, 172, 0.5) 20%,
+    rgba(255, 214, 0, 0.44) 35%,
+    rgba(64, 255, 170, 0.44) 50%,
+    rgba(56, 182, 255, 0.5) 65%,
+    rgba(186, 85, 255, 0.46) 80%,
+    transparent 96%
   );
-  background-size: 220% 220%;
-  mix-blend-mode: overlay;
-  animation: holo-shift 7s ease-in-out infinite alternate;
+  background-size: 200% 200%;
+  animation: holo-shift 5s ease-in-out infinite alternate;
 }
 @media (prefers-reduced-motion: reduce) {
   .holo-overlay { animation: none; background-position: 50% 50%; }
