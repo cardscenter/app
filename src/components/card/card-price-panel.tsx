@@ -151,7 +151,10 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   // is wél de bron van het percentage). Het getoonde percentage = begin→eind
   // van deze lijn, zodat één toevallige piek/dip aan een venstergrens geen
   // absurde delta's meer geeft en grafiek + getal altijd hetzelfde vertellen.
-  const trendVals = quadraticTrend(series.map((p) => p.price));
+  const trendVals = quadraticTrend(
+    series.map((p) => p.price),
+    series.map((p) => Date.parse(p.date)),
+  );
   const trendDelta = trendVals && trendVals[0] > 0
     ? ((trendVals[trendVals.length - 1] - trendVals[0]) / trendVals[0]) * 100
     : null;

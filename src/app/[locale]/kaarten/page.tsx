@@ -14,7 +14,7 @@ import { getCardImageUrl, getSetLogoUrl } from "@/lib/card-image";
 import {
   getDisplayPrice,
   getMarktprijs,
-  computeWeeklyDeltaPct,
+  computeMonthlyDeltaPct,
   type SnapshotPoint,
 } from "@/lib/display-price";
 import { trendDeltaPct } from "@/lib/price-trend";
@@ -193,25 +193,27 @@ const getCardsOverviewData = unstable_cache(
   }
   const marqueeItems = shuffled.slice(0, 40);
 
-  // Trending: trend-gebaseerde delta. We fitten een 7-dagen-trendlijn over
-  // ALLE snapshots in het venster (+ de huidige Marktprijs als eindpunt) en
-  // nemen begin→eind van die fit als percentage — zelfde wiskunde als de
-  // trendlijn op de kaart-detailpagina. Dat voorkomt absurde percentages
-  // wanneer er toevallig een piek of dip op precies de venstergrens lag.
-  // Fallback (te weinig snapshots voor een fit): de oude snapshot-delta
-  // (Marktprijs vandaag vs ~7d-oude snapshot, beide door de outlier-filter).
+  // Trending: trend-gebaseerde delta over de AFGELOPEN MAAND. We fitten een
+  // 30-dagen-trendlijn over ALLE snapshots in het venster (op echte
+  // tijdstempels, + de huidige Marktprijs als eindpunt) en nemen begin→eind
+  // van die fit als percentage — zelfde wiskunde als de trendlijn op de
+  // kaart-detailpagina. Een maand-venster met veel punten maakt de trend
+  // véél stabieler dan een week: één piek-/dipdag legt nauwelijks gewicht
+  // in de schaal. Fallback (te weinig snapshots voor een fit): de oude
+  // snapshot-delta (Marktprijs vandaag vs ~30d-oude snapshot, beide door
+  // de outlier-filter).
   //
   // Two queries: candidate pool (priceAvg≥€10 + 3y cutoff) → fetch last
-  // ~9 days of CardPriceHistory rows for those candidates → build a per-
+  // ~32 days of CardPriceHistory rows for those candidates → build a per-
   // card map → compute delta with snapshot baseline.
   const trendingCandidateIds = trendingCards.map((c) => c.id);
-  const ninedaysAgo = new Date(Date.now() - 9 * 24 * 60 * 60 * 1000);
+  const windowFetchStart = new Date(Date.now() - 32 * 24 * 60 * 60 * 1000);
   const recentSnapshotRows = trendingCandidateIds.length === 0
     ? []
     : await prisma.cardPriceHistory.findMany({
         where: {
           cardId: { in: trendingCandidateIds },
-          date: { gte: ninedaysAgo },
+          date: { gte: windowFetchStart },
         },
         select: { cardId: true, date: true, priceNormal: true },
       });
@@ -243,22 +245,26 @@ const getCardsOverviewData = unstable_cache(
         .slice(-7)
         .map((s) => s.price);
       const displayPrice = getDisplayPrice({ ...c, recentSnapshots }) ?? c.priceAvg;
-      // 7-dagen-trendfit: alle snapshots binnen het venster (excl. vandaag —
-      // de huidige Marktprijs wordt als eindpunt aangehecht), oplopend op datum.
-      const sevenDayWindowMs = todayUtcMs - 7 * 24 * 60 * 60 * 1000;
-      const trendSeries = (snapshotHistory ?? [])
+      // 30-dagen-trendfit: alle snapshots binnen het venster (excl. vandaag —
+      // de huidige Marktprijs wordt als eindpunt aangehecht), oplopend op
+      // datum, met echte timestamps als x-as zodat gaten in de reeks
+      // (gemiste sync-nachten) de fit niet vertekenen.
+      const windowStartMs = todayUtcMs - 30 * 24 * 60 * 60 * 1000;
+      const trendPoints = (snapshotHistory ?? [])
         .map((s) => ({
           t: s.date instanceof Date ? s.date.getTime() : new Date(s.date).getTime(),
           price: s.price,
         }))
         .filter((s): s is { t: number; price: number } =>
-          s.price != null && s.price > 0 && s.t >= sevenDayWindowMs && s.t < todayUtcMs)
-        .sort((a, b) => a.t - b.t)
-        .map((s) => s.price);
+          s.price != null && s.price > 0 && s.t >= windowStartMs && s.t < todayUtcMs)
+        .sort((a, b) => a.t - b.t);
       const trendPct = displayPrice != null && displayPrice > 0
-        ? trendDeltaPct([...trendSeries, displayPrice])
+        ? trendDeltaPct(
+            [...trendPoints.map((s) => s.price), displayPrice],
+            [...trendPoints.map((s) => s.t), Date.now()],
+          )
         : null;
-      const snapshotPct = computeWeeklyDeltaPct({ ...c, recentSnapshots, snapshotHistory });
+      const snapshotPct = computeMonthlyDeltaPct({ ...c, recentSnapshots, snapshotHistory });
       const deltaPct = trendPct ?? snapshotPct;
       const trendBased = trendPct != null;
       // Flag corrupted idProduct mappings (raw priceAvg >> Marktprijs):
@@ -267,15 +273,15 @@ const getCardsOverviewData = unstable_cache(
       // gets fixed or an admin sets a priceOverrideAvg.
       const corrupted = c.priceAvg > 0 && displayPrice < c.priceAvg / 2.5;
       // hasSnapshotBaseline tells us whether the delta is true apples-to-
-      // apples (preferred) or fell back to raw avg vs avg7. We don't
+      // apples (preferred) or fell back to raw avg vs avg30. We don't
       // exclude raw-fallback cards entirely — they're still valid signals
-      // for the first ~7 days of a card's snapshot lifetime — but we
+      // for the first ~30 days of a card's snapshot lifetime — but we
       // demand stricter ≥5% movement to compensate for the lower precision.
       const hasSnapshotBaseline = (snapshotHistory ?? []).some((s) => {
         if (s.price == null || s.price <= 0) return false;
         const t = s.date instanceof Date ? s.date.getTime() : new Date(s.date).getTime();
         const ageDays = (Date.now() - t) / (24 * 60 * 60 * 1000);
-        return ageDays >= 5 && ageDays <= 9;
+        return ageDays >= 28 && ageDays <= 32;
       });
       return {
         id: c.id,
@@ -330,7 +336,7 @@ const getCardsOverviewData = unstable_cache(
       sortedSeries,
     };
   },
-  ["cards-overview-v5"],
+  ["cards-overview-v6"],
   { revalidate: 3600, tags: ["cards-catalog"] },
 );
 

@@ -12,7 +12,7 @@ export interface TrendingCard {
   imageUrl: string | null;
   priceAvg: number;
   priceAvg7: number;
-  deltaPct: number; // Pre-computed: begin→eind van de 7-dagen-trendfit (fallback: snapshot-delta)
+  deltaPct: number; // Pre-computed: begin→eind van de 30-dagen-trendfit (fallback: snapshot-delta)
 }
 
 interface Props {
@@ -87,7 +87,7 @@ export function DatabaseTrending({ risers, fallers }: Props) {
         <div>
           <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
             <TrendingUp className="size-4 text-emerald-500" />
-            Stijgers deze week
+            Stijgers afgelopen maand
           </h3>
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {risers.map((c, i) => <TrendTile key={c.id} card={c} direction="up" rank={i + 1} />)}
@@ -98,7 +98,7 @@ export function DatabaseTrending({ risers, fallers }: Props) {
         <div>
           <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
             <TrendingDown className="size-4 text-red-500" />
-            Dalers deze week
+            Dalers afgelopen maand
           </h3>
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {fallers.map((c, i) => <TrendTile key={c.id} card={c} direction="down" rank={i + 1} />)}

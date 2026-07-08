@@ -76,11 +76,22 @@ function theilSenBaseline(xs: number[], ys: number[]): { b0: number; b1: number 
  * daling volledig behouden blijft. Null bij te weinig punten (<5) of een
  * numeriek ontaarde fit.
  */
-export function quadraticTrend(values: number[]): number[] | null {
+export function quadraticTrend(values: number[], times?: number[]): number[] | null {
   const n = values.length;
   if (n < 5) return null;
-  // x genormaliseerd naar [0,1] voor numerieke stabiliteit
-  const xs = values.map((_, i) => i / (n - 1));
+  // x genormaliseerd naar [0,1] voor numerieke stabiliteit. Met `times`
+  // (timestamps, zelfde lengte) wordt de ECHTE tijdsafstand tussen punten
+  // gebruikt — cruciaal wanneer er gaten in de snapshot-reeks zitten
+  // (gemiste sync-nachten): index-gebaseerde x doet alsof 4 dagen gat niet
+  // bestaat en vertekent de fit.
+  let xs: number[];
+  if (times && times.length === n && times[n - 1] > times[0]) {
+    const t0 = times[0];
+    const span = times[n - 1] - t0;
+    xs = times.map((t) => (t - t0) / span);
+  } else {
+    xs = values.map((_, i) => i / (n - 1));
+  }
 
   // Uitschieter-detectie tegen de robuuste basislijn
   const base = theilSenBaseline(xs, values);
@@ -114,8 +125,8 @@ export function quadraticTrend(values: number[]): number[] | null {
  * Null bij te weinig punten of wanneer het startpunt van de fit niet
  * positief is (dan is een percentage betekenisloos).
  */
-export function trendDeltaPct(values: number[]): number | null {
-  const trend = quadraticTrend(values);
+export function trendDeltaPct(values: number[], times?: number[]): number | null {
+  const trend = quadraticTrend(values, times);
   if (!trend) return null;
   const first = trend[0];
   const last = trend[trend.length - 1];
