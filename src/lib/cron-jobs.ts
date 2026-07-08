@@ -530,48 +530,60 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     // geen mirror-key hebben. Weerbaarheid tegen TCGdex-storing. Gecapt zodat de
     // dagelijkse job bounded blijft; de eenmalige bulk-lading doet
     // scripts/pw-mirror-images.ts. pokewalletId is in stap 2 al toegekend.
+    // Incident-hardening (2026-07-07): DB-writes GEBUNDELD in $transactions van
+    // 25 i.p.v. één update per item — minimale schrijfdruk op Turso.
     let mirror: { cards: number; logos: number; cardsFailed: number } | null = null;
     try {
       const MIRROR_CARDS_PER_RUN = 300;
+      const MIRROR_WRITE_BATCH = 25;
       const cardsToMirror = await prisma.card.findMany({
         where: { pokewalletId: { not: null }, imageMirrorKey: null },
         select: { id: true, pokewalletId: true },
         orderBy: { id: "asc" },
         take: MIRROR_CARDS_PER_RUN,
       });
-      let mirroredCards = 0;
       let cardsFailed = 0;
+      const doneCards: { id: string; stem: string }[] = [];
       await mapPaced(
         cardsToMirror,
         async (c) => {
           const stem = await mirrorCardImage(c);
-          if (stem) {
-            await prisma.card.update({ where: { id: c.id }, data: { imageMirrorKey: stem } });
-            mirroredCards++;
-          } else {
-            cardsFailed++;
-          }
+          if (stem) doneCards.push({ id: c.id, stem });
+          else cardsFailed++;
         },
-        { concurrency: 3, sleepMs: 400 },
+        { concurrency: 2, sleepMs: 400 },
       );
+      for (let i = 0; i < doneCards.length; i += MIRROR_WRITE_BATCH) {
+        const batch = doneCards.slice(i, i + MIRROR_WRITE_BATCH);
+        await prisma.$transaction(
+          batch.map((d) =>
+            prisma.card.update({ where: { id: d.id }, data: { imageMirrorKey: d.stem } }),
+          ),
+        );
+      }
 
       const setsToMirror = await prisma.cardSet.findMany({
         where: { pokewalletSetId: { not: null }, logoMirrorKey: null },
         select: { id: true, pokewalletSetId: true },
       });
-      let mirroredLogos = 0;
+      const doneLogos: { id: string; stem: string }[] = [];
       await mapPaced(
         setsToMirror,
         async (s) => {
           const stem = await mirrorSetLogo(s);
-          if (stem) {
-            await prisma.cardSet.update({ where: { id: s.id }, data: { logoMirrorKey: stem } });
-            mirroredLogos++;
-          }
+          if (stem) doneLogos.push({ id: s.id, stem });
         },
-        { concurrency: 3, sleepMs: 400 },
+        { concurrency: 2, sleepMs: 400 },
       );
-      mirror = { cards: mirroredCards, logos: mirroredLogos, cardsFailed };
+      for (let i = 0; i < doneLogos.length; i += MIRROR_WRITE_BATCH) {
+        const batch = doneLogos.slice(i, i + MIRROR_WRITE_BATCH);
+        await prisma.$transaction(
+          batch.map((d) =>
+            prisma.cardSet.update({ where: { id: d.id }, data: { logoMirrorKey: d.stem } }),
+          ),
+        );
+      }
+      mirror = { cards: doneCards.length, logos: doneLogos.length, cardsFailed };
     } catch (e) {
       failures.push({ setName: "(image-mirror)", error: (e as Error).message.slice(0, 200) });
     }
