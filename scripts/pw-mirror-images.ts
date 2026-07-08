@@ -23,6 +23,7 @@
 // Vlaggen:
 //   --only=cards|logos|both   (default both)
 //   --limit=N                 kaarten deze run (default 50, max 1000)
+//   --set=<tcgdexSetId>       alleen kaarten uit deze set (bv. --set=me03)
 //   --cursor=<Card.id>        start vanaf id > cursor (om hardnekkige falers te passeren)
 //   --concurrency=N           parallelle fetches per batch (default 2, max 4)
 //   --sleep=MS                pauze tussen fetch-batches (default 1500, min 250)
@@ -138,6 +139,7 @@ async function main() {
     LIMIT_MAX,
   );
   const startCursor = arg("cursor", "");
+  const setFilter = arg("set", ""); // tcgdexSetId, bv. "me03" — alleen die set
   const concurrency = Math.max(1, Math.min(4, parseInt(arg("concurrency", "2"), 10) || 2));
   const sleepMs = Math.max(250, parseInt(arg("sleep", "1500"), 10) || 1500);
   const healthUrl = arg("health-url", HEALTH_URL_DEFAULT);
@@ -151,7 +153,7 @@ async function main() {
       `DB: ${isRemoteDb ? `REMOTE (${(process.env.DATABASE_URL ?? "").slice(0, 55)}…)` : "lokaal (dev.db)"}`,
   );
   console.log(
-    `only=${only} limit=${limit} cursor=${startCursor || "(begin)"} ` +
+    `only=${only} limit=${limit} set=${setFilter || "(alle)"} cursor=${startCursor || "(begin)"} ` +
       `concurrency=${concurrency} sleep=${sleepMs}ms · health-gate: ${isRemoteDb ? "AAN" : "uit (lokale DB)"}\n`,
   );
 
@@ -166,9 +168,13 @@ async function main() {
 
   if (only === "cards" || only === "both") {
     const todo = await prisma.card.count({
-      where: { pokewalletId: { not: null }, imageMirrorKey: null },
+      where: {
+        pokewalletId: { not: null },
+        imageMirrorKey: null,
+        ...(setFilter ? { cardSet: { tcgdexSetId: setFilter } } : {}),
+      },
     });
-    console.log(`Kaarten zonder mirror: ${todo} — deze run doet er max ${limit}\n`);
+    console.log(`Kaarten zonder mirror${setFilter ? ` in ${setFilter}` : ""}: ${todo} — deze run doet er max ${limit}\n`);
 
     let lastId = startCursor;
     let processed = 0;
@@ -180,6 +186,7 @@ async function main() {
         where: {
           pokewalletId: { not: null },
           imageMirrorKey: null,
+          ...(setFilter ? { cardSet: { tcgdexSetId: setFilter } } : {}),
           ...(lastId ? { id: { gt: lastId } } : {}),
         },
         select: { id: true, pokewalletId: true },

@@ -10,6 +10,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cardSlug, localIdFromSlug } from "@/lib/card-helpers";
 import { getCardImageUrl } from "@/lib/card-image";
 import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
+import { CardImageHoloOverlay } from "@/components/card/card-image-holo-overlay";
 import { CardPricePanel, type VariantPricing, type ExtraVariant } from "@/components/card/card-price-panel";
 import { basePokemonName } from "@/lib/pokeapi/base-name";
 import { pokedexSlug } from "@/lib/pokeapi/slug";
@@ -680,6 +681,7 @@ export default async function CardDetailPage({ params }: Props) {
                   </div>
                 );
               })()}
+              <CardImageHoloOverlay />
             </div>
             {session?.user?.id && (
               <CardWatchlistButton cardId={card.id} initialWatching={!!isWatched} />

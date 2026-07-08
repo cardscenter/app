@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -91,6 +91,15 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   const [periodDays, setPeriodDays] = useState<number>(
     overallSpanDays >= 14 ? 30 : overallSpanDays >= 7 ? 14 : 7,
   );
+  // Vertel de kaartafbeelding (server-gerenderd, elders op de pagina) welke
+  // variant actief is — die toont bij "reverse" een holo-glans-overlay. Zelfde
+  // custom-DOM-event-patroon als cart-checkout-locked.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("card-variant-changed", { detail: { variantKey: activeKey } }),
+    );
+  }, [activeKey]);
+
   const active = variants.find((v) => v.key === activeKey) ?? variants[0];
   if (!active) return null;
 
