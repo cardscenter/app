@@ -57,3 +57,4 @@ dev.db-journal
 
 # Claude Code runtime state (per-session, niet projectspecifiek)
 .claude/
+scripts/.pw-mirror-images.lock
