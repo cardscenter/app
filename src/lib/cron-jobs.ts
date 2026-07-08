@@ -363,11 +363,11 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   },
   "sync-pokewallet": {
     description:
-      "Detecteert nieuwe PokeWallet-sets (maakt er CardSet-rijen voor aan onder een 'Onbekend'-Series), vult lege nieuwe sets met kaarten + afbeeldingen uit TCGdex, vernieuwt prijzen voor alle CardSets met een mapping, en mirrort tot 300 nog niet gemirrorde kaartafbeeldingen + set-logo's naar R2/schijf (weerbaarheid tegen TCGdex-storing). ~600 prijs-calls + tot ~600 beeld-calls per pass.",
+      "Detecteert nieuwe PokeWallet-sets (maakt er CardSet-rijen voor aan onder een 'Onbekend'-Series), vult lege nieuwe sets met kaarten + afbeeldingen uit TCGdex, vernieuwt prijzen voor alle CardSets met een mapping, en mirrort tot 1500 nog niet gemirrorde kaartafbeeldingen + set-logo's naar R2 (weerbaarheid tegen TCGdex-storing; ~12 nachten tot de backfill klaar is, daarna alleen nieuwe kaarten). ~600 prijs-calls + tot ~3000 beeld-calls per pass.",
     schedule: "Dagelijks",
     allowManualRun: true,
     runWarning:
-      "Heavy job: ~600 prijs-calls + tot ~600 beeld-mirror-calls naar PokeWallet, kan 5+ minuten duren. Raakt rate-limit-budget. Alleen draaien als prijzen écht stale zijn.",
+      "Heavy job: ~600 prijs-calls + tot ~3000 beeld-mirror-calls naar PokeWallet, kan 20-30 minuten duren. Raakt rate-limit-budget. Niet vaker dan 1× per uur draaien.",
   },
   "auction-payment-deadline": {
     description:
@@ -534,7 +534,12 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     // 25 i.p.v. één update per item — minimale schrijfdruk op Turso.
     let mirror: { cards: number; logos: number; cardsFailed: number } | null = null;
     try {
-      const MIRROR_CARDS_PER_RUN = 300;
+      // 1500/nacht: hele backfill (~18k) in ~12 nachten, volledig autonoom op
+      // Railway — geen lokale pc nodig. ~3000 beeld-calls + ~600 prijs-calls per
+      // nacht = ruim onder de PokeWallet-limiet van 5000/uur; fetchBinary heeft
+      // 429-backoff als vangnet. Na de backfill pakt deze stap alleen nog
+      // nieuwe kaarten (paar per week).
+      const MIRROR_CARDS_PER_RUN = 1500;
       const MIRROR_WRITE_BATCH = 25;
       const cardsToMirror = await prisma.card.findMany({
         where: { pokewalletId: { not: null }, imageMirrorKey: null },
