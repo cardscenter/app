@@ -307,7 +307,7 @@ const getCardsOverviewData = unstable_cache(
       sortedSeries,
     };
   },
-  ["cards-overview-v3"],
+  ["cards-overview-v4"],
   { revalidate: 3600, tags: ["cards-catalog"] },
 );
 

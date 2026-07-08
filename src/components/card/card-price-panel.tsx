@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import {
   Area,
-  AreaChart,
   Bar,
   BarChart,
   Cell,
+  ComposedChart,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -79,6 +80,35 @@ const DELTA_LABELS: Record<number, string> = {
 function formatEur(n: number | null) {
   if (n === null || n === undefined) return "—";
   return `€${n.toFixed(2)}`;
+}
+
+/**
+ * Kwadratische kleinste-kwadraten-fit (a + b·x + c·x²) over de getoonde reeks —
+ * een stijve, licht buigende trendlijn van begin tot eind van de grafiek.
+ * Bewust maar 3 vrijheidsgraden zodat 'ie de ruis niet volgt. Null bij te
+ * weinig punten of een numeriek ontaarde fit.
+ */
+function quadraticTrend(values: number[]): number[] | null {
+  const n = values.length;
+  if (n < 5) return null;
+  // x genormaliseerd naar [0,1] voor numerieke stabiliteit
+  const xs = values.map((_, i) => i / (n - 1));
+  let s1 = 0, s2 = 0, s3 = 0, s4 = 0, t0 = 0, t1 = 0, t2 = 0;
+  for (let i = 0; i < n; i++) {
+    const x = xs[i], y = values[i];
+    s1 += x; s2 += x * x; s3 += x * x * x; s4 += x * x * x * x;
+    t0 += y; t1 += x * y; t2 += x * x * y;
+  }
+  const det3 = (m: number[][]) =>
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
+    m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+    m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det3([[n, s1, s2], [s1, s2, s3], [s2, s3, s4]]);
+  if (Math.abs(D) < 1e-12) return null;
+  const a = det3([[t0, s1, s2], [t1, s2, s3], [t2, s3, s4]]) / D;
+  const b = det3([[n, t0, s2], [s1, t1, s3], [s2, t2, s4]]) / D;
+  const c = det3([[n, s1, t0], [s1, s2, t1], [s2, s3, t2]]) / D;
+  return xs.map((x) => a + b * x + c * x * x);
 }
 
 export function CardPricePanel({ variants, history, updated, extraVariants, canExtendedHistory = false }: Props) {
@@ -160,6 +190,13 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   const hasRealHistory = series.length >= 2;
   const firstDate = series[0]?.date;
 
+  // Trendlijn vanaf de 30d-periode (30/60/120/365): stijve, licht buigende
+  // fit over de getoonde reeks. Korte periodes (7/14d) blijven puur de data.
+  const trendVals = effectivePeriodDays >= 30 ? quadraticTrend(series.map((p) => p.price)) : null;
+  const chartData = trendVals
+    ? series.map((p, i) => ({ ...p, trend: trendVals[i] }))
+    : series;
+
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       {hasRealHistory && (
@@ -237,7 +274,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
         <>
           <div className="mt-4 h-40 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={series} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+              <ComposedChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="currentColor" stopOpacity={0.35} className="text-primary" />
@@ -266,7 +303,8 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
                     fontSize: 12,
                   }}
                   labelFormatter={(v) => new Date(v).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
-                  formatter={((v: number) => [`€${v.toFixed(2)}`, active.label]) as never}
+                  formatter={((v: number, name: string) =>
+                    [`€${v.toFixed(2)}`, name === "trend" ? "Trendlijn" : active.label]) as never}
                 />
                 <Area
                   type="monotone"
@@ -277,12 +315,25 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
                   className="text-primary"
                   dot={series.length > 45 ? false : { r: 2.5 }}
                 />
-              </AreaChart>
+                {trendVals && (
+                  <Line
+                    type="monotone"
+                    dataKey="trend"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeDasharray="6 4"
+                    className="text-amber-500 dark:text-amber-400"
+                    dot={false}
+                    activeDot={false}
+                  />
+                )}
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
             {series.length} dag{series.length === 1 ? "" : "en"} historie
             {firstDate && ` · sinds ${new Date(firstDate).toLocaleDateString("nl-NL")}`}
+            {trendVals && " · stippellijn = trend"}
           </p>
         </>
       ) : (
