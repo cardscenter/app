@@ -137,12 +137,14 @@ export default async function EventsPage({
             Beurzen, trade nights, toernooien en meetups in heel Europa.
           </p>
         </div>
-        <Link
-          href="/evenementen/nieuw"
-          className="inline-flex items-center gap-2 self-start rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-        >
-          <Plus className="h-4 w-4" /> Evenement toevoegen
-        </Link>
+        {session?.user?.id && (
+          <Link
+            href={filters.tab === "beurzen" ? "/evenementen/nieuw?type=BEURS" : "/evenementen/nieuw"}
+            className="inline-flex items-center gap-2 self-start rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+          >
+            <Plus className="h-4 w-4" /> {filters.tab === "beurzen" ? "Beurs toevoegen" : "Evenement toevoegen"}
+          </Link>
+        )}
       </div>
 
       {/* Tabs */}
