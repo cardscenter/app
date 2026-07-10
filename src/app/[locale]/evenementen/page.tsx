@@ -14,6 +14,7 @@ import { EventTabs, EventViewToggle } from "@/components/events/event-controls";
 import { EventFilterSidebar } from "@/components/events/event-filter-sidebar";
 import { EventCard, EventEmptyState, EventBanner } from "@/components/events/event-card";
 import { EventCalendarMonth } from "@/components/events/event-calendar-month";
+import { EventsLaunchBanner } from "@/components/events/events-launch-banner";
 import { EventMap } from "@/components/events/event-map";
 import type { EventListItem } from "@/components/events/event-view-types";
 
@@ -59,6 +60,10 @@ export default async function EventsPage({
     endTime: { gte: now },
     ...(blocked.size > 0 ? { organizerId: { notIn: [...blocked] } } : {}),
   };
+
+  // Ongefilterd totaal voor de launch-banner (events.length is gefilterd + gecapt).
+  const totalLive = await prisma.event.count({ where: { status: "LIVE", endTime: { gte: now } } });
+  const LAUNCH_BANNER_MAX_EVENTS = 15;
 
   const rows = await prisma.event.findMany({
     where,
@@ -146,6 +151,9 @@ export default async function EventsPage({
           </Link>
         )}
       </div>
+
+      {/* Launch-banner — verdwijnt vanzelf zodra de kalender gevuld raakt */}
+      {totalLive < LAUNCH_BANNER_MAX_EVENTS && <EventsLaunchBanner />}
 
       {/* Tabs */}
       <div className="mt-5">
