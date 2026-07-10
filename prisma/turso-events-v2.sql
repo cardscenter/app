@@ -3,3 +3,4 @@
 -- Toepassen op Turso via een @libsql/client.executeMultiple-script (zoals scripts/push-to-turso.ts).
 ALTER TABLE "Event" ADD COLUMN "flyerImage" TEXT;
 ALTER TABLE "Event" ADD COLUMN "earlyAccessTime" DATETIME;
+ALTER TABLE "Event" ADD COLUMN "venueSizeM2" INTEGER;

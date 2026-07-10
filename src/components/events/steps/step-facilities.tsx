@@ -57,16 +57,30 @@ export function StepFacilities({ form, set }: { form: EventFormState; set: Event
         </div>
       </div>
 
-      <div className="sm:max-w-[14rem]">
-        <label className="block text-sm font-medium text-foreground" htmlFor="evt-max">Max. aantal bezoekers</label>
-        <input
-          id="evt-max"
-          type="number" min="1"
-          value={form.maxVisitors}
-          onChange={(e) => set("maxVisitors", e.target.value)}
-          placeholder="Onbeperkt"
-          className={`mt-1 ${inputClass}`}
-        />
+      <div className="grid grid-cols-1 gap-3 sm:max-w-md sm:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-foreground" htmlFor="evt-max">Max. aantal bezoekers</label>
+          <input
+            id="evt-max"
+            type="number" min="1"
+            value={form.maxVisitors}
+            onChange={(e) => set("maxVisitors", e.target.value)}
+            placeholder="Onbeperkt"
+            className={`mt-1 ${inputClass}`}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground" htmlFor="evt-m2">Oppervlakte (m²)</label>
+          <input
+            id="evt-m2"
+            type="number" min="1"
+            value={form.venueSizeM2}
+            onChange={(e) => set("venueSizeM2", e.target.value)}
+            placeholder="bv. 800"
+            className={`mt-1 ${inputClass}`}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">Vloeroppervlak van de zaal — geeft bezoekers een beeld van de grootte.</p>
+        </div>
       </div>
     </section>
   );

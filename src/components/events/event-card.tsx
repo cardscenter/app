@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Calendar, MapPin, Ticket, ShieldCheck, Users, Sparkles } from "lucide-react";
+import { Calendar, MapPin, Ticket, ShieldCheck, Users, Sparkles, Gamepad2, Repeat, Tag, Ruler, Table2 } from "lucide-react";
 import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, type EventType } from "@/lib/events/types";
@@ -73,19 +73,54 @@ export function EventCard({ event }: { event: EventListItem }) {
           <MapPin className="h-3.5 w-3.5 shrink-0" /> {event.venueName}, {event.city}
           <CountryFlag code={event.country} size="sm" /> {getEventCountryName(event.country, locale)}
         </p>
-        <p className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          <span className="flex items-center gap-1.5">
+        {/* Activiteiten-pills — wat kun je er doen? */}
+        {(event.canPlay || event.canTrade || event.canSell) && (
+          <div className="flex flex-wrap gap-1.5">
+            {event.canSell && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+                <Tag className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> Verkopen
+              </span>
+            )}
+            {event.canTrade && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+                <Repeat className="h-3 w-3 text-sky-600 dark:text-sky-400" /> Ruilen
+              </span>
+            )}
+            {event.canPlay && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+                <Gamepad2 className="h-3 w-3 text-violet-600 dark:text-violet-400" /> Spelen
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-auto space-y-1 text-sm">
+          <p className="flex items-center gap-1.5">
             <Ticket className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className={event.entryType === "FREE" ? "font-medium text-emerald-600 dark:text-emerald-400" : "font-medium text-foreground"}>
               {event.priceLabel}
             </span>
-          </span>
-          {event.maxVisitors && (
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <Users className="h-3.5 w-3.5 shrink-0" /> Max. {event.maxVisitors} bezoekers
-            </span>
+          </p>
+          {(event.maxVisitors || event.venueSizeM2 || event.totalTables) && (
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {event.maxVisitors && (
+                <span className="flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5 shrink-0" /> Max. {event.maxVisitors} bezoekers
+                </span>
+              )}
+              {event.venueSizeM2 && (
+                <span className="flex items-center gap-1">
+                  <Ruler className="h-3.5 w-3.5 shrink-0" /> {event.venueSizeM2} m²
+                </span>
+              )}
+              {event.totalTables && (
+                <span className="flex items-center gap-1">
+                  <Table2 className="h-3.5 w-3.5 shrink-0" /> {event.totalTables} tafels
+                </span>
+              )}
+            </p>
           )}
-        </p>
+        </div>
       </div>
     </Link>
   );

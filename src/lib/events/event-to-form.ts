@@ -92,6 +92,7 @@ export function eventToFormState(event: Event): EventFormState {
     childFriendly: event.childFriendly,
 
     maxVisitors: event.maxVisitors ? String(event.maxVisitors) : "",
+    venueSizeM2: event.venueSizeM2 ? String(event.venueSizeM2) : "",
     totalTables: event.totalTables ? String(event.totalTables) : "",
 
     coverImage: event.coverImage ?? "",

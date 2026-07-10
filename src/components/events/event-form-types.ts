@@ -60,6 +60,7 @@ export interface EventFormState {
   childFriendly: boolean;
 
   maxVisitors: string;
+  venueSizeM2: string; // vloeroppervlak van de locatie in m²
   totalTables: string; // totaal aantal tafels (standhouder-capaciteit)
 
   coverImage: string;
@@ -111,6 +112,7 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   hasCloakroom: false,
   childFriendly: false,
   maxVisitors: "",
+  venueSizeM2: "",
   totalTables: "",
   coverImage: "",
   flyerImage: "",

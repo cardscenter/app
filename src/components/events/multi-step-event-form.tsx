@@ -167,6 +167,7 @@ export function MultiStepEventForm({
       fd.set(k, form[k] ? "1" : "0");
     }
     fd.set("maxVisitors", form.maxVisitors);
+    fd.set("venueSizeM2", form.venueSizeM2);
     fd.set("totalTables", form.totalTables);
     fd.set("coverImage", form.coverImage);
     fd.set("flyerImage", form.flyerImage);

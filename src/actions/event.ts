@@ -145,6 +145,7 @@ export async function createEvent(formData: FormData) {
     hasCloakroom: formData.get("hasCloakroom") || undefined,
     childFriendly: formData.get("childFriendly") || undefined,
     maxVisitors: formData.get("maxVisitors") || undefined,
+    venueSizeM2: formData.get("venueSizeM2") || undefined,
     totalTables: formData.get("totalTables") || undefined,
     coverImage: formData.get("coverImage") || undefined,
     flyerImage: formData.get("flyerImage") || undefined,
@@ -275,6 +276,7 @@ export async function createEvent(formData: FormData) {
         vendorInfo: data.vendorInfo || null,
         ...facilityData,
         maxVisitors: data.maxVisitors ?? null,
+        venueSizeM2: data.venueSizeM2 ?? null,
         totalTables: data.totalTables ?? null,
         registrationUrl: data.registrationUrl || null,
         coverImage: data.coverImage || null,
@@ -420,6 +422,7 @@ export async function updateEvent(eventId: string, formData: FormData) {
     hasCloakroom: str("hasCloakroom"),
     childFriendly: str("childFriendly"),
     maxVisitors: str("maxVisitors"),
+    venueSizeM2: str("venueSizeM2"),
     totalTables: str("totalTables"),
     coverImage: str("coverImage"),
     flyerImage: str("flyerImage"),
@@ -448,6 +451,7 @@ export async function updateEvent(eventId: string, formData: FormData) {
     if (formData.has(key)) updateData[key] = data[key];
   }
   if (data.maxVisitors !== undefined) updateData.maxVisitors = data.maxVisitors === "" ? null : data.maxVisitors;
+  if (data.venueSizeM2 !== undefined) updateData.venueSizeM2 = data.venueSizeM2 === "" ? null : data.venueSizeM2;
   if (data.totalTables !== undefined) updateData.totalTables = data.totalTables === "" ? null : data.totalTables;
   if (data.galleryImages !== undefined) {
     const gallery = parseGalleryImages(data.galleryImages);

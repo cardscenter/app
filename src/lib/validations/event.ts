@@ -80,6 +80,7 @@ export const createEventSchema = z
     childFriendly: boolField,
 
     maxVisitors: z.coerce.number().int().min(1).max(1000000).optional(),
+    venueSizeM2: z.coerce.number().int().min(1).max(1000000).optional(),
     totalTables: z.coerce.number().int().min(1).max(100000).optional(),
     registrationUrl: z.string().url("Ongeldige link").max(500).optional().or(z.literal("")),
 
@@ -162,6 +163,7 @@ export const updateEventSchema = z
     hasCloakroom: boolField,
     childFriendly: boolField,
     maxVisitors: z.union([z.literal(""), z.coerce.number().int().min(1).max(1000000)]).optional(),
+    venueSizeM2: z.union([z.literal(""), z.coerce.number().int().min(1).max(1000000)]).optional(),
     totalTables: z.union([z.literal(""), z.coerce.number().int().min(1).max(100000)]).optional(),
     coverImage: z.string().optional(),
     flyerImage: z.string().optional(),

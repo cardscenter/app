@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, CalendarPlus, Clock, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2,
+  Calendar, CalendarPlus, Clock, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2, Ruler,
   Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy, Baby,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -218,11 +218,18 @@ export default async function EventDetailPage({
             )}
 
             {/* Praktische capaciteit-info (tafels staan bij "Voor standhouders") */}
-            {event.maxVisitors && (
+            {(event.maxVisitors || event.venueSizeM2) && (
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
-                  <Users className="h-4 w-4 text-muted-foreground" /> Max. {event.maxVisitors} bezoekers
-                </span>
+                {event.maxVisitors && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                    <Users className="h-4 w-4 text-muted-foreground" /> Max. {event.maxVisitors} bezoekers
+                  </span>
+                )}
+                {event.venueSizeM2 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                    <Ruler className="h-4 w-4 text-muted-foreground" /> {event.venueSizeM2} m² vloeroppervlak
+                  </span>
+                )}
               </div>
             )}
           </div>
