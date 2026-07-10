@@ -112,9 +112,11 @@ export const createEventSchema = z
       if (data.ticketSaleMode === "ONLINE" && !data.registrationUrl) {
         ctx.addIssue({ code: "custom", message: "Vul de ticketlink in of kies 'Alleen aan de deur'", path: ["registrationUrl"] });
       }
-      if (data.earlyAccessTime && data.earlyAccessTime >= data.startTime) {
-        ctx.addIssue({ code: "custom", message: "Vroege toegang moet vóór de begintijd liggen", path: ["earlyAccessTime"] });
-      }
+    }
+
+    // VT hoort bij de openingstijden, los van gratis/betaald.
+    if (data.earlyAccessTime && data.earlyAccessTime >= data.startTime) {
+      ctx.addIssue({ code: "custom", message: "Vroege toegang moet vóór de reguliere begintijd liggen", path: ["earlyAccessTime"] });
     }
 
     if (data.videoUrl && !isSupportedVideoUrl(data.videoUrl)) {
@@ -185,9 +187,9 @@ export const updateEventSchema = z
       if (data.ticketSaleMode === "ONLINE" && !data.registrationUrl) {
         ctx.addIssue({ code: "custom", message: "Vul de ticketlink in of kies 'Alleen aan de deur'", path: ["registrationUrl"] });
       }
-      if (data.earlyAccessTime && data.startTime && data.earlyAccessTime >= data.startTime) {
-        ctx.addIssue({ code: "custom", message: "Vroege toegang moet vóór de begintijd liggen", path: ["earlyAccessTime"] });
-      }
+    }
+    if (data.earlyAccessTime && data.startTime && data.earlyAccessTime >= data.startTime) {
+      ctx.addIssue({ code: "custom", message: "Vroege toegang moet vóór de reguliere begintijd liggen", path: ["earlyAccessTime"] });
     }
     if (data.videoUrl && !isSupportedVideoUrl(data.videoUrl)) {
       ctx.addIssue({ code: "custom", message: "Gebruik een geldige YouTube- of Vimeo-link", path: ["videoUrl"] });

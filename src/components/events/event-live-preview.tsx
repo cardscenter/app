@@ -70,7 +70,7 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
           {(form.startDate || form.startTime) && (
             <Row icon={Calendar}>
               {dateLabel} · {form.startTime}–{form.endTime}
-              {form.entryType === "PAID" && form.earlyAccessTime ? ` · VT ${form.earlyAccessTime}` : ""}
+              {form.earlyAccessTime ? ` · VT ${form.earlyAccessTime}` : ""}
             </Row>
           )}
           {(form.city || form.venueName) && (

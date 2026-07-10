@@ -154,6 +154,13 @@ export default async function EventDetailPage({
               <Ticket className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /> Tickets & entree
             </h2>
 
+            {event.earlyAccessTime && (
+              <p className="mb-3 flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                <Clock className="h-4 w-4 shrink-0" />
+                Vroege toegang vanaf {formatEventTime(event.earlyAccessTime, event.timezone, locale === "en" ? "en-GB" : "nl-NL")}
+              </p>
+            )}
+
             {event.entryType === "FREE" ? (
               <div className="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
@@ -166,12 +173,6 @@ export default async function EventDetailPage({
               </div>
             ) : (
               <div className="space-y-4">
-                {event.earlyAccessTime && (
-                  <p className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                    <Clock className="h-4 w-4 shrink-0" />
-                    Vroege toegang vanaf {formatEventTime(event.earlyAccessTime, event.timezone, locale === "en" ? "en-GB" : "nl-NL")}
-                  </p>
-                )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {ticketList.map((t, i) => (
                     <div key={i} className="relative aspect-[847/350] w-full overflow-hidden">

@@ -86,7 +86,25 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           🕒 Vul de begin- en eindtijd in zoals ze gelden op de locatie ({getEventCountryName(form.country, "nl")}).
+          De begintijd is de <strong>reguliere</strong> opening — vroege toegang vul je hieronder apart in.
         </p>
+
+        <div className="mt-4 border-t border-border pt-3">
+          <div className="sm:max-w-[14rem]">
+            <label className={labelClass} htmlFor="evt-vt">Vroege toegang <span className="text-xs font-normal text-muted-foreground">(optioneel)</span></label>
+            <input
+              id="evt-vt"
+              type="time"
+              value={form.earlyAccessTime}
+              onChange={(e) => set("earlyAccessTime", e.target.value)}
+              className={`mt-1 ${inputClass}`}
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Mogen sommige bezoekers (bv. met een VIP-ticket) eerder naar binnen? Vul dan hier die
+            eerdere tijd in — dit moet vóór de reguliere begintijd liggen.
+          </p>
+        </div>
       </div>
 
       {/* Organisator */}

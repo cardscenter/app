@@ -175,11 +175,10 @@ export async function createEvent(formData: FormData) {
   if (endTime.getTime() <= Date.now()) {
     return { error: "Dit event ligt in het verleden" };
   }
-  // Vroege toegang (VT) — zelfde dag als de start, alleen voor betaalde events.
-  const earlyAccessTime =
-    data.entryType === "PAID" && data.earlyAccessTime
-      ? zonedWallClockToUtc(data.startDate, data.earlyAccessTime, timezone)
-      : null;
+  // Vroege toegang (VT) — zelfde dag als de start, los van gratis/betaald.
+  const earlyAccessTime = data.earlyAccessTime
+    ? zonedWallClockToUtc(data.startDate, data.earlyAccessTime, timezone)
+    : null;
 
   const confirmDuplicate = formData.get("confirmDuplicate") === "1";
   if (!confirmDuplicate) {
@@ -494,24 +493,28 @@ export async function updateEvent(eventId: string, formData: FormData) {
     updateData.endTime = newEnd;
   }
 
-  // Entree: FREE wist tickets + link + VT; PAID vervangt ze met de payload.
+  // Entree: FREE wist tickets + link; PAID vervangt ze met de payload.
   if (data.entryType !== undefined) {
     updateData.entryType = data.entryType;
     if (data.entryType === "FREE") {
       updateData.ticketTypes = null;
       updateData.registrationUrl = null;
-      updateData.earlyAccessTime = null;
     } else {
       const tickets = parseTicketTypes(data.ticketTypes).sort((a, b) => a.price - b.price);
       updateData.ticketTypes = tickets.length > 0 ? JSON.stringify(tickets) : null;
       updateData.registrationUrl = data.registrationUrl || null;
-      const vtStartDate = data.startDate ?? toLocalDate(event.startTime, timezone);
-      updateData.earlyAccessTime = data.earlyAccessTime
-        ? zonedWallClockToUtc(vtStartDate, data.earlyAccessTime, timezone)
-        : null;
     }
   } else if (data.registrationUrl !== undefined) {
     updateData.registrationUrl = data.registrationUrl || null;
+  }
+
+  // Vroege toegang: hoort bij de openingstijden, los van gratis/betaald.
+  // Lege string = leegmaken; herrekend op de (mogelijk gewijzigde) startdatum.
+  if (data.earlyAccessTime !== undefined) {
+    const vtStartDate = data.startDate ?? toLocalDate(event.startTime, timezone);
+    updateData.earlyAccessTime = data.earlyAccessTime
+      ? zonedWallClockToUtc(vtStartDate, data.earlyAccessTime, timezone)
+      : null;
   }
 
   // Een afgewezen event gaat na bewerken terug de goedkeurings-wachtrij in.
