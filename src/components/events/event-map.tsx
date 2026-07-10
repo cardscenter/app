@@ -18,14 +18,18 @@ const LeafletMap = dynamic(() => import("@/components/events/leaflet-map"), {
 export function EventMap({ events, locale }: { events: MapEvent[]; locale: string }) {
   const withCoords = events.filter((e) => Number.isFinite(e.lat) && Number.isFinite(e.lng));
 
-  if (withCoords.length === 0) {
-    return (
-      <div className="flex h-[600px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-border bg-muted text-muted-foreground">
-        <MapPin className="h-8 w-8" />
-        <p className="text-sm">Geen evenementen met een kaartlocatie gevonden.</p>
-      </div>
-    );
-  }
-
-  return <LeafletMap events={withCoords} locale={locale} />;
+  // Kaart altijd renderen — met 0 markers blijft Leaflet op het default
+  // Europa-overzicht en tonen we een overlay-pill i.p.v. een lege placeholder.
+  return (
+    <div className="relative">
+      <LeafletMap events={withCoords} locale={locale} />
+      {withCoords.length === 0 && (
+        <div className="pointer-events-none absolute inset-x-0 top-4 z-[500] flex justify-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-card">
+            <MapPin className="h-4 w-4 text-muted-foreground" /> Geen evenementen gevonden — pas je filters aan
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }

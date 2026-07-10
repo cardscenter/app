@@ -186,7 +186,7 @@ export default async function EventsPage({
             <EventViewToggle />
           </div>
 
-          {events.length === 0 ? (
+          {events.length === 0 && filters.view !== "map" ? (
             <EventEmptyState message={`Geen ${tabLabel} gevonden. Pas je filters aan of voeg er zelf één toe.`} />
           ) : filters.view === "month" ? (
             <EventCalendarMonth events={events} />
