@@ -7,8 +7,10 @@ import { Link } from "@/i18n/navigation";
 const STORAGE_KEY = "events-launch-banner-dismissed";
 
 /** Launch-banner voor de jonge kalender — dismissible, en de page rendert 'm
- *  alleen zolang er nog weinig live events zijn (drempel in page.tsx). */
-export function EventsLaunchBanner() {
+ *  alleen zolang er nog weinig live events zijn (drempel in page.tsx).
+ *  Tab-bewust: beurzen-tab spreekt beurs-organisatoren aan, events-tab de rest. */
+export function EventsLaunchBanner({ tab }: { tab: "beurzen" | "events" }) {
+  const isBeurzen = tab === "beurzen";
   // Standaard zichtbaar (SSR rendert mee — geen layout-pop-in voor nieuwe
   // bezoekers); alleen wie 'm wegklikte ziet heel kort een flash bij hydration.
   const [visible, setVisible] = useState(true);
@@ -39,17 +41,19 @@ export function EventsLaunchBanner() {
           <PartyPopper className="h-5 w-5" />
         </span>
         <div>
-          <p className="font-semibold text-foreground">Nieuw: de evenementenkalender</p>
+          <p className="font-semibold text-foreground">Wees er als eerste bij</p>
           <p className="text-sm text-muted-foreground">
-            Organiseer jij een beurs of evenement? Zet &apos;m er als eerste op en pak maximale zichtbaarheid.
+            {isBeurzen
+              ? "Organiseer jij een Pokémon-beurs? De kalender is net open — zet 'm erop en pak maximale zichtbaarheid bij verzamelaars."
+              : "Organiseer jij een toernooi, ruildag of ander evenement? De kalender is net open — zet 'm erop en pak maximale zichtbaarheid."}
           </p>
         </div>
       </div>
       <Link
-        href="/evenementen/nieuw"
+        href={isBeurzen ? "/evenementen/nieuw?type=BEURS" : "/evenementen/nieuw"}
         className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 sm:self-auto"
       >
-        <Plus className="h-4 w-4" /> Evenement toevoegen
+        <Plus className="h-4 w-4" /> {isBeurzen ? "Beurs toevoegen" : "Evenement toevoegen"}
       </Link>
       <button
         type="button"

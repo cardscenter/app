@@ -153,7 +153,7 @@ export default async function EventsPage({
       </div>
 
       {/* Launch-banner — verdwijnt vanzelf zodra de kalender gevuld raakt */}
-      {totalLive < LAUNCH_BANNER_MAX_EVENTS && <EventsLaunchBanner />}
+      {totalLive < LAUNCH_BANNER_MAX_EVENTS && <EventsLaunchBanner tab={filters.tab} />}
 
       {/* Tabs */}
       <div className="mt-5">
