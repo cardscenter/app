@@ -11,7 +11,7 @@ const labelClass = "block text-sm font-medium text-foreground";
 export function StepTickets({ form, set }: { form: EventFormState; set: EventFieldSetter }) {
   return (
     <section className="space-y-6">
-      <h2 className="text-lg font-semibold text-foreground">Tickets & toegang</h2>
+      <h2 className="text-lg font-semibold text-foreground">Tickets & standhouders</h2>
 
       {/* Gratis / betaald */}
       <div>
@@ -91,15 +91,27 @@ export function StepTickets({ form, set }: { form: EventFormState; set: EventFie
           <Store className="h-4 w-4" /> Standhouders <span className="text-xs font-normal text-muted-foreground">(optioneel)</span>
         </p>
         <p className="text-xs text-muted-foreground">
-          Voor verkopers die iets willen huren of bijkopen — bv. een tafel, stoel of stroomaansluiting. Vul zelf in wat je aanbiedt.
+          Huurprijzen voor verkopers — bv. een tafel, stoel of stroomaansluiting. Dit zijn geen tickets; vul zelf in wat je aanbiedt.
         </p>
         <TicketListEditor
           items={form.vendorOptions}
           onChange={(items) => set("vendorOptions", items)}
           namePlaceholder="bv. Tafel, Stoel, Stroom"
           addLabel="Optie toevoegen"
-          showServiceFee={false}
+          variant="option"
         />
+        <div className="sm:max-w-[14rem]">
+          <label className={labelClass} htmlFor="evt-tables">Totaal aantal tafels</label>
+          <input
+            id="evt-tables"
+            type="number" min="1"
+            value={form.totalTables}
+            onChange={(e) => set("totalTables", e.target.value)}
+            placeholder="bv. 40"
+            className={`mt-1 ${inputClass}`}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">Handig voor standhouders — laat leeg indien n.v.t.</p>
+        </div>
         <div>
           <label className={labelClass} htmlFor="evt-vendorinfo">Extra info voor standhouders</label>
           <textarea

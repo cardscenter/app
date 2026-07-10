@@ -72,7 +72,10 @@ function parseGalleryImages(raw: string | undefined): string[] {
   }
 }
 
-function parseTicketTypes(raw: string | undefined): TicketType[] {
+// Ook gebruikt voor standhouder-opties (zelfde naam/prijs-shape). Die zijn
+// huurprijzen, geen tickets — daar mag géén serviceFee aan hangen
+// (allowServiceFee=false, anti-tamper voor direct-gepostte payloads).
+function parseTicketTypes(raw: string | undefined, allowServiceFee = true): TicketType[] {
   if (!raw) return [];
   try {
     const arr = JSON.parse(raw) as Array<{ name?: unknown; price?: unknown; description?: unknown; serviceFee?: unknown }>;
@@ -82,7 +85,7 @@ function parseTicketTypes(raw: string | undefined): TicketType[] {
       .map((t) => {
         const out: TicketType = { name: (t.name as string).trim().slice(0, 60), price: Math.max(0, Number(t.price)) };
         if (typeof t.description === "string" && t.description.trim()) out.description = t.description.trim().slice(0, 200);
-        if (Number.isFinite(Number(t.serviceFee)) && Number(t.serviceFee) > 0) out.serviceFee = Math.max(0, Number(t.serviceFee));
+        if (allowServiceFee && Number.isFinite(Number(t.serviceFee)) && Number(t.serviceFee) > 0) out.serviceFee = Math.max(0, Number(t.serviceFee));
         return out;
       })
       .slice(0, 12);
@@ -179,7 +182,7 @@ export async function createEvent(formData: FormData) {
   const isPaid = data.entryType === "PAID";
   // Tickets oplopend op prijs tonen.
   const ticketTypes = (isPaid ? parseTicketTypes(data.ticketTypes) : []).sort((a, b) => a.price - b.price);
-  const vendorOptions = parseTicketTypes(data.vendorOptions);
+  const vendorOptions = parseTicketTypes(data.vendorOptions, false);
   const galleryImages = parseGalleryImages(data.galleryImages);
 
   const user = await prisma.user.findUnique({

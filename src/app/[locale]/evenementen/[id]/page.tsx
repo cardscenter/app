@@ -76,7 +76,7 @@ export default async function EventDetailPage({
       if (Array.isArray(parsed)) vendorOptions = parsed;
     } catch { /* negeer */ }
   }
-  const hasVendor = vendorOptions.length > 0 || !!event.vendorInfo;
+  const hasVendor = vendorOptions.length > 0 || !!event.vendorInfo || !!event.totalTables;
 
   const video = parseEventVideo(event.videoUrl);
 
@@ -203,19 +203,12 @@ export default async function EventDetailPage({
               </div>
             )}
 
-            {/* Praktische capaciteit-info */}
-            {(event.maxVisitors || event.totalTables) && (
+            {/* Praktische capaciteit-info (tafels staan bij "Voor standhouders") */}
+            {event.maxVisitors && (
               <div className="mt-4 flex flex-wrap gap-2">
-                {event.maxVisitors && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
-                    <Users className="h-4 w-4 text-muted-foreground" /> Max. {event.maxVisitors} bezoekers
-                  </span>
-                )}
-                {event.totalTables && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
-                    <Table2 className="h-4 w-4 text-muted-foreground" /> {event.totalTables} tafels
-                  </span>
-                )}
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                  <Users className="h-4 w-4 text-muted-foreground" /> Max. {event.maxVisitors} bezoekers
+                </span>
               </div>
             )}
           </div>
@@ -288,6 +281,11 @@ export default async function EventDetailPage({
                     </li>
                   ))}
                 </ul>
+              )}
+              {event.totalTables && (
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                  <Table2 className="h-4 w-4 text-muted-foreground" /> {event.totalTables} tafels beschikbaar
+                </span>
               )}
               {event.vendorInfo && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{event.vendorInfo}</p>}
             </div>

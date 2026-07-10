@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Ticket, Pencil, Check } from "lucide-react";
+import { Plus, X, Ticket, Table2, Pencil, Check } from "lucide-react";
 import type { NamePriceInput } from "@/components/events/event-form-types";
 
 const inputClass =
@@ -17,22 +17,25 @@ function PriceInput({ value, onChange, placeholder = "0" }: { value: string; onC
 }
 
 /**
- * Editor voor een lijst van naam+prijs-items (ticket-soorten of standhouder-
- * opties). Toevoegen via het invul-rijtje; toegevoegde items komen eronder als
- * ticket-achtige kaartjes met gestippelde rand. Via het potlood kun je per
- * ticket extra info en (optioneel) servicekosten toevoegen.
+ * Editor voor een lijst van naam+prijs-items. Twee varianten:
+ * - "ticket": bezoekers-tickets — ticket-achtige kaartjes met gestippelde rand,
+ *   Ticket-icoon en (optioneel) servicekosten.
+ * - "option": standhouder-opties (tafel/stoel/stroom) — neutrale rijen met een
+ *   tafel-icoon, géén servicekosten. Dit zijn huurprijzen, geen tickets.
  */
 export function TicketListEditor({
   items,
   onChange,
   namePlaceholder,
   addLabel,
-  showServiceFee = true,
+  variant = "ticket",
+  showServiceFee = variant === "ticket",
 }: {
   items: NamePriceInput[];
   onChange: (items: NamePriceInput[]) => void;
   namePlaceholder: string;
   addLabel: string;
+  variant?: "ticket" | "option";
   showServiceFee?: boolean;
 }) {
   const [name, setName] = useState("");
@@ -52,6 +55,16 @@ export function TicketListEditor({
     onChange(items.filter((_, idx) => idx !== i));
     if (editing === i) setEditing(null);
   }
+
+  const ItemIcon = variant === "ticket" ? Ticket : Table2;
+  const itemCardClass =
+    variant === "ticket"
+      ? "rounded-lg border-2 border-dashed border-border bg-muted/40 px-3 py-2.5"
+      : "rounded-lg border border-border bg-card px-3 py-2.5";
+  const extraInfoLabel =
+    variant === "ticket" ? "Extra info (bv. wat krijg je bij dit ticket)" : "Extra info (bv. afmetingen of wat is inbegrepen)";
+  const extraInfoPlaceholder =
+    variant === "ticket" ? "bv. inclusief goodiebag + vroege toegang" : "bv. tafel van 180 cm, incl. 2 stoelen";
 
   return (
     <div className="space-y-3">
@@ -89,10 +102,10 @@ export function TicketListEditor({
             const priceNum = Number(t.price || 0);
             const feeNum = Number(t.serviceFee || 0);
             return (
-              <div key={i} className="rounded-lg border-2 border-dashed border-border bg-muted/40 px-3 py-2.5">
+              <div key={i} className={itemCardClass}>
                 {!isEditing ? (
                   <div className="flex items-center gap-3">
-                    <Ticket className="h-7 w-7 shrink-0 text-primary" />
+                    <ItemIcon className={`h-7 w-7 shrink-0 ${variant === "ticket" ? "text-primary" : "text-muted-foreground"}`} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-base font-semibold text-foreground">{t.name}</p>
                       {t.description ? (
@@ -135,8 +148,8 @@ export function TicketListEditor({
                       )}
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-muted-foreground">Extra info (bv. wat krijg je bij dit ticket)</label>
-                      <input value={t.description} onChange={(e) => update(i, { description: e.target.value })} placeholder="bv. inclusief goodiebag + vroege toegang" className={`${inputClass} w-full`} />
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">{extraInfoLabel}</label>
+                      <input value={t.description} onChange={(e) => update(i, { description: e.target.value })} placeholder={extraInfoPlaceholder} className={`${inputClass} w-full`} />
                     </div>
                     <div className="flex justify-end gap-2">
                       <button type="button" onClick={() => remove(i)} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground transition hover:text-rose-500"><X className="h-4 w-4" /> Verwijderen</button>

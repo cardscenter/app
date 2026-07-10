@@ -94,8 +94,8 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
               Standhouders: {validVendor.map((v) => `${v.name} ${fmtPrice(v.price)}`).join(" · ")}
             </Row>
           )}
+          {form.totalTables && <Row icon={Table2}>{form.totalTables} tafels voor standhouders</Row>}
           {form.maxVisitors && <Row icon={Users}>max. {form.maxVisitors} bezoekers</Row>}
-          {form.totalTables && <Row icon={Table2}>{form.totalTables} tafels</Row>}
           {form.organizerName.trim() && <Row icon={Building2}>Door {form.organizerName.trim()}</Row>}
           {(form.galleryImages.length > 0 || form.videoUrl.trim().length > 0) && (
             <Row icon={Images}>

@@ -24,7 +24,7 @@ interface DuplicateMatch {
   startTime: string;
 }
 
-const STEP_LABELS = ["Type", "Details", "Locatie", "Tickets", "Faciliteiten", "Foto", "Promotie", "Controleren"];
+const STEP_LABELS = ["Type", "Details", "Locatie", "Tickets & stands", "Faciliteiten", "Foto", "Promotie", "Controleren"];
 
 function validateStep(step: number, form: EventFormState): string | null {
   switch (step) {
