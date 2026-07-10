@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, CalendarPlus, Clock, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2, Ruler,
+  Calendar, CalendarPlus, Clock, MapPin, Navigation, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2, Ruler,
   Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy, Baby,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -92,6 +92,14 @@ export default async function EventDetailPage({
   const organizerDisplay = event.organizerName?.trim() || event.organizer.displayName || "Onbekend";
   const hasOrganizerOverride = !!event.organizerName?.trim();
 
+  // Route via Google Maps (universal URL, geen API-key): coördinaten als de
+  // geocode gelukt is, anders het volledige adres als bestemming.
+  const routeDestination =
+    event.lat !== null && event.lng !== null
+      ? `${event.lat},${event.lng}`
+      : `${event.street} ${event.houseNumber}, ${event.postalCode} ${event.city}, ${getEventCountryName(event.country, "nl")}`;
+  const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(routeDestination)}`;
+
   // Andere lopende events van dezelfde organisator (account).
   const otherEvents = await prisma.event.findMany({
     where: {
@@ -137,12 +145,22 @@ export default async function EventDetailPage({
           {event.venueName}, {event.street} {event.houseNumber}, {event.postalCode} {event.city}
           <CountryFlag code={event.country} size="sm" /> {getEventCountryName(event.country, locale)}
         </p>
-        <a
-          href={`/api/events/${event.id}/ics`}
-          className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
-        >
-          <CalendarPlus className="h-4 w-4" /> Zet in mijn agenda
-        </a>
+        <div className="mt-1 flex flex-wrap gap-2">
+          <a
+            href={`/api/events/${event.id}/ics`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
+          >
+            <CalendarPlus className="h-4 w-4" /> Zet in mijn agenda
+          </a>
+          <a
+            href={routeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
+          >
+            <Navigation className="h-4 w-4" /> Plan je route
+          </a>
+        </div>
       </div>
 
       <div className="mt-6 lg:grid lg:grid-cols-[1fr_320px] lg:gap-8">
