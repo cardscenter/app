@@ -129,6 +129,7 @@ export async function createEvent(formData: FormData) {
     entryType: formData.get("entryType") || "PAID",
     ticketTypes: formData.get("ticketTypes") || undefined,
     ticketSaleMode: formData.get("ticketSaleMode") || undefined,
+    earlyAccessTime: formData.get("earlyAccessTime") || undefined,
     registrationUrl: formData.get("registrationUrl") || undefined,
     vendorOptions: formData.get("vendorOptions") || undefined,
     vendorInfo: formData.get("vendorInfo") || undefined,
@@ -173,6 +174,11 @@ export async function createEvent(formData: FormData) {
   if (endTime.getTime() <= Date.now()) {
     return { error: "Dit event ligt in het verleden" };
   }
+  // Vroege toegang (VT) — zelfde dag als de start, alleen voor betaalde events.
+  const earlyAccessTime =
+    data.entryType === "PAID" && data.earlyAccessTime
+      ? zonedWallClockToUtc(data.startDate, data.earlyAccessTime, timezone)
+      : null;
 
   const confirmDuplicate = formData.get("confirmDuplicate") === "1";
   if (!confirmDuplicate) {
@@ -258,6 +264,7 @@ export async function createEvent(formData: FormData) {
         timezone,
         startTime,
         endTime,
+        earlyAccessTime,
         entryType: data.entryType,
         entryPriceMode: "TIERS",
         entryPrice: null,

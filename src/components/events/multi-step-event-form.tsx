@@ -47,6 +47,7 @@ function validateStep(step: number, form: EventFormState): string | null {
       if (form.entryType === "PAID") {
         if (!form.ticketTypes.some((t) => t.name.trim())) return "Voeg minstens één ticket-soort toe (of kies Gratis)";
         if (form.ticketSaleMode === "ONLINE" && !form.registrationUrl.trim()) return "Vul de link in waar bezoekers tickets kunnen kopen (of kies 'Alleen aan de deur')";
+        if (form.earlyAccessTime && form.startTime && form.earlyAccessTime >= form.startTime) return "Vroege toegang moet vóór de begintijd liggen";
       }
       return null;
     case 6:
@@ -118,6 +119,7 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
       fd.set("ticketTypes", JSON.stringify(tickets));
       fd.set("ticketSaleMode", form.ticketSaleMode);
       if (form.ticketSaleMode === "ONLINE" && form.registrationUrl) fd.set("registrationUrl", form.registrationUrl);
+      if (form.earlyAccessTime) fd.set("earlyAccessTime", form.earlyAccessTime);
     }
 
     const vendor = form.vendorOptions

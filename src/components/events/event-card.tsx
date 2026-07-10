@@ -10,6 +10,11 @@ import { formatEventDateRange } from "@/lib/events/timezones";
 import { CountryFlag } from "@/components/ui/country-flag";
 import type { EventListItem } from "@/components/events/event-view-types";
 
+// "VT 09:00"-notatie (vroege toegang) in de event-tijdzone.
+function earlyAccessLabel(iso: string, timeZone: string): string {
+  return new Intl.DateTimeFormat("nl-NL", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+}
+
 export function EventCard({ event }: { event: EventListItem }) {
   const locale = useLocale();
   const start = new Date(event.startTime);
@@ -56,6 +61,11 @@ export function EventCard({ event }: { event: EventListItem }) {
 
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Calendar className="h-3.5 w-3.5 shrink-0" /> {dateLabel}
+          {event.earlyAccessTime && (
+            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+              · VT {earlyAccessLabel(event.earlyAccessTime, event.timezone)}
+            </span>
+          )}
         </p>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0" /> {event.venueName}, {event.city}

@@ -68,7 +68,10 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
 
         <div className="space-y-1.5 border-t border-border pt-3">
           {(form.startDate || form.startTime) && (
-            <Row icon={Calendar}>{dateLabel} · {form.startTime}–{form.endTime}</Row>
+            <Row icon={Calendar}>
+              {dateLabel} · {form.startTime}–{form.endTime}
+              {form.entryType === "PAID" && form.earlyAccessTime ? ` · VT ${form.earlyAccessTime}` : ""}
+            </Row>
           )}
           {(form.city || form.venueName) && (
             <Row icon={MapPin}>

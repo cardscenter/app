@@ -42,6 +42,12 @@ export function EventQuickViewPanel({ event }: { event: EventListItem }) {
         <h4 className="text-sm font-bold leading-snug text-foreground">{event.title}</h4>
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Calendar className="h-3 w-3 shrink-0" /> {dateLabel}
+          {event.earlyAccessTime && (
+            <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+              · VT{" "}
+              {new Intl.DateTimeFormat("nl-NL", { timeZone: event.timezone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(event.earlyAccessTime))}
+            </span>
+          )}
         </p>
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <MapPin className="h-3 w-3 shrink-0" /> {event.venueName}, {event.city}

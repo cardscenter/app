@@ -37,6 +37,7 @@ export interface EventFormState {
   ticketTypes: NamePriceInput[]; // bezoekers-tickets, zelf gedefinieerd
   ticketSaleMode: "ONLINE" | "DOOR"; // online ticketlink of alleen aan de deur
   registrationUrl: string; // verplicht bij ONLINE — waar tickets gekocht worden
+  earlyAccessTime: string; // "HH:mm" vroege toegang (VT) — leeg = geen, moet vóór startTime
 
   // Standhouders — zelf-gedefinieerde opties
   vendorOptions: NamePriceInput[];
@@ -95,6 +96,7 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   ticketTypes: [],
   ticketSaleMode: "ONLINE",
   registrationUrl: "",
+  earlyAccessTime: "",
   vendorOptions: [],
   vendorInfo: "",
   canPlay: false,

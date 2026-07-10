@@ -13,6 +13,7 @@ export interface EventListItem {
   country: string;
   startTime: string; // ISO
   endTime: string; // ISO
+  earlyAccessTime: string | null; // ISO — vroege toegang (VT), vóór startTime
   timezone: string;
   coverImage: string | null;
   entryType: string;

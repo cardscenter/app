@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, CalendarPlus, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2,
+  Calendar, CalendarPlus, Clock, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2,
   Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy, Baby,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { PageContainer } from "@/components/layout/page-container";
 import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, FACILITY_LABELS_NL, type EventType, type FacilityKey } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
-import { formatEventDateRange } from "@/lib/events/timezones";
+import { formatEventDateRange, formatEventTime } from "@/lib/events/timezones";
 import { parseEventVideo } from "@/lib/events/video";
 import { formatEuro } from "@/lib/events/format";
 import { CountryFlag } from "@/components/ui/country-flag";
@@ -166,6 +166,12 @@ export default async function EventDetailPage({
               </div>
             ) : (
               <div className="space-y-4">
+                {event.earlyAccessTime && (
+                  <p className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                    <Clock className="h-4 w-4 shrink-0" />
+                    Vroege toegang vanaf {formatEventTime(event.earlyAccessTime, event.timezone, locale === "en" ? "en-GB" : "nl-NL")}
+                  </p>
+                )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {ticketList.map((t, i) => (
                     <div key={i} className="relative aspect-[847/350] w-full overflow-hidden">

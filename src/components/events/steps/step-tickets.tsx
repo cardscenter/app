@@ -71,6 +71,20 @@ export function StepTickets({ form, set }: { form: EventFormState; set: EventFie
             </div>
           </div>
 
+          <div className="sm:max-w-[14rem]">
+            <label className={labelClass} htmlFor="evt-vt">Vroege toegang <span className="text-xs font-normal text-muted-foreground">(optioneel)</span></label>
+            <input
+              id="evt-vt"
+              type="time"
+              value={form.earlyAccessTime}
+              onChange={(e) => set("earlyAccessTime", e.target.value)}
+              className={`mt-1 ${inputClass}`}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Vroege toegang voor bv. VIP-tickets — moet vóór de reguliere begintijd liggen.
+            </p>
+          </div>
+
           {form.ticketSaleMode === "ONLINE" ? (
             <div>
               <label className={labelClass} htmlFor="evt-regurl">Link naar tickets <span className="text-rose-500">*</span></label>

@@ -73,6 +73,7 @@ export default async function EventsPage({
     country: e.country,
     startTime: e.startTime.toISOString(),
     endTime: e.endTime.toISOString(),
+    earlyAccessTime: e.earlyAccessTime?.toISOString() ?? null,
     timezone: e.timezone,
     coverImage: e.coverImage,
     entryType: e.entryType,

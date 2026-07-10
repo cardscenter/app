@@ -60,6 +60,7 @@ export const createEventSchema = z
     // Niet opgeslagen in DB (registrationUrl-aanwezigheid codeert het al), maar
     // nodig om server-side af te dwingen dat ONLINE-verkoop een link heeft.
     ticketSaleMode: z.enum(["ONLINE", "DOOR"]).optional(),
+    earlyAccessTime: timeField.optional(), // vroege toegang (VT), vóór startTime
 
     // Standhouders — zelf-gedefinieerde opties.
     vendorOptions: z.string().optional(), // JSON [{name, price}]
@@ -110,6 +111,9 @@ export const createEventSchema = z
       // (DOOR of geen mode meegestuurd) mag zonder link.
       if (data.ticketSaleMode === "ONLINE" && !data.registrationUrl) {
         ctx.addIssue({ code: "custom", message: "Vul de ticketlink in of kies 'Alleen aan de deur'", path: ["registrationUrl"] });
+      }
+      if (data.earlyAccessTime && data.earlyAccessTime >= data.startTime) {
+        ctx.addIssue({ code: "custom", message: "Vroege toegang moet vóór de begintijd liggen", path: ["earlyAccessTime"] });
       }
     }
 
