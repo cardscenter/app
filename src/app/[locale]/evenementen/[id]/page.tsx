@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
@@ -18,6 +19,7 @@ import { EventMap } from "@/components/events/event-map";
 import { EventGallery } from "@/components/events/event-gallery";
 import { EventFlyer } from "@/components/events/event-flyer";
 import { EventReportButton } from "@/components/events/event-report-button";
+import { ContactSellerButton } from "@/components/message/contact-seller-button";
 
 const FACILITY_ICONS: Record<FacilityKey, React.ComponentType<{ className?: string }>> = {
   canPlay: Gamepad2, canTrade: Repeat, canSell: Tag, hasParking: Car, hasFood: Coffee,
@@ -34,6 +36,7 @@ export default async function EventDetailPage({
 }) {
   const { id } = await params;
   const locale = await getLocale();
+  const session = await auth();
 
   const event = await prisma.event.findUnique({
     where: { id },
@@ -415,6 +418,13 @@ export default async function EventDetailPage({
               <Link href={`/verkoper/${event.organizer.id}`} className="mt-2 block text-xs text-muted-foreground hover:text-foreground">
                 Geplaatst via {event.organizer.displayName ?? "account"}
               </Link>
+            )}
+
+            {/* Vraag stellen via chat — alleen ingelogd en niet aan jezelf */}
+            {session?.user?.id && session.user.id !== event.organizer.id && (
+              <div className="mt-3">
+                <ContactSellerButton sellerId={event.organizer.id} label="Stel een vraag" variant="primary" />
+              </div>
             )}
           </div>
 
