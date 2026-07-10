@@ -125,7 +125,6 @@ export async function createEvent(formData: FormData) {
     organizerWebsite: formData.get("organizerWebsite") || undefined,
     startDate: formData.get("startDate"),
     startTime: formData.get("startTime"),
-    endDate: formData.get("endDate") || undefined,
     endTime: formData.get("endTime"),
     entryType: formData.get("entryType") || "PAID",
     ticketTypes: formData.get("ticketTypes") || undefined,
@@ -168,7 +167,8 @@ export async function createEvent(formData: FormData) {
 
   const timezone = timezoneForCountry(data.country);
   const startTime = zonedWallClockToUtc(data.startDate, data.startTime, timezone);
-  const endTime = zonedWallClockToUtc(data.endDate || data.startDate, data.endTime, timezone);
+  // Eendaags per definitie — eindtijd valt op dezelfde dag als de start.
+  const endTime = zonedWallClockToUtc(data.startDate, data.endTime, timezone);
   if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
     return { error: "Ongeldige datum/tijd" };
   }
@@ -400,7 +400,6 @@ export async function updateEvent(eventId: string, formData: FormData) {
     organizerWebsite: str("organizerWebsite"),
     startDate: str("startDate"),
     startTime: str("startTime"),
-    endDate: str("endDate"),
     endTime: str("endTime"),
     entryType: str("entryType"),
     ticketTypes: str("ticketTypes"),
@@ -478,14 +477,14 @@ export async function updateEvent(eventId: string, formData: FormData) {
   }
 
   const timezone = (updateData.timezone as string) ?? event.timezone;
-  if (data.startDate || data.startTime || data.endDate || data.endTime) {
+  if (data.startDate || data.startTime || data.endTime) {
     const startDate = data.startDate ?? toLocalDate(event.startTime, timezone);
     const startTimeStr = data.startTime ?? toLocalTime(event.startTime, timezone);
-    // Lege endDate = eendaags event (zelfde dag als start).
-    const endDateStr = data.endDate || data.startDate || toLocalDate(event.endTime, timezone);
+    // Eendaags per definitie — eindtijd valt op dezelfde dag als de start
+    // (een legacy meerdaags event wordt hiermee teruggebracht naar de startdag).
     const endTimeStr = data.endTime ?? toLocalTime(event.endTime, timezone);
     const newStart = zonedWallClockToUtc(startDate, startTimeStr, timezone);
-    const newEnd = zonedWallClockToUtc(endDateStr, endTimeStr, timezone);
+    const newEnd = zonedWallClockToUtc(startDate, endTimeStr, timezone);
     if (Number.isNaN(newStart.getTime()) || Number.isNaN(newEnd.getTime()) || newEnd <= newStart) {
       return { error: "Ongeldige datum/tijd" };
     }

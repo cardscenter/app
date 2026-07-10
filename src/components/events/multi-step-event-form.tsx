@@ -132,7 +132,6 @@ export function MultiStepEventForm({
     fd.set("organizerWebsite", form.organizerWebsite.trim());
     fd.set("startDate", form.startDate);
     fd.set("startTime", form.startTime);
-    fd.set("endDate", form.endDate); // leeg = eendaags
     fd.set("endTime", form.endTime);
 
     fd.set("entryType", form.entryType);

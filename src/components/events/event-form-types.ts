@@ -12,9 +12,10 @@ export interface EventFormState {
   title: string;
   description: string; // HTML
 
+  // Eendaags per definitie — meerdaagse beurzen = één event per dag aanmaken
+  // (openingstijden kunnen per dag verschillen).
   startDate: string;
   startTime: string;
-  endDate: string;
   endTime: string;
 
   tournamentFormat: string;
@@ -79,7 +80,6 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   description: "",
   startDate: "",
   startTime: "10:00",
-  endDate: "",
   endTime: "17:00",
   tournamentFormat: "",
   isSanctioned: false,

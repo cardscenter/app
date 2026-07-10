@@ -49,9 +49,9 @@ export const createEventSchema = z
     organizerName: z.string().max(100).optional(),
     organizerWebsite: z.string().url("Ongeldige website-link").max(500).optional().or(z.literal("")),
 
+    // Eendaags per definitie — meerdaagse beurzen = één event per dag.
     startDate: dateField,
     startTime: timeField,
-    endDate: dateField.optional(),
     endTime: timeField,
 
     // Entree — gratis of betaald met zelf-gedefinieerde ticket-soorten (altijd EUR).
@@ -98,8 +98,7 @@ export const createEventSchema = z
     spotlightDays: z.coerce.number().int().min(1).max(60).optional(),
   })
   .superRefine((data, ctx) => {
-    const endDate = data.endDate || data.startDate;
-    if (`${endDate}T${data.endTime}` <= `${data.startDate}T${data.startTime}`) {
+    if (data.endTime <= data.startTime) {
       ctx.addIssue({ code: "custom", message: "De eindtijd moet na de begintijd liggen", path: ["endTime"] });
     }
 
@@ -143,7 +142,6 @@ export const updateEventSchema = z
     organizerWebsite: z.string().url("Ongeldige website-link").max(500).optional().or(z.literal("")),
     startDate: dateField.optional(),
     startTime: timeField.optional(),
-    endDate: dateField.optional().or(z.literal("")),
     endTime: timeField.optional(),
     entryType: z.enum(["FREE", "PAID"]).optional(),
     ticketTypes: z.string().optional(),
@@ -174,11 +172,8 @@ export const updateEventSchema = z
     prizePool: z.string().max(300).optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.startDate && data.startTime && data.endTime) {
-      const endDate = data.endDate || data.startDate;
-      if (`${endDate}T${data.endTime}` <= `${data.startDate}T${data.startTime}`) {
-        ctx.addIssue({ code: "custom", message: "De eindtijd moet na de begintijd liggen", path: ["endTime"] });
-      }
+    if (data.startTime && data.endTime && data.endTime <= data.startTime) {
+      ctx.addIssue({ code: "custom", message: "De eindtijd moet na de begintijd liggen", path: ["endTime"] });
     }
     if (data.entryType === "PAID") {
       if (!hasValidNamePriceList(data.ticketTypes)) {

@@ -41,7 +41,7 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
       {/* Datum / tijd */}
       <div className="rounded-xl border border-border bg-muted/40 p-4">
         <p className="text-sm font-medium text-foreground">Wanneer?</p>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
             <label className={labelClass} htmlFor="evt-startdate">Datum <span className="text-rose-500">*</span></label>
             <input
@@ -49,17 +49,6 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
               type="date"
               value={form.startDate}
               onChange={(e) => set("startDate", e.target.value)}
-              className={`mt-1 ${inputClass}`}
-            />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="evt-enddate">Einddatum (indien meerdaags)</label>
-            <input
-              id="evt-enddate"
-              type="date"
-              value={form.endDate}
-              min={form.startDate || undefined}
-              onChange={(e) => set("endDate", e.target.value)}
               className={`mt-1 ${inputClass}`}
             />
           </div>
@@ -87,6 +76,10 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
         <p className="mt-2 text-xs text-muted-foreground">
           🕒 Vul de begin- en eindtijd in zoals ze gelden op de locatie ({getEventCountryName(form.country, "nl")}).
           De begintijd is de <strong>reguliere</strong> opening — vroege toegang vul je hieronder apart in.
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          📅 Duurt je beurs meerdere dagen? Maak dan per dag een apart evenement aan — zo kunnen de
+          openingstijden per dag verschillen en zien bezoekers precies wanneer ze terechtkunnen.
         </p>
 
         <div className="mt-4 border-t border-border pt-3">

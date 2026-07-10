@@ -43,8 +43,6 @@ function parseGallery(raw: string | null): string[] {
  *  op de initial-waarden (promotie is niet bewerkbaar via de edit-flow). */
 export function eventToFormState(event: Event): EventFormState {
   const tz = event.timezone;
-  const startDate = toLocalDate(event.startTime, tz);
-  const endDate = toLocalDate(event.endTime, tz);
 
   return {
     ...INITIAL_EVENT_FORM,
@@ -52,9 +50,10 @@ export function eventToFormState(event: Event): EventFormState {
     title: event.title,
     description: event.description ?? "",
 
-    startDate,
+    // Eendaags per definitie — een legacy meerdaags event wordt bij bewerken
+    // teruggebracht naar de startdag (eindtijd blijft de tijd-van-de-dag).
+    startDate: toLocalDate(event.startTime, tz),
     startTime: toLocalTime(event.startTime, tz),
-    endDate: endDate !== startDate ? endDate : "",
     endTime: toLocalTime(event.endTime, tz),
 
     tournamentFormat: event.tournamentFormat ?? "",
