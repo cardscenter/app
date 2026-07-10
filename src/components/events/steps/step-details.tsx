@@ -1,6 +1,5 @@
 "use client";
 
-import { getEventCountryName } from "@/lib/events/countries";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import type { EventFormState, EventFieldSetter } from "@/components/events/event-form-types";
 
@@ -74,12 +73,7 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
           </div>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          🕒 Vul de begin- en eindtijd in zoals ze gelden op de locatie ({getEventCountryName(form.country, "nl")}).
           De begintijd is de <strong>reguliere</strong> opening — vroege toegang vul je hieronder apart in.
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          📅 Duurt je beurs meerdere dagen? Maak dan per dag een apart evenement aan — zo kunnen de
-          openingstijden per dag verschillen en zien bezoekers precies wanneer ze terechtkunnen.
         </p>
 
         <div className="mt-4 border-t border-border pt-3">
@@ -93,10 +87,6 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
               className={`mt-1 ${inputClass}`}
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Mogen sommige bezoekers (bv. met een VIP-ticket) eerder naar binnen? Vul dan hier die
-            eerdere tijd in — dit moet vóór de reguliere begintijd liggen.
-          </p>
         </div>
       </div>
 
