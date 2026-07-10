@@ -36,9 +36,12 @@ function validateStep(step: number, form: EventFormState): string | null {
       if (!form.startTime || !form.endTime) return "Vul begin- en eindtijd in";
       return null;
     case 2:
-      if (!form.venueName.trim() || !form.street.trim() || !form.houseNumber.trim() || !form.postalCode.trim() || !form.city.trim() || !form.country) {
-        return "Vul het volledige adres in";
-      }
+      if (!form.venueName.trim()) return "Vul de naam van de locatie in";
+      if (!form.street.trim()) return "Vul de straat in";
+      if (!form.houseNumber.trim()) return "Vul het huisnummer in";
+      if (!form.postalCode.trim()) return "Vul de postcode in";
+      if (!form.city.trim()) return "Vul de plaats in";
+      if (!form.country) return "Kies een land";
       return null;
     case 3:
       if (form.entryType === "PAID") {
@@ -113,6 +116,7 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
           serviceFee: Number(t.serviceFee) > 0 ? Number(t.serviceFee) : undefined,
         }));
       fd.set("ticketTypes", JSON.stringify(tickets));
+      fd.set("ticketSaleMode", form.ticketSaleMode);
       if (form.ticketSaleMode === "ONLINE" && form.registrationUrl) fd.set("registrationUrl", form.registrationUrl);
     }
 

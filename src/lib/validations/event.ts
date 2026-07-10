@@ -57,6 +57,9 @@ export const createEventSchema = z
     // Entree — gratis of betaald met zelf-gedefinieerde ticket-soorten (altijd EUR).
     entryType: z.enum(["FREE", "PAID"]).default("PAID"),
     ticketTypes: z.string().optional(), // JSON [{name, price}]
+    // Niet opgeslagen in DB (registrationUrl-aanwezigheid codeert het al), maar
+    // nodig om server-side af te dwingen dat ONLINE-verkoop een link heeft.
+    ticketSaleMode: z.enum(["ONLINE", "DOOR"]).optional(),
 
     // Standhouders — zelf-gedefinieerde opties.
     vendorOptions: z.string().optional(), // JSON [{name, price}]
@@ -102,8 +105,11 @@ export const createEventSchema = z
       if (!hasValidNamePriceList(data.ticketTypes)) {
         ctx.addIssue({ code: "custom", message: "Voeg minstens één ticket-soort met naam en prijs toe", path: ["ticketTypes"] });
       }
-      // registrationUrl is optioneel: een betaald event mag ook "alleen aan de
-      // deur" verkopen (dan blijft de link leeg).
+      // Bij online verkoop is de ticketlink verplicht; "alleen aan de deur"
+      // (DOOR of geen mode meegestuurd) mag zonder link.
+      if (data.ticketSaleMode === "ONLINE" && !data.registrationUrl) {
+        ctx.addIssue({ code: "custom", message: "Vul de ticketlink in of kies 'Alleen aan de deur'", path: ["registrationUrl"] });
+      }
     }
 
     if (data.videoUrl && !isSupportedVideoUrl(data.videoUrl)) {

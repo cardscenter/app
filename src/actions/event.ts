@@ -128,6 +128,7 @@ export async function createEvent(formData: FormData) {
     endTime: formData.get("endTime"),
     entryType: formData.get("entryType") || "PAID",
     ticketTypes: formData.get("ticketTypes") || undefined,
+    ticketSaleMode: formData.get("ticketSaleMode") || undefined,
     registrationUrl: formData.get("registrationUrl") || undefined,
     vendorOptions: formData.get("vendorOptions") || undefined,
     vendorInfo: formData.get("vendorInfo") || undefined,
