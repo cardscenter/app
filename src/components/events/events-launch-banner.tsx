@@ -9,14 +9,15 @@ const STORAGE_KEY = "events-launch-banner-dismissed";
 /** Launch-banner voor de jonge kalender — dismissible, en de page rendert 'm
  *  alleen zolang er nog weinig live events zijn (drempel in page.tsx). */
 export function EventsLaunchBanner() {
-  // Start verborgen tot we localStorage gelezen hebben (geen flash na dismiss).
-  const [visible, setVisible] = useState(false);
+  // Standaard zichtbaar (SSR rendert mee — geen layout-pop-in voor nieuwe
+  // bezoekers); alleen wie 'm wegklikte ziet heel kort een flash bij hydration.
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     try {
-      if (window.localStorage.getItem(STORAGE_KEY) !== "1") setVisible(true);
+      if (window.localStorage.getItem(STORAGE_KEY) === "1") setVisible(false);
     } catch {
-      setVisible(true);
+      // localStorage niet beschikbaar — banner blijft staan
     }
   }, []);
 
