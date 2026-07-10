@@ -151,7 +151,7 @@ export default async function EventDetailPage({
           {/* Tickets — belangrijkste blok */}
           <div>
             <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
-              <Ticket className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /> Tickets
+              <Ticket className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /> Tickets & entree
             </h2>
 
             {event.entryType === "FREE" ? (
@@ -280,7 +280,7 @@ export default async function EventDetailPage({
 
           {/* Standhouders */}
           {hasVendor && (
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="rounded-xl border border-border border-l-4 border-l-indigo-500/40 bg-card p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Store className="h-5 w-5" /> Voor standhouders</h2>
               {vendorOptions.length > 0 && (
                 <ul className="mt-2 divide-y divide-border">

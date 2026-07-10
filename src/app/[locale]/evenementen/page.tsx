@@ -17,6 +17,20 @@ import { EventCalendarMonth } from "@/components/events/event-calendar-month";
 import { EventMap } from "@/components/events/event-map";
 import type { EventListItem } from "@/components/events/event-view-types";
 
+// Groepeer de (op startTime gesorteerde) lijst per maand voor sectie-koppen
+// à la beurzen-agenda's ("Juli 2026"). Maand in de tijdzone van het event zelf.
+function groupEventsByMonth(events: EventListItem[]) {
+  const groups: Array<{ label: string; items: EventListItem[] }> = [];
+  for (const e of events) {
+    const raw = new Intl.DateTimeFormat("nl-NL", { timeZone: e.timezone, month: "long", year: "numeric" }).format(new Date(e.startTime));
+    const label = raw.charAt(0).toUpperCase() + raw.slice(1);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(e);
+    else groups.push({ label, items: [e] });
+  }
+  return groups;
+}
+
 export default async function EventsPage({
   params,
   searchParams,
@@ -156,6 +170,10 @@ export default async function EventsPage({
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {events.length} {tabLabel}
+              {events.length > 0 && (() => {
+                const within30d = events.filter((e) => new Date(e.startTime).getTime() <= now.getTime() + 30 * 24 * 3600 * 1000).length;
+                return within30d > 0 ? ` · ${within30d} in de komende 30 dagen` : "";
+              })()}
             </p>
             <EventViewToggle />
           </div>
@@ -186,9 +204,21 @@ export default async function EventsPage({
                 }))}
             />
           ) : (
-            <div className="space-y-3">
-              {events.map((e) => (
-                <EventCard key={e.id} event={e} />
+            <div className="space-y-7">
+              {groupEventsByMonth(events).map((group) => (
+                <section key={group.label}>
+                  <h3 className="mb-3 flex items-baseline gap-2 border-b border-border pb-1.5 text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                    {group.label}
+                    <span className="text-xs font-medium normal-case tracking-normal text-muted-foreground/70">
+                      {group.items.length} {group.items.length === 1 ? "evenement" : "evenementen"}
+                    </span>
+                  </h3>
+                  <div className="space-y-3">
+                    {group.items.map((e) => (
+                      <EventCard key={e.id} event={e} />
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           )}
