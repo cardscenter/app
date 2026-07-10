@@ -124,22 +124,75 @@ export const createEventSchema = z
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
-export const updateEventSchema = z.object({
-  title: z.string().min(3).max(120).optional(),
-  description: z.string().max(8000).optional(),
-  venueName: z.string().min(2).max(150).optional(),
-  street: z.string().min(1).max(150).optional(),
-  houseNumber: z.string().min(1).max(20).optional(),
-  postalCode: z.string().min(2).max(20).optional(),
-  city: z.string().min(1).max(100).optional(),
-  country: z.string().refine((c) => EVENT_COUNTRY_CODES.includes(c)).optional(),
-  startDate: dateField.optional(),
-  startTime: timeField.optional(),
-  endDate: dateField.optional(),
-  endTime: timeField.optional(),
-  registrationUrl: z.string().url().max(500).optional().or(z.literal("")),
-  coverImage: z.string().optional(),
-});
+// Edit-flow: alle velden optioneel (alleen meegestuurde velden worden bijgewerkt).
+// Lege string = expliciet leegmaken voor nullable velden. eventType is bewust
+// NIET bewerkbaar (bepaalt kalender-tab + toernooivelden).
+export const updateEventSchema = z
+  .object({
+    title: z.string().min(3, "Titel is te kort").max(120).optional(),
+    description: z.string().max(8000).optional(),
+    venueName: z.string().min(2, "Locatienaam is verplicht").max(150).optional(),
+    street: z.string().min(1).max(150).optional(),
+    houseNumber: z.string().min(1).max(20).optional(),
+    postalCode: z.string().min(2).max(20).optional(),
+    city: z.string().min(1).max(100).optional(),
+    country: z.string().refine((c) => EVENT_COUNTRY_CODES.includes(c), "Onbekend land").optional(),
+    organizerName: z.string().max(100).optional(),
+    organizerWebsite: z.string().url("Ongeldige website-link").max(500).optional().or(z.literal("")),
+    startDate: dateField.optional(),
+    startTime: timeField.optional(),
+    endDate: dateField.optional().or(z.literal("")),
+    endTime: timeField.optional(),
+    entryType: z.enum(["FREE", "PAID"]).optional(),
+    ticketTypes: z.string().optional(),
+    ticketSaleMode: z.enum(["ONLINE", "DOOR"]).optional(),
+    earlyAccessTime: timeField.optional().or(z.literal("")),
+    registrationUrl: z.string().url("Ongeldige link").max(500).optional().or(z.literal("")),
+    vendorOptions: z.string().optional(),
+    vendorInfo: z.string().max(1000).optional(),
+    canPlay: boolField,
+    canTrade: boolField,
+    canSell: boolField,
+    hasParking: boolField,
+    hasFood: boolField,
+    hasToilets: boolField,
+    hasWifi: boolField,
+    cardPayment: boolField,
+    wheelchairAccessible: boolField,
+    hasCloakroom: boolField,
+    childFriendly: boolField,
+    maxVisitors: z.union([z.literal(""), z.coerce.number().int().min(1).max(1000000)]).optional(),
+    totalTables: z.union([z.literal(""), z.coerce.number().int().min(1).max(100000)]).optional(),
+    coverImage: z.string().optional(),
+    flyerImage: z.string().optional(),
+    galleryImages: z.string().optional(),
+    videoUrl: z.string().max(500).optional().or(z.literal("")),
+    tournamentFormat: z.string().max(100).optional(),
+    isSanctioned: boolField,
+    prizePool: z.string().max(300).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.startDate && data.startTime && data.endTime) {
+      const endDate = data.endDate || data.startDate;
+      if (`${endDate}T${data.endTime}` <= `${data.startDate}T${data.startTime}`) {
+        ctx.addIssue({ code: "custom", message: "De eindtijd moet na de begintijd liggen", path: ["endTime"] });
+      }
+    }
+    if (data.entryType === "PAID") {
+      if (!hasValidNamePriceList(data.ticketTypes)) {
+        ctx.addIssue({ code: "custom", message: "Voeg minstens één ticket-soort met naam en prijs toe", path: ["ticketTypes"] });
+      }
+      if (data.ticketSaleMode === "ONLINE" && !data.registrationUrl) {
+        ctx.addIssue({ code: "custom", message: "Vul de ticketlink in of kies 'Alleen aan de deur'", path: ["registrationUrl"] });
+      }
+      if (data.earlyAccessTime && data.startTime && data.earlyAccessTime >= data.startTime) {
+        ctx.addIssue({ code: "custom", message: "Vroege toegang moet vóór de begintijd liggen", path: ["earlyAccessTime"] });
+      }
+    }
+    if (data.videoUrl && !isSupportedVideoUrl(data.videoUrl)) {
+      ctx.addIssue({ code: "custom", message: "Gebruik een geldige YouTube- of Vimeo-link", path: ["videoUrl"] });
+    }
+  });
 
 export const reportEventSchema = z.object({
   reason: z.enum(["MISLEADING", "OFFENSIVE", "SPAM", "INAPPROPRIATE", "OTHER"]),

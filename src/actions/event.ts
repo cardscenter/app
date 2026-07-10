@@ -8,6 +8,7 @@ import { createNotification } from "@/actions/notification";
 import { requireNotSuspended } from "@/lib/suspension";
 import { requireEmailVerified } from "@/lib/email-verification";
 import { timezoneForCountry, zonedWallClockToUtc } from "@/lib/events/timezones";
+import { toLocalDate, toLocalTime } from "@/lib/events/event-to-form";
 import { geocodeAddress } from "@/lib/events/geocoding";
 import {
   EVENT_BANNER_STORED_TYPE,
@@ -364,6 +365,9 @@ export async function updateEvent(eventId: string, formData: FormData) {
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
 
+  const susp = await requireNotSuspended(userId);
+  if ("error" in susp) return { error: susp.error };
+
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
@@ -378,29 +382,82 @@ export async function updateEvent(eventId: string, formData: FormData) {
     return { error: "Dit evenement kan niet meer worden bewerkt" };
   }
 
+  // Alleen meegestuurde velden worden bijgewerkt; lege string = leegmaken.
+  const str = (key: string): string | undefined => {
+    const v = formData.get(key);
+    return v === null ? undefined : String(v);
+  };
+
   const raw = {
-    title: formData.get("title") || undefined,
-    description: formData.get("description") ?? undefined,
-    venueName: formData.get("venueName") || undefined,
-    street: formData.get("street") || undefined,
-    houseNumber: formData.get("houseNumber") || undefined,
-    postalCode: formData.get("postalCode") || undefined,
-    city: formData.get("city") || undefined,
-    country: formData.get("country") || undefined,
-    startDate: formData.get("startDate") || undefined,
-    startTime: formData.get("startTime") || undefined,
-    endDate: formData.get("endDate") || undefined,
-    endTime: formData.get("endTime") || undefined,
-    registrationUrl: formData.get("registrationUrl") ?? undefined,
-    coverImage: formData.get("coverImage") ?? undefined,
+    title: str("title"),
+    description: str("description"),
+    venueName: str("venueName"),
+    street: str("street"),
+    houseNumber: str("houseNumber"),
+    postalCode: str("postalCode"),
+    city: str("city"),
+    country: str("country"),
+    organizerName: str("organizerName"),
+    organizerWebsite: str("organizerWebsite"),
+    startDate: str("startDate"),
+    startTime: str("startTime"),
+    endDate: str("endDate"),
+    endTime: str("endTime"),
+    entryType: str("entryType"),
+    ticketTypes: str("ticketTypes"),
+    ticketSaleMode: str("ticketSaleMode"),
+    earlyAccessTime: str("earlyAccessTime"),
+    registrationUrl: str("registrationUrl"),
+    vendorOptions: str("vendorOptions"),
+    vendorInfo: str("vendorInfo"),
+    canPlay: str("canPlay"),
+    canTrade: str("canTrade"),
+    canSell: str("canSell"),
+    hasParking: str("hasParking"),
+    hasFood: str("hasFood"),
+    hasToilets: str("hasToilets"),
+    hasWifi: str("hasWifi"),
+    cardPayment: str("cardPayment"),
+    wheelchairAccessible: str("wheelchairAccessible"),
+    hasCloakroom: str("hasCloakroom"),
+    childFriendly: str("childFriendly"),
+    maxVisitors: str("maxVisitors"),
+    totalTables: str("totalTables"),
+    coverImage: str("coverImage"),
+    flyerImage: str("flyerImage"),
+    galleryImages: str("galleryImages"),
+    videoUrl: str("videoUrl"),
+    tournamentFormat: str("tournamentFormat"),
+    isSanctioned: str("isSanctioned"),
+    prizePool: str("prizePool"),
   };
   const parsed = updateEventSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Ongeldige gegevens" };
   const data = parsed.data;
 
   const updateData: Record<string, unknown> = {};
-  for (const key of ["title", "description", "venueName", "street", "houseNumber", "postalCode", "city", "country", "registrationUrl", "coverImage"] as const) {
-    if (data[key] !== undefined) updateData[key] = data[key] || null;
+  // Verplichte strings: alleen overschrijven met een echte waarde.
+  for (const key of ["title", "venueName", "street", "houseNumber", "postalCode", "city", "country"] as const) {
+    if (data[key]) updateData[key] = data[key];
+  }
+  // Nullable strings: lege string = leegmaken.
+  for (const key of ["description", "organizerName", "organizerWebsite", "vendorInfo", "coverImage", "flyerImage", "videoUrl", "tournamentFormat", "prizePool"] as const) {
+    if (data[key] !== undefined) updateData[key] = (typeof data[key] === "string" ? data[key].trim() : data[key]) || null;
+  }
+  // Activiteiten + faciliteiten: boolField maakt van niet-meegestuurd `false`,
+  // dus alleen toepassen als de key echt in de FormData zat.
+  for (const key of ["canPlay", "canTrade", "canSell", "hasParking", "hasFood", "hasToilets", "hasWifi", "cardPayment", "wheelchairAccessible", "hasCloakroom", "childFriendly", "isSanctioned"] as const) {
+    if (formData.has(key)) updateData[key] = data[key];
+  }
+  if (data.maxVisitors !== undefined) updateData.maxVisitors = data.maxVisitors === "" ? null : data.maxVisitors;
+  if (data.totalTables !== undefined) updateData.totalTables = data.totalTables === "" ? null : data.totalTables;
+  if (data.galleryImages !== undefined) {
+    const gallery = parseGalleryImages(data.galleryImages);
+    updateData.galleryImages = gallery.length > 0 ? JSON.stringify(gallery) : null;
+  }
+  if (data.vendorOptions !== undefined) {
+    const vendor = parseTicketTypes(data.vendorOptions, false);
+    updateData.vendorOptions = vendor.length > 0 ? JSON.stringify(vendor) : null;
   }
 
   const newCountry = data.country ?? event.country;
@@ -421,11 +478,12 @@ export async function updateEvent(eventId: string, formData: FormData) {
     updateData.lng = geo?.lng ?? null;
   }
 
+  const timezone = (updateData.timezone as string) ?? event.timezone;
   if (data.startDate || data.startTime || data.endDate || data.endTime) {
-    const timezone = (updateData.timezone as string) ?? event.timezone;
     const startDate = data.startDate ?? toLocalDate(event.startTime, timezone);
     const startTimeStr = data.startTime ?? toLocalTime(event.startTime, timezone);
-    const endDateStr = data.endDate ?? data.startDate ?? toLocalDate(event.endTime, timezone);
+    // Lege endDate = eendaags event (zelfde dag als start).
+    const endDateStr = data.endDate || data.startDate || toLocalDate(event.endTime, timezone);
     const endTimeStr = data.endTime ?? toLocalTime(event.endTime, timezone);
     const newStart = zonedWallClockToUtc(startDate, startTimeStr, timezone);
     const newEnd = zonedWallClockToUtc(endDateStr, endTimeStr, timezone);
@@ -436,10 +494,38 @@ export async function updateEvent(eventId: string, formData: FormData) {
     updateData.endTime = newEnd;
   }
 
+  // Entree: FREE wist tickets + link + VT; PAID vervangt ze met de payload.
+  if (data.entryType !== undefined) {
+    updateData.entryType = data.entryType;
+    if (data.entryType === "FREE") {
+      updateData.ticketTypes = null;
+      updateData.registrationUrl = null;
+      updateData.earlyAccessTime = null;
+    } else {
+      const tickets = parseTicketTypes(data.ticketTypes).sort((a, b) => a.price - b.price);
+      updateData.ticketTypes = tickets.length > 0 ? JSON.stringify(tickets) : null;
+      updateData.registrationUrl = data.registrationUrl || null;
+      const vtStartDate = data.startDate ?? toLocalDate(event.startTime, timezone);
+      updateData.earlyAccessTime = data.earlyAccessTime
+        ? zonedWallClockToUtc(vtStartDate, data.earlyAccessTime, timezone)
+        : null;
+    }
+  } else if (data.registrationUrl !== undefined) {
+    updateData.registrationUrl = data.registrationUrl || null;
+  }
+
+  // Een afgewezen event gaat na bewerken terug de goedkeurings-wachtrij in.
+  // LIVE/PENDING behouden hun status (edits triggeren geen her-moderatie).
+  if (event.status === "REJECTED") {
+    updateData.status = "PENDING";
+    updateData.rejectionReason = null;
+  }
+
   await prisma.event.update({ where: { id: eventId }, data: updateData });
   revalidatePath(`/evenementen/${eventId}`);
+  revalidatePath("/evenementen");
   revalidatePath("/dashboard/evenementen");
-  return { success: true };
+  return { success: true, resubmitted: event.status === "REJECTED" };
 }
 
 export async function deleteEvent(eventId: string) {
@@ -457,11 +543,4 @@ export async function deleteEvent(eventId: string) {
   revalidatePath("/evenementen");
   revalidatePath("/dashboard/evenementen");
   return { success: true };
-}
-
-function toLocalDate(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
-}
-function toLocalTime(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
 }

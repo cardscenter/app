@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { Trash2, ExternalLink, Clock, CheckCircle2, XCircle, CalendarOff } from "lucide-react";
+import { Trash2, ExternalLink, Pencil, Clock, CheckCircle2, XCircle, CalendarOff } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useRouter } from "@/i18n/navigation";
 import { deleteEvent } from "@/actions/event";
@@ -59,6 +59,11 @@ export function MyEventRow({ event }: { event: MyEvent }) {
       {event.status === "LIVE" && (
         <Link href={`/evenementen/${event.id}`} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-sm text-foreground transition hover:bg-muted">
           <ExternalLink className="h-4 w-4" /> Bekijk
+        </Link>
+      )}
+      {(event.status === "LIVE" || event.status === "PENDING" || event.status === "REJECTED") && (
+        <Link href={`/dashboard/evenementen/${event.id}/bewerken`} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-sm text-foreground transition hover:bg-muted">
+          <Pencil className="h-4 w-4" /> Bewerken
         </Link>
       )}
       <button

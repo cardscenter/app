@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter, Link } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { AlertTriangle, Loader2, Check, ChevronLeft, ChevronRight, MailWarning } from "lucide-react";
-import { createEvent } from "@/actions/event";
+import { createEvent, updateEvent } from "@/actions/event";
 import { INITIAL_EVENT_FORM, type EventFormState, type EventFieldSetter } from "@/components/events/event-form-types";
 import { bannerDaysUntil, eventUpsellDaysUntil, EVENT_SPOTLIGHT_STORED_TYPE } from "@/lib/events/upsell-config";
 import { EventLivePreview } from "@/components/events/event-live-preview";
@@ -24,18 +24,29 @@ interface DuplicateMatch {
   startTime: string;
 }
 
-const STEP_LABELS = ["Type", "Details", "Locatie", "Tickets & stands", "Faciliteiten", "Foto", "Promotie", "Controleren"];
+type StepKey = "type" | "details" | "location" | "tickets" | "facilities" | "photo" | "promotion" | "review";
 
-function validateStep(step: number, form: EventFormState): string | null {
-  switch (step) {
-    case 0:
+const ALL_STEPS: Array<{ key: StepKey; label: string }> = [
+  { key: "type", label: "Type" },
+  { key: "details", label: "Details" },
+  { key: "location", label: "Locatie" },
+  { key: "tickets", label: "Tickets & stands" },
+  { key: "facilities", label: "Faciliteiten" },
+  { key: "photo", label: "Foto" },
+  { key: "promotion", label: "Promotie" },
+  { key: "review", label: "Controleren" },
+];
+
+function validateStep(key: StepKey, form: EventFormState): string | null {
+  switch (key) {
+    case "type":
       return form.eventType ? null : "Kies een type evenement";
-    case 1:
+    case "details":
       if (form.title.trim().length < 3) return "Vul een titel in (min. 3 tekens)";
       if (!form.startDate) return "Kies een datum";
       if (!form.startTime || !form.endTime) return "Vul begin- en eindtijd in";
       return null;
-    case 2:
+    case "location":
       if (!form.venueName.trim()) return "Vul de naam van de locatie in";
       if (!form.street.trim()) return "Vul de straat in";
       if (!form.houseNumber.trim()) return "Vul het huisnummer in";
@@ -43,14 +54,14 @@ function validateStep(step: number, form: EventFormState): string | null {
       if (!form.city.trim()) return "Vul de plaats in";
       if (!form.country) return "Kies een land";
       return null;
-    case 3:
+    case "tickets":
       if (form.entryType === "PAID") {
         if (!form.ticketTypes.some((t) => t.name.trim())) return "Voeg minstens één ticket-soort toe (of kies Gratis)";
         if (form.ticketSaleMode === "ONLINE" && !form.registrationUrl.trim()) return "Vul de link in waar bezoekers tickets kunnen kopen (of kies 'Alleen aan de deur')";
         if (form.earlyAccessTime && form.startTime && form.earlyAccessTime >= form.startTime) return "Vroege toegang moet vóór de begintijd liggen";
       }
       return null;
-    case 6:
+    case "promotion":
       if ((form.promote || form.spotlight) && !form.coverImage) return "Upload eerst een banner-afbeelding voor de promotie";
       if (form.promote && !form.promoteUntil) return "Kies tot welke datum je evenement uitgelicht moet zijn";
       if (form.spotlight && !form.spotlightUntil) return "Kies tot welke datum je evenement op de homepage moet staan";
@@ -60,22 +71,39 @@ function validateStep(step: number, form: EventFormState): string | null {
   }
 }
 
-export function MultiStepEventForm({ accountType, emailVerified }: { accountType: string; emailVerified: boolean }) {
+export function MultiStepEventForm({
+  accountType,
+  emailVerified,
+  mode = "create",
+  eventId,
+  initialForm,
+}: {
+  accountType: string;
+  emailVerified: boolean;
+  mode?: "create" | "edit";
+  eventId?: string;
+  initialForm?: EventFormState;
+}) {
   const router = useRouter();
-  const [form, setForm] = useState<EventFormState>(INITIAL_EVENT_FORM);
+  const isEdit = mode === "edit";
+  // Edit-flow: type is niet bewerkbaar (bepaalt kalender-tab + toernooivelden)
+  // en promotie evenmin (pro-rata refund-interactie — aparte flow later).
+  const steps = isEdit ? ALL_STEPS.filter((s) => s.key !== "type" && s.key !== "promotion") : ALL_STEPS;
+  const [form, setForm] = useState<EventFormState>(initialForm ?? INITIAL_EVENT_FORM);
   const [step, setStep] = useState(0);
-  const [maxReached, setMaxReached] = useState(0);
+  const [maxReached, setMaxReached] = useState(isEdit ? steps.length - 1 : 0);
   const [isPending, startTransition] = useTransition();
   const [duplicates, setDuplicates] = useState<DuplicateMatch[] | null>(null);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
 
   const set: EventFieldSetter = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
-  const isLast = step === STEP_LABELS.length - 1;
+  const isLast = step === steps.length - 1;
+  const currentKey = steps[step].key;
 
   function goNext() {
-    const err = validateStep(step, form);
+    const err = validateStep(currentKey, form);
     if (err) { toast.error(err); return; }
-    const next = Math.min(step + 1, STEP_LABELS.length - 1);
+    const next = Math.min(step + 1, steps.length - 1);
     setStep(next);
     setMaxReached((m) => Math.max(m, next));
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -92,18 +120,19 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
     const fd = new FormData();
     fd.set("title", form.title);
     fd.set("description", form.description);
-    fd.set("eventType", form.eventType);
+    if (!isEdit) fd.set("eventType", form.eventType); // eventType is niet bewerkbaar
     fd.set("venueName", form.venueName);
     fd.set("street", form.street);
     fd.set("houseNumber", form.houseNumber);
     fd.set("postalCode", form.postalCode);
     fd.set("city", form.city);
     fd.set("country", form.country);
-    if (form.organizerName.trim()) fd.set("organizerName", form.organizerName.trim());
-    if (form.organizerWebsite.trim()) fd.set("organizerWebsite", form.organizerWebsite.trim());
+    // Altijd meesturen: lege waarde = leegmaken (nodig voor de edit-flow).
+    fd.set("organizerName", form.organizerName.trim());
+    fd.set("organizerWebsite", form.organizerWebsite.trim());
     fd.set("startDate", form.startDate);
     fd.set("startTime", form.startTime);
-    if (form.endDate) fd.set("endDate", form.endDate);
+    fd.set("endDate", form.endDate); // leeg = eendaags
     fd.set("endTime", form.endTime);
 
     fd.set("entryType", form.entryType);
@@ -129,39 +158,48 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
         price: Number(t.price) || 0,
         description: t.description.trim() || undefined,
       }));
-    if (vendor.length) fd.set("vendorOptions", JSON.stringify(vendor));
-    if (form.vendorInfo) fd.set("vendorInfo", form.vendorInfo);
+    fd.set("vendorOptions", JSON.stringify(vendor));
+    fd.set("vendorInfo", form.vendorInfo);
 
     for (const k of ["canPlay", "canTrade", "canSell", "hasParking", "hasFood", "hasToilets", "hasWifi", "cardPayment", "wheelchairAccessible", "hasCloakroom", "childFriendly"] as const) {
       fd.set(k, form[k] ? "1" : "0");
     }
-    if (form.maxVisitors) fd.set("maxVisitors", form.maxVisitors);
-    if (form.totalTables) fd.set("totalTables", form.totalTables);
-    if (form.coverImage) fd.set("coverImage", form.coverImage);
-    if (form.flyerImage) fd.set("flyerImage", form.flyerImage);
-    if (form.galleryImages.length) fd.set("galleryImages", JSON.stringify(form.galleryImages));
-    if (form.videoUrl.trim()) fd.set("videoUrl", form.videoUrl.trim());
+    fd.set("maxVisitors", form.maxVisitors);
+    fd.set("totalTables", form.totalTables);
+    fd.set("coverImage", form.coverImage);
+    fd.set("flyerImage", form.flyerImage);
+    fd.set("galleryImages", JSON.stringify(form.galleryImages));
+    fd.set("videoUrl", form.videoUrl.trim());
 
     if (form.eventType === "OP_TOERNOOI") {
-      if (form.tournamentFormat) fd.set("tournamentFormat", form.tournamentFormat);
-      if (form.prizePool) fd.set("prizePool", form.prizePool);
+      fd.set("tournamentFormat", form.tournamentFormat);
+      fd.set("prizePool", form.prizePool);
       fd.set("isSanctioned", form.isSanctioned ? "1" : "0");
     }
 
-    fd.set("promote", form.promote ? "1" : "0");
-    if (form.promote) fd.set("promoteDays", String(bannerDaysUntil(form.promoteUntil)));
-    fd.set("spotlight", form.spotlight ? "1" : "0");
-    if (form.spotlight) fd.set("spotlightDays", String(eventUpsellDaysUntil(form.spotlightUntil, EVENT_SPOTLIGHT_STORED_TYPE)));
-    if (confirm) fd.set("confirmDuplicate", "1");
+    if (!isEdit) {
+      fd.set("promote", form.promote ? "1" : "0");
+      if (form.promote) fd.set("promoteDays", String(bannerDaysUntil(form.promoteUntil)));
+      fd.set("spotlight", form.spotlight ? "1" : "0");
+      if (form.spotlight) fd.set("spotlightDays", String(eventUpsellDaysUntil(form.spotlightUntil, EVENT_SPOTLIGHT_STORED_TYPE)));
+      if (confirm) fd.set("confirmDuplicate", "1");
+    }
     return fd;
   }
 
   function publish(confirm: boolean) {
-    for (let s = 0; s < STEP_LABELS.length; s++) {
-      const err = validateStep(s, form);
+    for (let s = 0; s < steps.length; s++) {
+      const err = validateStep(steps[s].key, form);
       if (err) { setStep(s); toast.error(err); return; }
     }
     startTransition(async () => {
+      if (isEdit && eventId) {
+        const res = await updateEvent(eventId, buildFormData(false));
+        if (res?.error) { toast.error(res.error); return; }
+        toast.success(res?.resubmitted ? "Wijzigingen opgeslagen — je evenement wordt opnieuw beoordeeld." : "Wijzigingen opgeslagen");
+        router.push("/dashboard/evenementen");
+        return;
+      }
       const res = await createEvent(buildFormData(confirm));
       if (res?.error) { toast.error(res.error); return; }
       if (res?.duplicateWarning) {
@@ -195,11 +233,11 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
         )}
         <div className="mb-6">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-foreground">Stap {step + 1} van {STEP_LABELS.length}</span>
-            <span className="text-muted-foreground">{STEP_LABELS[step]}</span>
+            <span className="font-semibold text-foreground">Stap {step + 1} van {steps.length}</span>
+            <span className="text-muted-foreground">{steps[step].label}</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {STEP_LABELS.map((label, i) => {
+            {steps.map(({ label }, i) => {
               const done = i <= maxReached && i !== step;
               const current = i === step;
               const reachable = i <= maxReached;
@@ -242,14 +280,14 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
         )}
 
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-          {step === 0 && <StepType form={form} set={set} />}
-          {step === 1 && <StepDetails form={form} set={set} />}
-          {step === 2 && <StepLocation form={form} set={set} />}
-          {step === 3 && <StepTickets form={form} set={set} />}
-          {step === 4 && <StepFacilities form={form} set={set} />}
-          {step === 5 && <StepPhoto form={form} set={set} />}
-          {step === 6 && <StepPromotion form={form} set={set} accountType={accountType} />}
-          {step === 7 && <StepReview form={form} accountType={accountType} />}
+          {currentKey === "type" && <StepType form={form} set={set} />}
+          {currentKey === "details" && <StepDetails form={form} set={set} />}
+          {currentKey === "location" && <StepLocation form={form} set={set} />}
+          {currentKey === "tickets" && <StepTickets form={form} set={set} />}
+          {currentKey === "facilities" && <StepFacilities form={form} set={set} />}
+          {currentKey === "photo" && <StepPhoto form={form} set={set} />}
+          {currentKey === "promotion" && <StepPromotion form={form} set={set} accountType={accountType} />}
+          {currentKey === "review" && <StepReview form={form} accountType={accountType} />}
         </div>
 
         <div className="mt-5 flex items-center justify-between">
@@ -261,7 +299,7 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
             <button type="button" onClick={() => publish(confirmDuplicate)} disabled={isPending}
               className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60">
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {confirmDuplicate ? "Toch publiceren" : "Evenement publiceren"}
+              {isEdit ? "Wijzigingen opslaan" : confirmDuplicate ? "Toch publiceren" : "Evenement publiceren"}
             </button>
           ) : (
             <button type="button" onClick={goNext} disabled={isPending}
