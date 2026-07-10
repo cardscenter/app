@@ -48,6 +48,7 @@ export const createEventSchema = z
 
     organizerName: z.string().max(100).optional(),
     organizerWebsite: z.string().url("Ongeldige website-link").max(500).optional().or(z.literal("")),
+    socialLinks: z.string().optional(), // JSON [url] — max 4, gevalideerd via parseSocialLinks
 
     // Eendaags per definitie — meerdaagse beurzen = één event per dag.
     startDate: dateField,
@@ -141,6 +142,7 @@ export const updateEventSchema = z
     country: z.string().refine((c) => EVENT_COUNTRY_CODES.includes(c), "Onbekend land").optional(),
     organizerName: z.string().max(100).optional(),
     organizerWebsite: z.string().url("Ongeldige website-link").max(500).optional().or(z.literal("")),
+    socialLinks: z.string().optional(), // JSON [url]
     startDate: dateField.optional(),
     startTime: timeField.optional(),
     endTime: timeField.optional(),

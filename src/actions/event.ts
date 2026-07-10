@@ -21,6 +21,7 @@ import {
   calculateEventSpotlightCost,
 } from "@/lib/events/upsell-config";
 import { FACILITY_KEYS, ACTIVITY_KEYS, type TicketType } from "@/lib/events/types";
+import { parseSocialLinks } from "@/lib/events/socials";
 
 interface DuplicateMatch {
   id: string;
@@ -123,6 +124,7 @@ export async function createEvent(formData: FormData) {
     country: formData.get("country"),
     organizerName: formData.get("organizerName") || undefined,
     organizerWebsite: formData.get("organizerWebsite") || undefined,
+    socialLinks: formData.get("socialLinks") || undefined,
     startDate: formData.get("startDate"),
     startTime: formData.get("startTime"),
     endTime: formData.get("endTime"),
@@ -193,6 +195,7 @@ export async function createEvent(formData: FormData) {
   const ticketTypes = (isPaid ? parseTicketTypes(data.ticketTypes) : []).sort((a, b) => a.price - b.price);
   const vendorOptions = parseTicketTypes(data.vendorOptions, false);
   const galleryImages = parseGalleryImages(data.galleryImages);
+  const socialLinks = parseSocialLinks(data.socialLinks);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -285,6 +288,7 @@ export async function createEvent(formData: FormData) {
         videoUrl: data.videoUrl || null,
         organizerName: data.organizerName?.trim() || null,
         organizerWebsite: data.organizerWebsite || null,
+        socialLinks: socialLinks.length > 0 ? JSON.stringify(socialLinks) : null,
         tournamentFormat: data.tournamentFormat ?? null,
         isSanctioned: data.isSanctioned,
         prizePool: data.prizePool ?? null,
@@ -400,6 +404,7 @@ export async function updateEvent(eventId: string, formData: FormData) {
     country: str("country"),
     organizerName: str("organizerName"),
     organizerWebsite: str("organizerWebsite"),
+    socialLinks: str("socialLinks"),
     startDate: str("startDate"),
     startTime: str("startTime"),
     endTime: str("endTime"),
@@ -460,6 +465,10 @@ export async function updateEvent(eventId: string, formData: FormData) {
   if (data.vendorOptions !== undefined) {
     const vendor = parseTicketTypes(data.vendorOptions, false);
     updateData.vendorOptions = vendor.length > 0 ? JSON.stringify(vendor) : null;
+  }
+  if (data.socialLinks !== undefined) {
+    const socials = parseSocialLinks(data.socialLinks);
+    updateData.socialLinks = socials.length > 0 ? JSON.stringify(socials) : null;
   }
 
   const newCountry = data.country ?? event.country;

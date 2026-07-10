@@ -4,3 +4,4 @@
 ALTER TABLE "Event" ADD COLUMN "flyerImage" TEXT;
 ALTER TABLE "Event" ADD COLUMN "earlyAccessTime" DATETIME;
 ALTER TABLE "Event" ADD COLUMN "venueSizeM2" INTEGER;
+ALTER TABLE "Event" ADD COLUMN "socialLinks" TEXT;

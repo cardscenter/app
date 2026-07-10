@@ -2,6 +2,7 @@ import type { Event } from "@prisma/client";
 import type { EventFormState, NamePriceInput } from "@/components/events/event-form-types";
 import { INITIAL_EVENT_FORM } from "@/components/events/event-form-types";
 import type { EventType } from "@/lib/events/types";
+import { parseSocialLinks } from "@/lib/events/socials";
 
 // UTC → event-lokale wandklok (gedeeld met updateEvent in src/actions/event.ts).
 export function toLocalDate(date: Date, timeZone: string): string {
@@ -69,6 +70,7 @@ export function eventToFormState(event: Event): EventFormState {
 
     organizerName: event.organizerName ?? "",
     organizerWebsite: event.organizerWebsite ?? "",
+    socialLinks: parseSocialLinks(event.socialLinks),
 
     entryType: event.entryType === "FREE" ? "FREE" : "PAID",
     ticketTypes: parseNamePriceList(event.ticketTypes),

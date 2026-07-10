@@ -2541,6 +2541,7 @@ model Event {
   // Organisator-weergave: soms organiseert een bedrijf het, niet de account-houder
   organizerName    String? // weergavenaam-override (leeg = account-displayName)
   organizerWebsite String? // externe website van de organisator
+  socialLinks      String? // JSON [url] — socials van de organisator (max 4, platform-detectie in UI)
 
   // Toernooi-specifiek
   tournamentFormat String?

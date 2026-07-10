@@ -20,6 +20,8 @@ import { EventGallery } from "@/components/events/event-gallery";
 import { EventFlyer } from "@/components/events/event-flyer";
 import { EventReportButton } from "@/components/events/event-report-button";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
+import { parseSocialLinks, detectSocialPlatform } from "@/lib/events/socials";
+import { SocialIcon } from "@/components/events/social-icon";
 
 const FACILITY_ICONS: Record<FacilityKey, React.ComponentType<{ className?: string }>> = {
   canPlay: Gamepad2, canTrade: Repeat, canSell: Tag, hasParking: Car, hasFood: Coffee,
@@ -94,6 +96,7 @@ export default async function EventDetailPage({
 
   const organizerDisplay = event.organizerName?.trim() || event.organizer.displayName || "Onbekend";
   const hasOrganizerOverride = !!event.organizerName?.trim();
+  const socialLinks = parseSocialLinks(event.socialLinks);
 
   // Route via Google Maps (universal URL, geen API-key): coördinaten als de
   // geocode gelukt is, anders het volledige adres als bestemming.
@@ -399,6 +402,25 @@ export default async function EventDetailPage({
               >
                 <Globe className="h-3.5 w-3.5" /> Website <ExternalLink className="h-3 w-3" />
               </a>
+            )}
+
+            {socialLinks.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                {socialLinks.map((url) => {
+                  const { label, platform } = detectSocialPlatform(url);
+                  return (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                    >
+                      <SocialIcon platform={platform} className="h-3.5 w-3.5" /> {label} <ExternalLink className="h-3 w-3" />
+                    </a>
+                  );
+                })}
+              </div>
             )}
 
             <div className="mt-2 flex flex-wrap gap-1.5">

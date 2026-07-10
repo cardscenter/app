@@ -1,11 +1,76 @@
 "use client";
 
+import { useState } from "react";
+import { Plus, X } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { MAX_SOCIAL_LINKS, detectSocialPlatform } from "@/lib/events/socials";
+import { SocialIcon } from "@/components/events/social-icon";
 import type { EventFormState, EventFieldSetter } from "@/components/events/event-form-types";
 
 const inputClass =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
 const labelClass = "block text-sm font-medium text-foreground";
+
+/** Vrije lijst social-URL's (Instagram/Facebook/TikTok/…) — plak + toevoegen. */
+function SocialLinksEditor({ links, onChange }: { links: string[]; onChange: (links: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const draftValid = /^https?:\/\/\S+\.\S+/i.test(draft.trim());
+
+  function add() {
+    const url = draft.trim();
+    if (!draftValid || links.length >= MAX_SOCIAL_LINKS || links.includes(url)) return;
+    onChange([...links, url]);
+    setDraft("");
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      {links.length < MAX_SOCIAL_LINKS && (
+        <div className="flex gap-2">
+          <input
+            type="url"
+            inputMode="url"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+            placeholder="bv. https://instagram.com/jouwbeurs"
+            className={`${inputClass} flex-1`}
+          />
+          <button
+            type="button"
+            onClick={add}
+            disabled={!draftValid}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" /> Toevoegen
+          </button>
+        </div>
+      )}
+      {links.length > 0 && (
+        <ul className="space-y-1.5">
+          {links.map((url) => {
+            const { label, platform } = detectSocialPlatform(url);
+            return (
+              <li key={url} className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm">
+                <SocialIcon platform={platform} className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="font-medium text-foreground">{label}</span>
+                <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{url}</span>
+                <button
+                  type="button"
+                  onClick={() => onChange(links.filter((u) => u !== url))}
+                  className="text-muted-foreground transition hover:text-rose-500"
+                  aria-label="Verwijder social-link"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function StepDetails({ form, set }: { form: EventFormState; set: EventFieldSetter }) {
   // Vandaag in lokale tijd (YYYY-MM-DD) — de datepicker blokkeert eerdere datums.
@@ -123,6 +188,11 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
               className={`mt-1 ${inputClass}`}
             />
           </div>
+        </div>
+
+        <div className="mt-3">
+          <p className={labelClass}>Socials <span className="text-xs font-normal text-muted-foreground">(optioneel, max {MAX_SOCIAL_LINKS})</span></p>
+          <SocialLinksEditor links={form.socialLinks} onChange={(links) => set("socialLinks", links)} />
         </div>
       </div>
 

@@ -32,6 +32,7 @@ export interface EventFormState {
   // Organisator (bedrijf kan afwijken van de account-houder)
   organizerName: string; // weergavenaam-override (leeg = accountnaam)
   organizerWebsite: string;
+  socialLinks: string[]; // social-URL's (max 4, platform-detectie in UI)
 
   // Entree (valuta is altijd EUR — heel Europa, geen keuze nodig)
   entryType: "FREE" | "PAID";
@@ -93,6 +94,7 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   country: "NL",
   organizerName: "",
   organizerWebsite: "",
+  socialLinks: [],
   entryType: "PAID", // beurzen hebben bijna altijd tickets
   ticketTypes: [],
   ticketSaleMode: "ONLINE",

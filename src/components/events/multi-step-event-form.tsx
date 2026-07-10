@@ -131,6 +131,7 @@ export function MultiStepEventForm({
     // Altijd meesturen: lege waarde = leegmaken (nodig voor de edit-flow).
     fd.set("organizerName", form.organizerName.trim());
     fd.set("organizerWebsite", form.organizerWebsite.trim());
+    fd.set("socialLinks", JSON.stringify(form.socialLinks));
     fd.set("startDate", form.startDate);
     fd.set("startTime", form.startTime);
     fd.set("endTime", form.endTime);
