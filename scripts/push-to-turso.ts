@@ -1,8 +1,9 @@
-// Past het Prisma-schema (prisma/turso-schema.sql) toe op de remote Turso-
-// database. Eenmalig nodig om alle tabellen in een lege Turso-DB aan te maken,
-// omdat `prisma db push` niet rechtstreeks met remote libSQL praat.
+// Past een SQL-bestand toe op de remote Turso-database, omdat `prisma db push`
+// niet rechtstreeks met remote libSQL praat. Zonder tweede argument het volledige
+// schema (prisma/turso-schema.sql — alleen voor een LEGE database!); voor
+// incrementele migraties op de gevulde live-DB een additief bestand meegeven.
 //
-// Gebruik:  npx tsx scripts/push-to-turso.ts "libsql://<jouw-db>.turso.io"
+// Gebruik:  npx tsx scripts/push-to-turso.ts "libsql://<jouw-db>.turso.io" [pad/naar/migratie.sql]
 //   - de database-URL komt als argument (niet geheim)
 //   - het auth-token komt uit .env (TURSO_AUTH_TOKEN) — niet in de chat/argumenten
 import "dotenv/config";
@@ -11,6 +12,7 @@ import { readFileSync } from "fs";
 
 async function main() {
   const url = process.argv[2] ?? process.env.TURSO_DATABASE_URL;
+  const sqlFile = process.argv[3] ?? "prisma/turso-schema.sql";
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
   if (!url) {
@@ -22,10 +24,10 @@ async function main() {
     process.exit(1);
   }
 
-  const sql = readFileSync("prisma/turso-schema.sql", "utf8");
+  const sql = readFileSync(sqlFile, "utf8");
   const client = createClient({ url, authToken });
 
-  console.log(`→ Schema toepassen op Turso: ${url}`);
+  console.log(`→ ${sqlFile} toepassen op Turso: ${url}`);
   await client.executeMultiple(sql);
 
   const res = await client.execute(
