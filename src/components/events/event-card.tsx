@@ -50,11 +50,6 @@ export function EventCard({ event }: { event: EventListItem }) {
           <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${EVENT_TYPE_PILL_CLASSES[event.eventType as EventType] ?? "bg-muted"}`}>
             {getEventTypeLabel(event.eventType, locale)}
           </span>
-          {event.entryType === "FREE" && (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-              Gratis entree
-            </span>
-          )}
         </div>
 
         <h3 className="text-base font-bold leading-snug text-foreground group-hover:text-primary">{event.title}</h3>
@@ -68,8 +63,8 @@ export function EventCard({ event }: { event: EventListItem }) {
         </p>
         <p className="mt-auto flex items-center gap-1.5 text-sm">
           <Ticket className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          <span className={event.entryType === "FREE" ? "font-medium text-emerald-600 dark:text-emerald-400" : "text-foreground"}>
-            {event.entryType === "FREE" ? "Gratis entree" : `${event.entryCurrency ?? ""} ${event.entryPrice ?? ""}`}
+          <span className={event.entryType === "FREE" ? "font-medium text-emerald-600 dark:text-emerald-400" : "font-medium text-foreground"}>
+            {event.priceLabel}
           </span>
         </p>
       </div>

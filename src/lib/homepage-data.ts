@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { calculateXP, getLevel } from "@/lib/seller-levels";
 import { getRecentlySold } from "@/lib/home-recently-sold";
 import type { EventListItem } from "@/components/events/event-view-types";
+import { getEventPriceLabel } from "@/lib/events/format";
 
 export type HomepageStats = {
   activeAuctions: number;
@@ -178,6 +179,7 @@ async function fetchHomepageData() {
     entryType: e.entryType,
     entryPrice: e.entryPrice,
     entryCurrency: e.entryCurrency,
+    priceLabel: getEventPriceLabel(e),
     isOfficial: e.isOfficial,
     lat: e.lat,
     lng: e.lng,

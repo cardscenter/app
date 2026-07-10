@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { PageContainer } from "@/components/layout/page-container";
 import { parseEventFilters, buildEventFilterWhere } from "@/lib/event-filters";
 import { EVENT_BANNER_STORED_TYPE } from "@/lib/events/upsell-config";
+import { getEventPriceLabel } from "@/lib/events/format";
 import { getBlockedUserIds } from "@/lib/blocking";
 import { getBuyerLocation } from "@/lib/shipping/filter";
 import { coordForPostcode, haversineDistanceKm } from "@/lib/distance";
@@ -77,6 +78,7 @@ export default async function EventsPage({
     entryType: e.entryType,
     entryPrice: e.entryPrice,
     entryCurrency: e.entryCurrency,
+    priceLabel: getEventPriceLabel(e),
     isOfficial: e.isOfficial,
     lat: e.lat,
     lng: e.lng,

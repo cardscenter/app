@@ -6,7 +6,6 @@ import { useLocale } from "next-intl";
 import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, type EventType } from "@/lib/events/types";
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
-import { formatEuro } from "@/lib/events/format";
 import { CountryFlag } from "@/components/ui/country-flag";
 import type { EventListItem } from "@/components/events/event-view-types";
 
@@ -50,7 +49,7 @@ export function EventQuickViewPanel({ event }: { event: EventListItem }) {
         </p>
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Ticket className="h-3 w-3 shrink-0" />
-          {event.entryType === "FREE" ? "Gratis entree" : event.entryPrice != null ? formatEuro(event.entryPrice) : "Tickets"}
+          {event.priceLabel}
         </p>
         <p className="pt-1 text-xs font-medium text-primary">Bekijk details →</p>
       </div>
