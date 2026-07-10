@@ -30,11 +30,12 @@ export function EventCard({ event }: { event: EventListItem }) {
           : "border-border"
       }`}
     >
-      <div className="relative h-40 w-full shrink-0 bg-muted sm:h-auto sm:w-52">
+      {/* Banner altijd volledig in 3:1 — mobiel bovenaan, desktop links naast de info. */}
+      <div className="relative aspect-[3/1] w-full shrink-0 overflow-hidden bg-muted sm:m-3 sm:w-80 sm:self-center sm:rounded-lg">
         {event.coverImage ? (
-          <Image src={event.coverImage} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw, 208px" unoptimized />
+          <Image src={event.coverImage} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw, 320px" unoptimized />
         ) : (
-          <div className="flex h-full min-h-32 items-center justify-center text-muted-foreground">
+          <div className="flex h-full items-center justify-center text-muted-foreground">
             <Calendar className="h-10 w-10" />
           </div>
         )}
