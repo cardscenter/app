@@ -10,6 +10,7 @@ const MAX_GALLERY = 8;
 
 export function StepPhoto({ form, set }: { form: EventFormState; set: EventFieldSetter }) {
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingFlyer, setUploadingFlyer] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
   async function uploadFiles(files: FileList | null): Promise<string[]> {
@@ -34,6 +35,19 @@ export function StepPhoto({ form, set }: { form: EventFormState; set: EventField
       toast.error("Upload mislukt. Probeer het opnieuw.");
     } finally {
       setUploadingCover(false);
+    }
+  }
+
+  async function uploadFlyer(files: FileList | null) {
+    if (!files?.length) return;
+    setUploadingFlyer(true);
+    try {
+      const urls = await uploadFiles(files);
+      if (urls.length) set("flyerImage", urls[0]);
+    } catch {
+      toast.error("Upload mislukt. Probeer het opnieuw.");
+    } finally {
+      setUploadingFlyer(false);
     }
   }
 
@@ -101,6 +115,47 @@ export function StepPhoto({ form, set }: { form: EventFormState; set: EventField
                 <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
                 <span className="mt-2 text-sm font-medium text-muted-foreground">Banner uploaden</span>
                 <span className="text-xs text-muted-foreground/70">klik of sleep een afbeelding hierheen</span>
+              </>
+            )}
+          </label>
+        )}
+      </div>
+
+      {/* Flyer */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-foreground">Flyer <span className="text-sm font-normal text-muted-foreground">(optioneel)</span></h2>
+        <p className="text-sm text-muted-foreground">
+          De flyer of poster van je evenement — <strong>staand</strong> formaat. Bezoekers kunnen
+          hem vergroten op de evenementpagina, handig voor alle details in één beeld.
+        </p>
+
+        {form.flyerImage ? (
+          <div className="relative aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-xl border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={form.flyerImage} alt="" className="h-full w-full object-cover" />
+            <button
+              type="button"
+              onClick={() => set("flyerImage", "")}
+              className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white transition hover:bg-black/80"
+              aria-label="Verwijder flyer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <label
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); uploadFlyer(e.dataTransfer.files); }}
+            className={`flex aspect-[3/4] w-full max-w-[240px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border transition hover:border-primary/50 hover:bg-muted/30 ${uploadingFlyer ? "pointer-events-none opacity-60" : ""}`}
+          >
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => uploadFlyer(e.target.files)} />
+            {uploadingFlyer ? (
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
+                <span className="mt-2 text-sm font-medium text-muted-foreground">Flyer uploaden</span>
+                <span className="px-2 text-center text-xs text-muted-foreground/70">klik of sleep een afbeelding hierheen</span>
               </>
             )}
           </label>

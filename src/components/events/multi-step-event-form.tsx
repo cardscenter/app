@@ -136,6 +136,7 @@ export function MultiStepEventForm({ accountType, emailVerified }: { accountType
     if (form.maxVisitors) fd.set("maxVisitors", form.maxVisitors);
     if (form.totalTables) fd.set("totalTables", form.totalTables);
     if (form.coverImage) fd.set("coverImage", form.coverImage);
+    if (form.flyerImage) fd.set("flyerImage", form.flyerImage);
     if (form.galleryImages.length) fd.set("galleryImages", JSON.stringify(form.galleryImages));
     if (form.videoUrl.trim()) fd.set("videoUrl", form.videoUrl.trim());
 

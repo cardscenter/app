@@ -16,6 +16,7 @@ import { formatEuro } from "@/lib/events/format";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EventMap } from "@/components/events/event-map";
 import { EventGallery } from "@/components/events/event-gallery";
+import { EventFlyer } from "@/components/events/event-flyer";
 import { EventReportButton } from "@/components/events/event-report-button";
 
 const FACILITY_ICONS: Record<FacilityKey, React.ComponentType<{ className?: string }>> = {
@@ -330,6 +331,14 @@ export default async function EventDetailPage({
 
         {/* Sidebar */}
         <aside className="mt-6 space-y-4 lg:mt-0">
+          {/* Flyer */}
+          {event.flyerImage && (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Flyer</p>
+              <EventFlyer src={event.flyerImage} title={event.title} />
+            </div>
+          )}
+
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Organisator</p>
             {hasOrganizerOverride ? (

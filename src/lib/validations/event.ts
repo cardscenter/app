@@ -83,6 +83,7 @@ export const createEventSchema = z
     registrationUrl: z.string().url("Ongeldige link").max(500).optional().or(z.literal("")),
 
     coverImage: z.string().optional(),
+    flyerImage: z.string().optional(), // staande flyer/poster
     galleryImages: z.string().optional(), // JSON [url]
     videoUrl: z.string().max(500).optional().or(z.literal("")),
 

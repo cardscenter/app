@@ -61,6 +61,7 @@ export interface EventFormState {
   totalTables: string; // totaal aantal tafels (standhouder-capaciteit)
 
   coverImage: string;
+  flyerImage: string; // staande flyer/poster (≈3:4) — klik-vergrootbaar op detailpagina
   galleryImages: string[]; // impressiefoto's van eerdere jaargangen
   videoUrl: string; // YouTube/Vimeo-link (optioneel)
 
@@ -110,6 +111,7 @@ export const INITIAL_EVENT_FORM: EventFormState = {
   maxVisitors: "",
   totalTables: "",
   coverImage: "",
+  flyerImage: "",
   galleryImages: [],
   videoUrl: "",
   promote: false,
