@@ -2499,6 +2499,7 @@ model Event {
   // Tijd — opgeslagen als UTC, ingevoerd als event-lokale wandklok-tijd
   startTime   DateTime
   endTime     DateTime
+  earlyAccessTime DateTime? // vroege toegang (VT) — UTC, moet vóór startTime liggen
 
   // Entree
   entryType      String  @default("FREE") // FREE | PAID
@@ -2531,7 +2532,8 @@ model Event {
   totalTables     Int?    // totaal aantal tafels (capaciteit voor standhouders)
   registrationUrl String? // externe aanmeld-/ticketlink (getoond als er tickets zijn)
 
-  coverImage  String? // brede banner/flyer (≈3:1) — thumbnail in kalender + banner in Uitgelicht + detail
+  coverImage  String? // brede banner (≈3:1) — thumbnail in kalender + banner in Uitgelicht + detail
+  flyerImage  String? // staande flyer/poster (≈3:4) — klik-vergrootbaar op detailpagina
   galleryImages String? // JSON [url] — impressiefoto's van eerdere jaargangen (detailpagina)
   videoUrl    String? // YouTube/Vimeo-link — embed via iframe (geen eigen opslag)
 
