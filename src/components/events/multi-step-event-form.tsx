@@ -44,6 +44,7 @@ function validateStep(key: StepKey, form: EventFormState): string | null {
     case "details":
       if (form.title.trim().length < 3) return "Vul een titel in (min. 3 tekens)";
       if (!form.startDate) return "Kies een datum";
+      if (form.startDate < new Intl.DateTimeFormat("en-CA").format(new Date())) return "De datum kan niet in het verleden liggen";
       if (!form.startTime || !form.endTime) return "Vul begin- en eindtijd in";
       if (form.earlyAccessTime && form.earlyAccessTime >= form.startTime) return "Vroege toegang moet vóór de reguliere begintijd liggen";
       return null;

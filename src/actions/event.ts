@@ -488,6 +488,9 @@ export async function updateEvent(eventId: string, formData: FormData) {
     if (Number.isNaN(newStart.getTime()) || Number.isNaN(newEnd.getTime()) || newEnd <= newStart) {
       return { error: "Ongeldige datum/tijd" };
     }
+    if (newEnd.getTime() <= Date.now()) {
+      return { error: "Dit event ligt in het verleden" };
+    }
     updateData.startTime = newStart;
     updateData.endTime = newEnd;
   }

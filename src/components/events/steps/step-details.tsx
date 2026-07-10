@@ -8,6 +8,8 @@ const inputClass =
 const labelClass = "block text-sm font-medium text-foreground";
 
 export function StepDetails({ form, set }: { form: EventFormState; set: EventFieldSetter }) {
+  // Vandaag in lokale tijd (YYYY-MM-DD) — de datepicker blokkeert eerdere datums.
+  const todayStr = new Intl.DateTimeFormat("en-CA").format(new Date());
   return (
     <section data-section="details" className="scroll-mt-32 space-y-4">
       <h2 className="text-lg font-semibold text-foreground">Details</h2>
@@ -47,6 +49,7 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
               id="evt-startdate"
               type="date"
               value={form.startDate}
+              min={todayStr}
               onChange={(e) => set("startDate", e.target.value)}
               className={`mt-1 ${inputClass}`}
             />
