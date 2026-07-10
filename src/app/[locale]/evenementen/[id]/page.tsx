@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import Image from "next/image";
 import {
-  Calendar, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2,
+  Calendar, CalendarPlus, MapPin, Ticket, ExternalLink, ShieldCheck, Star, Users, Store, Globe, Table2,
   Gamepad2, Repeat, Tag, Car, Coffee, Toilet, Wifi, CreditCard, Accessibility, Shirt, Trophy, Baby,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -137,6 +137,12 @@ export default async function EventDetailPage({
           {event.venueName}, {event.street} {event.houseNumber}, {event.postalCode} {event.city}
           <CountryFlag code={event.country} size="sm" /> {getEventCountryName(event.country, locale)}
         </p>
+        <a
+          href={`/api/events/${event.id}/ics`}
+          className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
+        >
+          <CalendarPlus className="h-4 w-4" /> Zet in mijn agenda
+        </a>
       </div>
 
       <div className="mt-6 lg:grid lg:grid-cols-[1fr_320px] lg:gap-8">
