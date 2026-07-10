@@ -73,11 +73,18 @@ export function EventCard({ event }: { event: EventListItem }) {
           <MapPin className="h-3.5 w-3.5 shrink-0" /> {event.venueName}, {event.city}
           <CountryFlag code={event.country} size="sm" /> {getEventCountryName(event.country, locale)}
         </p>
-        <p className="mt-auto flex items-center gap-1.5 text-sm">
-          <Ticket className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          <span className={event.entryType === "FREE" ? "font-medium text-emerald-600 dark:text-emerald-400" : "font-medium text-foreground"}>
-            {event.priceLabel}
+        <p className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="flex items-center gap-1.5">
+            <Ticket className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className={event.entryType === "FREE" ? "font-medium text-emerald-600 dark:text-emerald-400" : "font-medium text-foreground"}>
+              {event.priceLabel}
+            </span>
           </span>
+          {event.maxVisitors && (
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Users className="h-3.5 w-3.5 shrink-0" /> Max. {event.maxVisitors} bezoekers
+            </span>
+          )}
         </p>
       </div>
     </Link>

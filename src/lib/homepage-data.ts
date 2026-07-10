@@ -181,6 +181,7 @@ async function fetchHomepageData() {
     entryPrice: e.entryPrice,
     entryCurrency: e.entryCurrency,
     priceLabel: getEventPriceLabel(e),
+    maxVisitors: e.maxVisitors,
     isOfficial: e.isOfficial,
     lat: e.lat,
     lng: e.lng,

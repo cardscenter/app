@@ -20,6 +20,7 @@ export interface EventListItem {
   entryPrice: number | null;
   entryCurrency: string | null;
   priceLabel: string; // afgeleid via getEventPriceLabel — "Gratis entree" | "€5,-" | "Vanaf €5,-" | "Betaald"
+  maxVisitors: number | null;
   isOfficial: boolean;
   lat: number | null;
   lng: number | null;
