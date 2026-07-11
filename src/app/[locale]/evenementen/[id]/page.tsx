@@ -36,6 +36,40 @@ const FACILITY_ORDER: FacilityKey[] = [
   "canPlay", "canTrade", "canSell", "hasParking", "hasFood", "hasToilets", "hasWifi", "cardPayment", "wheelchairAccessible", "hasCloakroom", "childFriendly",
 ];
 
+/** Consistente sectie-kop: klein indigo kicker-label + titel. Eén systeem
+ *  voor alle secties geeft de pagina rust en hiërarchie. */
+function SectionHeading({ kicker, title }: { kicker: string; title: string }) {
+  return (
+    <div className="mb-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400">{kicker}</p>
+      <h2 className="mt-0.5 text-xl font-bold tracking-tight text-foreground">{title}</h2>
+    </div>
+  );
+}
+
+/** Meta-tegel in de hero: icoon in getint vierkant + label + waarde. */
+function HeroMetaTile({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+        <div className="mt-0.5 text-sm font-medium text-foreground">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default async function EventDetailPage({
   params,
 }: {
@@ -50,7 +84,7 @@ export default async function EventDetailPage({
     include: {
       organizer: {
         select: {
-          id: true, displayName: true, isVerified: true, isIbanVerified: true,
+          id: true, displayName: true, avatarUrl: true, isVerified: true, isIbanVerified: true,
           isAddressVerified: true, isTrustedEventOrganizer: true,
         },
       },
@@ -193,7 +227,7 @@ export default async function EventDetailPage({
       <div className="space-y-6">
         {event.description && (
           <div className={panelCard}>
-            <h2 className="mb-2 text-lg font-semibold text-foreground">Over dit evenement</h2>
+            <SectionHeading kicker="Over" title="Over dit evenement" />
             <div
               className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
               dangerouslySetInnerHTML={{ __html: event.description }}
@@ -202,7 +236,7 @@ export default async function EventDetailPage({
         )}
         {activeFacilities.length > 0 && (
           <div className={panelCard}>
-            <h2 className="mb-2 text-lg font-semibold text-foreground">Faciliteiten</h2>
+            <SectionHeading kicker="Voorzieningen" title="Faciliteiten" />
             <div className="flex flex-wrap gap-2">
               {activeFacilities.map((k) => {
                 const Icon = FACILITY_ICONS[k];
@@ -230,7 +264,7 @@ export default async function EventDetailPage({
 
   const locationPanel = (
     <div className={panelCard}>
-      <h2 className="mb-2 text-lg font-semibold text-foreground">Locatie</h2>
+      <SectionHeading kicker="Locatie" title="Locatie & route" />
       <p className="flex items-center gap-2 text-sm text-muted-foreground">
         <MapPin className="h-4 w-4 shrink-0" />
         {event.venueName}, {event.street} {event.houseNumber}, {event.postalCode} {event.city}
@@ -270,6 +304,7 @@ export default async function EventDetailPage({
 
   const visitorsPanel = (
     <div className={panelCard}>
+      <SectionHeading kicker="Community" title="Wie komt er?" />
       <EventAttendeeList
         going={goingUsers}
         interested={interestedUsers}
@@ -282,7 +317,7 @@ export default async function EventDetailPage({
   const vendorsPanel = (
     <div className="space-y-6">
       <div className={`${panelCard} border-l-4 border-l-indigo-500/40`}>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Store className="h-5 w-5" /> Voor standhouders</h2>
+        <SectionHeading kicker="Standhouders" title="Voor standhouders" />
         {hasVendor ? (
           <>
             {vendorOptions.length > 0 && (
@@ -311,9 +346,7 @@ export default async function EventDetailPage({
       </div>
 
       <div className={panelCard}>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-          <Store className="h-5 w-5" /> Aanwezige standhouders op dit event
-        </h2>
+        <SectionHeading kicker="Standhouders" title="Aanwezige standhouders op dit event" />
         <div className="mt-3">
           {approvedVendors.length > 0 ? (
             <EventVendorGrid vendors={approvedVendors} />
@@ -340,7 +373,7 @@ export default async function EventDetailPage({
       <div className="space-y-6">
         {video && (
           <div className={panelCard}>
-            <h2 className="mb-2 text-lg font-semibold text-foreground">Video</h2>
+            <SectionHeading kicker="Media" title="Video" />
             <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
               <iframe
                 src={video.embedUrl}
@@ -355,7 +388,7 @@ export default async function EventDetailPage({
         )}
         {galleryImages.length > 0 && (
           <div className={panelCard}>
-            <h2 className="mb-2 text-lg font-semibold text-foreground">Impressie</h2>
+            <SectionHeading kicker="Media" title="Impressie" />
             <EventGallery images={galleryImages} />
           </div>
         )}
@@ -366,79 +399,88 @@ export default async function EventDetailPage({
     <PageContainer width="default" className="py-8">
       <Link href="/evenementen" className="text-sm text-muted-foreground hover:text-foreground">← Terug naar evenementen</Link>
 
-      {/* Banner */}
-      <div className="relative mt-3 aspect-[3/1] w-full overflow-hidden rounded-2xl bg-muted">
-        {event.coverImage ? (
-          <Image src={event.coverImage} alt={event.title} fill className="object-cover" sizes="100vw" unoptimized priority />
-        ) : (
-          <div className="flex h-full items-center justify-center text-muted-foreground"><Calendar className="h-16 w-16" /></div>
-        )}
-        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${EVENT_TYPE_PILL_CLASSES[event.eventType as EventType] ?? "bg-muted"}`}>
-            {getEventTypeLabel(event.eventType, locale)}
-          </span>
-          {event.isOfficial && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white">
-              <ShieldCheck className="h-3.5 w-3.5" /> Geverifieerd door Cards Center
-            </span>
+      {/* ── Hero: banner + kerninfo in één omkaderde kaart ── */}
+      <section className="mt-3 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+        <div className="relative aspect-[3/1] w-full bg-muted">
+          {event.coverImage ? (
+            <Image src={event.coverImage} alt={event.title} fill className="object-cover" sizes="100vw" unoptimized priority />
+          ) : (
+            <div className="flex h-full items-center justify-center text-muted-foreground"><Calendar className="h-16 w-16" /></div>
           )}
-        </div>
-      </div>
-
-      <h1 className="mt-5 text-3xl font-bold text-foreground">{event.title}</h1>
-
-      <div className="mt-2 space-y-1 text-muted-foreground">
-        <p className="flex items-center gap-2"><Calendar className="h-4 w-4 shrink-0" /> {dateLabel}</p>
-        <p className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 shrink-0" />
-          {event.venueName}, {event.street} {event.houseNumber}, {event.postalCode} {event.city}
-          <CountryFlag code={event.country} size="sm" /> {getEventCountryName(event.country, locale)}
-        </p>
-        <div className="mt-1 flex flex-wrap gap-2">
-          <a
-            href={`/api/events/${event.id}/ics`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
-          >
-            <CalendarPlus className="h-4 w-4" /> Zet in mijn agenda
-          </a>
-          <a
-            href={routeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
-          >
-            <Navigation className="h-4 w-4" /> Plan je route
-          </a>
+          {/* subtiele diepte onderaan de banner */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent" />
+          <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${EVENT_TYPE_PILL_CLASSES[event.eventType as EventType] ?? "bg-muted"}`}>
+              {getEventTypeLabel(event.eventType, locale)}
+            </span>
+            {event.isOfficial && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white">
+                <ShieldCheck className="h-3.5 w-3.5" /> Geverifieerd door Cards Center
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* RSVP à la Facebook */}
-        <EventRsvpButtons
-          eventId={event.id}
-          viewerStatus={(viewerRsvp?.status as "INTERESTED" | "GOING" | undefined) ?? null}
-          isLoggedIn={!!viewerId}
-          isOrganizer={isOrganizer}
-          eventOver={eventOver}
-          interestedCount={interestedTotal}
-          goingCount={goingTotal}
-          stack={rsvpStack}
-        />
-      </div>
+        <div className="p-5 sm:p-7">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{event.title}</h1>
+
+          {/* Meta-tegels: datum + locatie */}
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <HeroMetaTile icon={Calendar} label="Datum & tijd">
+              <p>{dateLabel}</p>
+              {event.earlyAccessTime && (
+                <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                  <Clock className="h-3 w-3" /> Vroege toegang vanaf {formatEventTime(event.earlyAccessTime, event.timezone, locale === "en" ? "en-GB" : "nl-NL")}
+                </p>
+              )}
+            </HeroMetaTile>
+            <HeroMetaTile icon={MapPin} label="Locatie">
+              <p>{event.venueName}</p>
+              <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                {event.street} {event.houseNumber}, {event.postalCode} {event.city}
+                <CountryFlag code={event.country} size="xs" />
+              </p>
+            </HeroMetaTile>
+          </div>
+
+          {/* Actie-rij: RSVP links, agenda/route rechts */}
+          <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 lg:flex-row lg:items-center lg:justify-between">
+            <EventRsvpButtons
+              eventId={event.id}
+              viewerStatus={(viewerRsvp?.status as "INTERESTED" | "GOING" | undefined) ?? null}
+              isLoggedIn={!!viewerId}
+              isOrganizer={isOrganizer}
+              eventOver={eventOver}
+              interestedCount={interestedTotal}
+              goingCount={goingTotal}
+              stack={rsvpStack}
+            />
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={`/api/events/${event.id}/ics`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+              >
+                <CalendarPlus className="h-4 w-4" /> Zet in mijn agenda
+              </a>
+              <a
+                href={routeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
+              >
+                <Navigation className="h-4 w-4" /> Plan je route
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="mt-6 lg:grid lg:grid-cols-[1fr_320px] lg:gap-8">
         {/* Main */}
         <div className="space-y-6">
-          {/* Tickets — belangrijkste blok */}
-          <div>
-            <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
-              <Ticket className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /> Tickets & entree
-            </h2>
-
-            {event.earlyAccessTime && (
-              <p className="mb-3 flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                <Clock className="h-4 w-4 shrink-0" />
-                Vroege toegang vanaf {formatEventTime(event.earlyAccessTime, event.timezone, locale === "en" ? "en-GB" : "nl-NL")}
-              </p>
-            )}
+          {/* ── Entree: eigen getinte sectie ── */}
+          <section className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/70 via-card to-card p-5 shadow-card dark:border-indigo-800/40 dark:from-indigo-950/30 sm:p-6">
+            <SectionHeading kicker="Entree" title="Tickets & entree" />
 
             {event.entryType === "FREE" ? (
               <div className="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
@@ -452,7 +494,7 @@ export default async function EventDetailPage({
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                   {ticketList.map((t, i) => (
                     <div key={i} className="relative aspect-[847/350] w-full overflow-hidden">
                       {/* ticket-achtergrond (perforatie op ~70%) */}
@@ -465,53 +507,57 @@ export default async function EventDetailPage({
                       />
                       <div className="absolute inset-0 flex items-stretch">
                         {/* hoofdgedeelte: naam + beschrijving + servicekosten */}
-                        <div className="flex min-w-0 basis-[70%] flex-col justify-center gap-0.5 py-3 pl-[8%] pr-2">
-                          <p className="truncate text-base font-bold text-slate-900">{t.name}</p>
-                          {t.description && <p className="line-clamp-2 text-xs leading-snug text-slate-600">{t.description}</p>}
+                        <div className="flex min-w-0 basis-[70%] flex-col justify-center gap-0.5 py-2 pl-[8%] pr-1.5">
+                          <p className="truncate text-xs font-bold text-slate-900 sm:text-sm">{t.name}</p>
+                          {t.description && <p className="line-clamp-1 text-[10px] leading-snug text-slate-600">{t.description}</p>}
                           {t.serviceFee != null && t.serviceFee > 0 && (
-                            <p className="text-[11px] text-slate-500">+ {formatEuro(t.serviceFee)} servicekosten</p>
+                            <p className="text-[9px] text-slate-500">+ {formatEuro(t.serviceFee)} servicekosten</p>
                           )}
                         </div>
                         {/* stub: prijs */}
                         <div className="flex basis-[30%] items-center justify-center pr-[4%]">
-                          <p className="text-lg font-extrabold leading-tight text-slate-900">{formatEuro(t.price)}</p>
+                          <p className="text-xs font-extrabold leading-tight text-slate-900 sm:text-sm">{formatEuro(t.price)}</p>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {event.registrationUrl ? (
-                  <a
-                    href={event.registrationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                  >
-                    Tickets kopen <ExternalLink className="h-4 w-4" />
-                  </a>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Tickets zijn aan de deur verkrijgbaar.</p>
-                )}
+                <div className="flex flex-wrap items-center gap-3">
+                  {event.registrationUrl ? (
+                    <a
+                      href={event.registrationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                    >
+                      Tickets kopen <ExternalLink className="h-4 w-4" />
+                    </a>
+                  ) : (
+                    <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Ticket className="h-4 w-4" /> Tickets zijn aan de deur verkrijgbaar.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Praktische capaciteit-info (tafels staan bij "Voor standhouders") */}
+            {/* Capaciteit (tafels staan bij "Standhouders") */}
             {(event.maxVisitors || event.venueSizeM2) && (
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-indigo-200/60 pt-4 dark:border-indigo-800/40">
                 {event.maxVisitors && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm text-foreground">
                     <Users className="h-4 w-4 text-muted-foreground" /> Max. {event.maxVisitors} bezoekers
                   </span>
                 )}
                 {event.venueSizeM2 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm text-foreground">
                     <Ruler className="h-4 w-4 text-muted-foreground" /> {event.venueSizeM2} m² vloeroppervlak
                   </span>
                 )}
               </div>
             )}
-          </div>
+          </section>
 
           {/* Overige secties in tabs (hybride layout) */}
           <EventDetailTabs
@@ -529,64 +575,85 @@ export default async function EventDetailPage({
         <aside className="mt-6 space-y-4 lg:mt-0">
           {/* Flyer */}
           {event.flyerImage && (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Flyer</p>
-              <EventFlyer src={event.flyerImage} title={event.title} />
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="border-b border-border bg-muted/40 px-4 py-2.5">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400">Flyer</p>
+              </div>
+              <div className="p-4">
+                <EventFlyer src={event.flyerImage} title={event.title} />
+              </div>
             </div>
           )}
 
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Organisator</p>
-            {hasOrganizerOverride ? (
-              <p className="mt-1 font-semibold text-foreground">{organizerDisplay}</p>
-            ) : (
-              <Link href={`/verkoper/${event.organizer.id}`} className="mt-1 block font-semibold text-foreground hover:text-primary">
-                {organizerDisplay}
-              </Link>
-            )}
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
+            <div className="border-b border-border bg-muted/40 px-4 py-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400">Organisator</p>
+            </div>
+            <div className="p-4">
+            <div className="flex items-center gap-3">
+              {event.organizer.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={event.organizer.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+              ) : (
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+                  {organizerDisplay.charAt(0).toUpperCase()}
+                </span>
+              )}
+              <div className="min-w-0">
+                {hasOrganizerOverride ? (
+                  <p className="truncate font-semibold text-foreground">{organizerDisplay}</p>
+                ) : (
+                  <Link href={`/verkoper/${event.organizer.id}`} className="block truncate font-semibold text-foreground hover:text-primary">
+                    {organizerDisplay}
+                  </Link>
+                )}
+                <div className="mt-0.5 flex flex-wrap gap-1.5">
+                  {event.organizer.isTrustedEventOrganizer && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                      <Star className="h-3 w-3" /> Vertrouwd
+                    </span>
+                  )}
+                  {event.organizer.isVerified && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                      <ShieldCheck className="h-3 w-3" /> ID
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
 
-            {event.organizerWebsite && (
-              <a
-                href={event.organizerWebsite}
-                target="_blank"
-                rel="noopener noreferrer nofollow"
-                className="mt-1 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-              >
-                <Globe className="h-3.5 w-3.5" /> Website <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-
-            {socialLinks.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                {socialLinks.map((url) => {
-                  const { label, platform } = detectSocialPlatform(url);
-                  return (
-                    <a
-                      key={url}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-                    >
-                      <SocialIcon platform={platform} className="h-3.5 w-3.5" /> {label} <ExternalLink className="h-3 w-3" />
-                    </a>
-                  );
-                })}
+            {(event.organizerWebsite || socialLinks.length > 0) && (
+              <div className="mt-3 space-y-1.5 border-t border-border pt-3">
+                {event.organizerWebsite && (
+                  <a
+                    href={event.organizerWebsite}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    <Globe className="h-3.5 w-3.5" /> Website <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+                {socialLinks.length > 0 && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    {socialLinks.map((url) => {
+                      const { label, platform } = detectSocialPlatform(url);
+                      return (
+                        <a
+                          key={url}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                        >
+                          <SocialIcon platform={platform} className="h-3.5 w-3.5" /> {label} <ExternalLink className="h-3 w-3" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
-
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {event.organizer.isTrustedEventOrganizer && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                  <Star className="h-3 w-3" /> Vertrouwd
-                </span>
-              )}
-              {event.organizer.isVerified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                  <ShieldCheck className="h-3 w-3" /> ID
-                </span>
-              )}
-            </div>
 
             {hasOrganizerOverride && (
               <Link href={`/verkoper/${event.organizer.id}`} className="mt-2 block text-xs text-muted-foreground hover:text-foreground">
@@ -600,14 +667,18 @@ export default async function EventDetailPage({
                 <ContactSellerButton sellerId={event.organizer.id} label="Stel een vraag" variant="primary" />
               </div>
             )}
+            </div>
           </div>
 
           {/* Andere events van deze organisator */}
           {otherEvents.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Andere events van {organizerDisplay}
-              </p>
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="border-b border-border bg-muted/40 px-4 py-2.5">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400">
+                  Meer van {organizerDisplay}
+                </p>
+              </div>
+              <div className="p-4">
               <ul className="space-y-2">
                 {otherEvents.map((o) => (
                   <li key={o.id}>
@@ -629,6 +700,7 @@ export default async function EventDetailPage({
                   </li>
                 ))}
               </ul>
+              </div>
             </div>
           )}
 

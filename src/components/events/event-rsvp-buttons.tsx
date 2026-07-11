@@ -102,13 +102,13 @@ export function EventRsvpButtons({
 
   // Organisator of afgelopen event: alleen de samenvatting (geen knoppen).
   if (isOrganizer || eventOver) {
-    return shownInterested + shownGoing > 0 ? <div className="mt-3">{summary}</div> : null;
+    return shownInterested + shownGoing > 0 ? <div>{summary}</div> : null;
   }
 
   const btnBase = "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:opacity-60";
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <div className="flex gap-2">
         {isLoggedIn ? (
           <>
