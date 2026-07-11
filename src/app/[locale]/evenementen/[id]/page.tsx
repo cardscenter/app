@@ -27,6 +27,8 @@ import { EventReportButton } from "@/components/events/event-report-button";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
 import { SocialShare } from "@/components/ui/social-share";
 import { parseSocialLinks, detectSocialPlatform } from "@/lib/events/socials";
+import { getBuyerLocation } from "@/lib/shipping/filter";
+import { coordForPostcode, haversineDistanceKm, formatDistance } from "@/lib/distance";
 import { SocialIcon } from "@/components/events/social-icon";
 
 const FACILITY_ICONS: Record<FacilityKey, React.ComponentType<{ className?: string }>> = {
@@ -149,6 +151,15 @@ export default async function EventDetailPage({
   const viewerId = session?.user?.id ?? null;
   const isOrganizer = viewerId === event.organizer.id;
   const eventOver = event.endTime <= new Date();
+
+  // "± X km bij jou vandaan" — hemelsbreed vanaf de PC4-centroïde van de
+  // kijker (alleen NL-postcodes in de dataset; anders geen regel).
+  const buyerLoc = await getBuyerLocation();
+  const buyerCoord = buyerLoc ? coordForPostcode(buyerLoc.country, buyerLoc.postalCode) : null;
+  const distanceFromViewerKm =
+    buyerCoord && event.lat !== null && event.lng !== null
+      ? haversineDistanceKm(buyerCoord, [event.lat, event.lng])
+      : null;
   const rsvpUserSelect = { select: { id: true, displayName: true, avatarUrl: true, city: true } } as const;
 
   // Andere events + RSVP- en standhouder-data in één batch.
@@ -271,6 +282,12 @@ export default async function EventDetailPage({
         {event.venueName}, {event.street} {event.houseNumber}, {event.postalCode} {event.city}
         <CountryFlag code={event.country} size="sm" /> {getEventCountryName(event.country, locale)}
       </p>
+      {distanceFromViewerKm !== null && (
+        <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <Navigation className="h-4 w-4 shrink-0" />
+          ± {formatDistance(distanceFromViewerKm)} bij jou vandaan (hemelsbreed)
+        </p>
+      )}
       {event.lat !== null && event.lng !== null && (
         <div className="mt-3">
           <EventMap
@@ -440,6 +457,7 @@ export default async function EventDetailPage({
               <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                 {event.street} {event.houseNumber}, {event.postalCode} {event.city}
                 <CountryFlag code={event.country} size="xs" />
+                {distanceFromViewerKm !== null && <span>· ± {formatDistance(distanceFromViewerKm)}</span>}
               </p>
             </HeroMetaTile>
           </div>
