@@ -315,7 +315,8 @@ export default async function EventDetailPage({
         rel="noopener noreferrer"
         className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
       >
-        <Navigation className="h-4 w-4" /> Plan je route
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/maps.webp" alt="" className="h-4 w-auto" /> Plan je route
       </a>
     </div>
   );
@@ -487,7 +488,8 @@ export default async function EventDetailPage({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
               >
-                <Navigation className="h-4 w-4" /> Plan je route
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/maps.webp" alt="" className="h-4 w-auto" /> Plan je route
               </a>
               <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
               <SocialShare title={event.title} />
