@@ -198,6 +198,16 @@ export const updateEventSchema = z
 // RSVP-toggle: NONE = huidige status verwijderen.
 export const rsvpStatusSchema = z.enum(["INTERESTED", "GOING", "NONE"]);
 
+// Standhouder-aanvraag: optionele korte pitch aan de organisator.
+export const vendorRequestSchema = z.object({
+  message: z
+    .string()
+    .trim()
+    .max(300, "Bericht is te lang (max 300 tekens)")
+    .optional()
+    .transform((v) => v || undefined),
+});
+
 export const reportEventSchema = z.object({
   reason: z.enum(["MISLEADING", "OFFENSIVE", "SPAM", "INAPPROPRIATE", "OTHER"]),
   details: z.string().min(10, "Geef wat meer details (min. 10 tekens)").max(1000),

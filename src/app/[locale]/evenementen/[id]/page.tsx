@@ -19,6 +19,8 @@ import { EventMap } from "@/components/events/event-map";
 import { EventDetailTabs } from "@/components/events/event-detail-tabs";
 import { EventRsvpButtons } from "@/components/events/event-rsvp-buttons";
 import { EventAttendeeList } from "@/components/events/event-attendee-list";
+import { EventVendorGrid } from "@/components/events/event-vendor-grid";
+import { EventVendorRequestCta } from "@/components/events/event-vendor-request-cta";
 import { EventGallery } from "@/components/events/event-gallery";
 import { EventFlyer } from "@/components/events/event-flyer";
 import { EventReportButton } from "@/components/events/event-report-button";
@@ -114,8 +116,8 @@ export default async function EventDetailPage({
   const eventOver = event.endTime <= new Date();
   const rsvpUserSelect = { select: { id: true, displayName: true, avatarUrl: true, city: true } } as const;
 
-  // Andere events + RSVP-data in één batch.
-  const [otherEvents, rsvpCounts, goingRows, interestedRows, viewerRsvp] = await Promise.all([
+  // Andere events + RSVP- en standhouder-data in één batch.
+  const [otherEvents, rsvpCounts, goingRows, interestedRows, viewerRsvp, approvedVendorRows, viewerVendorRequest] = await Promise.all([
     prisma.event.findMany({
       where: {
         organizerId: event.organizer.id,
@@ -146,6 +148,22 @@ export default async function EventDetailPage({
           select: { status: true },
         })
       : Promise.resolve(null),
+    prisma.eventVendorRequest.findMany({
+      where: { eventId: event.id, status: "APPROVED" },
+      orderBy: { decidedAt: "asc" },
+      take: 60,
+      select: {
+        user: {
+          select: { id: true, displayName: true, avatarUrl: true, companyName: true, profileBanner: true, isVerified: true },
+        },
+      },
+    }),
+    viewerId
+      ? prisma.eventVendorRequest.findUnique({
+          where: { eventId_userId: { eventId: event.id, userId: viewerId } },
+          select: { id: true, status: true },
+        })
+      : Promise.resolve(null),
   ]);
 
   const goingTotal = rsvpCounts.find((c) => c.status === "GOING")?._count ?? 0;
@@ -154,6 +172,15 @@ export default async function EventDetailPage({
   const interestedUsers = interestedRows.map((r) => r.user);
   // Avatar-stack: aanwezigen eerst, dan geïnteresseerden.
   const rsvpStack = [...goingUsers, ...interestedUsers].slice(0, 6);
+
+  const approvedVendors = approvedVendorRows.map((r) => ({
+    userId: r.user.id,
+    displayName: r.user.displayName,
+    companyName: r.user.companyName,
+    avatarUrl: r.user.avatarUrl,
+    profileBanner: r.user.profileBanner,
+    isVerified: r.user.isVerified,
+  }));
 
   // ── Tab-panelen (hybride layout: hero + tickets altijd zichtbaar, rest in tabs) ──
 
@@ -281,6 +308,29 @@ export default async function EventDetailPage({
         ) : (
           <p className="mt-2 text-sm text-muted-foreground">De organisator heeft nog geen standhouder-informatie toegevoegd.</p>
         )}
+      </div>
+
+      <div className={panelCard}>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <Store className="h-5 w-5" /> Aanwezige standhouders op dit event
+        </h2>
+        <div className="mt-3">
+          {approvedVendors.length > 0 ? (
+            <EventVendorGrid vendors={approvedVendors} />
+          ) : (
+            <p className="text-sm text-muted-foreground">Nog geen standhouders aangemeld.</p>
+          )}
+        </div>
+        <div className="mt-4 border-t border-border pt-4">
+          <EventVendorRequestCta
+            eventId={event.id}
+            viewerStatus={(viewerVendorRequest?.status as "PENDING" | "APPROVED" | "REJECTED" | undefined) ?? null}
+            requestId={viewerVendorRequest?.id ?? null}
+            isLoggedIn={!!viewerId}
+            isOrganizer={isOrganizer}
+            eventOver={eventOver}
+          />
+        </div>
       </div>
     </div>
   );
@@ -471,6 +521,7 @@ export default async function EventDetailPage({
             vendors={vendorsPanel}
             media={mediaPanel}
             visitorsCount={goingTotal + interestedTotal}
+            vendorsCount={approvedVendors.length}
           />
         </div>
 

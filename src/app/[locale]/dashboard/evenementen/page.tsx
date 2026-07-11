@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Plus, CalendarDays } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { MyEventRow } from "@/components/events/my-event-row";
+import { EventVendorRequestsPanel } from "@/components/events/event-vendor-requests-panel";
 
 export default async function MyEventsPage({
   params,
@@ -17,7 +18,16 @@ export default async function MyEventsPage({
   const events = await prisma.event.findMany({
     where: { organizerId: session.user.id, status: { not: "DELETED" } },
     orderBy: { startTime: "asc" },
-    select: { id: true, title: true, city: true, status: true, startTime: true, rejectionReason: true },
+    select: {
+      id: true, title: true, city: true, status: true, startTime: true, rejectionReason: true,
+      vendorRequests: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true, status: true, message: true, createdAt: true,
+          user: { select: { id: true, displayName: true, avatarUrl: true, companyName: true, city: true } },
+        },
+      },
+    },
   });
 
   const rows = events.map((e) => ({
@@ -27,6 +37,13 @@ export default async function MyEventsPage({
     status: e.status,
     startTime: e.startTime.toISOString(),
     rejectionReason: e.rejectionReason,
+    vendorRequests: e.vendorRequests.map((r) => ({
+      id: r.id,
+      status: r.status,
+      message: r.message,
+      createdAt: r.createdAt.toISOString(),
+      user: r.user,
+    })),
   }));
 
   return (
@@ -52,7 +69,10 @@ export default async function MyEventsPage({
       ) : (
         <div className="mt-6 space-y-3">
           {rows.map((e) => (
-            <MyEventRow key={e.id} event={e} />
+            <div key={e.id}>
+              <MyEventRow event={e} />
+              {e.vendorRequests.length > 0 && <EventVendorRequestsPanel requests={e.vendorRequests} />}
+            </div>
           ))}
         </div>
       )}
