@@ -21,7 +21,15 @@ import {
   countActiveEventFilters,
 } from "@/lib/event-filters";
 
-export function EventFilterSidebar({ buyerHasPostcode = false }: { buyerHasPostcode?: boolean }) {
+export function EventFilterSidebar({
+  buyerHasPostcode = false,
+  variant = "sidebar",
+  onClose,
+}: {
+  buyerHasPostcode?: boolean;
+  variant?: "sidebar" | "drawer";
+  onClose?: () => void;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -98,7 +106,7 @@ export function EventFilterSidebar({ buyerHasPostcode = false }: { buyerHasPostc
   const hasCustomRange = !!(filters.dateFrom || filters.dateTo);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+    <div className={variant === "sidebar" ? "hidden rounded-2xl border border-border bg-card p-4 shadow-card lg:block" : "p-4"}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="font-semibold text-foreground">Verfijn resultaten</h2>
@@ -108,6 +116,16 @@ export function EventFilterSidebar({ buyerHasPostcode = false }: { buyerHasPostc
             </span>
           )}
         </div>
+        {variant === "drawer" && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            aria-label="Sluit filters"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {activeCount > 0 && (

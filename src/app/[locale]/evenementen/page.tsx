@@ -12,6 +12,7 @@ import { getBuyerLocation } from "@/lib/shipping/filter";
 import { coordForPostcode, haversineDistanceKm } from "@/lib/distance";
 import { EventTabs, EventViewToggle } from "@/components/events/event-controls";
 import { EventFilterSidebar } from "@/components/events/event-filter-sidebar";
+import { EventsMobileFilters } from "@/components/events/events-mobile-filters";
 import { EventCard, EventEmptyState, EventBanner } from "@/components/events/event-card";
 import { EventCalendarMonth } from "@/components/events/event-calendar-month";
 import { EventsLaunchBanner } from "@/components/events/events-launch-banner";
@@ -176,7 +177,7 @@ export default async function EventsPage({
 
       {/* Two-column: sidebar + content */}
       <div className="mt-6 lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
-        <aside className="mb-6 lg:mb-0">
+        <aside className="hidden lg:block">
           <div className="lg:sticky lg:top-20">
             <EventFilterSidebar buyerHasPostcode={!!buyerCoord} />
           </div>
@@ -191,7 +192,10 @@ export default async function EventsPage({
                 return within30d > 0 ? ` · ${within30d} in de komende 30 dagen` : "";
               })()}
             </p>
-            <EventViewToggle />
+            <div className="flex items-center gap-2">
+              <EventsMobileFilters buyerHasPostcode={!!buyerCoord} />
+              <EventViewToggle />
+            </div>
           </div>
 
           {events.length === 0 && filters.view !== "map" && filters.view !== "month" ? (
