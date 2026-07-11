@@ -16,6 +16,7 @@ import { parseEventVideo } from "@/lib/events/video";
 import { formatEuro } from "@/lib/events/format";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EventMap } from "@/components/events/event-map";
+import { EventDetailTabs } from "@/components/events/event-detail-tabs";
 import { EventGallery } from "@/components/events/event-gallery";
 import { EventFlyer } from "@/components/events/event-flyer";
 import { EventReportButton } from "@/components/events/event-report-button";
@@ -118,6 +119,159 @@ export default async function EventDetailPage({
     take: 4,
     select: { id: true, title: true, startTime: true, timezone: true, coverImage: true, city: true },
   });
+
+  // ── Tab-panelen (hybride layout: hero + tickets altijd zichtbaar, rest in tabs) ──
+
+  const panelCard = "rounded-xl border border-border bg-card p-4 sm:p-5";
+  const hasTournamentInfo =
+    event.eventType === "OP_TOERNOOI" && (event.tournamentFormat || event.prizePool || event.isSanctioned);
+
+  const infoPanel =
+    event.description || activeFacilities.length > 0 || hasTournamentInfo ? (
+      <div className="space-y-6">
+        {event.description && (
+          <div className={panelCard}>
+            <h2 className="mb-2 text-lg font-semibold text-foreground">Over dit evenement</h2>
+            <div
+              className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+              dangerouslySetInnerHTML={{ __html: event.description }}
+            />
+          </div>
+        )}
+        {activeFacilities.length > 0 && (
+          <div className={panelCard}>
+            <h2 className="mb-2 text-lg font-semibold text-foreground">Faciliteiten</h2>
+            <div className="flex flex-wrap gap-2">
+              {activeFacilities.map((k) => {
+                const Icon = FACILITY_ICONS[k];
+                return (
+                  <span key={k} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                    <Icon className="h-4 w-4" /> {FACILITY_LABELS_NL[k]}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {hasTournamentInfo && (
+          <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-950/30">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Trophy className="h-5 w-5" /> Toernooi-informatie</h2>
+            <dl className="mt-2 space-y-1 text-sm">
+              {event.tournamentFormat && <div><dt className="inline font-medium text-foreground">Format: </dt><dd className="inline text-muted-foreground">{event.tournamentFormat}</dd></div>}
+              {event.prizePool && <div><dt className="inline font-medium text-foreground">Prijzenpot: </dt><dd className="inline text-muted-foreground">{event.prizePool}</dd></div>}
+              {event.isSanctioned && <p className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><ShieldCheck className="h-4 w-4" /> Officieel gesanctioneerd (TCG+)</p>}
+            </dl>
+          </div>
+        )}
+      </div>
+    ) : null;
+
+  const locationPanel = (
+    <div className={panelCard}>
+      <h2 className="mb-2 text-lg font-semibold text-foreground">Locatie</h2>
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <MapPin className="h-4 w-4 shrink-0" />
+        {event.venueName}, {event.street} {event.houseNumber}, {event.postalCode} {event.city}
+        <CountryFlag code={event.country} size="sm" /> {getEventCountryName(event.country, locale)}
+      </p>
+      {event.lat !== null && event.lng !== null && (
+        <div className="mt-3">
+          <EventMap
+            locale={locale}
+            events={[{
+              id: event.id,
+              title: event.title,
+              lat: event.lat,
+              lng: event.lng,
+              venueName: event.venueName,
+              street: event.street,
+              houseNumber: event.houseNumber,
+              postalCode: event.postalCode,
+              city: event.city,
+              startTime: event.startTime.toISOString(),
+              endTime: event.endTime.toISOString(),
+              timezone: event.timezone,
+            }]}
+          />
+        </div>
+      )}
+      <a
+        href={routeUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted"
+      >
+        <Navigation className="h-4 w-4" /> Plan je route
+      </a>
+    </div>
+  );
+
+  // Commit R3-C6 vervangt deze placeholder door de RSVP-lijsten.
+  const visitorsPanel = (
+    <div className={panelCard}>
+      <p className="text-sm text-muted-foreground">Nog geen aanmeldingen.</p>
+    </div>
+  );
+
+  const vendorsPanel = (
+    <div className="space-y-6">
+      <div className={`${panelCard} border-l-4 border-l-indigo-500/40`}>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Store className="h-5 w-5" /> Voor standhouders</h2>
+        {hasVendor ? (
+          <>
+            {vendorOptions.length > 0 && (
+              <ul className="mt-2 divide-y divide-border">
+                {vendorOptions.map((v, i) => (
+                  <li key={i} className="flex items-start justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">{v.name}</p>
+                      {v.description && <p className="text-xs text-muted-foreground">{v.description}</p>}
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold text-foreground">{formatEuro(v.price)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {event.totalTables && (
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
+                <Table2 className="h-4 w-4 text-muted-foreground" /> {event.totalTables} tafels beschikbaar
+              </span>
+            )}
+            {event.vendorInfo && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{event.vendorInfo}</p>}
+          </>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">De organisator heeft nog geen standhouder-informatie toegevoegd.</p>
+        )}
+      </div>
+    </div>
+  );
+
+  const mediaPanel =
+    video || galleryImages.length > 0 ? (
+      <div className="space-y-6">
+        {video && (
+          <div className={panelCard}>
+            <h2 className="mb-2 text-lg font-semibold text-foreground">Video</h2>
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
+              <iframe
+                src={video.embedUrl}
+                title="Evenement-video"
+                className="absolute inset-0 h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          </div>
+        )}
+        {galleryImages.length > 0 && (
+          <div className={panelCard}>
+            <h2 className="mb-2 text-lg font-semibold text-foreground">Impressie</h2>
+            <EventGallery images={galleryImages} />
+          </div>
+        )}
+      </div>
+    ) : null;
 
   return (
     <PageContainer width="default" className="py-8">
@@ -258,119 +412,14 @@ export default async function EventDetailPage({
             )}
           </div>
 
-          {event.description && (
-            <div>
-              <h2 className="mb-2 text-lg font-semibold text-foreground">Over dit evenement</h2>
-              <div
-                className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
-                dangerouslySetInnerHTML={{ __html: event.description }}
-              />
-            </div>
-          )}
-
-          {/* Video */}
-          {video && (
-            <div>
-              <h2 className="mb-2 text-lg font-semibold text-foreground">Video</h2>
-              <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
-                <iframe
-                  src={video.embedUrl}
-                  title="Evenement-video"
-                  className="absolute inset-0 h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  referrerPolicy="strict-origin-when-cross-origin"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Impressiefoto's */}
-          {galleryImages.length > 0 && (
-            <div>
-              <h2 className="mb-2 text-lg font-semibold text-foreground">Impressie</h2>
-              <EventGallery images={galleryImages} />
-            </div>
-          )}
-
-          {/* Faciliteiten */}
-          {activeFacilities.length > 0 && (
-            <div>
-              <h2 className="mb-2 text-lg font-semibold text-foreground">Faciliteiten</h2>
-              <div className="flex flex-wrap gap-2">
-                {activeFacilities.map((k) => {
-                  const Icon = FACILITY_ICONS[k];
-                  return (
-                    <span key={k} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
-                      <Icon className="h-4 w-4" /> {FACILITY_LABELS_NL[k]}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Standhouders */}
-          {hasVendor && (
-            <div className="rounded-xl border border-border border-l-4 border-l-indigo-500/40 bg-card p-4">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Store className="h-5 w-5" /> Voor standhouders</h2>
-              {vendorOptions.length > 0 && (
-                <ul className="mt-2 divide-y divide-border">
-                  {vendorOptions.map((v, i) => (
-                    <li key={i} className="flex items-start justify-between gap-3 py-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{v.name}</p>
-                        {v.description && <p className="text-xs text-muted-foreground">{v.description}</p>}
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold text-foreground">{formatEuro(v.price)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {event.totalTables && (
-                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm text-foreground">
-                  <Table2 className="h-4 w-4 text-muted-foreground" /> {event.totalTables} tafels beschikbaar
-                </span>
-              )}
-              {event.vendorInfo && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{event.vendorInfo}</p>}
-            </div>
-          )}
-
-          {/* Toernooi */}
-          {event.eventType === "OP_TOERNOOI" && (event.tournamentFormat || event.prizePool || event.isSanctioned) && (
-            <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-950/30">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Trophy className="h-5 w-5" /> Toernooi-informatie</h2>
-              <dl className="mt-2 space-y-1 text-sm">
-                {event.tournamentFormat && <div><dt className="inline font-medium text-foreground">Format: </dt><dd className="inline text-muted-foreground">{event.tournamentFormat}</dd></div>}
-                {event.prizePool && <div><dt className="inline font-medium text-foreground">Prijzenpot: </dt><dd className="inline text-muted-foreground">{event.prizePool}</dd></div>}
-                {event.isSanctioned && <p className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><ShieldCheck className="h-4 w-4" /> Officieel gesanctioneerd (TCG+)</p>}
-              </dl>
-            </div>
-          )}
-
-          {/* Kaart */}
-          {event.lat !== null && event.lng !== null && (
-            <div>
-              <h2 className="mb-2 text-lg font-semibold text-foreground">Locatie op de kaart</h2>
-              <EventMap
-                locale={locale}
-                events={[{
-                  id: event.id,
-                  title: event.title,
-                  lat: event.lat,
-                  lng: event.lng,
-                  venueName: event.venueName,
-                  street: event.street,
-                  houseNumber: event.houseNumber,
-                  postalCode: event.postalCode,
-                  city: event.city,
-                  startTime: event.startTime.toISOString(),
-                  endTime: event.endTime.toISOString(),
-                  timezone: event.timezone,
-                }]}
-              />
-            </div>
-          )}
+          {/* Overige secties in tabs (hybride layout) */}
+          <EventDetailTabs
+            info={infoPanel}
+            location={locationPanel}
+            visitors={visitorsPanel}
+            vendors={vendorsPanel}
+            media={mediaPanel}
+          />
         </div>
 
         {/* Sidebar */}
