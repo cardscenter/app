@@ -317,7 +317,7 @@ export default async function EventDetailPage({
 
   const vendorsPanel = (
     <div className="space-y-6">
-      <div className={`${panelCard} border-l-4 border-l-indigo-500/40`}>
+      <div className={panelCard}>
         <SectionHeading kicker="Huren & reserveren" title="Voor standhouders" />
         {hasVendor ? (
           <>
