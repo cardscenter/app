@@ -243,6 +243,8 @@ model User {
   eventsReviewed    Event[]       @relation("EventReviewer")
   eventReportsFiled EventReport[] @relation("EventReporter")
   eventReportsReviewed EventReport[] @relation("EventReportReviewer")
+  eventRsvps EventRsvp[] @relation("EventRsvpUser")
+  eventVendorRequests EventVendorRequest[] @relation("EventVendorRequester")
 }
 
 // ============================================================
@@ -2557,8 +2559,10 @@ model Event {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  upsells     EventUpsell[]
-  reports     EventReport[]
+  upsells        EventUpsell[]
+  reports        EventReport[]
+  rsvps          EventRsvp[]
+  vendorRequests EventVendorRequest[]
 
   @@index([status, startTime])
   @@index([organizerId])
@@ -2581,6 +2585,51 @@ model EventUpsell {
 
   @@index([eventId])
   @@index([type, expiresAt])
+}
+
+// RSVP à la Facebook: "Geïnteresseerd" of "Ik ben aanwezig". Toggle-data
+// (Watchlist-patroon) — Cascade op beide relaties, geen moderatie-audit.
+model EventRsvp {
+  id        String   @id @default(cuid())
+
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation("EventRsvpUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  status    String   // INTERESTED | GOING
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@index([eventId, status])
+}
+
+// Standhouder-aanvraag: email-geverifieerde user vraagt de organisator om
+// vermelding bij "Aanwezige standhouders op dit event"; organisator keurt
+// goed/af via het dashboard. Herkansing na REJECTED via upsert naar PENDING.
+model EventVendorRequest {
+  id        String    @id @default(cuid())
+
+  eventId   String
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User      @relation("EventVendorRequester", fields: [userId], references: [id], onDelete: Cascade)
+
+  message   String?   // korte pitch aan de organisator (max 300 via zod)
+  status    String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  decidedAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@index([eventId, status])
 }
 
 model EventReport {
