@@ -35,6 +35,11 @@ function dayKeyInTz(iso: string, tz: string): string {
   return fmt.format(new Date(iso)); // en-CA → yyyy-mm-dd
 }
 
+// Begintijd "HH:mm" in de tijdzone van het event zelf.
+function timeInTz(iso: string, tz: string): string {
+  return new Intl.DateTimeFormat("nl-NL", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+}
+
 export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
   // Begin op de maand van het eerstvolgende event, anders de huidige maand.
   const initial = useMemo(() => {
@@ -90,6 +95,13 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
     return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`;
   })();
 
+  // Dagen in de zichtbare maand mét events — voor de mobiele agenda-weergave
+  // en de lege-maand-melding.
+  const agendaDays = useMemo(
+    () => cells.filter((c) => c.inMonth && (eventsByDay.get(c.key)?.length ?? 0) > 0),
+    [cells, eventsByDay],
+  );
+
   function prev() {
     setMonth(({ year, month }) => (month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 }));
   }
@@ -110,15 +122,15 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
         </button>
       </div>
 
-      {/* Weekdag-headers */}
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold uppercase text-muted-foreground">
+      {/* Weekdag-headers (desktop-grid) */}
+      <div className="hidden grid-cols-7 gap-1 text-center text-xs font-semibold uppercase text-muted-foreground sm:grid">
         {WEEKDAYS.map((w) => (
           <div key={w} className="py-1">{w}</div>
         ))}
       </div>
 
-      {/* Dag-cellen */}
-      <div className="grid grid-cols-7 gap-1">
+      {/* Dag-cellen (desktop-grid) */}
+      <div className="hidden grid-cols-7 gap-1 sm:grid">
         {cells.map((cell) => {
           const dayEvents = orderDayEvents(eventsByDay.get(cell.key) ?? []);
           const isToday = cell.key === todayKey;
@@ -182,6 +194,70 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Lege maand (desktop) */}
+      {agendaDays.length === 0 && (
+        <p className="mt-3 hidden rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground sm:block">
+          Geen evenementen in {MONTHS[month]} {year}. Blader naar een andere maand of pas je filters aan.
+        </p>
+      )}
+
+      {/* Mobiel: agenda-weergave — één rij per dag mét events (7 kolommen is
+          te krap op kleine schermen). Zelfde maand-navigatie hierboven. */}
+      <div className="sm:hidden">
+        {agendaDays.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+            Geen evenementen in {MONTHS[month]} {year}. Blader naar een andere maand of pas je filters aan.
+          </p>
+        ) : (
+          <div className="divide-y divide-border">
+            {agendaDays.map((cell) => {
+              const dayEvents = orderDayEvents(eventsByDay.get(cell.key) ?? []);
+              const isToday = cell.key === todayKey;
+              const weekday = WEEKDAYS[(new Date(cell.y, cell.m, cell.d).getDay() + 6) % 7];
+              return (
+                <div key={cell.key} className="flex gap-3 py-3 first:pt-1 last:pb-1">
+                  <div className={`h-fit w-12 shrink-0 rounded-lg py-1.5 text-center ${
+                    isToday ? "bg-blue-500 text-white" : "bg-muted text-foreground"
+                  }`}>
+                    <div className="text-lg font-bold leading-tight">{cell.d}</div>
+                    <div className={`text-[10px] font-semibold uppercase ${isToday ? "text-white/90" : "text-muted-foreground"}`}>
+                      {weekday}
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    {dayEvents.map((e) => (
+                      <Link
+                        key={e.id}
+                        href={`/evenementen/${e.id}`}
+                        className={`flex items-center gap-2.5 rounded-lg p-2 transition ${
+                          e.featured
+                            ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-900"
+                            : "bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-200 dark:hover:bg-indigo-900"
+                        }`}
+                      >
+                        <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md bg-muted">
+                          {e.coverImage ? (
+                            <Image src={e.coverImage} alt="" fill className="object-cover" sizes="36px" unoptimized />
+                          ) : (
+                            <span className="flex h-full items-center justify-center"><Calendar className="h-4 w-4 text-muted-foreground" /></span>
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">{e.title}</span>
+                          <span className="block truncate text-xs opacity-75">
+                            {timeInTz(e.startTime, e.timezone)} · {e.city}
+                          </span>
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
