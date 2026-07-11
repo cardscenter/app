@@ -228,7 +228,7 @@ export default async function EventDetailPage({
       <div className="space-y-6">
         {event.description && (
           <div className={panelCard}>
-            <SectionHeading kicker="Over" title="Over dit evenement" />
+            <SectionHeading kicker="Beschrijving" title="Over dit evenement" />
             <div
               className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
               dangerouslySetInnerHTML={{ __html: event.description }}
@@ -265,7 +265,7 @@ export default async function EventDetailPage({
 
   const locationPanel = (
     <div className={panelCard}>
-      <SectionHeading kicker="Locatie" title="Locatie & route" />
+      <SectionHeading kicker="Adres" title="Locatie & route" />
       <p className="flex items-center gap-2 text-sm text-muted-foreground">
         <MapPin className="h-4 w-4 shrink-0" />
         {event.venueName}, {event.street} {event.houseNumber}, {event.postalCode} {event.city}
@@ -318,7 +318,7 @@ export default async function EventDetailPage({
   const vendorsPanel = (
     <div className="space-y-6">
       <div className={`${panelCard} border-l-4 border-l-indigo-500/40`}>
-        <SectionHeading kicker="Standhouders" title="Voor standhouders" />
+        <SectionHeading kicker="Huren & reserveren" title="Voor standhouders" />
         {hasVendor ? (
           <>
             {vendorOptions.length > 0 && (
@@ -347,7 +347,7 @@ export default async function EventDetailPage({
       </div>
 
       <div className={panelCard}>
-        <SectionHeading kicker="Standhouders" title="Aanwezige standhouders op dit event" />
+        <SectionHeading kicker="Aanwezig" title="Standhouders op dit event" />
         <div className="mt-3">
           {approvedVendors.length > 0 ? (
             <EventVendorGrid vendors={approvedVendors} />
@@ -483,7 +483,7 @@ export default async function EventDetailPage({
         <div className="space-y-6">
           {/* ── Entree: eigen getinte sectie ── */}
           <section className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/70 via-card to-card p-5 shadow-card dark:border-indigo-800/40 dark:from-indigo-950/30 sm:p-6">
-            <SectionHeading kicker="Entree" title="Tickets & entree" />
+            <SectionHeading kicker="Toegang" title="Tickets & entree" />
 
             {event.entryType === "FREE" ? (
               <div className="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
