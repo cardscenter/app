@@ -25,6 +25,7 @@ import { EventGallery } from "@/components/events/event-gallery";
 import { EventFlyer } from "@/components/events/event-flyer";
 import { EventReportButton } from "@/components/events/event-report-button";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
+import { SocialShare } from "@/components/ui/social-share";
 import { parseSocialLinks, detectSocialPlatform } from "@/lib/events/socials";
 import { SocialIcon } from "@/components/events/social-icon";
 
@@ -455,7 +456,7 @@ export default async function EventDetailPage({
               goingCount={goingTotal}
               stack={rsvpStack}
             />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <a
                 href={`/api/events/${event.id}/ics`}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
@@ -470,6 +471,8 @@ export default async function EventDetailPage({
               >
                 <Navigation className="h-4 w-4" /> Plan je route
               </a>
+              <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
+              <SocialShare title={event.title} />
             </div>
           </div>
         </div>
@@ -508,7 +511,7 @@ export default async function EventDetailPage({
                       <div className="absolute inset-0 flex items-stretch">
                         {/* hoofdgedeelte: naam + beschrijving + servicekosten */}
                         <div className="flex min-w-0 basis-[70%] flex-col justify-center gap-0.5 py-2 pl-[8%] pr-1.5">
-                          <p className="truncate text-xs font-bold text-slate-900 sm:text-sm">{t.name}</p>
+                          <p className="truncate text-sm font-bold text-slate-900 sm:text-base">{t.name}</p>
                           {t.description && <p className="line-clamp-1 text-[10px] leading-snug text-slate-600">{t.description}</p>}
                           {t.serviceFee != null && t.serviceFee > 0 && (
                             <p className="text-[9px] text-slate-500">+ {formatEuro(t.serviceFee)} servicekosten</p>
@@ -516,7 +519,7 @@ export default async function EventDetailPage({
                         </div>
                         {/* stub: prijs */}
                         <div className="flex basis-[30%] items-center justify-center pr-[4%]">
-                          <p className="text-xs font-extrabold leading-tight text-slate-900 sm:text-sm">{formatEuro(t.price)}</p>
+                          <p className="whitespace-nowrap text-sm font-extrabold leading-none text-slate-900 sm:text-xl">{formatEuro(t.price)}</p>
                         </div>
                       </div>
                     </div>
