@@ -70,8 +70,9 @@ type DashboardNavProps = {
   level?: LevelInfo;
   adminPendingCounts?: { disputes?: number; verifications?: number; withdrawals?: number; buybacks?: number; reports?: number; sellerWarnings?: number; enterpriseRequests?: number };
   /** Live counts voor de "offer"-groep — auctions = ACTIVE+SCHEDULED,
-   *  claimsales = LIVE+SCHEDULED, listings = ACTIVE. */
-  counts?: { auctions: number; listings: number; claimsales: number };
+   *  claimsales = LIVE+SCHEDULED, listings = ACTIVE, events = alles behalve
+   *  DELETED (0 = nav-item verborgen). */
+  counts?: { auctions: number; listings: number; claimsales: number; events?: number };
 };
 
 const OPEN_STATE_STORAGE_KEY = "dashboard-nav-open";
@@ -131,7 +132,11 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
           { href: "/dashboard/veilingen", labelKey: "myAuctions", icon: Gavel, badge: counts?.auctions },
           { href: "/dashboard/claimsales", labelKey: "myClaimsales", icon: Tag, badge: counts?.claimsales },
           { href: "/dashboard/marktplaats", labelKey: "myListings", icon: Store, badge: counts?.listings },
-          { href: "/dashboard/evenementen", labelKey: "myEvents", icon: CalendarDays },
+          // Alleen zichtbaar als de user ooit een event heeft aangemaakt
+          // (PENDING/LIVE/REJECTED/ENDED — deep-link blijft altijd werken).
+          ...(counts?.events
+            ? [{ href: "/dashboard/evenementen", labelKey: "myEvents", icon: CalendarDays, badge: counts.events }]
+            : []),
         ],
       },
       {

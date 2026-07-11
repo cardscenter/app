@@ -139,18 +139,21 @@ export async function fetchBalanceOverview(userId: string): Promise<BalanceOverv
 }
 
 export type ActiveActivity = {
-  counts: { auctions: number; listings: number; claimsales: number };
+  counts: { auctions: number; listings: number; claimsales: number; events: number };
   bids: { highest: number; outbid: number; totalActive: number };
 };
 
 export async function fetchActiveActivity(userId: string): Promise<ActiveActivity> {
-  const [auctions, listings, claimsales, myAuctions] = await Promise.all([
+  const [auctions, listings, claimsales, events, myAuctions] = await Promise.all([
     // Auctions + claimsales tellen ook SCHEDULED mee — die zijn "in de pijplijn"
     // en horen in de nav-badge naast de echt-lopende items. Listings hebben geen
     // SCHEDULED-state.
     prisma.auction.count({ where: { sellerId: userId, status: { in: ["ACTIVE", "SCHEDULED"] } } }),
     prisma.listing.count({ where: { sellerId: userId, status: "ACTIVE" } }),
     prisma.claimsale.count({ where: { sellerId: userId, status: { in: ["LIVE", "SCHEDULED"] } } }),
+    // Events: alles behalve DELETED — het nav-item is verborgen zolang de user
+    // nog nooit een event heeft aangemaakt.
+    prisma.event.count({ where: { organizerId: userId, status: { not: "DELETED" } } }),
     prisma.auction.findMany({
       where: { status: "ACTIVE", bids: { some: { bidderId: userId } } },
       select: {
@@ -172,7 +175,7 @@ export async function fetchActiveActivity(userId: string): Promise<ActiveActivit
   }
 
   return {
-    counts: { auctions, listings, claimsales },
+    counts: { auctions, listings, claimsales, events },
     bids: { highest, outbid, totalActive: myAuctions.length },
   };
 }
