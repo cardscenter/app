@@ -78,7 +78,7 @@ export function EventRsvpButtons({
   const summary = (
     <div className="flex items-center gap-2.5">
       {stack.length > 0 && (
-        <div className="flex -space-x-2">
+        <div className="flex items-center gap-1">
           {stack.slice(0, 6).map((u) => (
             <AvatarBubble key={u.id} user={u} />
           ))}

@@ -20,8 +20,10 @@ export function EventMap({ events, locale }: { events: MapEvent[]; locale: strin
 
   // Kaart altijd renderen — met 0 markers blijft Leaflet op het default
   // Europa-overzicht en tonen we een overlay-pill i.p.v. een lege placeholder.
+  // `isolate z-0` sluit Leaflet's interne z-indexen (tot 1000) op in een eigen
+  // stacking-context, zodat lightboxen/drawers er altijd overheen vallen.
   return (
-    <div className="relative">
+    <div className="relative isolate z-0">
       <LeafletMap events={withCoords} locale={locale} />
       {withCoords.length === 0 && (
         <div className="pointer-events-none absolute inset-x-0 top-4 z-[500] flex justify-center">
