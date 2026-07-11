@@ -17,6 +17,8 @@ import { formatEuro } from "@/lib/events/format";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EventMap } from "@/components/events/event-map";
 import { EventDetailTabs } from "@/components/events/event-detail-tabs";
+import { EventRsvpButtons } from "@/components/events/event-rsvp-buttons";
+import { EventAttendeeList } from "@/components/events/event-attendee-list";
 import { EventGallery } from "@/components/events/event-gallery";
 import { EventFlyer } from "@/components/events/event-flyer";
 import { EventReportButton } from "@/components/events/event-report-button";
@@ -107,18 +109,51 @@ export default async function EventDetailPage({
       : `${event.street} ${event.houseNumber}, ${event.postalCode} ${event.city}, ${getEventCountryName(event.country, "nl")}`;
   const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(routeDestination)}`;
 
-  // Andere lopende events van dezelfde organisator (account).
-  const otherEvents = await prisma.event.findMany({
-    where: {
-      organizerId: event.organizer.id,
-      status: "LIVE",
-      endTime: { gte: new Date() },
-      id: { not: event.id },
-    },
-    orderBy: { startTime: "asc" },
-    take: 4,
-    select: { id: true, title: true, startTime: true, timezone: true, coverImage: true, city: true },
-  });
+  const viewerId = session?.user?.id ?? null;
+  const isOrganizer = viewerId === event.organizer.id;
+  const eventOver = event.endTime <= new Date();
+  const rsvpUserSelect = { select: { id: true, displayName: true, avatarUrl: true, city: true } } as const;
+
+  // Andere events + RSVP-data in één batch.
+  const [otherEvents, rsvpCounts, goingRows, interestedRows, viewerRsvp] = await Promise.all([
+    prisma.event.findMany({
+      where: {
+        organizerId: event.organizer.id,
+        status: "LIVE",
+        endTime: { gte: new Date() },
+        id: { not: event.id },
+      },
+      orderBy: { startTime: "asc" },
+      take: 4,
+      select: { id: true, title: true, startTime: true, timezone: true, coverImage: true, city: true },
+    }),
+    prisma.eventRsvp.groupBy({ by: ["status"], where: { eventId: event.id }, _count: true }),
+    prisma.eventRsvp.findMany({
+      where: { eventId: event.id, status: "GOING" },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      select: { user: rsvpUserSelect },
+    }),
+    prisma.eventRsvp.findMany({
+      where: { eventId: event.id, status: "INTERESTED" },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      select: { user: rsvpUserSelect },
+    }),
+    viewerId
+      ? prisma.eventRsvp.findUnique({
+          where: { eventId_userId: { eventId: event.id, userId: viewerId } },
+          select: { status: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  const goingTotal = rsvpCounts.find((c) => c.status === "GOING")?._count ?? 0;
+  const interestedTotal = rsvpCounts.find((c) => c.status === "INTERESTED")?._count ?? 0;
+  const goingUsers = goingRows.map((r) => r.user);
+  const interestedUsers = interestedRows.map((r) => r.user);
+  // Avatar-stack: aanwezigen eerst, dan geïnteresseerden.
+  const rsvpStack = [...goingUsers, ...interestedUsers].slice(0, 6);
 
   // ── Tab-panelen (hybride layout: hero + tickets altijd zichtbaar, rest in tabs) ──
 
@@ -206,10 +241,14 @@ export default async function EventDetailPage({
     </div>
   );
 
-  // Commit R3-C6 vervangt deze placeholder door de RSVP-lijsten.
   const visitorsPanel = (
     <div className={panelCard}>
-      <p className="text-sm text-muted-foreground">Nog geen aanmeldingen.</p>
+      <EventAttendeeList
+        going={goingUsers}
+        interested={interestedUsers}
+        goingTotal={goingTotal}
+        interestedTotal={interestedTotal}
+      />
     </div>
   );
 
@@ -321,6 +360,18 @@ export default async function EventDetailPage({
             <Navigation className="h-4 w-4" /> Plan je route
           </a>
         </div>
+
+        {/* RSVP à la Facebook */}
+        <EventRsvpButtons
+          eventId={event.id}
+          viewerStatus={(viewerRsvp?.status as "INTERESTED" | "GOING" | undefined) ?? null}
+          isLoggedIn={!!viewerId}
+          isOrganizer={isOrganizer}
+          eventOver={eventOver}
+          interestedCount={interestedTotal}
+          goingCount={goingTotal}
+          stack={rsvpStack}
+        />
       </div>
 
       <div className="mt-6 lg:grid lg:grid-cols-[1fr_320px] lg:gap-8">
@@ -419,6 +470,7 @@ export default async function EventDetailPage({
             visitors={visitorsPanel}
             vendors={vendorsPanel}
             media={mediaPanel}
+            visitorsCount={goingTotal + interestedTotal}
           />
         </div>
 

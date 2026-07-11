@@ -195,6 +195,9 @@ export const updateEventSchema = z
     }
   });
 
+// RSVP-toggle: NONE = huidige status verwijderen.
+export const rsvpStatusSchema = z.enum(["INTERESTED", "GOING", "NONE"]);
+
 export const reportEventSchema = z.object({
   reason: z.enum(["MISLEADING", "OFFENSIVE", "SPAM", "INAPPROPRIATE", "OTHER"]),
   details: z.string().min(10, "Geef wat meer details (min. 10 tekens)").max(1000),
