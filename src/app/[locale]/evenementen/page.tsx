@@ -181,8 +181,8 @@ export default async function EventsPage({
         </div>
       )}
 
-      {/* Two-column: sidebar + content. Extra top-ruimte op lg voor de Pikachu boven de events-box. */}
-      <div className="mt-6 lg:mt-32 lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
+      {/* Two-column: sidebar + content */}
+      <div className="mt-6 lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
         <aside className="hidden lg:block">
           <div className="lg:sticky lg:top-20">
             <EventFilterSidebar buyerHasPostcode={!!buyerCoord} />
