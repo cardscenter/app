@@ -11,7 +11,20 @@
  * Rijkere per-type varianten (bv. prijstabel) kunnen later via de bodyHtml-slot.
  */
 
-import { escapeHtml, getAppUrl } from "@/lib/email/send-email";
+/** App-URL helper — gebruikt NEXTAUTH_URL of fallback voor links in e-mails. */
+export function getAppUrl(): string {
+  return process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+}
+
+/** Minimalistische HTML-escape voor user-input in mail-templates. */
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 interface RenderArgs {
   recipientName: string;
