@@ -358,7 +358,7 @@ export default async function CardsOverviewPage() {
     <PageContainer width="wide" className="py-8">
       <ScrollToTop />
 
-      <header className="mb-6 mt-2">
+      <header className="mb-6">
         <h1 className="sr-only">Pokémon Kaarten Database</h1>
         {/* Plain <img>: Next image-optimizer faalt op Railway (zie performance-pass) */}
         <img
