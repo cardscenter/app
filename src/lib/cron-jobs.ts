@@ -302,6 +302,7 @@ export const CRON_JOB_NAMES = [
   "prune-bid-ips",
   "reset-free-upsells",
   "cleanup-sold-images",
+  "email-unread-messages",
 ] as const;
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
 
@@ -453,6 +454,12 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     description:
       "Verwijdert 30 dagen na voltooide verkoop (deliveredAt) de geüploade foto-bestanden van die verkoop (R2/schijf) en maakt de DB-foto-velden leeg — alle tekstdata blijft. Slaat bestellingen met lopend geschil/ticket over. Idempotent via imagesPurgedAt. Gedeelde foto's (listing met restvoorraad, claimsale-cover) blijven tot ook die volledig klaar zijn.",
     schedule: "Dagelijks",
+    allowManualRun: true,
+  },
+  "email-unread-messages": {
+    description:
+      "Mailt ontvangers van een chatbericht dat na 15 minuten nog ongelezen is (max 1 mail per ongelezen-episode per conversatie; respecteert e-mailvoorkeuren en alleen geverifieerde adressen). Ruimt ook EmailLog-rijen >90 dagen op. Draait primair in-process elke 5 min; deze route is safety-net + handmatige run.",
+    schedule: "Elke 10 min",
     allowManualRun: true,
   },
 };
@@ -1718,5 +1725,10 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     }
 
     return { itemsProcessed: processed, result: { processed, total: bundles.length, filesDeleted } };
+  },
+  "email-unread-messages": async () => {
+    const { sendUnreadChatEmails } = await import("@/lib/email/unread-chat-emails");
+    const r = await sendUnreadChatEmails();
+    return { itemsProcessed: r.emailsSent, result: r };
   },
 };

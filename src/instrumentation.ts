@@ -64,4 +64,15 @@ export async function register() {
     // eslint-disable-next-line no-console
     console.error("[instrumentation] pokewallet scheduler boot failed", err);
   }
+
+  // In-process scheduler voor chat-ongelezen-mails (Fase 16): elke 5 min
+  // checken of er chatberichten >15 min ongelezen zijn en de ontvanger mailen.
+  // Cron-route /api/cron/email-unread-messages blijft als safety-net + "Run nu".
+  try {
+    const { startUnreadEmailScheduler } = await import("@/lib/unread-email-scheduler");
+    startUnreadEmailScheduler("boot");
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[instrumentation] unread-email scheduler boot failed", err);
+  }
 }
