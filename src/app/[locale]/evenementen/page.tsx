@@ -181,15 +181,24 @@ export default async function EventsPage({
         </div>
       )}
 
-      {/* Two-column: sidebar + content */}
-      <div className="mt-6 lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
+      {/* Two-column: sidebar + content. Extra top-ruimte op lg voor de Pikachu boven de events-box. */}
+      <div className="mt-6 lg:mt-32 lg:grid lg:grid-cols-[260px_1fr] lg:gap-6">
         <aside className="hidden lg:block">
           <div className="lg:sticky lg:top-20">
             <EventFilterSidebar buyerHasPostcode={!!buyerCoord} />
           </div>
         </aside>
 
-        <div className="min-w-0">
+        <div className="relative min-w-0">
+          {/* Pikachu piept over de bovenrand van de events-box (alleen desktop).
+              De PNG is onderaan recht afgesneden; 1px tuck onder de box-rand verkoopt de illusie. */}
+          <img
+            src="/images/pikatop.png"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-[111px] left-1/2 hidden h-28 w-auto -translate-x-1/2 lg:block"
+          />
+          <div className="relative lg:rounded-2xl lg:border lg:border-border lg:bg-card lg:p-5">
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {events.length} {tabLabel}
@@ -248,6 +257,7 @@ export default async function EventsPage({
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
     </PageContainer>
