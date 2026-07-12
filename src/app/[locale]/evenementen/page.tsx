@@ -201,7 +201,7 @@ export default async function EventsPage({
           {/* Officiële event-logo's rechts op dezelfde box-rand (alleen desktop) */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -top-[63px] right-5 hidden items-end gap-3 lg:flex"
+            className="pointer-events-none absolute -top-[72px] right-5 hidden items-end gap-3 lg:flex"
           >
             <img src="/images/playlogo.png" alt="" className="h-14 w-auto" />
             <img src="/images/regionalslogo.png" alt="" className="h-16 w-auto" />
