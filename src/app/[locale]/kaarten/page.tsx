@@ -361,17 +361,16 @@ export default async function CardsOverviewPage() {
       <Breadcrumbs items={[{ label: "Kaarten" }]} />
 
       <header className="mb-6 mt-2">
-        <div className="flex items-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Layers className="size-6" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Pokémon Kaarten Database</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Bekijk alle kaarten per set, vergelijk marktprijzen en zie wat er nu te koop is.
-            </p>
-          </div>
-        </div>
+        <h1 className="sr-only">Pokémon Kaarten Database</h1>
+        {/* Plain <img>: Next image-optimizer faalt op Railway (zie performance-pass) */}
+        <img
+          src="/images/PKMdatabase.png"
+          alt="Pokémon Database"
+          className="h-16 w-auto sm:h-20"
+        />
+        <p className="mt-2 text-sm text-muted-foreground">
+          Bekijk alle kaarten per set, vergelijk marktprijzen en zie wat er nu te koop is.
+        </p>
       </header>
 
       <div className="mb-6">
