@@ -152,6 +152,14 @@ model User {
   // Niet blokkerend voor functionaliteit — alleen visuele nudge via dashboard-banner.
   emailVerifiedAt    DateTime?
 
+  // Twee-factor-authenticatie via TOTP/authenticator-app (Fase 16-followup).
+  // totpSecret wordt al bij enrollment-start gezet; pas geldig als totpEnabled
+  // true is (na succesvolle code-bevestiging). totpBackupCodes = JSON-array
+  // van bcrypt-hashes; gebruikte codes worden uit de array verwijderd.
+  totpSecret      String?
+  totpEnabled     Boolean @default(false)
+  totpBackupCodes String?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

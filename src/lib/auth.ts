@@ -1,9 +1,23 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import "next-auth/jwt";
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { verifyTotpOrBackupCode } from "@/lib/two-factor";
+
+/**
+ * 2FA-signalen vanuit authorize (Fase 16-followup). CredentialsSignin-
+ * subclasses behouden hun `code` door de NextAuth-error-laag heen, zodat de
+ * login-action "wachtwoord goed maar code nodig" kan onderscheiden van
+ * "ongeldige inloggegevens".
+ */
+export class TotpRequiredError extends CredentialsSignin {
+  code = "totp_required";
+}
+export class TotpInvalidError extends CredentialsSignin {
+  code = "totp_invalid";
+}
 
 declare module "next-auth" {
   interface Session {
@@ -34,6 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        totpCode: { label: "2FA-code", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -50,6 +65,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
 
         if (!passwordMatch) return null;
+
+        // 2FA (Fase 16-followup): wachtwoord klopt, maar bij totpEnabled is
+        // ook een geldige TOTP- of backup-code vereist. Aparte error-codes
+        // zodat de login-UI de 2FA-stap kan tonen i.p.v. "ongeldige gegevens".
+        if (user.totpEnabled && user.totpSecret) {
+          const totpCode = (credentials.totpCode as string | undefined)?.trim();
+          if (!totpCode) throw new TotpRequiredError();
+          const check = await verifyTotpOrBackupCode({
+            code: totpCode,
+            totpSecret: user.totpSecret,
+            backupCodesJson: user.totpBackupCodes,
+            consumeForUserId: user.id,
+          });
+          if (!check.valid) throw new TotpInvalidError();
+        }
 
         // Fase 29: snapshot login-IP voor anti-shill-bidding-detectie. Wordt
         // door placeBid gebruikt om hard-block te triggeren als een bidder

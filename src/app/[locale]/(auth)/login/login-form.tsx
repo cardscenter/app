@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { login } from "@/actions/auth";
 import { useActionState } from "react";
-import { Mail, AlertCircle, ArrowRight } from "lucide-react";
+import { Mail, AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,7 +20,10 @@ export function LoginForm({ locale }: LoginFormProps) {
   const [rememberMe, setRememberMe] = useState(false);
 
   const [state, formAction, pending] = useActionState(
-    async (_prev: { error?: string } | null, formData: FormData) => {
+    async (
+      _prev: { error?: string; totpRequired?: boolean } | null,
+      formData: FormData,
+    ) => {
       const result = await login(formData);
       if (result && "success" in result && result.success) {
         window.location.href = `/${locale}`;
@@ -30,6 +33,8 @@ export function LoginForm({ locale }: LoginFormProps) {
     },
     null,
   );
+
+  const totpStep = Boolean(state && "totpRequired" in state && state.totpRequired);
 
   return (
     <div className="flex h-full items-start justify-center overflow-y-auto bg-background px-4 pb-12 pt-16 sm:px-8 lg:px-12 lg:pt-[12vh]">
@@ -93,6 +98,33 @@ export function LoginForm({ locale }: LoginFormProps) {
               placeholder="••••••••"
             />
           </div>
+
+          {totpStep && (
+            <div className="space-y-1.5 rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-4 text-primary" />
+                <Label htmlFor="totpCode" className="text-sm font-medium text-foreground">
+                  Twee-factor-code
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vul de 6-cijferige code uit je authenticator-app in, of een backup-code
+                (XXXX-XXXX).
+              </p>
+              <Input
+                id="totpCode"
+                name="totpCode"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={9}
+                required
+                autoFocus
+                placeholder="123456"
+                className="h-11 text-center text-lg tracking-[0.3em]"
+              />
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <Checkbox

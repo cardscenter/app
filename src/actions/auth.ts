@@ -169,6 +169,7 @@ export async function register(formData: FormData) {
 export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const totpCode = (formData.get("totpCode") as string | null)?.trim() || undefined;
   // rememberMe is geaccepteerd voor UI-affordance; functionele JWT-extensie
   // wacht op een NextAuth-callback uitbreiding (open follow-up).
   // const rememberMe = formData.get("rememberMe") === "on";
@@ -188,15 +189,30 @@ export async function login(formData: FormData) {
     await signIn("credentials", {
       email,
       password,
+      ...(totpCode ? { totpCode } : {}),
       redirect: false,
     });
   } catch (error) {
     if (error instanceof AuthError) {
+      // 2FA-signalen (Fase 16-followup): CredentialsSignin-subclasses geven
+      // hun code door. "totp_required" = wachtwoord klopt, geen strafpunt —
+      // de UI toont de code-stap. "totp_invalid" telt wél als failed attempt
+      // (brute-force-bescherming op de 6-cijferige code).
+      const code = (error as { code?: string }).code;
+      if (code === "totp_required") {
+        return { totpRequired: true as const };
+      }
       const { cooldownActive, cooldownMs: newCooldown } = recordFailedAttempt(ip);
       if (cooldownActive) {
         const minutes = Math.ceil(newCooldown / 60000);
         return {
           error: `Te veel mislukte pogingen. Probeer opnieuw over ${minutes} minuten.`,
+        };
+      }
+      if (code === "totp_invalid") {
+        return {
+          totpRequired: true as const,
+          error: "Ongeldige 2FA-code. Probeer opnieuw of gebruik een backup-code.",
         };
       }
       return { error: "Ongeldige inloggegevens" };

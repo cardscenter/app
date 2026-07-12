@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { ProfileForm } from "@/components/dashboard/profile-form";
 import { PasswordChangeForm } from "@/components/dashboard/password-change-form";
+import { TwoFactorSettings } from "@/components/dashboard/two-factor-settings";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
 import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
@@ -170,6 +171,7 @@ export default async function ProfilePage({
             }
           />
           <PasswordChangeForm />
+          <TwoFactorSettings enabled={user.totpEnabled} />
         </div>
       </Section>
 
