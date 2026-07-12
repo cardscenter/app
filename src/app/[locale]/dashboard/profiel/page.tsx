@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { ProfileForm } from "@/components/dashboard/profile-form";
+import { PasswordChangeForm } from "@/components/dashboard/password-change-form";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
 import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
@@ -22,7 +23,6 @@ import {
   CreditCard,
   Award,
   Building2,
-  Lock,
   History,
   Sparkles,
   Truck,
@@ -169,16 +169,7 @@ export default async function ProfilePage({
               </Link>
             }
           />
-          <ReadOnlyRow
-            icon={<Lock className="size-4" />}
-            label="Wachtwoord"
-            value="••••••••"
-            action={
-              <span className="text-xs text-muted-foreground italic">
-                Wijzigen via support
-              </span>
-            }
-          />
+          <PasswordChangeForm />
         </div>
       </Section>
 

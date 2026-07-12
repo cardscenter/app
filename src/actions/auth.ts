@@ -359,3 +359,58 @@ export async function resetPassword(
 
   return { success: true };
 }
+
+/**
+ * Wachtwoord wijzigen vanuit /dashboard/profiel (Fase 16-followup — verving
+ * de "Wijzigen via support"-placeholder uit Fase 27.108). Vereist het huidige
+ * wachtwoord als bewijs; geen e-mail-flow nodig. Stuurt na succes een
+ * ACCOUNT_UPDATE-notificatie (altijd-aan mailcategorie) als security-signaal.
+ */
+export async function changePassword(
+  formData: FormData,
+): Promise<{ success: true } | { error: string }> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return { error: "Niet ingelogd." };
+
+  const currentPassword = formData.get("currentPassword") as string | null;
+  const newPassword = formData.get("newPassword") as string | null;
+  const confirmPassword = formData.get("confirmPassword") as string | null;
+
+  if (!currentPassword) return { error: "Vul je huidige wachtwoord in." };
+  if (!newPassword || newPassword.length < 8) {
+    return { error: "Nieuw wachtwoord moet minstens 8 tekens zijn." };
+  }
+  if (newPassword !== confirmPassword) {
+    return { error: "De nieuwe wachtwoorden komen niet overeen." };
+  }
+  if (newPassword === currentPassword) {
+    return { error: "Het nieuwe wachtwoord moet anders zijn dan het huidige." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true },
+  });
+  if (!user?.passwordHash) {
+    return { error: "Dit account heeft geen wachtwoord-login. Neem contact op via de site." };
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) return { error: "Huidig wachtwoord is onjuist." };
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+
+  // Security-signaal: in-app + mail (account-categorie is altijd aan).
+  const { createNotification } = await import("@/actions/notification");
+  await createNotification(
+    userId,
+    "ACCOUNT_UPDATE",
+    "Je wachtwoord is gewijzigd",
+    "Het wachtwoord van je Cards Center-account is zojuist gewijzigd. Was jij dit niet? Reset dan direct je wachtwoord via 'Wachtwoord vergeten' op de inlogpagina.",
+    "/dashboard/profiel",
+  );
+
+  return { success: true };
+}
