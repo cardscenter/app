@@ -20,11 +20,11 @@ export function TotpStepUpField({
       <div className="flex items-center gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/images/google_auth.webp" alt="" width={18} height={18} className="rounded" />
-        <span className="text-sm font-medium text-foreground">Bevestig met je 2FA-code</span>
+        <span className="text-sm font-medium text-foreground">Google Authenticator</span>
         <ShieldCheck className="size-4 text-primary" />
       </div>
       <p className="text-xs text-muted-foreground">
-        Vul de 6-cijferige code uit je authenticator-app in, of een backup-code (XXXX-XXXX).
+        Vul de 6-cijferige code uit je authenticator-app in.
       </p>
       <input
         type="text"
