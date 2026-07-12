@@ -198,6 +198,14 @@ export default async function EventsPage({
             aria-hidden="true"
             className="pointer-events-none absolute -top-[111px] left-1/2 hidden h-28 w-auto -translate-x-1/2 lg:block"
           />
+          {/* Officiële event-logo's rechts op dezelfde box-rand (alleen desktop) */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-[63px] right-0 hidden items-end gap-3 lg:flex"
+          >
+            <img src="/images/playlogo.png" alt="" className="h-14 w-auto" />
+            <img src="/images/regionalslogo.png" alt="" className="h-16 w-auto" />
+          </div>
           <div className="relative lg:rounded-2xl lg:border lg:border-border lg:bg-card lg:p-5">
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
