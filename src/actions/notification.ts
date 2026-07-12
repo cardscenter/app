@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { publish, userChannel } from "@/lib/realtime";
+import { maybeSendNotificationEmail } from "@/lib/email/notification-email";
 
 export async function createNotification(
   userId: string,
@@ -24,6 +25,12 @@ export async function createNotification(
     type: "notification-created",
     payload: { unreadCount },
   });
+
+  // E-mail-dispatch (Fase 16) — fire-and-forget: categorie-map + voorkeuren +
+  // throttle zitten in de dispatcher; een mailfout mag de actie nooit breken.
+  void maybeSendNotificationEmail({ userId, type, title, body, link }).catch((err) =>
+    console.error("[email] dispatch faalde:", err),
+  );
 }
 
 export async function getUnreadCount(): Promise<number> {

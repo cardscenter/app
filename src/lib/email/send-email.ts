@@ -19,6 +19,8 @@ interface SendEmailArgs {
   subject: string;
   html: string;
   text: string;
+  /** Extra SMTP-headers, bv. List-Unsubscribe (Fase 16). */
+  headers?: Record<string, string>;
 }
 
 interface SendEmailResult {
@@ -51,12 +53,17 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
         "EMAIL_PROVIDER=resend maar EMAIL_FROM ontbreekt — zet de afzender in de env-vars.",
       );
     }
+    // Optioneel reply-adres (Fase 16): noreply@ als afzender, maar replies
+    // komen binnen op bv. info@poke-center.nl zonder mailbox op het domein.
+    const replyTo = process.env.EMAIL_REPLY_TO;
     const { data, error } = await getResendClient().emails.send({
       from,
       to: args.to,
       subject: args.subject,
       html: args.html,
       text: args.text,
+      ...(replyTo ? { replyTo } : {}),
+      ...(args.headers ? { headers: args.headers } : {}),
     });
     if (error) {
       throw new Error(`Resend kon de e-mail niet versturen: ${error.message}`);
@@ -80,7 +87,7 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
 }
 
 /** App-URL helper — gebruikt NEXTAUTH_URL of fallback voor links in e-mails. */
-function getAppUrl(): string {
+export function getAppUrl(): string {
   return process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 }
 
@@ -175,7 +182,7 @@ Vragen? Reply gerust op deze mail — we lezen ze allemaal.
 }
 
 /** Minimalistische HTML-escape voor user-input in mail-templates. */
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
