@@ -44,6 +44,7 @@ export function renderNotificationEmail(args: RenderArgs): { html: string; text:
   const appUrl = getAppUrl();
   const logoUrl = `${appUrl}/images/logo-white-bg.png`;
   const dashboardUrl = `${appUrl}/nl/dashboard`;
+  const supportUrl = `${appUrl}/nl/support`;
   const ctaUrl = args.ctaUrl
     ? args.ctaUrl.startsWith("http")
       ? args.ctaUrl
@@ -59,6 +60,8 @@ ${args.title}
 
 ${args.body}
 ${ctaUrl ? `\n${ctaLabel}: ${ctaUrl}\n` : ""}
+Hulp nodig? Open een support ticket: ${supportUrl}
+
 — Team Cards Center${
     args.unsubscribeUrl
       ? `\n\nGeen mails meer over dit onderwerp? Afmelden: ${args.unsubscribeUrl}`
@@ -166,7 +169,7 @@ ${ctaUrl ? `\n${ctaLabel}: ${ctaUrl}\n` : ""}
           </tr>
           <tr>
             <td class="footer" width="100%">
-              <p style="margin-bottom:8px;font-size:14px;">Vragen? Neem contact op via <a href="${appUrl}" style="color:#2563eb;">Cards Center</a>. Dit adres wordt niet gelezen.</p>
+              <p style="margin-bottom:8px;font-size:14px;">Hulp nodig? <a href="${supportUrl}" style="color:#2563eb;text-decoration:underline;font-weight:500;">Open een support ticket</a>. Dit adres wordt niet gelezen.</p>
               <p style="color:#6b7c8d;font-size:14px;margin-bottom:0;">&copy; Cards Center &ndash; Alle rechten voorbehouden</p>
               ${
                 args.unsubscribeUrl
