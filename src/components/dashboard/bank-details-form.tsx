@@ -7,6 +7,7 @@ import { Landmark } from "lucide-react";
 import { toast } from "sonner";
 import { updateBankDetails } from "@/actions/profile";
 import { formatIbanForDisplay } from "@/lib/validations/iban";
+import { TotpStepUpField } from "@/components/dashboard/totp-step-up-field";
 
 interface BankDetailsFormProps {
   iban: string | null;
@@ -23,6 +24,8 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
   const [ibanInput, setIbanInput] = useState(iban ?? "");
   const [holderInput, setHolderInput] = useState(accountHolderName ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
 
   const lastChangeDate = lastIbanChange ? new Date(lastIbanChange) : null;
   const daysSinceChange = lastChangeDate
@@ -38,15 +41,19 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
     const formData = new FormData();
     formData.set("iban", ibanInput);
     formData.set("accountHolderName", holderInput);
+    if (totpCode) formData.set("totpCode", totpCode);
 
     startTransition(async () => {
       const result = await updateBankDetails(formData);
       if (result.error) {
+        if ("totpRequired" in result && result.totpRequired) setTotpRequired(true);
         setError(result.error);
         return;
       }
       toast.success(t("bankSaved"));
       setEditing(false);
+      setTotpRequired(false);
+      setTotpCode("");
       router.refresh();
     });
   }
@@ -135,6 +142,8 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
           {t("ibanChangeWarning", { days: cooldownDays })}
         </p>
       )}
+
+      {totpRequired && <TotpStepUpField value={totpCode} onChange={setTotpCode} />}
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 

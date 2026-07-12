@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyTotpOrBackupCode } from "@/lib/two-factor";
+import { isTrustedDevice } from "@/lib/trusted-device";
 
 /**
  * 2FA-signalen vanuit authorize (Fase 16-followup). CredentialsSignin-
@@ -67,18 +68,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!passwordMatch) return null;
 
         // 2FA (Fase 16-followup): wachtwoord klopt, maar bij totpEnabled is
-        // ook een geldige TOTP- of backup-code vereist. Aparte error-codes
-        // zodat de login-UI de 2FA-stap kan tonen i.p.v. "ongeldige gegevens".
+        // ook een geldige TOTP- of backup-code vereist — tenzij dit apparaat
+        // een geldige 30d trust-cookie heeft ("dit apparaat vertrouwen").
+        // Aparte error-codes zodat de login-UI de 2FA-stap kan tonen i.p.v.
+        // "ongeldige gegevens".
         if (user.totpEnabled && user.totpSecret) {
-          const totpCode = (credentials.totpCode as string | undefined)?.trim();
-          if (!totpCode) throw new TotpRequiredError();
-          const check = await verifyTotpOrBackupCode({
-            code: totpCode,
-            totpSecret: user.totpSecret,
-            backupCodesJson: user.totpBackupCodes,
-            consumeForUserId: user.id,
-          });
-          if (!check.valid) throw new TotpInvalidError();
+          const trusted = await isTrustedDevice(user.id, user.totpSecret);
+          if (!trusted) {
+            const totpCode = (credentials.totpCode as string | undefined)?.trim();
+            if (!totpCode) throw new TotpRequiredError();
+            const check = await verifyTotpOrBackupCode({
+              code: totpCode,
+              totpSecret: user.totpSecret,
+              backupCodesJson: user.totpBackupCodes,
+              consumeForUserId: user.id,
+            });
+            if (!check.valid) throw new TotpInvalidError();
+          }
         }
 
         // Fase 29: snapshot login-IP voor anti-shill-bidding-detectie. Wordt

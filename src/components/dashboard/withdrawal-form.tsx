@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { requestWithdrawal } from "@/actions/withdrawal";
+import { TotpStepUpField } from "@/components/dashboard/totp-step-up-field";
 
 interface WithdrawalFormProps {
   available: number;
@@ -19,6 +20,8 @@ export function WithdrawalForm({ available, minAmount, disabled, disabledReason 
   const [pending, startTransition] = useTransition();
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
 
   const value = parseFloat(amount) || 0;
   const isValid = value >= minAmount && value <= available;
@@ -29,15 +32,19 @@ export function WithdrawalForm({ available, minAmount, disabled, disabledReason 
 
     const formData = new FormData();
     formData.set("amount", amount);
+    if (totpCode) formData.set("totpCode", totpCode);
 
     startTransition(async () => {
       const result = await requestWithdrawal(formData);
       if (result.error) {
+        if ("totpRequired" in result && result.totpRequired) setTotpRequired(true);
         setError(result.error);
         return;
       }
       toast.success(t("requestSubmitted"));
       setAmount("");
+      setTotpRequired(false);
+      setTotpCode("");
       router.refresh();
     });
   }
@@ -81,6 +88,8 @@ export function WithdrawalForm({ available, minAmount, disabled, disabledReason 
           {t("minAmountHint", { min: minAmount.toFixed(2) })}
         </p>
       </div>
+
+      {totpRequired && <TotpStepUpField value={totpCode} onChange={setTotpCode} />}
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 

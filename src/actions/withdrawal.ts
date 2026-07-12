@@ -7,6 +7,7 @@ import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
 import { WITHDRAWAL_MIN_AMOUNT } from "@/lib/withdrawal-config";
 import { requireEmailVerified } from "@/lib/email-verification";
+import { requireTotpStepUp } from "@/lib/two-factor";
 import { publish, userChannel } from "@/lib/realtime";
 import { z } from "zod";
 
@@ -35,6 +36,19 @@ export async function requestWithdrawal(formData: FormData) {
 
   const verified = await requireEmailVerified(session.user.id);
   if ("error" in verified) return { error: verified.error };
+
+  // Step-up 2FA (Fase 16-followup): uitbetalen is het punt waar geld het
+  // platform verlaat — code vereist tenzij dit apparaat vertrouwd is (30d).
+  const stepUp = await requireTotpStepUp(
+    session.user.id,
+    formData.get("totpCode") as string | null,
+  );
+  if (stepUp === "code_required") {
+    return { totpRequired: true as const, error: "Bevestig deze uitbetaling met je 2FA-code." };
+  }
+  if (stepUp === "invalid") {
+    return { totpRequired: true as const, error: "Ongeldige 2FA-code. Probeer opnieuw." };
+  }
 
   const parsed = requestSchema.safeParse({ amount: formData.get("amount") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };

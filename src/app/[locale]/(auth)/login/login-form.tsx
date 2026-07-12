@@ -102,10 +102,12 @@ export function LoginForm({ locale }: LoginFormProps) {
           {totpStep && (
             <div className="space-y-1.5 rounded-lg border border-primary/30 bg-primary/5 p-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="size-4 text-primary" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/google_auth.webp" alt="" width={18} height={18} className="rounded" />
                 <Label htmlFor="totpCode" className="text-sm font-medium text-foreground">
                   Twee-factor-code
                 </Label>
+                <ShieldCheck className="size-4 text-primary" />
               </div>
               <p className="text-xs text-muted-foreground">
                 Vul de 6-cijferige code uit je authenticator-app in, of een backup-code
@@ -123,6 +125,12 @@ export function LoginForm({ locale }: LoginFormProps) {
                 placeholder="123456"
                 className="h-11 text-center text-lg tracking-[0.3em]"
               />
+              <label className="flex cursor-pointer items-center gap-2 pt-1">
+                <input type="checkbox" name="trustDevice" className="h-4 w-4 accent-primary" />
+                <span className="text-xs text-muted-foreground">
+                  Dit apparaat 30 dagen vertrouwen — geen code meer nodig op dit apparaat
+                </span>
+              </label>
             </div>
           )}
 

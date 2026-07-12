@@ -9,10 +9,15 @@ export async function requireAdmin(): Promise<{ adminId: string }> {
   }
   const me = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { accountType: true },
+    select: { accountType: true, totpEnabled: true },
   });
   if (me?.accountType !== "ADMIN") {
     throw new Error("Forbidden");
+  }
+  // 2FA verplicht voor admins (Fase 16-followup). De admin-layout toont het
+  // instructiescherm; deze check is defense-in-depth voor directe action-calls.
+  if (!me.totpEnabled) {
+    throw new Error("Stel eerst twee-factor-authenticatie in via je profiel — verplicht voor admin-accounts.");
   }
   return { adminId: session.user.id };
 }

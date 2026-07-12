@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { saveUploadedFile } from "@/lib/upload";
 import { isValidIbanFormat, normalizeIban, IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
 import { EMAIL_PREF_CATEGORIES, parseEmailPreferences } from "@/lib/email/preferences-config";
+import { requireTotpStepUp } from "@/lib/two-factor";
 import { z } from "zod";
 
 const profileSchema = z.object({
@@ -118,6 +119,19 @@ const bankDetailsSchema = z.object({
 export async function updateBankDetails(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  // Step-up 2FA (Fase 16-followup): bankgegevens wijzigen is de voorbereidende
+  // stap van geld wegsluizen — code vereist tenzij dit apparaat vertrouwd is.
+  const stepUp = await requireTotpStepUp(
+    session.user.id,
+    formData.get("totpCode") as string | null,
+  );
+  if (stepUp === "code_required") {
+    return { totpRequired: true as const, error: "Bevestig deze wijziging met je 2FA-code." };
+  }
+  if (stepUp === "invalid") {
+    return { totpRequired: true as const, error: "Ongeldige 2FA-code. Probeer opnieuw." };
+  }
 
   const result = bankDetailsSchema.safeParse({
     iban: formData.get("iban"),

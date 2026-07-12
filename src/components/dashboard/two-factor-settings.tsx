@@ -146,9 +146,13 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
       {/* Stap 1 — QR scannen + code bevestigen */}
       {step === "scan" && qrDataUrl && (
         <div className="space-y-3 border-t border-border px-3 py-3">
-          <p className="text-sm text-foreground">
-            <strong>1.</strong> Scan deze QR-code met Google Authenticator (of een andere
-            authenticator-app):
+          <p className="flex items-center gap-2 text-sm text-foreground">
+            <strong>1.</strong>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/google_auth.webp" alt="Google Authenticator" width={20} height={20} className="rounded" />
+            <span>
+              Scan deze QR-code met Google Authenticator (of een andere authenticator-app):
+            </span>
           </p>
           <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-start sm:gap-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}

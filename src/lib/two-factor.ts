@@ -18,6 +18,39 @@ export const BACKUP_CODE_COUNT = 8;
 // ±30s tolerantie = accepteer de vorige/volgende 30s-stap ook (klok-drift telefoon).
 export const TOTP_EPOCH_TOLERANCE_SECONDS = 30;
 
+/**
+ * Step-up-check voor gevoelige acties (uitbetaling, IBAN wijzigen, wachtwoord
+ * wijzigen). Verloop:
+ *   - 2FA uit → "ok" (niets te checken)
+ *   - vertrouwd apparaat (30d-cookie) → "ok"
+ *   - geen code meegegeven → "code_required" (UI toont het code-veld)
+ *   - code klopt (TOTP of backup, backup wordt verbruikt) → "ok", anders "invalid"
+ */
+export async function requireTotpStepUp(
+  userId: string,
+  code: string | null | undefined,
+): Promise<"ok" | "code_required" | "invalid"> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { totpEnabled: true, totpSecret: true, totpBackupCodes: true },
+  });
+  if (!user?.totpEnabled || !user.totpSecret) return "ok";
+
+  const { isTrustedDevice } = await import("@/lib/trusted-device");
+  if (await isTrustedDevice(userId, user.totpSecret)) return "ok";
+
+  const trimmed = code?.trim();
+  if (!trimmed) return "code_required";
+
+  const check = await verifyTotpOrBackupCode({
+    code: trimmed,
+    totpSecret: user.totpSecret,
+    backupCodesJson: user.totpBackupCodes,
+    consumeForUserId: userId,
+  });
+  return check.valid ? "ok" : "invalid";
+}
+
 export async function verifyTotpOrBackupCode(args: {
   code: string;
   totpSecret: string;

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Link } from "@/i18n/navigation";
 import { Lock, Check, Loader2 } from "lucide-react";
 import { changePassword } from "@/actions/auth";
+import { TotpStepUpField } from "@/components/dashboard/totp-step-up-field";
 
 /**
  * Wachtwoord-wijzigen rij + uitklap-formulier op /dashboard/profiel
@@ -14,6 +15,8 @@ export function PasswordChangeForm() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -21,15 +24,19 @@ export function PasswordChangeForm() {
     setError(null);
     const form = e.currentTarget;
     const formData = new FormData(form);
+    if (totpCode) formData.set("totpCode", totpCode);
     startTransition(async () => {
       const result = await changePassword(formData);
       if ("error" in result) {
+        if ("totpRequired" in result && result.totpRequired) setTotpRequired(true);
         setError(result.error);
         return;
       }
       form.reset();
       setOpen(false);
       setSaved(true);
+      setTotpRequired(false);
+      setTotpCode("");
       setTimeout(() => setSaved(false), 4000);
     });
   }
@@ -111,6 +118,8 @@ export function PasswordChangeForm() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">Minimaal 8 tekens.</p>
+
+          {totpRequired && <TotpStepUpField value={totpCode} onChange={setTotpCode} />}
 
           {error && (
             <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">

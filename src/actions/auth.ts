@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
 import { signIn, auth } from "@/lib/auth";
 import { AuthError } from "next-auth";
+import { requireTotpStepUp } from "@/lib/two-factor";
 import { saveUploadedFile } from "@/lib/upload";
 import { setupStaticShippingMethods } from "@/actions/shipping-method";
 import {
@@ -170,6 +171,7 @@ export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const totpCode = (formData.get("totpCode") as string | null)?.trim() || undefined;
+  const trustDevice = formData.get("trustDevice") === "on";
   // rememberMe is geaccepteerd voor UI-affordance; functionele JWT-extensie
   // wacht op een NextAuth-callback uitbreiding (open follow-up).
   // const rememberMe = formData.get("rememberMe") === "on";
@@ -221,6 +223,21 @@ export async function login(formData: FormData) {
 
   // Succesvolle login → reset attempts voor dit IP
   clearAttempts(ip);
+
+  // "Dit apparaat 30 dagen vertrouwen" (Fase 16-followup): alleen zetten als
+  // er daadwerkelijk een 2FA-code is geverifieerd in deze login — anders zou
+  // een wachtwoord-only login de 2FA-check kunnen omzeilen.
+  if (trustDevice && totpCode) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, totpEnabled: true, totpSecret: true },
+    });
+    if (user?.totpEnabled && user.totpSecret) {
+      const { setTrustedDeviceCookie } = await import("@/lib/trusted-device");
+      await setTrustedDeviceCookie(user.id, user.totpSecret);
+    }
+  }
+
   return { success: true };
 }
 
@@ -414,6 +431,16 @@ export async function changePassword(
 
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) return { error: "Huidig wachtwoord is onjuist." };
+
+  // Step-up 2FA (Fase 16-followup): bij ingeschakelde 2FA is naast het huidige
+  // wachtwoord ook een code vereist — tenzij dit apparaat vertrouwd is (30d).
+  const stepUp = await requireTotpStepUp(userId, formData.get("totpCode") as string | null);
+  if (stepUp === "code_required") {
+    return { totpRequired: true as const, error: "Bevestig deze wijziging met je 2FA-code." };
+  }
+  if (stepUp === "invalid") {
+    return { totpRequired: true as const, error: "Ongeldige 2FA-code. Probeer opnieuw." };
+  }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
