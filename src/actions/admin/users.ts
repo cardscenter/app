@@ -56,7 +56,7 @@ export async function forceUsernameReset(userId: string) {
 
   await createNotification(
     userId,
-    "NEW_MESSAGE",
+    "ACCOUNT_UPDATE",
     "Username-cooldown gereset",
     "Een admin heeft je username-cooldown gereset. Je kunt nu opnieuw je gebruikersnaam wijzigen.",
     "/dashboard/profiel"
@@ -124,7 +124,7 @@ export async function setBidDepositExemption(
 
   await createNotification(
     userId,
-    "NEW_MESSAGE",
+    "ACCOUNT_UPDATE",
     exempt ? "Borg-vrijstelling toegekend" : "Borg-vrijstelling ingetrokken",
     exempt
       ? "Je BUSINESS-account is door een admin vrijgesteld van de verified-eis voor bids ≥ €2500. Borg-forfait bij wanbetaling blijft van toepassing."

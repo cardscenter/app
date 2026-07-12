@@ -4,7 +4,7 @@ import { markAsRead, markAllAsRead } from "@/actions/notification";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Bell, Gavel, ShoppingBag, MessageCircle, Heart } from "lucide-react";
+import { Bell, Gavel, ShoppingBag, MessageCircle, Heart, ShieldCheck } from "lucide-react";
 
 type NotificationItem = {
   id: string;
@@ -25,6 +25,8 @@ function getIcon(type: string) {
       return ShoppingBag;
     case "NEW_MESSAGE":
       return MessageCircle;
+    case "ACCOUNT_UPDATE":
+      return ShieldCheck;
     case "WATCHLIST_ENDING":
       return Heart;
     default:

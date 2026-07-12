@@ -76,7 +76,7 @@ export async function submitEnterpriseRequest(formData: FormData) {
   for (const admin of admins) {
     await createNotification(
       admin.id,
-      "NEW_MESSAGE",
+      "ADMIN_TASK",
       "Nieuwe Enterprise-aanvraag",
       `${user.displayName} heeft een Enterprise-aanvraag ingediend (€${parsed.data.estimatedMonthlyRevenue.toLocaleString("nl-NL")}/m).`,
       "/dashboard/admin/enterprise-requests",
@@ -126,7 +126,7 @@ export async function approveEnterpriseRequest(params: {
 
   await createNotification(
     request.userId,
-    "NEW_MESSAGE",
+    "ACCOUNT_UPDATE",
     "Enterprise-aanvraag goedgekeurd",
     `Je Enterprise-aanvraag voor ${request.shopName} is goedgekeurd. Tarief: €${params.monthlyPrice.toLocaleString("nl-NL")}/maand. Welkom bij Enterprise.`,
     "/dashboard/abonnement",
@@ -175,7 +175,7 @@ export async function rejectEnterpriseRequest(params: {
 
   await createNotification(
     request.userId,
-    "NEW_MESSAGE",
+    "ACCOUNT_UPDATE",
     "Enterprise-aanvraag afgewezen",
     `Je Enterprise-aanvraag voor ${request.shopName} is afgewezen. Reden: ${params.rejectionReason.trim()}`,
     "/dashboard/abonnement",

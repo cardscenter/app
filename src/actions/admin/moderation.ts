@@ -9,7 +9,7 @@ import { revalidatePath } from "next/cache";
 async function notifySellerRemoved(sellerId: string, kind: "veiling" | "listing" | "claimsale", title: string, reason: string) {
   await createNotification(
     sellerId,
-    "NEW_MESSAGE",
+    "ACCOUNT_UPDATE",
     `${kind} verwijderd door admin`,
     `Je ${kind} "${title}" is verwijderd door een beheerder. Reden: ${reason}`,
     "/dashboard"

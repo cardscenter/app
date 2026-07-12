@@ -68,7 +68,7 @@ export async function suspendUser(targetId: string, formData: FormData) {
 
   await createNotification(
     targetId,
-    "NEW_MESSAGE",
+    "ACCOUNT_UPDATE",
     "Account opgeschort",
     parsed.data.type === "PERMANENT"
       ? `Je account is permanent opgeschort. Reden: ${parsed.data.reason}`
@@ -117,7 +117,7 @@ export async function liftSuspension(targetId: string) {
 
   await createNotification(
     targetId,
-    "NEW_MESSAGE",
+    "ACCOUNT_UPDATE",
     "Opschorting opgeheven",
     "Je account-opschorting is opgeheven. Je kunt het platform weer normaal gebruiken.",
     "/dashboard"

@@ -179,7 +179,7 @@ export async function reviewReport(
   if (newStatus === "DISMISSED" || newStatus === "ACTION_TAKEN") {
     await createNotification(
       r.reporterId,
-      "NEW_MESSAGE",
+      "ACCOUNT_UPDATE",
       newStatus === "ACTION_TAKEN" ? "Melding behandeld" : "Melding gesloten",
       newStatus === "ACTION_TAKEN"
         ? "Bedankt voor je melding. Onze moderators hebben actie ondernomen."
