@@ -99,6 +99,11 @@ model User {
   // bod per veiling (per-veiling tracking client-side via localStorage).
   skipBidConfirmation Boolean @default(false)
 
+  // E-mailnotificatie-voorkeuren (Fase 16). JSON-blob met categorie-toggles
+  // { orders, bids, messages, disputes, events } — zie src/lib/email/preferences-config.ts.
+  // Null = alle defaults (alles aan). "account"-mails zijn altijd aan en staan hier niet in.
+  emailPreferences  String?
+
   // Mollie recurring-billing customer ID (Fase 31). Hergebruikt over
   // meerdere subscription-cycli zodat Mollie weet om welke klant het gaat.
   mollieCustomerId  String?
@@ -1338,6 +1343,22 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+// E-mail-audit + throttle (Fase 16). Elke verstuurde notificatie-mail krijgt
+// een rij; dedupeKey wordt gebruikt voor throttles (OUTBID per veiling,
+// chat-episode per conversatie). Bewust geen FK naar User — puur log.
+model EmailLog {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String   // account | orders | bids | messages | disputes | events
+  type      String   // notificatie-type (OUTBID, ORDER_PAID, ...) of "CHAT_UNREAD"
+  dedupeKey String?  // bv. "OUTBID:/veilingen/abc" of "chat:convId:userId"
+  subject   String
+  sentAt    DateTime @default(now())
+
+  @@index([userId, type, sentAt])
+  @@index([dedupeKey, sentAt])
 }
 
 // ============================================================
