@@ -18,6 +18,8 @@ type Props = {
   activity: ActiveActivity;
   bundles: RecentBundles;
   showPremiumCta: boolean;
+  /** Fase 16-followup: false → optionele "stel 2FA in"-suggestie in de widget. */
+  totpEnabled?: boolean;
 };
 
 export async function DashboardEssentials({
@@ -26,12 +28,13 @@ export async function DashboardEssentials({
   activity,
   bundles,
   showPremiumCta,
+  totpEnabled = true,
 }: Props) {
   const t = await getTranslations("dashboard");
 
   return (
     <div className="space-y-6">
-      <ActionItemsWidget counts={actionItems} />
+      <ActionItemsWidget counts={actionItems} totpEnabled={totpEnabled} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <BalanceOverviewWidget data={balance} />

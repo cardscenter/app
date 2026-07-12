@@ -31,6 +31,7 @@ export default async function DashboardPage({
       balance: true,
       reservedBalance: true,
       accountType: true,
+      totpEnabled: true,
       _count: {
         select: {
           auctions: { where: { status: "ACTIVE" } },
@@ -89,6 +90,7 @@ export default async function DashboardPage({
           activity={activity}
           bundles={bundles}
           showPremiumCta={hasPremium}
+          totpEnabled={user.totpEnabled}
         />
       </div>
     </div>

@@ -14,7 +14,11 @@ import {
 } from "lucide-react";
 import type { ActionItemsCounts } from "@/lib/dashboard-queries";
 
-type Props = { counts: ActionItemsCounts };
+type Props = {
+  counts: ActionItemsCounts;
+  /** Fase 16-followup: false → optionele "stel 2FA in"-suggestie onderaan. */
+  totpEnabled?: boolean;
+};
 
 type Item = {
   key: keyof ActionItemsCounts;
@@ -25,7 +29,7 @@ type Item = {
   bgColor: string;
 };
 
-export function ActionItemsWidget({ counts }: Props) {
+export function ActionItemsWidget({ counts, totpEnabled = true }: Props) {
   const t = useTranslations("dashboard.essentials.actionItems");
 
   const items: Item[] = [
@@ -123,6 +127,25 @@ export function ActionItemsWidget({ counts }: Props) {
             );
           })}
         </div>
+      )}
+
+      {/* Optionele 2FA-suggestie (Fase 16-followup) — bewust dashed/subtiel:
+          geen urgent werk, maar wel de beste plek om 'm één keer te zien. */}
+      {!totpEnabled && (
+        <Link
+          href="/dashboard/profiel"
+          className="mt-3 flex items-center gap-2.5 rounded-lg border border-dashed border-border p-3 transition-colors hover:border-primary/40 hover:bg-muted/30"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/google_auth.webp" alt="" width={20} height={20} className="rounded" />
+          <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+            <span className="block font-medium text-foreground">{t("setup2fa")}</span>
+            {t("setup2faDesc")}
+          </span>
+          <span className="shrink-0 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {t("optional")}
+          </span>
+        </Link>
       )}
     </div>
   );

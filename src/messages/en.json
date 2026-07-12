@@ -1121,7 +1121,10 @@
         "awaitingPaymentAuctions": "Payment due",
         "bundlesToShip": "To ship",
         "pendingCancellations": "Cancellation requests",
-        "pendingPickups": "Pickup arrangements"
+        "pendingPickups": "Pickup arrangements",
+        "setup2fa": "Secure your account with 2FA",
+        "setup2faDesc": "Extra security layer via an authenticator app — set up in a minute.",
+        "optional": "Optional"
       },
       "balance": {
         "title": "Balance overview",

@@ -150,6 +150,7 @@ export async function sendWelcomeEmail(args: {
 
 • Voeg je bankgegevens toe op je profiel
 • Stel je verzendgebied in
+• Beveilig je account met twee-factor-authenticatie (2FA) — optioneel, ingesteld in een minuut
 • Personaliseer je profiel met een avatar en bio
 • Ontdek de marktplaats`,
     ctaUrl: dashboardUrl,

@@ -1121,7 +1121,10 @@
         "awaitingPaymentAuctions": "Betaling nodig",
         "bundlesToShip": "Te verzenden",
         "pendingCancellations": "Annuleringsverzoeken",
-        "pendingPickups": "Ophaalafspraken"
+        "pendingPickups": "Ophaalafspraken",
+        "setup2fa": "Beveilig je account met 2FA",
+        "setup2faDesc": "Extra beveiligingslaag via een authenticator-app — ingesteld in een minuut.",
+        "optional": "Optioneel"
       },
       "balance": {
         "title": "Saldo-overzicht",
