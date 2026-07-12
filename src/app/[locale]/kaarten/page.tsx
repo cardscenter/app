@@ -3,7 +3,6 @@ import { unstable_cache } from "next/cache";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/prisma";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { KaartenSearch } from "@/components/card/kaarten-search";
 import { PageContainer } from "@/components/layout/page-container";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
@@ -358,7 +357,6 @@ export default async function CardsOverviewPage() {
   return (
     <PageContainer width="wide" className="py-8">
       <ScrollToTop />
-      <Breadcrumbs items={[{ label: "Kaarten" }]} />
 
       <header className="mb-6 mt-2">
         <h1 className="sr-only">Pokémon Kaarten Database</h1>
