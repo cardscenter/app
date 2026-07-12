@@ -401,7 +401,7 @@ export async function resetPassword(
  */
 export async function changePassword(
   formData: FormData,
-): Promise<{ success: true } | { error: string }> {
+): Promise<{ success: true } | { error: string; totpRequired?: boolean }> {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return { error: "Niet ingelogd." };
