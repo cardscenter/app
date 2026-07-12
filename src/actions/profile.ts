@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { saveUploadedFile } from "@/lib/upload";
 import { isValidIbanFormat, normalizeIban, IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
+import { EMAIL_PREF_CATEGORIES, parseEmailPreferences } from "@/lib/email/preferences-config";
 import { z } from "zod";
 
 const profileSchema = z.object({
@@ -216,6 +217,32 @@ export async function updateBidConfirmationPreference(skip: boolean) {
   await prisma.user.update({
     where: { id: session.user.id },
     data: { skipBidConfirmation: skip },
+  });
+
+  return { success: true };
+}
+
+// E-mailnotificatie-voorkeuren (Fase 16). Accepteert alleen bekende
+// categorie-keys; onbekende keys worden genegeerd. Geen suspension-check —
+// mail-voorkeuren aanpassen mag altijd.
+export async function updateEmailPreferences(prefs: Record<string, boolean>) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { emailPreferences: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  const merged = parseEmailPreferences(user.emailPreferences);
+  for (const { key } of EMAIL_PREF_CATEGORIES) {
+    if (typeof prefs[key] === "boolean") merged[key] = prefs[key];
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { emailPreferences: JSON.stringify(merged) },
   });
 
   return { success: true };

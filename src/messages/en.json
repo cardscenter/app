@@ -1749,7 +1749,14 @@
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications",
-    "markAllRead": "Mark all as read"
+    "markAllRead": "Mark all as read",
+    "emailPrefs": {
+      "title": "Email preferences",
+      "subtitle": "Choose what you want to receive emails about",
+      "verifyHint": "Your email address is not verified yet — emails will only be sent once you have verified your address. Check your inbox or request a new verification email from your dashboard.",
+      "alwaysOn": "Account & security",
+      "alwaysOnDesc": "Important service emails about your account (suspensions, verification results, admin messages) are always sent."
+    }
   },
   "bids": {
     "title": "Live Hub",

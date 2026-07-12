@@ -1749,7 +1749,14 @@
   "notifications": {
     "title": "Meldingen",
     "empty": "Geen meldingen",
-    "markAllRead": "Alles als gelezen markeren"
+    "markAllRead": "Alles als gelezen markeren",
+    "emailPrefs": {
+      "title": "E-mailvoorkeuren",
+      "subtitle": "Kies waarover je e-mails wilt ontvangen",
+      "verifyHint": "Je e-mailadres is nog niet bevestigd — er worden pas e-mails verstuurd zodra je je adres hebt geverifieerd. Check je inbox of vraag een nieuwe verificatiemail aan via je dashboard.",
+      "alwaysOn": "Account & beveiliging",
+      "alwaysOnDesc": "Belangrijke servicemails over je account (schorsingen, verificatie-uitslagen, admin-berichten) worden altijd verstuurd."
+    }
   },
   "bids": {
     "title": "Live Hub",

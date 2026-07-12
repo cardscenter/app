@@ -163,7 +163,7 @@ Volgende stappen om écht van start te gaan:
 
 Direct naar je dashboard: ${dashboardUrl}
 
-Vragen? Reply gerust op deze mail — we lezen ze allemaal.
+Vragen? Neem contact op via de site — dit mailadres wordt niet gelezen.
 
 — Team Cards Center`;
   const html = `<p>Hoi ${escapeHtml(args.displayName)},</p>
@@ -176,7 +176,7 @@ Vragen? Reply gerust op deze mail — we lezen ze allemaal.
   <li>Ontdek de marktplaats</li>
 </ul>
 <p><a href="${dashboardUrl}">Direct naar je dashboard</a></p>
-<p>Vragen? Reply gerust op deze mail — we lezen ze allemaal.</p>
+<p>Vragen? Neem contact op via de site — dit mailadres wordt niet gelezen.</p>
 <p>— Team Cards Center</p>`;
   return sendEmail({ to: args.to, subject: "Welkom bij Cards Center 🎴", text, html });
 }

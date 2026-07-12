@@ -153,7 +153,7 @@ ${ctaUrl ? `\n${ctaLabel}: ${ctaUrl}\n` : ""}
           </tr>
           <tr>
             <td class="footer" width="100%">
-              <p style="margin-bottom:8px;font-size:14px;">Vragen? Beantwoord deze e-mail — we lezen ze allemaal.</p>
+              <p style="margin-bottom:8px;font-size:14px;">Vragen? Neem contact op via <a href="${appUrl}" style="color:#2563eb;">Cards Center</a>. Dit adres wordt niet gelezen.</p>
               <p style="color:#6b7c8d;font-size:14px;margin-bottom:0;">&copy; Cards Center &ndash; Alle rechten voorbehouden</p>
               ${
                 args.unsubscribeUrl
