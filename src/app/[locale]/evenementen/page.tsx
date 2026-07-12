@@ -138,8 +138,14 @@ export default async function EventsPage({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Pokémon-evenementen</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="sr-only">Pokémon-evenementen</h1>
+          {/* Plain <img>: Next image-optimizer faalt op Railway (zie performance-pass) */}
+          <img
+            src="/images/PKMevents.png"
+            alt="Pokémon Events"
+            className="h-16 w-auto sm:h-20"
+          />
+          <p className="mt-2 text-sm text-muted-foreground">
             Beurzen, trade nights, toernooien en meetups in heel Europa.
           </p>
         </div>
