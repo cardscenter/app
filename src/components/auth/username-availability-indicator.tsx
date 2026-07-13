@@ -22,6 +22,7 @@ const REASON_KEY: Record<UsernameCheckReason, string> = {
   TOO_LONG: "usernameReasonTooLong",
   INVALID_CHARS: "usernameReasonInvalidChars",
   RESERVED: "usernameReasonReserved",
+  NOT_ALLOWED: "usernameReasonNotAllowed",
   TAKEN: "usernameReasonTaken",
 };
 

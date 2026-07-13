@@ -196,6 +196,7 @@
     "usernameReasonTooLong": "Maximum 30 characters",
     "usernameReasonInvalidChars": "No spaces · only letters, numbers, _ and -",
     "usernameReasonReserved": "This username is reserved",
+    "usernameReasonNotAllowed": "This username is not allowed",
     "usernameReasonTaken": "Username already taken",
 
     "socialGoogleContinue": "Continue with Google",

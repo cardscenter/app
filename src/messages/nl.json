@@ -196,6 +196,7 @@
     "usernameReasonTooLong": "Maximaal 30 tekens",
     "usernameReasonInvalidChars": "Geen spaties · alleen letters, cijfers, _ en -",
     "usernameReasonReserved": "Deze naam is gereserveerd",
+    "usernameReasonNotAllowed": "Deze gebruikersnaam is niet toegestaan",
     "usernameReasonTaken": "Deze naam is al in gebruik",
 
     "socialGoogleContinue": "Doorgaan met Google",
