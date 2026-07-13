@@ -8,13 +8,9 @@ import { AdminNav } from "@/components/admin/admin-nav";
 import {
   LayoutDashboard,
   BarChart3,
-  Gavel,
-  Tag,
   ShoppingBag,
   Store,
-  CalendarDays,
   Heart,
-  Bell,
   Wallet,
   User,
   Star,
@@ -23,15 +19,13 @@ import {
   Scale,
   CreditCard,
   ShieldCheck,
-  Paintbrush,
+  Settings,
   Menu,
   X,
   ArrowDownToLine,
   LogOut,
-  Ban,
   Shield,
   HandCoins,
-  Banknote,
   ChevronDown,
 } from "lucide-react";
 
@@ -44,6 +38,12 @@ type NavItem = {
   liveIndicator?: boolean;
   /** Live-count badge naast de label. Hidden bij 0 of undefined. */
   badge?: number;
+  /**
+   * Extra route-prefixes waarop dit item ook actief is (Fase 44) — voor
+   * cluster-items waarvan de subroutes via PageTabs bereikbaar zijn, zoals
+   * Aanbod (claimsales/marktplaats/evenementen) en Financiën (uitbetalingen).
+   */
+  match?: string[];
 };
 
 // A group with `labelKey` collapses behind a chevron-button header. Without
@@ -75,7 +75,9 @@ type DashboardNavProps = {
   counts?: { auctions: number; listings: number; claimsales: number; events?: number };
 };
 
-const OPEN_STATE_STORAGE_KEY = "dashboard-nav-open";
+// v2 sinds Fase 44: de groep-ids zijn hernoemd (selling/buying/account) — de
+// oude key zou dode open-state bevatten.
+const OPEN_STATE_STORAGE_KEY = "dashboard-nav-open-v2";
 
 // Thin wrapper: decides which nav to render based on path + admin status.
 // Splitting the swap from the inner component avoids React reconciliation
@@ -116,6 +118,12 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
     confirmTimerRef.current = setTimeout(() => setConfirmLogout(false), 4000);
   }
 
+  const offerBadge =
+    (counts?.auctions ?? 0) +
+    (counts?.claimsales ?? 0) +
+    (counts?.listings ?? 0) +
+    (counts?.events ?? 0);
+
   const groups: NavGroup[] = useMemo(
     () => [
       {
@@ -126,43 +134,45 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
         ],
       },
       {
-        id: "offer",
-        labelKey: "sectionOffer",
+        id: "selling",
+        labelKey: "sectionSales",
         items: [
-          { href: "/dashboard/veilingen", labelKey: "myAuctions", icon: Gavel, badge: counts?.auctions },
-          { href: "/dashboard/claimsales", labelKey: "myClaimsales", icon: Tag, badge: counts?.claimsales },
-          { href: "/dashboard/marktplaats", labelKey: "myListings", icon: Store, badge: counts?.listings },
-          // Alleen zichtbaar als de user ooit een event heeft aangemaakt
-          // (PENDING/LIVE/REJECTED/ENDED — deep-link blijft altijd werken).
-          ...(counts?.events
-            ? [{ href: "/dashboard/evenementen", labelKey: "myEvents", icon: CalendarDays, badge: counts.events }]
-            : []),
+          {
+            href: "/dashboard/veilingen",
+            labelKey: "navOffer",
+            icon: Store,
+            badge: offerBadge,
+            // Claimsales/marktplaats/evenementen zijn tabs binnen het
+            // Aanbod-cluster (Fase 44) — nav-item licht op alle vier op.
+            match: [
+              "/dashboard/claimsales",
+              "/dashboard/marktplaats",
+              "/dashboard/evenementen",
+            ],
+          },
+          { href: "/dashboard/verkopen", labelKey: "mySales", icon: Package },
+          { href: "/dashboard/inkoop", labelKey: "myBuyback", icon: ArrowDownToLine },
         ],
       },
       {
-        id: "orders",
-        labelKey: "sectionOrders",
+        id: "buying",
+        labelKey: "sectionBuying",
         items: [
           { href: "/dashboard/aankopen", labelKey: "myPurchases", icon: ShoppingBag },
-          { href: "/dashboard/verkopen", labelKey: "mySales", icon: Package },
-        ],
-      },
-      {
-        id: "activity",
-        labelKey: "sectionActivity",
-        items: [
           { href: "/dashboard/biedingen", labelKey: "myBids", icon: HandCoins, liveIndicator: true },
           { href: "/dashboard/volglijst", labelKey: "myWatchlist", icon: Heart },
-          { href: "/dashboard/meldingen", labelKey: "myNotifications", icon: Bell },
         ],
       },
       {
-        id: "wallet",
-        labelKey: "sectionWallet",
+        id: "finance",
         items: [
-          { href: "/dashboard/saldo", labelKey: "myBalance", icon: Wallet },
-          { href: "/dashboard/uitbetalingen", labelKey: "myWithdrawals", icon: Banknote },
-          { href: "/dashboard/inkoop", labelKey: "myBuyback", icon: ArrowDownToLine },
+          {
+            href: "/dashboard/saldo",
+            labelKey: "navFinance",
+            icon: Wallet,
+            // Uitbetalingen + openstaande kosten zijn tabs binnen Financiën.
+            match: ["/dashboard/uitbetalingen"],
+          },
         ],
       },
       {
@@ -170,40 +180,55 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
         labelKey: "sectionAccount",
         items: [
           { href: "/dashboard/profiel", labelKey: "profile", icon: User },
+          {
+            href: "/dashboard/instellingen",
+            labelKey: "mySettings",
+            icon: Settings,
+            // Blokkeerlijst is bereikbaar via Instellingen → Privacy.
+            match: ["/dashboard/blokkeerlijst"],
+          },
+          { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
           { href: "/dashboard/verificatie", labelKey: "myVerification", icon: ShieldCheck },
           { href: "/dashboard/abonnement", labelKey: "mySubscription", icon: CreditCard },
-          { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
-          { href: "/dashboard/reviews", labelKey: "myReviews", icon: Star },
-          { href: "/dashboard/blokkeerlijst", labelKey: "myBlockedList", icon: Ban },
+          {
+            href: "/dashboard/reviews",
+            labelKey: "myReputation",
+            icon: Star,
+            // Level & XP is een tab binnen Reputatie; de levelCard boven de
+            // nav linkt er ook heen.
+            match: ["/dashboard/level"],
+          },
         ],
       },
       {
         id: "extras",
-        items: [
-          { href: "/customization", labelKey: "personalization", icon: Paintbrush, comingSoon: true },
-          { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
-        ],
+        items: [{ href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale }],
       },
     ],
-    [counts]
+    [counts, offerBadge]
   );
 
-  function isActive(href: string) {
+  function isPathActive(href: string) {
     return pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
+  }
+
+  function isActive(item: NavItem) {
+    if (isPathActive(item.href)) return true;
+    return item.match?.some((m) => isPathActive(m)) ?? false;
   }
 
   // Which collapsible group contains the active route? That one is always open.
   const activeGroupId = useMemo(() => {
-    return groups.find((g) => g.labelKey && g.items.some((item) => isActive(item.href)))?.id;
+    return groups.find((g) => g.labelKey && g.items.some((item) => isActive(item)))?.id;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, groups]);
 
-  // "offer" en "orders" zijn de meest-gebruikte secties — die staan altijd
+  // "selling" en "buying" zijn de meest-gebruikte secties — die staan altijd
   // open na een refresh, tenzij de user ze expliciet inklapt (localStorage).
   // De actieve sectie wordt áltijd geforceerd open, ook als user 'm gesloten
   // had — anders zien ze hun huidige page-link niet.
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = { offer: true, orders: true };
+    const initial: Record<string, boolean> = { selling: true, buying: true };
     if (activeGroupId) initial[activeGroupId] = true;
     return initial;
   });
@@ -247,7 +272,7 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
 
   // Active item for mobile compact-bar header
   const allItems = groups.flatMap((g) => g.items);
-  const activeItem = allItems.find((item) => isActive(item.href)) ?? allItems[0];
+  const activeItem = allItems.find((item) => isActive(item)) ?? allItems[0];
   const ActiveIcon = activeItem.icon;
 
   const isLevelActive = pathname === "/dashboard/level";
@@ -324,7 +349,7 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
       );
     }
 
-    const active = isActive(item.href);
+    const active = isActive(item);
     return (
       <Link
         key={item.href}
@@ -382,7 +407,7 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
     }
 
     const isOpen = !!openSections[group.id];
-    const groupHasActive = group.items.some((item) => isActive(item.href));
+    const groupHasActive = group.items.some((item) => isActive(item));
 
     return (
       <div key={group.id} className="mt-1">
