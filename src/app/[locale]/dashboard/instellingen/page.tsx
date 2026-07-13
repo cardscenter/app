@@ -13,7 +13,7 @@ import { EmailPreferenceRows } from "@/components/dashboard/settings/email-prefe
 import { LocalPrefToggle } from "@/components/dashboard/settings/local-pref-toggle";
 import { BidConfirmationToggle } from "@/components/dashboard/bid-confirmation-toggle";
 import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { parseEmailPreferences } from "@/lib/email/preferences-config";
 import { PREF_HIDE_BALANCE, PREF_ACHIEVEMENT_TOASTS } from "@/lib/local-preferences";
 

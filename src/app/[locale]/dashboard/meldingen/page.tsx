@@ -7,7 +7,7 @@ import { Bell, Settings } from "lucide-react";
 import { NotificationList } from "@/components/ui/notification-list";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 export default async function MeldingenPage({
   params,

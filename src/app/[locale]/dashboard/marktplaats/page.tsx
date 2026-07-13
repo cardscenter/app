@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { Upload } from "lucide-react";
 import { OfferTabs } from "@/components/dashboard/cluster-tabs";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Store } from "lucide-react";
 import { ListingCard } from "@/components/listing/listing-card";
 import { ListingStatusBadge } from "@/components/listing/listing-status-badge";

@@ -8,23 +8,17 @@ import {
   fetchSalesData,
   fetchBuyerData,
   fetchSellerPerformance,
-  fetchXPData,
 } from "@/lib/statistics-queries";
 import {
-  groupByMonth,
-  calculatePeriodComparison,
   buildRatingDistribution,
   computeAverage,
-  getPeriodDates,
+  getPeriodRange,
   getPeriodDayCount,
+  bucketForPeriod,
+  bucketKey,
 } from "@/lib/statistics-helpers";
-import {
-  calculateXP,
-  getLevel,
-  getNextLevel,
-  getLevelProgress,
-} from "@/lib/seller-levels";
 import { getCommissionRate } from "@/lib/subscription-tiers";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -48,20 +42,21 @@ export default async function StatistiekenPage({ params, searchParams }: Props) 
 
   if (!hasPremium) {
     return (
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t("statistics.title")}</h1>
-        <div className="mt-6">
-          <StatisticsLocked />
-        </div>
+      <div className="space-y-6">
+        <DashboardPageHeader title={t("statistics.title")} />
+        <StatisticsLocked />
       </div>
     );
   }
 
   const resolvedSearchParams = await searchParams;
   const period = resolvedSearchParams.period ?? "90d";
-  const { start, previousStart } = getPeriodDates(period);
+  const { start, end, previousStart } = getPeriodRange(period);
+  const bucket = bucketForPeriod(period);
 
-  // Fetch all data in parallel
+  // Fetch all data in parallel. Periodes met een einde in het verleden
+  // (gisteren, vorig jaar) worden ook op `end` gefilterd; de vergelijkings-
+  // periode is altijd het even-lange venster vóór `start`.
   const [
     salesData,
     prevSalesData,
@@ -69,18 +64,19 @@ export default async function StatistiekenPage({ params, searchParams }: Props) 
     prevBuyerData,
     perfData,
     prevPerfData,
-    xpRaw,
   ] = await Promise.all([
-    fetchSalesData(session.user.id, start),
+    fetchSalesData(session.user.id, start).then((d) => filterBefore(d, end)),
     fetchSalesData(session.user.id, previousStart).then((d) => filterBefore(d, start)),
-    fetchBuyerData(session.user.id, start),
+    fetchBuyerData(session.user.id, start).then((d) => filterBefore(d, end)),
     fetchBuyerData(session.user.id, previousStart).then((d) => filterBefore(d, start)),
-    fetchSellerPerformance(session.user.id, start),
+    fetchSellerPerformance(session.user.id, start).then((d) => ({
+      bundles: d.bundles.filter((b) => b.createdAt < end),
+      reviews: d.reviews.filter((r) => r.createdAt < end),
+    })),
     fetchSellerPerformance(session.user.id, previousStart).then((d) => ({
       bundles: d.bundles.filter((b) => b.createdAt < start),
       reviews: d.reviews.filter((r) => r.createdAt < start),
     })),
-    fetchXPData(session.user.id),
   ]);
 
   // === SALES ===
@@ -99,26 +95,25 @@ export default async function StatistiekenPage({ params, searchParams }: Props) 
     { name: t("statistics.listings"), value: salesData.listings.reduce((s, i) => s + i.value, 0) },
   ];
 
-  const revenuePerMonth = groupByMonth(allSales).map((g) => ({ month: g.label, revenue: g.total }));
-
-  // Avg price per month
-  const monthGroups = new Map<string, number[]>();
+  // Omzetverloop + gemiddelde prijs per bucket (dag ≤30d, week 90d/ytd/1j,
+  // maand bij "alles") — de bucket-key sorteert chronologisch (Fase 44).
+  const revenueBuckets = new Map<string, { label: string; values: number[] }>();
   for (const item of allSales) {
-    const d = new Date(item.date);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (!monthGroups.has(key)) monthGroups.set(key, []);
-    monthGroups.get(key)!.push(item.value);
+    const { key, label } = bucketKey(item.date, bucket);
+    if (!revenueBuckets.has(key)) revenueBuckets.set(key, { label, values: [] });
+    revenueBuckets.get(key)!.values.push(item.value);
   }
-  const avgPricePerMonth = Array.from(monthGroups.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, values]) => {
-      const [year, month] = key.split("-");
-      const d = new Date(Number(year), Number(month) - 1);
-      return {
-        month: d.toLocaleDateString("nl-NL", { month: "short", year: "2-digit" }),
-        avgPrice: computeAverage(values),
-      };
-    });
+  const sortedRevenueBuckets = Array.from(revenueBuckets.entries()).sort(([a], [b]) =>
+    a.localeCompare(b)
+  );
+  const revenueOverTime = sortedRevenueBuckets.map(([, g]) => ({
+    label: g.label,
+    revenue: Math.round(g.values.reduce((s, v) => s + v, 0) * 100) / 100,
+  }));
+  const avgPriceOverTime = sortedRevenueBuckets.map(([, g]) => ({
+    label: g.label,
+    avgPrice: computeAverage(g.values),
+  }));
 
   // === BUYER ===
   const allPurchases = [...buyerData.auctions, ...buyerData.claimsales, ...buyerData.listings];
@@ -132,19 +127,16 @@ export default async function StatistiekenPage({ params, searchParams }: Props) 
     { name: t("statistics.listings"), value: buyerData.listings.reduce((s, i) => s + i.value, 0) },
   ];
 
-  const purchaseCountPerMonth = new Map<string, number>();
+  const purchaseBuckets = new Map<string, { label: string; count: number }>();
   for (const item of allPurchases) {
-    const d = new Date(item.date);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    purchaseCountPerMonth.set(key, (purchaseCountPerMonth.get(key) ?? 0) + 1);
+    const { key, label } = bucketKey(item.date, bucket);
+    const existing = purchaseBuckets.get(key);
+    if (existing) existing.count += 1;
+    else purchaseBuckets.set(key, { label, count: 1 });
   }
-  const purchaseFrequency = Array.from(purchaseCountPerMonth.entries())
+  const purchaseFrequency = Array.from(purchaseBuckets.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, count]) => {
-      const [year, month] = key.split("-");
-      const d = new Date(Number(year), Number(month) - 1);
-      return { month: d.toLocaleDateString("nl-NL", { month: "short", year: "2-digit" }), count };
-    });
+    .map(([, g]) => ({ label: g.label, count: g.count }));
 
   // === SELLER PERFORMANCE ===
   function avgDays(bundles: { createdAt: Date; shippedAt: Date | null; deliveredAt: Date | null }[], field: "shippedAt" | "deliveredAt") {
@@ -194,31 +186,8 @@ export default async function StatistiekenPage({ params, searchParams }: Props) 
     communication: computeAverage(perfData.reviews.filter((r) => r.communicationRating != null).map((r) => r.communicationRating!)),
   };
 
-  // === XP ===
-  let xpData;
-  if (xpRaw) {
-    const xpBreakdown = calculateXP(xpRaw);
-    const currentLevel = getLevel(xpBreakdown.total);
-    const nextLevel = getNextLevel(xpBreakdown.total);
-    xpData = {
-      xp: xpBreakdown,
-      currentLevel: {
-        name: currentLevel.name,
-        icon: currentLevel.icon,
-        color: currentLevel.color,
-        minXP: currentLevel.minXP,
-      },
-      nextLevel: nextLevel ? { name: nextLevel.name, minXP: nextLevel.minXP } : null,
-      progress: getLevelProgress(xpBreakdown.total),
-    };
-  } else {
-    xpData = {
-      xp: { accountAge: 0, sales: 0, purchases: 0, positiveReviews: 0, reviewsGiven: 0, completedTransactions: 0, bonus: 0, total: 0 },
-      currentLevel: { name: "Beginner", icon: "🎒", color: "text-gray-500", minXP: 0 },
-      nextLevel: { name: "Rookie", minXP: 100 },
-      progress: 0,
-    };
-  }
+  // XP/level-sectie is per Fase 44 van deze pagina af — dat leeft op
+  // /dashboard/level (Reputatie-cluster).
 
   // === COMMISSION SAVINGS (PRO/UNLIMITED voordeel t.o.v. FREE) ===
   const freeRate = 0.03;
@@ -232,9 +201,8 @@ export default async function StatistiekenPage({ params, searchParams }: Props) 
   const projectedAnnualSavings = (commissionSaved / periodDays) * 365;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">{t("statistics.title")}</h1>
-      <p className="mt-1 text-sm text-muted-foreground mb-6">{t("statistics.subtitle")}</p>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("statistics.title")} subtitle={t("statistics.subtitle")} />
 
       <StatisticsPage
         period={period}
@@ -246,8 +214,8 @@ export default async function StatistiekenPage({ params, searchParams }: Props) 
           avgSalePrice,
           previousAvgSalePrice: prevAvgSalePrice,
           revenueByType,
-          revenuePerMonth,
-          avgPricePerMonth,
+          revenueOverTime,
+          avgPriceOverTime,
         }}
         performance={{
           avgShipDays,
@@ -268,7 +236,6 @@ export default async function StatistiekenPage({ params, searchParams }: Props) 
           spendingByType,
           purchaseFrequency,
         }}
-        xp={xpData}
         commission={{
           commissionSaved,
           projectedAnnualSavings,

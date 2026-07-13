@@ -1086,7 +1086,12 @@
       "period1y": "1 jaar",
       "periodAll": "Alles",
       "periodMonth": "Deze maand",
-      "periodYtd": "YTD",
+      "periodYtd": "Dit jaar (YTD)",
+      "periodToday": "Vandaag",
+      "periodYesterday": "Gisteren",
+      "period7d": "7 dagen",
+      "periodPrevYear": "Vorig jaar",
+      "revenueOverTime": "Omzetverloop",
       "totalRevenue": "Totale omzet",
       "itemsSold": "Items verkocht",
       "avgSalePrice": "Gem. verkoopprijs",
@@ -1158,7 +1163,8 @@
         "completeAddress": "Vul je verzendadres aan",
         "completeAddressDesc": "Zonder volledig adres kun je niet bestellen of verzenden.",
         "requiredForOrders": "Nodig om te bestellen",
-        "optional": "Optioneel"
+        "optional": "Optioneel",
+        "recommended": "Aanbevolen"
       },
       "balance": {
         "title": "Saldo-overzicht",

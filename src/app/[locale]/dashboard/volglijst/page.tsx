@@ -8,7 +8,7 @@ import { RealtimePageRefresh } from "@/components/providers/realtime-page-refres
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 // Status → StatusBadge-tone. ACTIVE/LIVE = koopbaar, PARTIALLY_SOLD = deels,
 // PAUSED/RESERVED = tijdelijk weg, DELETED = weg, rest = afgerond.

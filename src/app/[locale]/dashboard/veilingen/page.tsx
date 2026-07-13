@@ -9,7 +9,7 @@ import { SellerAuctionCard, type SellerAuctionCardData } from "@/components/dash
 import { EndedAuctionRow } from "@/components/dashboard/ended-auction-row";
 import { VeilingenRealtimeWatcher } from "@/components/dashboard/veilingen-realtime-watcher";
 import { OfferTabs } from "@/components/dashboard/cluster-tabs";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 const LIVE_STATUSES = new Set(["ACTIVE", "SCHEDULED"]);
 

@@ -7,7 +7,7 @@ import { MyEventRow } from "@/components/events/my-event-row";
 import { EventVendorRequestsPanel } from "@/components/events/event-vendor-requests-panel";
 import { OfferTabs } from "@/components/dashboard/cluster-tabs";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 export default async function MyEventsPage({
   params,

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { OfferTabs } from "@/components/dashboard/cluster-tabs";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Tag } from "lucide-react";
 
 const CLAIMSALE_STATUS_TONE: Record<string, StatusTone> = {

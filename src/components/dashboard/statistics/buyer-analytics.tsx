@@ -23,7 +23,8 @@ export type BuyerAnalyticsData = {
   itemsPurchased: number;
   previousItemsPurchased: number;
   spendingByType: { name: string; value: number }[];
-  purchaseFrequency: { month: string; count: number }[];
+  /** Aankopen per bucket (dag/week/maand, afhankelijk van de gekozen periode). */
+  purchaseFrequency: { label: string; count: number }[];
 };
 
 const TYPE_COLORS = ["hsl(var(--primary))", "#10b981", "#f59e0b"];
@@ -112,10 +113,11 @@ export function BuyerAnalytics({ data }: { data: BuyerAnalyticsData }) {
                 <BarChart data={data.purchaseFrequency}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
                   <XAxis
-                    dataKey="month"
+                    dataKey="label"
                     tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                     tickLine={false}
                     axisLine={false}
+                    minTickGap={24}
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}

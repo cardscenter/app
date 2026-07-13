@@ -1,115 +1,61 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useRef } from "react";
 import { PeriodSelector } from "./period-selector";
 import { ExportCsvButton } from "./export-csv-button";
 import { SalesAnalytics, type SalesAnalyticsData } from "./sales-analytics";
 import { SellerPerformance, type SellerPerformanceData } from "./seller-performance";
 import { BuyerAnalytics, type BuyerAnalyticsData } from "./buyer-analytics";
-import { XPLevelProgress, type XPLevelData } from "./xp-level-progress";
 import { CommissionTracker, type CommissionTrackerData } from "./commission-tracker";
-import {
-  TrendingUp,
-  UserCheck,
-  ShoppingBag,
-  Sparkles,
-  Receipt,
-} from "lucide-react";
 
 export type StatisticsPageProps = {
   period: string;
   sales: SalesAnalyticsData;
   performance: SellerPerformanceData;
   buyer: BuyerAnalyticsData;
-  xp: XPLevelData;
   commission: CommissionTrackerData;
 };
 
-const SECTIONS = [
-  { id: "sales", icon: TrendingUp },
-  { id: "performance", icon: UserCheck },
-  { id: "buyer", icon: ShoppingBag },
-  { id: "xp", icon: Sparkles },
-  { id: "commission", icon: Receipt },
-] as const;
-
-export function StatisticsPage({ period, sales, performance, buyer, xp, commission }: StatisticsPageProps) {
+// Fase 44: sectie-quick-nav en XP-sectie zijn vervallen — alleen de slanke
+// periode-balk blijft sticky. XP/level leeft op /dashboard/level.
+export function StatisticsPage({ period, sales, performance, buyer, commission }: StatisticsPageProps) {
   const t = useTranslations("dashboard.statistics");
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-
-  function scrollTo(id: string) {
-    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  const sectionLabels: Record<string, string> = {
-    sales: t("salesAnalytics"),
-    performance: t("sellerPerformance"),
-    buyer: t("buyerAnalytics"),
-    xp: t("xpProgress"),
-    commission: t("commissionTracker"),
-  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Sticky control bar */}
-      <div className="border border-border bg-card shadow-card sticky top-0 z-10 rounded-xl p-3 sm:p-4 space-y-3">
-        {/* Period selector */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-medium text-muted-foreground">{t("periodLabel")}</p>
-          <PeriodSelector current={period} />
-        </div>
-
-        {/* Section quick-nav */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-          {SECTIONS.map(({ id, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => scrollTo(id)}
-              className="flex items-center gap-2 rounded-lg border border-border/50 px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-foreground"
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{sectionLabels[id]}</span>
-            </button>
-          ))}
-        </div>
+      {/* Sticky periode-balk */}
+      <div className="sticky top-0 z-10 -mx-1 flex items-center justify-between gap-3 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-card backdrop-blur-sm">
+        <p className="text-sm font-medium text-muted-foreground">{t("periodLabel")}</p>
+        <PeriodSelector current={period} />
       </div>
 
       {/* Sections */}
-      <section ref={(el) => { sectionRefs.current.sales = el; }} className="scroll-mt-20">
-        <div className="flex items-center justify-between gap-2 mb-4">
+      <section>
+        <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-foreground">{t("salesAnalytics")}</h2>
           <ExportCsvButton section="sales" period={period} />
         </div>
         <SalesAnalytics data={sales} />
       </section>
 
-      <section ref={(el) => { sectionRefs.current.performance = el; }} className="scroll-mt-20">
-        <div className="flex items-center justify-between gap-2 mb-4">
+      <section>
+        <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-foreground">{t("sellerPerformance")}</h2>
           <ExportCsvButton section="performance" period={period} />
         </div>
         <SellerPerformance data={performance} />
       </section>
 
-      <section ref={(el) => { sectionRefs.current.buyer = el; }} className="scroll-mt-20">
-        <div className="flex items-center justify-between gap-2 mb-4">
+      <section>
+        <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-foreground">{t("buyerAnalytics")}</h2>
           <ExportCsvButton section="buyer" period={period} />
         </div>
         <BuyerAnalytics data={buyer} />
       </section>
 
-      <section ref={(el) => { sectionRefs.current.xp = el; }} className="scroll-mt-20">
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <h2 className="text-lg font-bold text-foreground">{t("xpProgress")}</h2>
-          <ExportCsvButton section="xp" period={period} />
-        </div>
-        <XPLevelProgress data={xp} />
-      </section>
-
-      <section ref={(el) => { sectionRefs.current.commission = el; }} className="scroll-mt-20">
-        <div className="flex items-center justify-between gap-2 mb-4">
+      <section>
+        <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-foreground">{t("commissionTracker")}</h2>
           <ExportCsvButton section="commission" period={period} />
         </div>

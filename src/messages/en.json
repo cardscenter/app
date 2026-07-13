@@ -1086,7 +1086,12 @@
       "period1y": "1 year",
       "periodAll": "All time",
       "periodMonth": "This month",
-      "periodYtd": "YTD",
+      "periodYtd": "This year (YTD)",
+      "periodToday": "Today",
+      "periodYesterday": "Yesterday",
+      "period7d": "7 days",
+      "periodPrevYear": "Last year",
+      "revenueOverTime": "Revenue over time",
       "totalRevenue": "Total revenue",
       "itemsSold": "Items sold",
       "avgSalePrice": "Avg. sale price",
@@ -1158,7 +1163,8 @@
         "completeAddress": "Complete your shipping address",
         "completeAddressDesc": "Without a full address you can't order or ship.",
         "requiredForOrders": "Required to order",
-        "optional": "Optional"
+        "optional": "Optional",
+        "recommended": "Recommended"
       },
       "balance": {
         "title": "Balance overview",

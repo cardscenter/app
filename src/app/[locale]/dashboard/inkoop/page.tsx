@@ -6,7 +6,7 @@ import { BuybackDashboard } from "@/components/buyback/buyback-dashboard";
 import { Link } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 export default async function DashboardInkoopPage({
   params,

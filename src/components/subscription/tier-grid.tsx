@@ -134,11 +134,12 @@ function TierCard({ tierKey, cycle, isCurrent, hasPendingEnterpriseRequest }: Ti
   }
   if (limits.freeHomepageSpotlightsPerMonth > 0) {
     const isPlural = limits.freeHomepageSpotlightsPerMonth > 1;
+    // {count} moet als i18n-variabele mee — de oude string-replace op de
+    // rauwe key gaf een FORMATTING_ERROR in next-intl (browser-console).
     features.push({
-      label: (isPlural ? t("featureFreeHomepageSpotlightPlural") : t("featureFreeHomepageSpotlight")).replace(
-        "{count}",
-        String(limits.freeHomepageSpotlightsPerMonth)
-      ),
+      label: isPlural
+        ? t("featureFreeHomepageSpotlightPlural", { count: limits.freeHomepageSpotlightsPerMonth })
+        : t("featureFreeHomepageSpotlight", { count: limits.freeHomepageSpotlightsPerMonth }),
       on: true,
     });
   }

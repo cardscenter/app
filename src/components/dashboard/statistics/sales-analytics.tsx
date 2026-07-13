@@ -2,8 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import {
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   LineChart,
@@ -27,8 +25,9 @@ export type SalesAnalyticsData = {
   avgSalePrice: number;
   previousAvgSalePrice: number;
   revenueByType: { name: string; value: number }[];
-  revenuePerMonth: { month: string; revenue: number }[];
-  avgPricePerMonth: { month: string; avgPrice: number }[];
+  /** Omzetverloop met bucket-per-periode: dag (≤30d), week (90d/ytd/1j), maand (alles). */
+  revenueOverTime: { label: string; revenue: number }[];
+  avgPriceOverTime: { label: string; avgPrice: number }[];
 };
 
 const TYPE_COLORS = ["var(--primary)", "#10b981", "#f59e0b"];
@@ -122,19 +121,21 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
           <ChartEmptyState title={t("revenueByType")} messageKey="noSales" />
         )}
 
-        {/* Revenue per month - Bar */}
-        {data.revenuePerMonth.length > 0 ? (
+        {/* Omzetverloop — lijn met een dot per bucket (dag/week/maand),
+            zelfde stijl als de prijsgrafiek op kaart-detail (Fase 44). */}
+        {data.revenueOverTime.length > 0 ? (
           <div className="border border-border bg-card shadow-card rounded-xl p-5">
-            <h4 className="text-sm font-semibold text-foreground mb-4">{t("revenuePerMonth")}</h4>
+            <h4 className="text-sm font-semibold text-foreground mb-4">{t("revenueOverTime")}</h4>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={data.revenuePerMonth}>
+                <LineChart data={data.revenueOverTime}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
                   <XAxis
-                    dataKey="month"
+                    dataKey="label"
                     tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                     tickLine={false}
                     axisLine={false}
+                    minTickGap={24}
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
@@ -152,29 +153,37 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
                     }}
                     formatter={(value) => [`€${Number(value).toFixed(2)}`, t("revenue")]}
                   />
-                  <Bar dataKey="revenue" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="var(--primary)"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "var(--primary)", strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
         ) : (
-          <ChartEmptyState title={t("revenuePerMonth")} messageKey="noSales" />
+          <ChartEmptyState title={t("revenueOverTime")} messageKey="noSales" />
         )}
       </div>
 
       {/* Average price over time - Line */}
-      {data.avgPricePerMonth.length > 1 ? (
+      {data.avgPriceOverTime.length > 1 ? (
         <div className="border border-border bg-card shadow-card rounded-xl p-5">
           <h4 className="text-sm font-semibold text-foreground mb-4">{t("avgPriceOverTime")}</h4>
           <div style={{ width: "100%", height: 192 }}>
             <ResponsiveContainer width="100%" height={192}>
-              <LineChart data={data.avgPricePerMonth}>
+              <LineChart data={data.avgPriceOverTime}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
                 <XAxis
-                  dataKey="month"
+                  dataKey="label"
                   tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
+                  minTickGap={24}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
@@ -196,7 +205,8 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
                   dataKey="avgPrice"
                   stroke="#8b5cf6"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: "#8b5cf6" }}
+                  dot={{ r: 3, fill: "#8b5cf6", strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
                 />
               </LineChart>
             </ResponsiveContainer>

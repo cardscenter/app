@@ -11,6 +11,7 @@ import {
   XCircle,
   CheckCircle2,
   MapPin,
+  ChevronRight,
 } from "lucide-react";
 import type { ActionItemsCounts } from "@/lib/dashboard-queries";
 
@@ -100,81 +101,94 @@ export function ActionItemsWidget({
 
   const visibleItems = items.filter((i) => i.count > 0);
   const allClear = visibleItems.length === 0;
+  const totalCount = visibleItems.reduce((s, i) => s + i.count, 0);
 
   return (
-    <div className="border border-border bg-card shadow-card rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-3">{t("title")}</h3>
-      {allClear ? (
-        <div className="flex items-center gap-3 rounded-lg bg-emerald-500/5 p-3">
-          <div className="rounded-lg bg-emerald-500/10 p-2">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <p className="text-sm text-muted-foreground">{t("allClear")}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {visibleItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className="flex items-center gap-2 rounded-lg border border-border/50 p-3 transition-colors hover:border-border hover:bg-muted/30"
-              >
-                <div className={`rounded-lg ${item.bgColor} p-1.5`}>
-                  <Icon className={`h-4 w-4 ${item.iconColor}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs text-muted-foreground">
-                    {t(item.key)}
-                  </p>
-                  <p className="text-base font-bold text-foreground">{item.count}</p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+      <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-5 py-4">
+        <h2 className="text-base font-semibold text-foreground">{t("title")}</h2>
+        {totalCount > 0 && (
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-primary">
+            {totalCount}
+          </span>
+        )}
+      </div>
 
-      {/* Verzendadres-vangnet (Fase 43) — voor accounts van vóór het
-          verplichte registratie-adres. Amber pill: zonder adres kan er niet
-          besteld of verzonden worden. */}
-      {!hasShippingAddress && (
-        <Link
-          href="/dashboard/verzending"
-          className="mt-3 flex items-center gap-2.5 rounded-lg border border-dashed border-amber-400/60 p-3 transition-colors hover:border-amber-500 hover:bg-amber-500/5 dark:border-amber-700/60"
-        >
-          <div className="rounded-lg bg-amber-500/10 p-1.5">
-            <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+      <div className="p-5">
+        {allClear ? (
+          <div className="flex items-center gap-3 rounded-xl bg-emerald-500/5 p-4">
+            <div className="rounded-xl bg-emerald-500/10 p-2.5">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <p className="text-sm text-muted-foreground">{t("allClear")}</p>
           </div>
-          <span className="min-w-0 flex-1 text-xs text-muted-foreground">
-            <span className="block font-medium text-foreground">{t("completeAddress")}</span>
-            {t("completeAddressDesc")}
-          </span>
-          <span className="shrink-0 rounded-full border border-amber-300 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:border-amber-800 dark:text-amber-300">
-            {t("requiredForOrders")}
-          </span>
-        </Link>
-      )}
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className="group flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:bg-muted/30 hover:shadow-card-hover"
+                >
+                  <div className={`shrink-0 rounded-xl ${item.bgColor} p-2.5`}>
+                    <Icon className={`h-5 w-5 ${item.iconColor}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-2xl font-bold leading-tight tabular-nums text-foreground">
+                      {item.count}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{t(item.key)}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
-      {/* Optionele 2FA-suggestie (Fase 16-followup) — bewust dashed/subtiel:
-          geen urgent werk, maar wel de beste plek om 'm één keer te zien. */}
-      {!totpEnabled && (
-        <Link
-          href="/dashboard/profiel"
-          className="mt-3 flex items-center gap-2.5 rounded-lg border border-dashed border-border p-3 transition-colors hover:border-primary/40 hover:bg-muted/30"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/google_auth.webp" alt="" width={20} height={20} className="rounded" />
-          <span className="min-w-0 flex-1 text-xs text-muted-foreground">
-            <span className="block font-medium text-foreground">{t("setup2fa")}</span>
-            {t("setup2faDesc")}
-          </span>
-          <span className="shrink-0 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-            {t("optional")}
-          </span>
-        </Link>
-      )}
+        {/* Verzendadres-vangnet (Fase 43) — voor accounts van vóór het
+            verplichte registratie-adres. Amber pill: zonder adres kan er niet
+            besteld of verzonden worden. */}
+        {!hasShippingAddress && (
+          <Link
+            href="/dashboard/verzending"
+            className="mt-4 flex items-center gap-3 rounded-xl border border-dashed border-amber-400/60 p-4 transition-colors hover:border-amber-500 hover:bg-amber-500/5 dark:border-amber-700/60"
+          >
+            <div className="rounded-xl bg-amber-500/10 p-2.5">
+              <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+              <span className="block font-medium text-foreground">{t("completeAddress")}</span>
+              {t("completeAddressDesc")}
+            </span>
+            <span className="shrink-0 rounded-full border border-amber-300 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:border-amber-800 dark:text-amber-300">
+              {t("requiredForOrders")}
+            </span>
+          </Link>
+        )}
+
+        {/* 2FA-suggestie (Fase 16-followup) — dashed tegel met zwevend
+            "Aanbevolen"-label bovenaan-midden (Fase 44-feedback). */}
+        {!totpEnabled && (
+          <Link
+            href="/dashboard/profiel"
+            className="relative mt-6 flex items-center gap-3 rounded-xl border border-dashed border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/30"
+          >
+            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary backdrop-blur-sm">
+              {t("recommended")}
+            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/google_auth.webp" alt="" width={36} height={36} className="shrink-0 rounded-lg" />
+            <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+              <span className="block font-medium text-foreground">{t("setup2fa")}</span>
+              {t("setup2faDesc")}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
