@@ -53,7 +53,7 @@ export async function DashboardEssentials({
       {showPremiumCta && (
         <Link
           href="/dashboard/statistieken"
-          className="border border-border bg-card shadow-card group flex items-center justify-between rounded-xl p-5 transition-colors hover:bg-muted/30"
+          className="group flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 p-5 transition-colors hover:bg-primary/10"
         >
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-primary/10 p-2">
