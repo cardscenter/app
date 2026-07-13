@@ -26,6 +26,10 @@ import { findUserByNameInsensitive } from "@/lib/username-policy-server";
 
 const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24u
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1u
+// Fase 43 — resend-throttle voor verificatiemails (niet-geëxporteerde consts
+// mogen in een use-server bestand; alleen exports moeten async zijn).
+const RESEND_COOLDOWN_MS = 60 * 1000; // 1 min tussen mails
+const RESEND_DAILY_MAX = 5; // max tokens per 24u
 
 function getPostRegisterRedirect(selectedPlan: string | null): string | undefined {
   if (selectedPlan === "PRO" || selectedPlan === "UNLIMITED") return "/dashboard/abonnement";
@@ -301,6 +305,28 @@ export async function resendVerificationEmail(): Promise<
   });
   if (!user) return { error: "Account niet gevonden." };
   if (user.emailVerifiedAt) return { success: true };
+
+  // Fase 43 — throttle: max 1 mail per minuut en 5 per 24 uur. Voorkomt dat
+  // de resend-knop als spam-kanaal misbruikt wordt (token-creates zijn de
+  // teller, EmailVerificationToken.createdAt bestaat al).
+  const lastToken = await prisma.emailVerificationToken.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  if (lastToken && Date.now() - lastToken.createdAt.getTime() < RESEND_COOLDOWN_MS) {
+    return {
+      error: "Even geduld — je kunt over een minuut opnieuw een verificatiemail aanvragen.",
+    };
+  }
+  const recentCount = await prisma.emailVerificationToken.count({
+    where: { userId, createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+  });
+  if (recentCount >= RESEND_DAILY_MAX) {
+    return {
+      error: "Maximum aantal verificatiemails bereikt. Probeer het morgen opnieuw of neem contact op via de supportpagina.",
+    };
+  }
 
   const token = crypto.randomBytes(32).toString("base64url");
   await prisma.emailVerificationToken.create({
