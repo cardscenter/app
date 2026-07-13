@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { SalesContent } from "@/components/dashboard/sales-content";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
 import { CancelledAuctionsSection, type CancelledAuctionData } from "@/components/dashboard/cancelled-auctions-section";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { Package } from "lucide-react";
 
 // Idem als in /aankopen: groepeer items met dezelfde cardName + conditie
 // tot één rij met aantal + subtotaal.
@@ -413,14 +416,10 @@ export default async function MySalesPage({
   const hasContent = serialized.length > 0 || pendingAuctions.length > 0 || cancelledAuctions.length > 0;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">
-        {t("title")}
-      </h1>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("title")} />
       {!hasContent ? (
-        <p className="mt-8 text-sm text-muted-foreground">
-          {t("noSales")}
-        </p>
+        <EmptyState icon={Package} title={t("noSales")} />
       ) : (
         <>
           <ActivePickupsSection pickups={sellerActivePickups} />

@@ -5,7 +5,9 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Upload } from "lucide-react";
 import { OfferTabs } from "@/components/dashboard/cluster-tabs";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button";
+import { Store } from "lucide-react";
 import { ListingCard } from "@/components/listing/listing-card";
 import { ListingStatusBadge } from "@/components/listing/listing-status-badge";
 import { hasFeature } from "@/lib/subscription-tiers";
@@ -101,9 +103,7 @@ async function Section({ title, status, items, locale, emptyKey }: SectionProps)
         <ListingStatusBadge status={status} />
       </div>
       {items.length === 0 ? (
-        <div className="glass-subtle rounded-2xl p-6 text-center text-muted-foreground">
-          {t(emptyKey)}
-        </div>
+        <EmptyState icon={Store} title={t(emptyKey)} compact />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((listing) => (

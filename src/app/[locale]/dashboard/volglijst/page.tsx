@@ -2,27 +2,22 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { Heart } from "lucide-react";
 import { RealtimePageRefresh } from "@/components/providers/realtime-page-refresh";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
+import { buttonVariants } from "@/components/ui/button";
 
-// Mappt een status-string naar een kleur-bucket. ACTIVE/LIVE = koopbaar (groen),
-// PARTIALLY_SOLD = deels koopbaar (blauw), PAUSED = tijdelijk weg (geel),
-// SOLD/CANCELLED/CLOSED/ENDED = afgerond (grijs), DELETED = weg (rood).
-function statusBadgeClass(status: string): string {
-  if (status === "ACTIVE" || status === "LIVE") {
-    return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
-  }
-  if (status === "PARTIALLY_SOLD") {
-    return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
-  }
-  if (status === "PAUSED" || status === "RESERVED") {
-    return "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200";
-  }
-  if (status === "DELETED") {
-    return "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300";
-  }
-  // SOLD, CANCELLED, CLOSED, ENDED — afgehandeld
-  return "bg-muted text-muted-foreground";
+// Status → StatusBadge-tone. ACTIVE/LIVE = koopbaar, PARTIALLY_SOLD = deels,
+// PAUSED/RESERVED = tijdelijk weg, DELETED = weg, rest = afgerond.
+function statusTone(status: string): StatusTone {
+  if (status === "ACTIVE" || status === "LIVE") return "success";
+  if (status === "PARTIALLY_SOLD") return "info";
+  if (status === "PAUSED" || status === "RESERVED") return "warning";
+  if (status === "DELETED") return "danger";
+  return "neutral";
 }
 
 const NOT_BUYABLE_STATUSES = new Set([
@@ -35,7 +30,7 @@ const NOT_BUYABLE_STATUSES = new Set([
   "RESERVED",
 ]);
 
-function statusLabel(status: string, type: "auction" | "claimsale" | "listing"): string {
+function statusLabel(status: string): string {
   // Vertalingen liggen in verschillende namespaces; voor nu een simpele
   // NL-mapping zodat de badge altijd leesbaar is. Gangbare labels.
   const labels: Record<string, string> = {
@@ -77,12 +72,18 @@ export default async function WatchlistPage({
   return (
     <div className="space-y-6">
       <RealtimePageRefresh events={["listing-changed", "auction-ended", "bid-placed"]} />
-      <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+      <DashboardPageHeader title={t("title")} />
 
       {items.length === 0 ? (
-        <div className="glass-subtle rounded-2xl p-8 text-center text-muted-foreground">
-          {t("empty")}
-        </div>
+        <EmptyState
+          icon={Heart}
+          title={t("empty")}
+          action={
+            <Link href="/marktplaats" className={buttonVariants({ size: "sm", variant: "outline" })}>
+              Ontdek de marktplaats
+            </Link>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {items.map((item) => {
@@ -91,10 +92,10 @@ export default async function WatchlistPage({
 
             const type = item.auction ? "auction" : item.claimsale ? "claimsale" : "listing";
             const href = type === "auction"
-              ? `/${locale}/veilingen/${target.id}`
+              ? `/veilingen/${target.id}`
               : type === "claimsale"
-                ? `/${locale}/claimsales/${target.id}`
-                : `/${locale}/marktplaats/${target.id}`;
+                ? `/claimsales/${target.id}`
+                : `/marktplaats/${target.id}`;
 
             const typeLabel = type === "auction" ? t("auction") : type === "claimsale" ? t("claimsale") : t("listing");
             const status = "status" in target ? target.status : "";
@@ -104,7 +105,7 @@ export default async function WatchlistPage({
               <Link
                 key={item.id}
                 href={href}
-                className={`glass-subtle flex items-center justify-between rounded-2xl p-4 transition-all hover:scale-[1.005] hover:shadow-md ${
+                className={`flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover ${
                   notBuyable ? "opacity-70" : ""
                 }`}
               >
@@ -118,9 +119,7 @@ export default async function WatchlistPage({
                     <p className="text-sm text-muted-foreground">€{(target.price as number).toFixed(2)}</p>
                   )}
                 </div>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass(status)}`}>
-                  {statusLabel(status, type)}
-                </span>
+                <StatusBadge tone={statusTone(status)}>{statusLabel(status)}</StatusBadge>
               </Link>
             );
           })}

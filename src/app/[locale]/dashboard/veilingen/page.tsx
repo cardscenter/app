@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { redirect } from "next/navigation";
-import { Clock } from "lucide-react";
+import { Clock, Gavel } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { SellerAuctionCard, type SellerAuctionCardData } from "@/components/dashboard/seller-auction-card";
 import { EndedAuctionRow } from "@/components/dashboard/ended-auction-row";
 import { VeilingenRealtimeWatcher } from "@/components/dashboard/veilingen-realtime-watcher";
@@ -158,9 +159,7 @@ export default async function MyAuctionsPage({
           </p>
         </div>
         {liveAuctions.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted-foreground">
-            {t("noActiveAuctions")}
-          </div>
+          <EmptyState icon={Gavel} title={t("noActiveAuctions")} compact />
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {liveAuctions.map((a) => (
@@ -184,9 +183,7 @@ export default async function MyAuctionsPage({
           </h2>
         </div>
         {endedAuctions.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted-foreground">
-            Nog geen afgelopen veilingen.
-          </div>
+          <EmptyState icon={Clock} title="Nog geen afgelopen veilingen" compact />
         ) : (
           <div className="space-y-2">
             {endedAuctions.map((a) => (

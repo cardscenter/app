@@ -2,8 +2,10 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
-import { Clock } from "lucide-react";
+import { Clock, HandCoins } from "lucide-react";
 import { ActiveRunnerUpOffersSection } from "@/components/dashboard/active-runner-up-offers-section";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { LiveBidCard, type LiveBidCardData } from "@/components/dashboard/live-bid-card";
 import { PastBidRow, type PastBidStatus } from "@/components/dashboard/past-bid-row";
 import { BiedingenRealtimeWatcher } from "@/components/dashboard/biedingen-realtime-watcher";
@@ -66,14 +68,9 @@ export default async function LiveHubPage({
   if (allAuctionIds.size === 0) {
     return (
       <div className="space-y-6">
-        <header>
-          <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-        </header>
+        <DashboardPageHeader title={t("title")} subtitle={t("subtitle")} />
         <ActiveRunnerUpOffersSection />
-        <div className="rounded-2xl border border-dashed border-border bg-card/40 p-8 text-center text-muted-foreground">
-          {t("empty")}
-        </div>
+        <EmptyState icon={HandCoins} title={t("empty")} />
       </div>
     );
   }
@@ -176,13 +173,10 @@ export default async function LiveHubPage({
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <BiedingenRealtimeWatcher liveAuctionIds={liveCards.map((c) => c.id)} />
 
-      <header>
-        <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-      </header>
+      <DashboardPageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <ActiveRunnerUpOffersSection />
 
@@ -211,9 +205,7 @@ export default async function LiveHubPage({
           </div>
         </div>
         {liveCards.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted-foreground">
-            {t("liveEmpty")}
-          </div>
+          <EmptyState icon={HandCoins} title={t("liveEmpty")} compact />
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {liveCards.map((c) => (
@@ -238,9 +230,7 @@ export default async function LiveHubPage({
           <p className="mt-0.5 text-sm text-muted-foreground">{t("pastDescription")}</p>
         </div>
         {pastRows.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted-foreground">
-            {t("pastEmpty")}
-          </div>
+          <EmptyState icon={Clock} title={t("pastEmpty")} compact />
         ) : (
           <div className="space-y-2">
             {pastRows.map((row) => (

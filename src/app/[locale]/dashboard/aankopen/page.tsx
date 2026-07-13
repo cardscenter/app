@@ -6,6 +6,9 @@ import { PurchasesContent } from "@/components/dashboard/purchases-content";
 import { ActivePickupsSection } from "@/components/dashboard/active-pickups-section";
 import { ActiveRunnerUpOffersSection } from "@/components/dashboard/active-runner-up-offers-section";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { ShoppingBag } from "lucide-react";
 
 // Groepeer items met dezelfde cardName + conditie tot één rij met aantal +
 // subtotaal. Voor stocked-buy ("5× Destined Rivals booster pack") en voor
@@ -341,17 +344,13 @@ export default async function MyPurchasesPage({
   }));
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">
-        {t("title")}
-      </h1>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("title")} />
 
       <ActiveRunnerUpOffersSection />
 
       {serialized.length === 0 && pendingAuctions.length === 0 ? (
-        <p className="mt-8 text-sm text-muted-foreground">
-          {t("noPurchases")}
-        </p>
+        <EmptyState icon={ShoppingBag} title={t("noPurchases")} />
       ) : (
         <>
           <ActivePickupsSection pickups={activePickups} />

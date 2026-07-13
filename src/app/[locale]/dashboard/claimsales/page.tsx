@@ -4,7 +4,16 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { redirect } from "next/navigation";
 import { OfferTabs } from "@/components/dashboard/cluster-tabs";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Tag } from "lucide-react";
+
+const CLAIMSALE_STATUS_TONE: Record<string, StatusTone> = {
+  LIVE: "success",
+  SCHEDULED: "info",
+  DRAFT: "warning",
+};
 
 export default async function MyClaimsalesPage({
   params,
@@ -38,28 +47,20 @@ export default async function MyClaimsalesPage({
       />
 
       {claimsales.length === 0 ? (
-        <p className="mt-8 text-sm text-muted-foreground">
-          {t("noActiveClaimsales")}
-        </p>
+        <EmptyState icon={Tag} title={t("noActiveClaimsales")} />
       ) : (
-        <div className="mt-6 space-y-4">
+        <div className="space-y-3">
           {claimsales.map((cs) => (
             <Link
               key={cs.id}
               href={`/claimsales/${cs.id}`}
-              className="block glass rounded-2xl p-4 transition-colors hover:bg-muted/50"
+              className="block rounded-2xl border border-border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover"
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-medium text-foreground">{cs.title}</h3>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  cs.status === "LIVE"
-                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                    : cs.status === "DRAFT"
-                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                    : "bg-muted text-muted-foreground"
-                }`}>
+                <StatusBadge tone={CLAIMSALE_STATUS_TONE[cs.status] ?? "neutral"}>
                   {cs.status}
-                </span>
+                </StatusBadge>
               </div>
               <div className="mt-2 flex gap-4 text-sm text-muted-foreground">
                 <span>{cs.items.length}/{cs._count.items} verkocht</span>

@@ -5,6 +5,8 @@ import { getTranslations } from "next-intl/server";
 import { BuybackDashboard } from "@/components/buyback/buyback-dashboard";
 import { Link } from "@/i18n/navigation";
 import { Plus } from "lucide-react";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function DashboardInkoopPage({
   params,
@@ -27,16 +29,15 @@ export default async function DashboardInkoopPage({
   });
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <Link
-          href="/verkoop-calculator"
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" /> {t("createNew")}
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title={t("title")}
+        action={
+          <Link href="/verkoop-calculator" className={buttonVariants()}>
+            <Plus className="h-4 w-4" /> {t("createNew")}
+          </Link>
+        }
+      />
       <BuybackDashboard requests={JSON.parse(JSON.stringify(requests))} />
     </div>
   );
