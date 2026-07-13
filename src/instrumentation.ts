@@ -75,4 +75,16 @@ export async function register() {
     // eslint-disable-next-line no-console
     console.error("[instrumentation] unread-email scheduler boot failed", err);
   }
+
+  // In-process scheduler voor order-onderhoud (Fase 44-feedback): elk uur
+  // cancellation-expiry (7d mutual-deadline) + auto-cancel-stale-paid
+  // (14d niet verzonden → volledige refund). De externe cron voor deze
+  // routes was nooit ingesteld waardoor de flows in de praktijk dood waren.
+  try {
+    const { startOrderMaintenanceScheduler } = await import("@/lib/order-maintenance-scheduler");
+    startOrderMaintenanceScheduler("boot");
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[instrumentation] order-maintenance scheduler boot failed", err);
+  }
 }

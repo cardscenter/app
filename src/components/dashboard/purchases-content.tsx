@@ -1,10 +1,16 @@
 "use client";
 
 import { useTranslations, useLocale } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { confirmDelivery } from "@/actions/purchase";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
+import { cancelOverdueOrder } from "@/actions/cancellation";
+import {
+  STALE_PAID_SELLER_DEADLINE_DAYS,
+  STALE_PAID_WARNING_AFTER_DAYS,
+  STALE_PAID_AUTO_CANCEL_AFTER_DAYS,
+} from "@/lib/stale-order-config";
 import { Link } from "@/i18n/navigation";
 import { useRefreshOnRealtime } from "@/hooks/use-refresh-on-realtime";
 import {
@@ -20,7 +26,6 @@ import {
   Star,
   CreditCard,
   Ban,
-  Info,
 } from "lucide-react";
 import Image from "next/image";
 import { OpenDisputeV2Form } from "./open-dispute-v2-form";
@@ -131,11 +136,11 @@ const STATUS_BADGE: Record<Tab, string> = {
 
 const AUTO_CONFIRM_DAYS = 30;
 
-// (Fase 40) Buyer-warning constants. STALE_PAID_DAYS = 14 matched de cron;
-// vanaf SHOW_WARNING_AFTER_DAYS toont UI een gele banner met aanbeveling
-// om actief annulering aan te vragen ipv passief op de cron te wachten.
-const STALE_PAID_DAYS = 14;
-const SHOW_WARNING_AFTER_DAYS = 7;
+// (Fase 40/44) Buyer-warning constants — gedeeld met de cron en de
+// cancelOverdueOrder-action via stale-order-config: dag 7 gele waarschuwing,
+// dag 14 mag de koper zelf direct annuleren, dag 21 cron-vangnet.
+const STALE_PAID_DAYS = STALE_PAID_SELLER_DEADLINE_DAYS;
+const SHOW_WARNING_AFTER_DAYS = STALE_PAID_WARNING_AFTER_DAYS;
 // Voor SHIPPED-bundles: na X dagen zonder delivery-confirm krijgt buyer een
 // "tracking-stuck?"-knop die straks (Fase 40-G) een ShippingIssue opent.
 const TRACKING_STUCK_AFTER_DAYS = 14;
@@ -296,6 +301,42 @@ export function PurchasesContent({
   );
 }
 
+/**
+ * "Annuleer nu met terugbetaling" (Fase 44) — directe koper-annulering zodra
+ * de verkoper de 14-dagen-verzendtermijn heeft overschreden. Server-side
+ * geguard (buyer-only, deadline-check) en race-safe via de gedeelde executor.
+ */
+function OverdueCancelButton({ bundleId, label }: { bundleId: string; label: string }) {
+  const t = useTranslations("purchases");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function handleClick() {
+    if (!window.confirm(t("staleOverdueConfirm"))) return;
+    startTransition(async () => {
+      const result = await cancelOverdueOrder(bundleId);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      if ("refundAmount" in result && typeof result.refundAmount === "number") {
+        toast.success(t("staleOverdueSuccess", { amount: result.refundAmount.toFixed(2) }));
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={pending}
+      className="shrink-0 rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {pending ? "..." : label}
+    </button>
+  );
+}
+
 function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle; locale: string; currentUserId: string }) {
   const t = useTranslations("purchases");
   const router = useRouter();
@@ -388,18 +429,21 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                 </span>
               </div>
             </div>
+          ) : bundle.auctionPremium !== null && bundle.auctionPremium > 0 ? (
+            // Auction-bundle: toon wat er wérkelijk is betaald (bod +
+            // veilingkosten) en benoem de kosten expliciet — de vorige
+            // tooltip-only variant verstopte de splitsing (Fase 44-feedback).
+            <div className="flex flex-col items-end leading-tight">
+              <span className="text-sm font-bold text-foreground tabular-nums">
+                &euro;{(bundle.totalCost + bundle.auctionPremium).toFixed(2)}
+              </span>
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {t("inclAuctionFee", { amount: bundle.auctionPremium.toFixed(2) })}
+              </span>
+            </div>
           ) : (
-            <span className="inline-flex items-center gap-1 text-sm font-bold text-foreground tabular-nums">
+            <span className="text-sm font-bold text-foreground tabular-nums">
               &euro;{bundle.totalCost.toFixed(2)}
-              {bundle.auctionPremium !== null && bundle.auctionPremium > 0 && (
-                <span
-                  title={`Bovenop dit bedrag is €${bundle.auctionPremium.toFixed(2)} veilingkosten apart afgeschreven (totaal betaald: €${(bundle.totalCost + bundle.auctionPremium).toFixed(2)}). Zie /dashboard/saldo voor het AUCTION_PREMIUM-transactieoverzicht.`}
-                  aria-label="Veilingkosten reeds verrekend"
-                  className="inline-flex cursor-help"
-                >
-                  <Info className="h-3.5 w-3.5 text-muted-foreground/60" />
-                </span>
-              )}
             </span>
           )}
           <button
@@ -457,12 +501,39 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
       {!expanded && bundle.status === "PAID" && !bundle.hasActiveCancellation && (() => {
         const paidDate = new Date(bundle.createdAt);
         const daysSincePaid = (Date.now() - paidDate.getTime()) / (1000 * 60 * 60 * 24);
-        const daysUntilAutoCancel = Math.max(0, Math.ceil(STALE_PAID_DAYS - daysSincePaid));
+        const daysUntilBuyerCancel = Math.max(0, Math.ceil(STALE_PAID_DAYS - daysSincePaid));
+        const daysUntilAutoCancel = Math.max(
+          1,
+          Math.ceil(STALE_PAID_AUTO_CANCEL_AFTER_DAYS - daysSincePaid)
+        );
         // Voor PICKUP-bundles geldt geen auto-cancel-cron (eigen 14d pickup-
         // reservation-timeout-cron handelt EXTERNAL af, PLATFORM-pickup
         // wacht op code-confirm). Geen STALE_PAID-waarschuwing daar.
         const isShip = bundle.deliveryMethod === "SHIP";
-        const showWarning = isShip && daysSincePaid >= SHOW_WARNING_AFTER_DAYS;
+        const isOverdue = isShip && daysSincePaid >= STALE_PAID_DAYS;
+        const showWarning = isShip && !isOverdue && daysSincePaid >= SHOW_WARNING_AFTER_DAYS;
+
+        // Dag 14+: verkoper schond de verzendtermijn — koper mag DIRECT
+        // annuleren met volledige terugbetaling (geen mutual akkoord). Doet
+        // 'ie 7 dagen niets, dan annuleert de cron automatisch (Fase 44).
+        if (isOverdue) {
+          return (
+            <div className="border-t border-red-200/60 bg-red-50/60 px-4 py-2.5 dark:border-red-900/40 dark:bg-red-950/30">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                <div className="flex-1 min-w-0 text-xs text-red-900 dark:text-red-200">
+                  <p className="font-medium">
+                    {t("staleWarningTitle", { days: Math.floor(daysSincePaid) })}
+                  </p>
+                  <p className="mt-0.5 text-red-800/80 dark:text-red-300/80">
+                    {t("staleOverdueBody", { daysLeft: daysUntilAutoCancel })}
+                  </p>
+                </div>
+                <OverdueCancelButton bundleId={bundle.id} label={t("staleOverdueCta")} />
+              </div>
+            </div>
+          );
+        }
 
         if (showWarning) {
           return (
@@ -474,7 +545,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                     {t("staleWarningTitle", { days: Math.floor(daysSincePaid) })}
                   </p>
                   <p className="mt-0.5 text-amber-800/80 dark:text-amber-300/80">
-                    {t("staleWarningBody", { daysLeft: daysUntilAutoCancel })}
+                    {t("staleWarningBody", { daysLeft: daysUntilBuyerCancel })}
                   </p>
                 </div>
                 <button

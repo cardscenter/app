@@ -6,6 +6,7 @@ import { refundEscrow, refundAuctionPremium } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { z } from "zod";
 import { CANCELLATION_DEADLINE_DAYS, CANCELLATION_REASONS } from "@/lib/cancellation-config";
+import { STALE_PAID_SELLER_DEADLINE_DAYS } from "@/lib/stale-order-config";
 import { publish, userChannel, listingChannel } from "@/lib/realtime";
 
 function publishBundleChanged(buyerId: string, sellerId: string, bundleId: string, status: string) {
@@ -254,4 +255,51 @@ export async function getActiveCancellationRequest(bundleId: string) {
       proposedBy: { select: { id: true, displayName: true } },
     },
   });
+}
+
+/**
+ * Directe annulering door de KOPER wanneer de verkoper de verzendtermijn
+ * (14 dagen) heeft overschreden (Fase 44). Geen wederzijds akkoord nodig —
+ * de verkoper heeft z'n leverplicht geschonden. Doet de koper 7 dagen lang
+ * niets, dan pakt de auto-cancel-stale-paid-cron 'm alsnog op (dag 21).
+ * Alle side-effects (refund, premium-refund, items terug op de markt,
+ * notificaties, realtime) lopen via de gedeelde race-safe executor.
+ */
+export async function cancelOverdueOrder(bundleId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const bundle = await prisma.shippingBundle.findUnique({
+    where: { id: bundleId },
+    select: {
+      buyerId: true,
+      status: true,
+      deliveryMethod: true,
+      shippedAt: true,
+      createdAt: true,
+    },
+  });
+  if (!bundle) return { error: "Bestelling niet gevonden" };
+  if (bundle.buyerId !== session.user.id) return { error: "Niet geautoriseerd" };
+  if (bundle.status !== "PAID" || bundle.shippedAt) {
+    return { error: "Deze bestelling is inmiddels verzonden of al geannuleerd." };
+  }
+  if (bundle.deliveryMethod !== "SHIP") {
+    return { error: "Directe annulering geldt alleen voor verzend-bestellingen." };
+  }
+
+  const deadline = new Date(
+    bundle.createdAt.getTime() + STALE_PAID_SELLER_DEADLINE_DAYS * 24 * 60 * 60 * 1000
+  );
+  if (new Date() < deadline) {
+    return {
+      error: `Direct annuleren kan pas als de verkoper ${STALE_PAID_SELLER_DEADLINE_DAYS} dagen niet heeft verzonden. Tot die tijd kun je een annuleringsverzoek indienen.`,
+    };
+  }
+
+  const { executeStalePaidCancel } = await import("@/lib/cron-jobs");
+  const result = await executeStalePaidCancel(bundleId, "buyer");
+  if ("error" in result) return { error: result.error };
+
+  return { success: true, refundAmount: result.refundAmount };
 }
