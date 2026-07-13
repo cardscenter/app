@@ -2,13 +2,16 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
-import { AddressForm } from "@/components/dashboard/address-form";
+import { Link } from "@/i18n/navigation";
 import { ShippingMethodsManager } from "@/components/dashboard/shipping-methods-manager";
 import { SellingScopeToggle } from "@/components/dashboard/selling-scope-toggle";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { DashboardSection } from "@/components/dashboard/ui/section";
 import { getSellerShippingMethods } from "@/actions/shipping-method";
 import { normalizeSellingScope } from "@/lib/shipping/static-methods";
 import { getCarriersForCountry } from "@/lib/shipping/carriers";
 import { getEuNearNeighbors } from "@/lib/shipping/zones";
+import { Globe2, Truck } from "lucide-react";
 
 export default async function ShippingPage({
   params,
@@ -20,6 +23,7 @@ export default async function ShippingPage({
   if (!session?.user) redirect(`/${locale}/login`);
 
   const t = await getTranslations("shipping");
+  const td = await getTranslations("dashboard");
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id! },
@@ -32,46 +36,53 @@ export default async function ShippingPage({
   const neighbors = user.country ? getEuNearNeighbors(user.country) : [];
 
   return (
-    <div className="space-y-8">
-      {/* Address section */}
-      <section>
-        <h2 className="text-lg font-semibold text-foreground">{t("addressTitle")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("addressDescription")}</p>
-        <div className="mt-4 glass rounded-2xl p-5">
-          <AddressForm user={user} />
-        </div>
-      </section>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title={td("myShipping")}
+        subtitle="Je verzendgebied en verzendmethoden per zone."
+      />
+
+      {/* Adres leeft canoniek op /dashboard/profiel (Fase 44) — hier alleen
+          een verwijzing zodat er geen twee formulieren naast elkaar bestaan. */}
+      <p className="text-sm text-muted-foreground">
+        Je verzendadres wijzig je op{" "}
+        <Link href="/dashboard/profiel" className="font-medium text-primary hover:underline">
+          je profiel
+        </Link>
+        .
+      </p>
 
       {/* Selling scope section */}
       {user.country && (
-        <section>
-          <h2 className="text-lg font-semibold text-foreground">{t("sellingCountriesTitle")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("sellingCountriesDescription")}</p>
-          <div className="mt-4">
-            <SellingScopeToggle
-              current={scope}
-              originCountry={user.country}
-              neighbors={neighbors}
-            />
-          </div>
-        </section>
+        <DashboardSection
+          icon={<Globe2 className="size-5" />}
+          title={t("sellingCountriesTitle")}
+          description={t("sellingCountriesDescription")}
+        >
+          <SellingScopeToggle
+            current={scope}
+            originCountry={user.country}
+            neighbors={neighbors}
+          />
+        </DashboardSection>
       )}
 
       {/* Static shipping methods section */}
-      <section>
-        <h2 className="text-lg font-semibold text-foreground">{t("methodsTitle")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("staticIntro")}</p>
-        <div className="mt-4">
-          <ShippingMethodsManager
-            methods={enrichedMethods}
-            availableCarriers={availableCarriers}
-            hasCountry={!!user.country}
-            originCountry={user.country ?? null}
-            neighbors={neighbors}
-            scope={scope}
-          />
-        </div>
-      </section>
+      <DashboardSection
+        icon={<Truck className="size-5" />}
+        title={t("methodsTitle")}
+        description={t("staticIntro")}
+        variant="plain"
+      >
+        <ShippingMethodsManager
+          methods={enrichedMethods}
+          availableCarriers={availableCarriers}
+          hasCountry={!!user.country}
+          originCountry={user.country ?? null}
+          neighbors={neighbors}
+          scope={scope}
+        />
+      </DashboardSection>
     </div>
   );
 }

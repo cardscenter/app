@@ -5,6 +5,9 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { VerificationForm } from "@/components/dashboard/verification-form";
 import { AddressVerificationForm } from "@/components/dashboard/address-verification-form";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { DashboardSection } from "@/components/dashboard/ui/section";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { CheckCircle2, Clock, XCircle, Landmark, MapPin, IdCard } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 
@@ -31,14 +34,11 @@ export default async function VerificationPage({
   const hasIban = !!user?.iban;
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Verifieer je account om vertrouwen te wekken bij andere gebruikers. Drie types verificatie staan
-          los van elkaar — je kunt er één, twee of alle drie behalen.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title={t("title")}
+        subtitle="Verifieer je account om vertrouwen te wekken bij andere gebruikers. Drie types verificatie staan los van elkaar — je kunt er één, twee of alle drie behalen."
+      />
 
       {/* ID — gate voor bids ≥ €2000, en algemene trust-signal */}
       <Section
@@ -152,14 +152,25 @@ function Section({
   pendingDescription: string;
   children: React.ReactNode;
 }) {
-  return (
-    <section className="space-y-3">
-      <header className="flex items-center gap-2">
-        <span className="text-muted-foreground">{icon}</span>
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-      </header>
-      <p className="text-xs text-muted-foreground">{subtitle}</p>
+  const badge =
+    statusValue === "APPROVED" ? (
+      <StatusBadge tone="success" icon={CheckCircle2}>Geverifieerd</StatusBadge>
+    ) : statusValue === "PENDING" ? (
+      <StatusBadge tone="info" icon={Clock}>In behandeling</StatusBadge>
+    ) : statusValue === "REJECTED" ? (
+      <StatusBadge tone="danger" icon={XCircle}>Afgewezen</StatusBadge>
+    ) : (
+      <StatusBadge tone="neutral">Niet geverifieerd</StatusBadge>
+    );
 
+  return (
+    <DashboardSection
+      icon={icon}
+      title={title}
+      description={subtitle}
+      action={badge}
+      contentClassName="space-y-3 p-5"
+    >
       {statusValue === "APPROVED" && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/10">
           <div className="flex items-start gap-3">
@@ -212,6 +223,6 @@ function Section({
       )}
 
       {statusValue === "NONE" && children}
-    </section>
+    </DashboardSection>
   );
 }

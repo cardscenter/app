@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { DisputesOverview } from "@/components/dashboard/disputes-overview";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function DisputesPage({
   params,
@@ -58,8 +59,8 @@ export default async function DisputesPage({
   }));
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("title")} />
       <DisputesOverview disputes={serialized} />
     </div>
   );

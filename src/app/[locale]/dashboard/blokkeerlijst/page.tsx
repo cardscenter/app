@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { BlockedListContent } from "@/components/dashboard/blocked-list-content";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function BlockedListPage({
   params,
@@ -24,9 +25,13 @@ export default async function BlockedListPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">{t("blockedListTitle")}</h1>
+      <DashboardPageHeader
+        title={t("blockedListTitle")}
+        backHref="/dashboard/instellingen"
+        backLabel="Terug naar instellingen"
+      />
 
-      <div className="glass rounded-xl p-6">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
         <BlockedListContent
           rows={rows.map((r) => ({
             id: r.id,

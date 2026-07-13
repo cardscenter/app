@@ -2,9 +2,12 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
+import { Bell, Settings } from "lucide-react";
 import { NotificationList } from "@/components/ui/notification-list";
-import { EmailPreferencesSection } from "@/components/dashboard/email-preferences";
-import { parseEmailPreferences } from "@/lib/email/preferences-config";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function MeldingenPage({
   params,
@@ -17,31 +20,28 @@ export default async function MeldingenPage({
 
   const t = await getTranslations("notifications");
 
-  const [notifications, user] = await Promise.all([
-    prisma.notification.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    }),
-    prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { emailPreferences: true, emailVerifiedAt: true },
-    }),
-  ]);
+  const notifications = await prisma.notification.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
-
-      <EmailPreferencesSection
-        initialPrefs={parseEmailPreferences(user?.emailPreferences)}
-        emailVerified={Boolean(user?.emailVerifiedAt)}
+      {/* E-mailvoorkeuren leven sinds Fase 44 op /dashboard/instellingen —
+          deze pagina is puur de notificatie-lijst. */}
+      <DashboardPageHeader
+        title={t("title")}
+        action={
+          <Link href="/dashboard/instellingen" className={buttonVariants({ variant: "outline" })}>
+            <Settings className="h-4 w-4" />
+            E-mailvoorkeuren beheren
+          </Link>
+        }
       />
 
       {notifications.length === 0 ? (
-        <div className="glass-subtle rounded-2xl p-8 text-center text-muted-foreground">
-          {t("empty")}
-        </div>
+        <EmptyState icon={Bell} title={t("empty")} />
       ) : (
         <NotificationList
           notifications={notifications.map((n) => ({

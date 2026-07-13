@@ -7,14 +7,12 @@ import { PasswordChangeForm } from "@/components/dashboard/password-change-form"
 import { TwoFactorSettings } from "@/components/dashboard/two-factor-settings";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
-import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
 import { ShopSlugForm } from "@/components/dashboard/shop-slug-form";
-import { BidConfirmationToggle } from "@/components/dashboard/bid-confirmation-toggle";
-import { SellingScopeToggle } from "@/components/dashboard/selling-scope-toggle";
-import { normalizeSellingScope } from "@/lib/shipping/static-methods";
-import { getEuNearNeighbors } from "@/lib/shipping/zones";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { DashboardSection } from "@/components/dashboard/ui/section";
 import { SessionProvider } from "next-auth/react";
 import { Link } from "@/i18n/navigation";
+import { buttonVariants } from "@/components/ui/button";
 import {
   ExternalLink,
   Shield,
@@ -26,11 +24,9 @@ import {
   Building2,
   History,
   Sparkles,
-  Truck,
   Landmark,
   MapPin,
   User as UserIcon,
-  Settings,
   KeyRound,
 } from "lucide-react";
 import { getLevel } from "@/lib/seller-levels";
@@ -80,18 +76,17 @@ export default async function ProfilePage({
   const isBusiness = user.accountKind === "BUSINESS";
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">{t("profile")}</h1>
-        <Link
-          href={`/verkoper/${user.id}`}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
-        >
-          <ExternalLink className="size-3.5" />
-          {tp("viewPublicProfile")}
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title={t("profile")}
+        subtitle="Je identiteit, adres, beveiliging en bankgegevens."
+        action={
+          <Link href={`/verkoper/${user.id}`} className={buttonVariants({ variant: "outline" })}>
+            <ExternalLink className="size-3.5" />
+            {tp("viewPublicProfile")}
+          </Link>
+        }
+      />
 
       {/* Account overview — 4 KPI-cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -137,7 +132,7 @@ export default async function ProfilePage({
       </div>
 
       {/* SECTIE 1 — Profielinformatie: avatar + displayName + bio */}
-      <Section
+      <DashboardSection
         icon={<UserIcon className="size-5" />}
         title={tp("editProfile")}
         description="Hoe andere gebruikers jou zien op het platform."
@@ -147,10 +142,10 @@ export default async function ProfilePage({
             <ProfileForm user={user} />
           </SessionProvider>
         </div>
-      </Section>
+      </DashboardSection>
 
       {/* SECTIE 2 — Account & Login */}
-      <Section
+      <DashboardSection
         icon={<KeyRound className="size-5" />}
         title="Account & Login"
         description="Inloggegevens en abonnement."
@@ -173,20 +168,20 @@ export default async function ProfilePage({
           <PasswordChangeForm />
           <TwoFactorSettings enabled={user.totpEnabled} />
         </div>
-      </Section>
+      </DashboardSection>
 
       {/* SECTIE 3 — Adresgegevens (synced met /verzending) */}
-      <Section
+      <DashboardSection
         icon={<MapPin className="size-5" />}
         title="Adresgegevens"
         description="Je adres wordt gedeeld met verkopers na aankoop. Maximaal eens per 30 dagen wijzigbaar."
       >
         <AddressForm user={user} />
-      </Section>
+      </DashboardSection>
 
       {/* SECTIE 4 — Bedrijfsgegevens (alleen voor BUSINESS-accounts) */}
       {isBusiness && (
-        <Section
+        <DashboardSection
           icon={<Building2 className="size-5" />}
           title="Bedrijfsgegevens"
           description="Officiële gegevens van je onderneming. Wijzigen via support."
@@ -208,26 +203,11 @@ export default async function ProfilePage({
               value={user.cocNumber ?? "—"}
             />
           </div>
-        </Section>
-      )}
-
-      {/* SECTIE 5 — Verzendgebied */}
-      {user.country && (
-        <Section
-          icon={<Truck className="size-5" />}
-          title="Verzendgebied"
-          description="Naar welke landen verzend je. Kopers buiten je verzendgebied zien je items niet."
-        >
-          <SellingScopeToggle
-            current={normalizeSellingScope(user.sellingCountries)}
-            originCountry={user.country}
-            neighbors={getEuNearNeighbors(user.country)}
-          />
-        </Section>
+        </DashboardSection>
       )}
 
       {/* SECTIE 6 — Bankgegevens */}
-      <Section
+      <DashboardSection
         icon={<Landmark className="size-5" />}
         title="Bankgegevens"
         description="Voor uitbetalingen van je verkopen. Eerste keer gratis, daarna 30 dagen cooldown bij wijziging."
@@ -240,11 +220,11 @@ export default async function ProfilePage({
             cooldownDays={IBAN_COOLDOWN_DAYS}
           />
         </div>
-      </Section>
+      </DashboardSection>
 
       {/* SECTIE 6b — Eigen winkel-URL (Unlimited+/Enterprise/Admin) */}
       {(user.accountType === "UNLIMITED" || user.accountType === "ENTERPRISE" || user.accountType === "ADMIN") && (
-        <Section
+        <DashboardSection
           icon={<Sparkles className="size-5" />}
           title="Eigen winkel-URL"
           description="Een persoonlijke link naar je winkel-pagina. Inbegrepen bij Unlimited en Enterprise."
@@ -252,41 +232,15 @@ export default async function ProfilePage({
           <div className="max-w-lg">
             <ShopSlugForm currentSlug={user.shopSlug} />
           </div>
-        </Section>
+        </DashboardSection>
       )}
 
-      {/* SECTIE 7 — Voorkeuren (runner-up + bid-bevestiging) */}
-      <Section
-        icon={<Settings className="size-5" />}
-        title="Voorkeuren"
-        description="Instellingen voor automatische processen en bevestigings-modals."
-      >
-        <div className="max-w-lg space-y-5">
-          <RunnerUpSettings current={user.maxRunnerUpAttempts} />
-          <div className="border-t border-border pt-4">
-            <BidConfirmationToggle currentValue={user.skipBidConfirmation} />
-          </div>
-        </div>
-      </Section>
-
-      {/* SECTIE 8 — Personalisatie hint (banner is nu in /customization) */}
-      <Section
-        icon={<Sparkles className="size-5" />}
-        title="Personalisatie"
-        description="Banner, emblem en achtergrond voor je publieke profiel."
-      >
-        <Link
-          href="/customization"
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          <Sparkles className="size-4 text-amber-500" />
-          Open personalisatie
-        </Link>
-      </Section>
+      {/* Voorkeuren (runner-up, bied-bevestiging, e-mail) leven sinds Fase 44
+          op /dashboard/instellingen; personalisatie is tijdelijk op slot. */}
 
       {/* SECTIE 9 — Geschiedenis */}
       {user.usernameHistory.length > 0 && (
-        <Section
+        <DashboardSection
           icon={<History className="size-5" />}
           title={tp("usernameHistory")}
           description="Vorige usernames blijven 90 dagen zichtbaar in zoekresultaten en op je publieke profiel."
@@ -308,7 +262,7 @@ export default async function ProfilePage({
               </div>
             ))}
           </div>
-        </Section>
+        </DashboardSection>
       )}
     </div>
   );
@@ -331,33 +285,6 @@ function OverviewCard({
       </div>
       <div className="mt-2">{children}</div>
     </div>
-  );
-}
-
-function Section({
-  icon,
-  title,
-  description,
-  children,
-}: {
-  icon: ReactNode;
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
-      <div className="border-b border-border bg-muted/30 px-5 py-4">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">{icon}</span>
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
-        </div>
-        {description && (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        )}
-      </div>
-      <div className="p-5">{children}</div>
-    </section>
   );
 }
 
