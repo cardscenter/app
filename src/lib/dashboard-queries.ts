@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
 export type ActionItemsCounts = {
@@ -143,7 +144,11 @@ export type ActiveActivity = {
   bids: { highest: number; outbid: number; totalActive: number };
 };
 
-export async function fetchActiveActivity(userId: string): Promise<ActiveActivity> {
+// React cache(): dashboard-layout (nav-badges) én OfferTabs (Fase 44) roepen
+// dit per request aan — dedupe voorkomt dubbele queries.
+export const fetchActiveActivity = cache(async function fetchActiveActivity(
+  userId: string
+): Promise<ActiveActivity> {
   const [auctions, listings, claimsales, events, myAuctions] = await Promise.all([
     // Auctions + claimsales tellen ook SCHEDULED mee — die zijn "in de pijplijn"
     // en horen in de nav-badge naast de echt-lopende items. Listings hebben geen
@@ -178,7 +183,7 @@ export async function fetchActiveActivity(userId: string): Promise<ActiveActivit
     counts: { auctions, listings, claimsales, events },
     bids: { highest, outbid, totalActive: myAuctions.length },
   };
-}
+});
 
 export type BundleRow = {
   id: string;
