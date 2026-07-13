@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Gavel } from "lucide-react";
 import { toast } from "sonner";
 import { updateMaxRunnerUpAttempts } from "@/actions/profile";
 
@@ -11,6 +10,8 @@ interface RunnerUpSettingsProps {
   current: number;
 }
 
+// Titel + uitleg komen sinds Fase 44 uit de omliggende SettingsRow op
+// /dashboard/instellingen — dit component is puur de slider + save-knop.
 export function RunnerUpSettings({ current }: RunnerUpSettingsProps) {
   const t = useTranslations("profile");
   const router = useRouter();
@@ -32,14 +33,7 @@ export function RunnerUpSettings({ current }: RunnerUpSettingsProps) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Gavel className="size-4" />
-        <span className="text-sm font-medium">{t("runnerUpTitle")}</span>
-      </div>
-
-      <p className="text-xs text-muted-foreground">{t("runnerUpHelp")}</p>
-
+    <div className="max-w-lg space-y-3">
       <div className="flex items-center gap-3">
         <input
           type="range"
@@ -59,7 +53,7 @@ export function RunnerUpSettings({ current }: RunnerUpSettingsProps) {
         type="button"
         onClick={handleSave}
         disabled={!dirty || pending}
-        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "..." : t("runnerUpSave")}
       </button>

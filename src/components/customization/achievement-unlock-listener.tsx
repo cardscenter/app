@@ -7,6 +7,7 @@ import { Trophy } from "lucide-react";
 import { EmberIcon } from "@/components/customization/ember-icon";
 import { getPendingUnlocks, acknowledgeAllUnlocks } from "@/actions/achievements";
 import { useRealtime } from "@/components/providers/realtime-provider";
+import { PREF_ACHIEVEMENT_TOASTS, getLocalPref } from "@/lib/local-preferences";
 
 interface Props {
   isAuthenticated: boolean;
@@ -32,6 +33,10 @@ export function AchievementUnlockListener({ isAuthenticated }: Props) {
 
   const showPendingUnlocks = useCallback(async () => {
     if (!isAuthenticated) return;
+    // "Prestatie-meldingen tonen" uit (Fase 44, /dashboard/instellingen):
+    // niets tonen én niets acknowledgen — unlocks verschijnen alsnog zodra
+    // de voorkeur weer aan gaat.
+    if (!getLocalPref(PREF_ACHIEVEMENT_TOASTS, true)) return;
     if (inFlight.current) return;
     inFlight.current = true;
 

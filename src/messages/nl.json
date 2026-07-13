@@ -1187,6 +1187,33 @@
       }
     }
   },
+  "settings": {
+    "title": "Instellingen",
+    "subtitle": "Beheer je voorkeuren voor weergave, meldingen en handel.",
+    "sectionDisplay": "Weergave",
+    "sectionDisplayDesc": "Hoe Cards Center eruitziet op dit apparaat.",
+    "theme": "Thema",
+    "themeDesc": "Kies tussen licht en donker.",
+    "language": "Taal",
+    "languageDesc": "De taal van de website.",
+    "sectionEmail": "E-mailvoorkeuren",
+    "sectionEmailDesc": "Welke e-mails je van ons ontvangt.",
+    "sectionTrading": "Bieden & kopen",
+    "sectionTradingDesc": "Voorkeuren voor veilingen en aankopen.",
+    "bidConfirmation": "Bevestiging vragen vóór elk veiling-bod",
+    "bidConfirmationDesc": "Toon bij je eerste bod op een veiling een overzicht met de totale kosten (bod + veilingkosten + reserve). Uitgeschakeld plaatst je bod direct.",
+    "sectionPrivacy": "Privacy",
+    "sectionPrivacyDesc": "Bepaal wat zichtbaar is voor jou en anderen.",
+    "hideBalance": "Saldo verbergen in de header",
+    "hideBalanceDesc": "Toon € ••• in plaats van je saldo — handig bij schermdelen of streamen. Geldt alleen voor dit apparaat.",
+    "blockedUsers": "Geblokkeerde gebruikers",
+    "blockedUsersDesc": "Gebruikers die jouw content niet zien en jou niet kunnen bereiken (en andersom).",
+    "manageBlockedList": "Beheer blokkeerlijst",
+    "sectionNotifications": "Meldingsgedrag",
+    "sectionNotificationsDesc": "Hoe meldingen zich gedragen in je browser.",
+    "achievementToasts": "Prestatie-meldingen tonen",
+    "achievementToastsDesc": "Kleine felicitatie-popup wanneer je een prestatie ontgrendelt. Geldt alleen voor dit apparaat."
+  },
   "profile": {
     "displayName": "Gebruikersnaam",
     "bio": "Bio",

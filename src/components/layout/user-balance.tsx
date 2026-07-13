@@ -4,6 +4,11 @@ import { Link } from "@/i18n/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRealtime } from "@/components/providers/realtime-provider";
+import {
+  PREF_HIDE_BALANCE,
+  getLocalPref,
+  onLocalPrefChange,
+} from "@/lib/local-preferences";
 
 export function UserBalance() {
   const { status } = useSession();
@@ -13,6 +18,15 @@ export function UserBalance() {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { subscribe } = useRealtime();
+
+  // "Saldo verbergen"-voorkeur (Fase 44, /dashboard/instellingen) — device-
+  // gebonden localStorage-pref; live gesynchroniseerd via CustomEvent zodat
+  // de header direct maskeert zodra de toggle omgaat.
+  const [hideBalance, setHideBalance] = useState(false);
+  useEffect(() => {
+    setHideBalance(getLocalPref(PREF_HIDE_BALANCE, false));
+    return onLocalPrefChange(PREF_HIDE_BALANCE, setHideBalance);
+  }, []);
 
   const fetchBalance = useCallback(() => {
     fetch("/api/balance")
@@ -73,9 +87,14 @@ export function UserBalance() {
   }, [open]);
 
   const hasReserve = balance !== null && reservedBalance > 0;
-  const totalLabel = balance !== null ? `€${balance.toFixed(2)}` : "...";
-  const reservedLabel = `€${reservedBalance.toFixed(2)}`;
-  const availableLabel = availableBalance !== null ? `€${availableBalance.toFixed(2)}` : "...";
+  const MASKED = "€ •••";
+  const totalLabel = hideBalance ? MASKED : balance !== null ? `€${balance.toFixed(2)}` : "...";
+  const reservedLabel = hideBalance ? MASKED : `€${reservedBalance.toFixed(2)}`;
+  const availableLabel = hideBalance
+    ? MASKED
+    : availableBalance !== null
+      ? `€${availableBalance.toFixed(2)}`
+      : "...";
 
   return (
     // Wrapper vangt hover voor pill ÉN popover. Belangrijk: zonder gap tussen

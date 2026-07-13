@@ -2,15 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { Loader2, Check } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { updateBidConfirmationPreference } from "@/actions/profile";
-import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
-
-const PREMIUM_LABEL = `${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "").replace(".", ",")}%`;
 
 interface Props {
   currentValue: boolean;
 }
 
+// Label + uitleg komen sinds Fase 44 uit de omliggende SettingsRow op
+// /dashboard/instellingen — dit component is puur de switch + save-status.
+// Switch aan = bevestiging vragen (= skipBidConfirmation uit).
 export function BidConfirmationToggle({ currentValue }: Props) {
   const [skip, setSkip] = useState(currentValue);
   const [isPending, startTransition] = useTransition();
@@ -30,26 +31,15 @@ export function BidConfirmationToggle({ currentValue }: Props) {
   };
 
   return (
-    <div className="space-y-2">
-      <label className="flex items-start gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={!skip}
-          onChange={(e) => handleToggle(!e.target.checked)}
-          disabled={isPending}
-          className="mt-1 h-4 w-4 accent-primary"
-        />
-        <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">
-            Bevestiging vragen vóór elk veiling-bod
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            We tonen standaard bij je eerste bod op een veiling een overzicht met de totale kosten (bod + {PREMIUM_LABEL} veilingkosten + reserve). Zet je deze uit, dan plaatst je bod direct.
-          </p>
-        </div>
-        {isPending && <Loader2 className="mt-1 h-4 w-4 animate-spin text-muted-foreground" />}
-        {savedFlash && !isPending && <Check className="mt-1 h-4 w-4 text-emerald-500" />}
-      </label>
+    <div className="flex items-center gap-2">
+      {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      {savedFlash && !isPending && <Check className="h-4 w-4 text-emerald-500" />}
+      <Switch
+        id="bid-confirmation"
+        checked={!skip}
+        disabled={isPending}
+        onCheckedChange={(checked) => handleToggle(!checked)}
+      />
     </div>
   );
 }

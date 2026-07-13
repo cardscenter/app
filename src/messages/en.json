@@ -1187,6 +1187,33 @@
       }
     }
   },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your preferences for display, notifications and trading.",
+    "sectionDisplay": "Display",
+    "sectionDisplayDesc": "How Cards Center looks on this device.",
+    "theme": "Theme",
+    "themeDesc": "Choose between light and dark.",
+    "language": "Language",
+    "languageDesc": "The language of the website.",
+    "sectionEmail": "Email preferences",
+    "sectionEmailDesc": "Which emails you receive from us.",
+    "sectionTrading": "Bidding & buying",
+    "sectionTradingDesc": "Preferences for auctions and purchases.",
+    "bidConfirmation": "Ask for confirmation before every auction bid",
+    "bidConfirmationDesc": "Show an overview of the total costs (bid + auction fee + reserve) on your first bid on an auction. When disabled, your bid is placed immediately.",
+    "sectionPrivacy": "Privacy",
+    "sectionPrivacyDesc": "Control what is visible to you and others.",
+    "hideBalance": "Hide balance in the header",
+    "hideBalanceDesc": "Show € ••• instead of your balance — useful when screen sharing or streaming. Only applies to this device.",
+    "blockedUsers": "Blocked users",
+    "blockedUsersDesc": "Users who can't see your content or reach you (and vice versa).",
+    "manageBlockedList": "Manage blocked list",
+    "sectionNotifications": "Notification behaviour",
+    "sectionNotificationsDesc": "How notifications behave in your browser.",
+    "achievementToasts": "Show achievement pop-ups",
+    "achievementToastsDesc": "A small celebration pop-up when you unlock an achievement. Only applies to this device."
+  },
   "profile": {
     "displayName": "Username",
     "bio": "Bio",
