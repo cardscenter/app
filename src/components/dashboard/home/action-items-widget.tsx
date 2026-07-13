@@ -18,6 +18,9 @@ type Props = {
   counts: ActionItemsCounts;
   /** Fase 16-followup: false → optionele "stel 2FA in"-suggestie onderaan. */
   totpEnabled?: boolean;
+  /** Fase 43: false → "vul je verzendadres aan"-tegel onderaan (vangnet voor
+   *  accounts van vóór het verplichte registratie-adres). */
+  hasShippingAddress?: boolean;
 };
 
 type Item = {
@@ -29,7 +32,11 @@ type Item = {
   bgColor: string;
 };
 
-export function ActionItemsWidget({ counts, totpEnabled = true }: Props) {
+export function ActionItemsWidget({
+  counts,
+  totpEnabled = true,
+  hasShippingAddress = true,
+}: Props) {
   const t = useTranslations("dashboard.essentials.actionItems");
 
   const items: Item[] = [
@@ -127,6 +134,27 @@ export function ActionItemsWidget({ counts, totpEnabled = true }: Props) {
             );
           })}
         </div>
+      )}
+
+      {/* Verzendadres-vangnet (Fase 43) — voor accounts van vóór het
+          verplichte registratie-adres. Amber pill: zonder adres kan er niet
+          besteld of verzonden worden. */}
+      {!hasShippingAddress && (
+        <Link
+          href="/dashboard/verzending"
+          className="mt-3 flex items-center gap-2.5 rounded-lg border border-dashed border-amber-400/60 p-3 transition-colors hover:border-amber-500 hover:bg-amber-500/5 dark:border-amber-700/60"
+        >
+          <div className="rounded-lg bg-amber-500/10 p-1.5">
+            <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+            <span className="block font-medium text-foreground">{t("completeAddress")}</span>
+            {t("completeAddressDesc")}
+          </span>
+          <span className="shrink-0 rounded-full border border-amber-300 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:border-amber-800 dark:text-amber-300">
+            {t("requiredForOrders")}
+          </span>
+        </Link>
       )}
 
       {/* Optionele 2FA-suggestie (Fase 16-followup) — bewust dashed/subtiel:

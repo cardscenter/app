@@ -1141,6 +1141,9 @@
         "pendingPickups": "Ophaalafspraken",
         "setup2fa": "Beveilig je account met 2FA",
         "setup2faDesc": "Extra beveiligingslaag via een authenticator-app — ingesteld in een minuut.",
+        "completeAddress": "Vul je verzendadres aan",
+        "completeAddressDesc": "Zonder volledig adres kun je niet bestellen of verzenden.",
+        "requiredForOrders": "Nodig om te bestellen",
         "optional": "Optioneel"
       },
       "balance": {

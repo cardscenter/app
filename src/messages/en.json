@@ -1141,6 +1141,9 @@
         "pendingPickups": "Pickup arrangements",
         "setup2fa": "Secure your account with 2FA",
         "setup2faDesc": "Extra security layer via an authenticator app — set up in a minute.",
+        "completeAddress": "Complete your shipping address",
+        "completeAddressDesc": "Without a full address you can't order or ship.",
+        "requiredForOrders": "Required to order",
         "optional": "Optional"
       },
       "balance": {

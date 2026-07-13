@@ -10,6 +10,7 @@ import {
   fetchActiveActivity,
   fetchRecentBundles,
 } from "@/lib/dashboard-queries";
+import { hasValidShippingAddress } from "@/lib/address-validation";
 
 export default async function DashboardPage({
   params,
@@ -56,11 +57,12 @@ export default async function DashboardPage({
     { label: tw("balance"), value: `€${availableBalance.toFixed(2)}`, href: "/dashboard/saldo" },
   ];
 
-  const [actionItems, balance, activity, bundles] = await Promise.all([
+  const [actionItems, balance, activity, bundles, hasShippingAddress] = await Promise.all([
     fetchActionItems(userId),
     fetchBalanceOverview(userId),
     fetchActiveActivity(userId),
     fetchRecentBundles(userId),
+    hasValidShippingAddress(userId),
   ]);
 
   return (
@@ -91,6 +93,7 @@ export default async function DashboardPage({
           bundles={bundles}
           showPremiumCta={hasPremium}
           totpEnabled={user.totpEnabled}
+          hasShippingAddress={hasShippingAddress}
         />
       </div>
     </div>

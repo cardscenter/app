@@ -20,6 +20,8 @@ type Props = {
   showPremiumCta: boolean;
   /** Fase 16-followup: false → optionele "stel 2FA in"-suggestie in de widget. */
   totpEnabled?: boolean;
+  /** Fase 43: false → "vul je verzendadres aan"-tegel in de widget. */
+  hasShippingAddress?: boolean;
 };
 
 export async function DashboardEssentials({
@@ -29,12 +31,17 @@ export async function DashboardEssentials({
   bundles,
   showPremiumCta,
   totpEnabled = true,
+  hasShippingAddress = true,
 }: Props) {
   const t = await getTranslations("dashboard");
 
   return (
     <div className="space-y-6">
-      <ActionItemsWidget counts={actionItems} totpEnabled={totpEnabled} />
+      <ActionItemsWidget
+        counts={actionItems}
+        totpEnabled={totpEnabled}
+        hasShippingAddress={hasShippingAddress}
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <BalanceOverviewWidget data={balance} />
