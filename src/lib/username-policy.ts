@@ -224,9 +224,12 @@ function checkTerms(value: string): UsernamePolicyResult {
   }
 
   // Korte woorden: exact, of exact na cijfer-strip ("kut123" → "kut").
-  const withoutDigits = normalized.replace(/[0-9]/g, "");
+  // De cijfer-strip werkt op de variant ZONDER leet-map — anders wordt
+  // "kut123" eerst "kutize" en matcht de strip niet meer.
+  const bare = value.toLowerCase().replace(/[-_]/g, "");
+  const bareNoDigits = bare.replace(/[0-9]/g, "");
   for (const term of PROFANITY_EXACT) {
-    if (normalized === term || withoutDigits === term) {
+    if (normalized === term || bare === term || bareNoDigits === term) {
       return { ok: false, error: GENERIC_NOT_ALLOWED, reason: "NOT_ALLOWED" };
     }
   }
