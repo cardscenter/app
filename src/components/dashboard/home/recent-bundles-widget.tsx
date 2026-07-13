@@ -72,7 +72,7 @@ export function RecentBundlesWidget({ data }: Props) {
   const t = useTranslations("dashboard.essentials.bundles");
 
   return (
-    <div className="glass-subtle rounded-xl p-5">
+    <div className="border border-border bg-card shadow-card rounded-xl p-5">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground mb-2">{t("salesTitle")}</h3>

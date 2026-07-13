@@ -32,7 +32,7 @@ export function ActiveActivityWidget({ data }: Props) {
   ] as const;
 
   return (
-    <div className="glass-subtle rounded-xl p-5">
+    <div className="border border-border bg-card shadow-card rounded-xl p-5">
       <h3 className="text-sm font-semibold text-foreground mb-3">{t("title")}</h3>
 
       <div className="space-y-2">

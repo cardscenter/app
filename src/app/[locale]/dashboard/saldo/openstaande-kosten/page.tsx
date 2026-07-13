@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { FinanceTabs } from "@/components/dashboard/cluster-tabs";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 
 export default async function PendingFeesPage({
   params,
@@ -32,9 +33,11 @@ export default async function PendingFeesPage({
       </p>
 
       {fees.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-          Je hebt geen openstaande of afgeloste platformkosten.
-        </div>
+        <EmptyState
+          icon={CheckCircle2}
+          title="Geen openstaande kosten"
+          description="Je hebt geen openstaande of afgeloste platformkosten."
+        />
       ) : (
         <>
           {open.length > 0 && (

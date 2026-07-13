@@ -102,7 +102,7 @@ export function ActionItemsWidget({
   const allClear = visibleItems.length === 0;
 
   return (
-    <div className="glass-subtle rounded-xl p-5">
+    <div className="border border-border bg-card shadow-card rounded-xl p-5">
       <h3 className="text-sm font-semibold text-foreground mb-3">{t("title")}</h3>
       {allClear ? (
         <div className="flex items-center gap-3 rounded-lg bg-emerald-500/5 p-3">

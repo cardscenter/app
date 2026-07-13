@@ -23,7 +23,7 @@ export function CancellationsSection({ currentUserId, paidBundles, userRole }: C
   if (paidBundles.length === 0) return null;
 
   return (
-    <section className="glass rounded-xl p-5">
+    <section className="border border-border bg-card shadow-card rounded-xl p-5">
       <h2 className="text-lg font-semibold text-foreground">{t("sectionTitle")}</h2>
       <p className="mt-1 text-xs text-muted-foreground">{t("sectionHelp")}</p>
 

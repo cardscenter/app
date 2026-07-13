@@ -62,7 +62,7 @@ export function BalanceSummary({ balance, reservedBalance, heldBalance }: Balanc
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <div key={card.label} className="glass rounded-2xl p-5 flex flex-col justify-between">
+          <div key={card.label} className="border border-border bg-card shadow-card rounded-2xl p-5 flex flex-col justify-between">
             <div className="flex items-center gap-2">
               <div className={`shrink-0 rounded-lg p-1.5 ${card.iconBg}`}>
                 <Icon className={`h-4 w-4 ${card.iconColor}`} />

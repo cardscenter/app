@@ -70,7 +70,7 @@ export function BuyerAnalytics({ data }: { data: BuyerAnalyticsData }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Spending by type - Donut */}
         {data.spendingByType.some((d) => d.value > 0) ? (
-          <div className="glass-subtle rounded-xl p-5">
+          <div className="border border-border bg-card shadow-card rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("spendingByType")}</h4>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height={220}>
@@ -105,7 +105,7 @@ export function BuyerAnalytics({ data }: { data: BuyerAnalyticsData }) {
 
         {/* Purchase frequency - Bar */}
         {data.purchaseFrequency.length > 0 ? (
-          <div className="glass-subtle rounded-xl p-5">
+          <div className="border border-border bg-card shadow-card rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("purchaseFrequency")}</h4>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height={220}>

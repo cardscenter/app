@@ -51,7 +51,7 @@ export function VerificationForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="glass rounded-2xl p-6">
+    <form onSubmit={handleSubmit} className="border border-border bg-card shadow-card rounded-2xl p-6">
       <h3 className="font-semibold text-foreground">{t("uploadDocuments")}</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         {t("uploadDescription")}

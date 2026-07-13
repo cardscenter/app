@@ -167,7 +167,7 @@ export function DisputeDetailContent({ dispute }: { dispute: DisputeData }) {
 
       {/* What happens next — contextual help */}
       {!isResolved && (
-        <div className="glass rounded-xl p-4 border-l-4 border-l-blue-400 dark:border-l-blue-500">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4 border-l-4 border-l-blue-400 dark:border-l-blue-500">
           <div className="flex items-start gap-3">
             <HelpCircle className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
             <div>
@@ -184,7 +184,7 @@ export function DisputeDetailContent({ dispute }: { dispute: DisputeData }) {
 
       {/* Admin decision notes */}
       {isResolved && dispute.resolution === "ADMIN_DECISION" && dispute.adminNotes && (
-        <div className="glass rounded-xl p-4 border-l-4 border-l-purple-400 dark:border-l-purple-500">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4 border-l-4 border-l-purple-400 dark:border-l-purple-500">
           <div className="flex items-start gap-3">
             <Scale className="h-5 w-5 text-purple-500 shrink-0 mt-0.5" />
             <div>
@@ -196,7 +196,7 @@ export function DisputeDetailContent({ dispute }: { dispute: DisputeData }) {
       )}
 
       {/* Order info */}
-      <div className="glass rounded-xl p-4 space-y-3">
+      <div className="border border-border bg-card shadow-card rounded-xl p-4 space-y-3">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Package className="h-4 w-4" />
           {t("bundleInfo")}
@@ -248,7 +248,7 @@ export function DisputeDetailContent({ dispute }: { dispute: DisputeData }) {
       </div>
 
       {/* Timeline */}
-      <div className="glass rounded-xl p-4 space-y-4">
+      <div className="border border-border bg-card shadow-card rounded-xl p-4 space-y-4">
         <h2 className="text-sm font-semibold text-foreground">{t("timeline")}</h2>
 
         {dispute.events.length > 0 ? (
@@ -365,7 +365,7 @@ export function DisputeDetailContent({ dispute }: { dispute: DisputeData }) {
 
       {/* Escalation panel — show when escalated but not resolved */}
       {isEscalated && !isResolved && (
-        <div className="glass rounded-xl p-4">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4">
           <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
             <Scale className="h-5 w-5" />
             <p className="text-sm font-semibold">{t("statusEscalated")}</p>
@@ -546,7 +546,7 @@ function DisputeActions({ dispute, router }: { dispute: DisputeData; router: Ret
     <div className="space-y-4">
       {/* Active proposal from the OTHER party → can accept */}
       {proposalIsFromOther && (
-        <div className="glass rounded-xl p-4 border-l-4 border-l-green-400 dark:border-l-green-500">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4 border-l-4 border-l-green-400 dark:border-l-green-500">
           <div className="flex items-start gap-3">
             <HandCoins className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -575,7 +575,7 @@ function DisputeActions({ dispute, router }: { dispute: DisputeData; router: Ret
 
       {/* Active proposal from SELF → waiting for other party */}
       {proposalIsFromSelf && (
-        <div className="glass rounded-xl p-4">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4">
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -598,7 +598,7 @@ function DisputeActions({ dispute, router }: { dispute: DisputeData; router: Ret
 
       {/* Seller: respond to OPEN dispute */}
       {dispute.isSeller && dispute.status === "OPEN" && (
-        <div className="glass rounded-xl p-4 space-y-4">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4 space-y-4">
           <p className="text-sm font-semibold text-foreground">{t("sellerResponseLabel")}</p>
           {!showResponse ? (
             <button
@@ -645,7 +645,7 @@ function DisputeActions({ dispute, router }: { dispute: DisputeData; router: Ret
 
       {/* Buyer: after seller responded — main actions */}
       {dispute.isBuyer && dispute.status === "SELLER_RESPONDED" && (
-        <div className="glass rounded-xl p-4 space-y-4">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4 space-y-4">
           {dispute.buyerReviewDeadline && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -687,7 +687,7 @@ function DisputeActions({ dispute, router }: { dispute: DisputeData; router: Ret
 
       {/* Propose settlement — available for both parties in OPEN/SELLER_RESPONDED, hidden if escalation started */}
       {(dispute.status === "OPEN" || dispute.status === "SELLER_RESPONDED") && !proposalIsFromSelf && !myEscalation && (
-        <div className="glass rounded-xl p-4 space-y-3">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2">
             <HandCoins className="h-4 w-4 text-muted-foreground" />
             <p className="text-sm font-semibold text-foreground">{t("proposePartialRefund")}</p>
@@ -739,7 +739,7 @@ function DisputeActions({ dispute, router }: { dispute: DisputeData; router: Ret
 
       {/* Escalation section — hidden if settlement proposal is pending */}
       {(dispute.status === "OPEN" || dispute.status === "SELLER_RESPONDED") && !hasProposal && (
-        <div className="glass rounded-xl p-4 space-y-3">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Scale className="h-4 w-4 text-muted-foreground" />
             <p className="text-sm font-semibold text-foreground">{t("escalateTitle")}</p>

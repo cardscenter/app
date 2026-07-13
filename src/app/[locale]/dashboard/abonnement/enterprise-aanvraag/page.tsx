@@ -32,13 +32,13 @@ export default async function EnterpriseAanvraagPage({
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 py-4">
+    <div className="max-w-2xl space-y-6">
       <div className="flex items-center gap-3">
         <div className="rounded-xl bg-violet-500/10 p-3">
           <Building2 className="h-6 w-6 text-violet-500" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Enterprise aanvragen</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Enterprise aanvragen</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Voor handelaren met €{ENTERPRISE_MIN_MONTHLY_REVENUE.toLocaleString("nl-NL")}+ verkoop per maand.
           </p>

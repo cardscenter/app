@@ -133,7 +133,7 @@ export function DisputeV2Detail({
       </header>
 
       {/* Bundle context */}
-      <section className="rounded-xl glass p-4">
+      <section className="rounded-xl border border-border bg-card shadow-card p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bestelling</p>
         <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
           <div>
@@ -272,7 +272,7 @@ export function DisputeV2Detail({
       )}
 
       {/* Timeline */}
-      <section className="rounded-xl glass p-4">
+      <section className="rounded-xl border border-border bg-card shadow-card p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tijdlijn</p>
         <ol className="mt-3 space-y-2">
           {dispute.events.map((e) => (
@@ -499,7 +499,7 @@ function AddEvidenceButton({ disputeId, onUploaded }: { disputeId: string; onUpl
   }
 
   return (
-    <section className="rounded-xl glass p-4">
+    <section className="rounded-xl border border-border bg-card shadow-card p-4">
       <p className="text-sm font-semibold text-foreground">Voeg extra bewijs toe</p>
       <EvidenceUploadInline urls={urls} onChange={setUrls} />
       {urls.length > 0 && (

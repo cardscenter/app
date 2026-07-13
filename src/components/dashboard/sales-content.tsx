@@ -228,15 +228,15 @@ export function SalesContent({
 
       {/* Summary stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="glass rounded-xl p-4">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4">
           <p className="text-sm text-muted-foreground">{t("totalRevenue")}</p>
           <p className="mt-1 text-2xl font-bold text-foreground">&euro;{stats.totalRevenue.toFixed(2)}</p>
         </div>
-        <div className="glass rounded-xl p-4">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4">
           <p className="text-sm text-muted-foreground">{t("itemsSold")}</p>
           <p className="mt-1 text-2xl font-bold text-foreground">{stats.itemsSold}</p>
         </div>
-        <div className="glass rounded-xl p-4">
+        <div className="border border-border bg-card shadow-card rounded-xl p-4">
           <p className="text-sm text-muted-foreground">{t("pendingShipments")}</p>
           <p className="mt-1 text-2xl font-bold text-foreground">{stats.pendingShipments}</p>
         </div>
@@ -276,7 +276,7 @@ export function SalesContent({
       {/* Content */}
       {activeTab === "AWAITING_PAYMENT" ? (
         pendingAuctions.length === 0 ? (
-          <div className="rounded-xl glass-subtle p-8 text-center">
+          <div className="rounded-xl border border-border bg-card shadow-card p-8 text-center">
             <p className="text-sm text-muted-foreground">{t("noSales")}</p>
           </div>
         ) : (
@@ -295,7 +295,7 @@ export function SalesContent({
           </div>
         )
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl glass-subtle p-8 text-center">
+        <div className="rounded-xl border border-border bg-card shadow-card p-8 text-center">
           <p className="text-sm text-muted-foreground">{t("noSales")}</p>
         </div>
       ) : (
@@ -324,7 +324,7 @@ function PendingAuctionCard({ auction, locale }: { auction: PendingAuction; loca
     : null;
 
   return (
-    <div className="rounded-xl glass overflow-hidden">
+    <div className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
       <div className="flex items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-3 min-w-0">
           {auction.imageUrl && (
@@ -397,7 +397,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
   const buyerFullName = [bundle.buyerFirstName, bundle.buyerLastName].filter(Boolean).join(" ");
 
   return (
-    <div className="rounded-xl glass overflow-hidden">
+    <div className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-3 min-w-0">

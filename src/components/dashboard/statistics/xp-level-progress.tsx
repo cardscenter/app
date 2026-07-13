@@ -44,7 +44,7 @@ export function XPLevelProgress({ data }: { data: XPLevelData }) {
   return (
     <div className="space-y-5">
       {/* Level progress card */}
-      <div className="glass-subtle rounded-xl p-5">
+      <div className="border border-border bg-card shadow-card rounded-xl p-5">
         <div className="flex items-center gap-3 mb-4">
           <span className="text-2xl">{data.currentLevel.icon}</span>
           <div className="flex-1 min-w-0">
@@ -88,7 +88,7 @@ export function XPLevelProgress({ data }: { data: XPLevelData }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* XP by source - Horizontal bar */}
         {xpSources.length > 0 && (
-          <div className="glass-subtle rounded-xl p-5">
+          <div className="border border-border bg-card shadow-card rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("xpBreakdown")}</h4>
             <div style={{ width: "100%", height: 240 }}>
               <ResponsiveContainer width="100%" height={240}>
@@ -126,7 +126,7 @@ export function XPLevelProgress({ data }: { data: XPLevelData }) {
         )}
 
         {/* Level timeline */}
-        <div className="glass-subtle rounded-xl p-5">
+        <div className="border border-border bg-card shadow-card rounded-xl p-5">
           <h4 className="text-sm font-semibold text-foreground mb-4">{t("levelProgress")}</h4>
           <div className="space-y-1.5 max-h-60 overflow-y-auto">
             {SELLER_LEVELS.map((level) => {

@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Receipt } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { BalanceSummary } from "@/components/dashboard/balance-summary";
 import { DepositMethods } from "@/components/dashboard/deposit-methods";
 import { DepositVerifyGate } from "@/components/dashboard/deposit-verify-gate";
@@ -90,28 +91,24 @@ export default async function BalancePage({
       {/* Deposit methods — verborgen tot e-mail bevestigd is (Fase 43),
           zodat de bankreferentie nooit aan onbevestigde accounts getoond
           wordt. */}
-      <div className="mt-6">
-        {user.emailVerifiedAt ? (
-          <DepositMethods
-            bankTransferReference={user.bankTransferReference}
-          />
-        ) : (
-          <DepositVerifyGate />
-        )}
-      </div>
+      {user.emailVerifiedAt ? (
+        <DepositMethods
+          bankTransferReference={user.bankTransferReference}
+        />
+      ) : (
+        <DepositVerifyGate />
+      )}
 
       {/* Transaction history */}
-      <div className="mt-8">
+      <div>
         <h2 className="text-lg font-semibold text-foreground">
           {t("transactions")}
         </h2>
 
         {transactions.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            {t("noTransactions")}
-          </p>
+          <EmptyState icon={Receipt} title={t("noTransactions")} compact />
         ) : (
-          <div className="mt-4 overflow-hidden glass rounded-2xl">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>

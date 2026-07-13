@@ -56,7 +56,7 @@ export function BuyerShippingInfo({
   };
 
   return (
-    <div className="glass rounded-2xl overflow-hidden">
+    <div className="border border-border bg-card shadow-card rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/50 bg-muted/30 px-5 py-3">
         <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getTierConfig } from "@/lib/subscription-tiers";
 import { TierGrid } from "@/components/subscription/tier-grid";
 import { CurrentSubscriptionCard } from "@/components/subscription/current-subscription-card";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function SubscriptionPage({
   params,
@@ -47,11 +48,8 @@ export default async function SubscriptionPage({
   const isAdmin = user.accountType === "ADMIN";
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("headerSubtitle")}</p>
-      </div>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("title")} subtitle={t("headerSubtitle")} />
 
       <CurrentSubscriptionCard
         accountType={user.accountType}

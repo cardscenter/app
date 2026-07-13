@@ -27,7 +27,7 @@ export function StatCard({
   subtitle,
 }: StatCardProps) {
   return (
-    <div className="glass-subtle rounded-xl p-4 sm:p-5">
+    <div className="border border-border bg-card shadow-card rounded-xl p-4 sm:p-5">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className={`rounded-lg p-2 ${iconBg}`}>

@@ -53,7 +53,7 @@ export function StatisticsPage({ period, sales, performance, buyer, xp, commissi
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Sticky control bar */}
-      <div className="glass-subtle sticky top-0 z-10 rounded-xl p-3 sm:p-4 space-y-3">
+      <div className="border border-border bg-card shadow-card sticky top-0 z-10 rounded-xl p-3 sm:p-4 space-y-3">
         {/* Period selector */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-medium text-muted-foreground">{t("periodLabel")}</p>

@@ -11,7 +11,7 @@ export function BalanceOverviewWidget({ data }: Props) {
   const t = useTranslations("dashboard.essentials.balance");
 
   return (
-    <div className="glass-subtle rounded-xl p-5">
+    <div className="border border-border bg-card shadow-card rounded-xl p-5">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-foreground">{t("title")}</h3>
         <Link

@@ -98,7 +98,7 @@ export function SellerPerformance({ data }: { data: SellerPerformanceData }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Ratings over time - Line */}
         {data.ratingsOverTime.length > 1 ? (
-          <div className="glass-subtle rounded-xl p-5">
+          <div className="border border-border bg-card shadow-card rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("ratingsOverTime")}</h4>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height={220}>
@@ -143,7 +143,7 @@ export function SellerPerformance({ data }: { data: SellerPerformanceData }) {
 
         {/* Rating distribution - Horizontal bar */}
         {data.ratingDistribution.some((d) => d.count > 0) ? (
-          <div className="glass-subtle rounded-xl p-5">
+          <div className="border border-border bg-card shadow-card rounded-xl p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("ratingDistribution")}</h4>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height={220}>
@@ -185,7 +185,7 @@ export function SellerPerformance({ data }: { data: SellerPerformanceData }) {
 
       {/* Sub-ratings - Bar chart */}
       {subRatingsData.some((d) => d.value > 0) ? (
-        <div className="glass-subtle rounded-xl p-5">
+        <div className="border border-border bg-card shadow-card rounded-xl p-5">
           <h4 className="text-sm font-semibold text-foreground mb-4">{t("subRatings")}</h4>
           <div style={{ width: "100%", height: 180 }}>
             <ResponsiveContainer width="100%" height={180}>

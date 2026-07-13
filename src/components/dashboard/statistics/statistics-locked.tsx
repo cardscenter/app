@@ -35,7 +35,7 @@ export function StatisticsLocked() {
               <h2 className="text-lg font-bold">{label}</h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="glass-subtle rounded-xl p-5">
+                  <div key={i} className="border border-border bg-card shadow-card rounded-xl p-5">
                     <div className="flex items-center gap-3">
                       <div className="rounded-lg bg-primary/10 p-2">
                         <Icon className="h-5 w-5 text-primary" />
@@ -48,7 +48,7 @@ export function StatisticsLocked() {
                   </div>
                 ))}
               </div>
-              <div className="glass-subtle rounded-xl p-5">
+              <div className="border border-border bg-card shadow-card rounded-xl p-5">
                 <div className="h-48 bg-gradient-to-t from-primary/5 to-transparent rounded-lg" />
               </div>
             </div>
@@ -58,7 +58,7 @@ export function StatisticsLocked() {
 
       {/* Overlay */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="glass rounded-2xl p-8 text-center max-w-sm shadow-lg">
+        <div className="border border-border bg-card shadow-card rounded-2xl p-8 text-center max-w-sm shadow-lg">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
             <Lock className="h-7 w-7 text-primary" />
           </div>

@@ -43,7 +43,7 @@ export default async function MyWithdrawalsPage({
     <div className="space-y-6">
       <FinanceTabs />
 
-      <div className="glass rounded-xl p-6">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <p className="text-xs text-muted-foreground">{t("availableBalance")}</p>
@@ -74,7 +74,7 @@ export default async function MyWithdrawalsPage({
         )}
       </div>
 
-      <div className="glass rounded-xl p-6">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
         <h2 className="text-lg font-semibold text-foreground mb-4">{t("historyTitle")}</h2>
         <WithdrawalHistory
           requests={requests.map((r) => ({
