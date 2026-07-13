@@ -12,6 +12,20 @@ function isBetaUnlockPath(pathname: string): boolean {
 }
 
 export default async function middleware(request: NextRequest) {
+  // TIJDELIJKE LOCKDOWN (Fase 44): personalisatie is niet toegankelijk —
+  // harde 307 op middleware-niveau zodat de pagina-inhoud nooit rendert.
+  // De layout-guard in app/[locale]/customization/layout.tsx is de
+  // belt-and-braces; verwijder beide om de hub te heropenen.
+  {
+    const custMatch = request.nextUrl.pathname.match(/^\/(nl|en)\/customization(?:\/|$)/);
+    if (custMatch) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/${custMatch[1]}/dashboard`;
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
   if (process.env.BETA_GATE === "true") {
     const password = process.env.BETA_ACCESS_PASSWORD;
     const { pathname } = request.nextUrl;
