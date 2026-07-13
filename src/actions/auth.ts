@@ -21,6 +21,8 @@ import {
   sendWelcomeEmail,
   sendPasswordResetEmail,
 } from "@/lib/email/send-email";
+import { validateUsername } from "@/lib/username-policy";
+import { findUserByNameInsensitive } from "@/lib/username-policy-server";
 
 const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24u
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1u
@@ -61,16 +63,22 @@ export async function register(formData: FormData) {
 
   const data = result.data;
 
+  // Fase 43 — username-policy: reserved namen, rol-termen en scheldwoorden
+  // server-side afdwingen (de availability-indicator is alleen UX).
+  const usernamePolicy = validateUsername(data.displayName);
+  if (!usernamePolicy.ok) {
+    return { error: usernamePolicy.error };
+  }
+
   // Check if email already exists
   const existingEmail = await prisma.user.findUnique({ where: { email: data.email } });
   if (existingEmail) {
     return { error: "Dit e-mailadres is al in gebruik" };
   }
 
-  // Check if display name already exists
-  const existingName = await prisma.user.findUnique({
-    where: { displayName: data.displayName },
-  });
+  // Check if display name already exists — case-insensitive (Fase 43),
+  // anders kan "Admin" naast "admin" bestaan.
+  const existingName = await findUserByNameInsensitive(data.displayName);
   if (existingName) {
     return { error: "Deze gebruikersnaam is al in gebruik" };
   }

@@ -6,6 +6,8 @@ import { saveUploadedFile } from "@/lib/upload";
 import { isValidIbanFormat, normalizeIban, IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
 import { EMAIL_PREF_CATEGORIES, parseEmailPreferences } from "@/lib/email/preferences-config";
 import { requireTotpStepUp } from "@/lib/two-factor";
+import { validateUsername, validateSlugTerms, RESERVED_EXACT } from "@/lib/username-policy";
+import { findUserByNameInsensitive } from "@/lib/username-policy-server";
 import { z } from "zod";
 
 const profileSchema = z.object({
@@ -30,10 +32,29 @@ export async function updateProfile(formData: FormData) {
 
   const { displayName, bio } = result.data;
 
-  // Check uniqueness if name changed
-  const existing = await prisma.user.findUnique({ where: { displayName } });
-  if (existing && existing.id !== session.user.id) {
-    return { error: "Deze gebruikersnaam is al in gebruik" };
+  // Fase 43 — username-policy alleen bij daadwerkelijke rename: users met een
+  // legacy-naam die inmiddels op de blocklist staat moeten bio/avatar kunnen
+  // blijven opslaan. Pure case-wissel van de eigen naam ("youri" → "Youri")
+  // blijft toegestaan.
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { displayName: true },
+  });
+  const isRename =
+    currentUser !== null &&
+    currentUser.displayName.toLowerCase() !== displayName.toLowerCase();
+
+  if (isRename) {
+    const usernamePolicy = validateUsername(displayName);
+    if (!usernamePolicy.ok) {
+      return { error: usernamePolicy.error };
+    }
+
+    // Case-insensitive uniqueness (Fase 43) — exclude eigen id.
+    const existing = await findUserByNameInsensitive(displayName);
+    if (existing && existing.id !== session.user.id) {
+      return { error: "Deze gebruikersnaam is al in gebruik" };
+    }
   }
 
   // Handle avatar upload
@@ -204,11 +225,15 @@ export async function updateMaxRunnerUpAttempts(value: number) {
 // een slug claimen. Slug verschijnt als /winkel/<slug> en redirect server-side
 // naar /verkoper/<userId>. Bij downgrade blijft de slug bewaard maar de
 // /winkel/-route stopt (notFound).
+// Fase 43: route-specifieke lijst blijft, ge-unioned met de gedeelde
+// RESERVED_EXACT uit username-policy; rol-termen/scheldwoorden via
+// validateSlugTerms in updateShopSlug.
 const SHOP_SLUG_RESERVED = new Set([
   "admin", "login", "register", "dashboard", "api", "winkel", "verkoper",
   "marktplaats", "veilingen", "claimsales", "berichten", "winkelwagen",
   "zoeken", "uploads", "customization", "abonnement", "saldo", "profiel",
   "support", "help", "about", "contact", "test", "settings",
+  ...RESERVED_EXACT,
 ]);
 
 const shopSlugSchema = z
@@ -291,6 +316,11 @@ export async function updateShopSlug(rawSlug: string | null) {
   const slug = rawSlug.trim().toLowerCase();
   const parsed = shopSlugSchema.safeParse(slug);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  // Fase 43 — rol-termen en scheldwoorden gelden ook voor winkel-URL's
+  // ("official-cards" wekt vals vertrouwen).
+  const slugTerms = validateSlugTerms(slug);
+  if (!slugTerms.ok) return { error: "Deze winkel-URL is niet toegestaan" };
 
   if (user.shopSlug === slug) return { success: true, unchanged: true };
 
