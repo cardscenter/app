@@ -2,11 +2,13 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
+import { Link } from "@/i18n/navigation";
+import { AlertCircle } from "lucide-react";
 import { BalanceSummary } from "@/components/dashboard/balance-summary";
 import { DepositMethods } from "@/components/dashboard/deposit-methods";
 import { DepositVerifyGate } from "@/components/dashboard/deposit-verify-gate";
-import { PendingAuctionPayments } from "@/components/dashboard/pending-auction-payments";
 import { PendingFeesBanner } from "@/components/dashboard/pending-fees-banner";
+import { FinanceTabs } from "@/components/dashboard/cluster-tabs";
 
 export default async function BalancePage({
   params,
@@ -35,56 +37,55 @@ export default async function BalancePage({
     take: 50,
   });
 
-  // Check for auctions awaiting payment
+  // Openstaande veilingbetalingen: het volledige betaal-blok leeft sinds
+  // Fase 44 alleen nog op /dashboard/aankopen (order-verplichting) — hier
+  // volstaat een slanke alert-banner met doorverwijzing.
   const pendingAuctions = await prisma.auction.findMany({
     where: {
       winnerId: session.user.id,
       paymentStatus: "AWAITING_PAYMENT",
     },
-    select: {
-      id: true,
-      title: true,
-      finalPrice: true,
-      paymentDeadline: true,
-    },
+    select: { id: true, finalPrice: true },
   });
+  const pendingAuctionTotal =
+    Math.round(pendingAuctions.reduce((s, a) => s + (a.finalPrice ?? 0), 0) * 100) / 100;
 
   if (!user) return null;
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">
-        {t("balance")}
-      </h1>
+    <div className="space-y-6">
+      <FinanceTabs />
 
-      <div className="mt-6">
-        <PendingFeesBanner />
-      </div>
+      <PendingFeesBanner />
 
-      {/* Balance summary */}
-      <div className="mt-6">
-        <BalanceSummary
-          balance={user.balance}
-          reservedBalance={user.reservedBalance}
-          heldBalance={user.heldBalance}
-        />
-      </div>
-
-      {/* Pending auction payments */}
       {pendingAuctions.length > 0 && (
-        <div className="mt-6">
-          <PendingAuctionPayments
-            auctions={pendingAuctions.map((a) => ({
-              id: a.id,
-              title: a.title,
-              finalPrice: a.finalPrice,
-              paymentDeadline: a.paymentDeadline,
-            }))}
-            availableBalance={Math.max(0, user.balance - user.reservedBalance)}
-            reservedBalance={user.reservedBalance}
-          />
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
+            <div className="flex-1">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
+                {pendingAuctions.length === 1
+                  ? "1 veiling wacht op je betaling"
+                  : `${pendingAuctions.length} veilingen wachten op je betaling`}{" "}
+                — €{pendingAuctionTotal.toFixed(2)}
+              </p>
+              <Link
+                href="/dashboard/aankopen"
+                className="mt-1 inline-block text-sm font-medium text-amber-900 underline dark:text-amber-200"
+              >
+                Betaal via je aankopen →
+              </Link>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Balance summary */}
+      <BalanceSummary
+        balance={user.balance}
+        reservedBalance={user.reservedBalance}
+        heldBalance={user.heldBalance}
+      />
 
       {/* Deposit methods — verborgen tot e-mail bevestigd is (Fase 43),
           zodat de bankreferentie nooit aan onbevestigde accounts getoond

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { redirect } from "next/navigation";
+import { OfferTabs } from "@/components/dashboard/cluster-tabs";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function MyClaimsalesPage({
   params,
@@ -25,18 +27,15 @@ export default async function MyClaimsalesPage({
   });
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">
-          {t("myClaimsales")}
-        </h1>
-        <Link
-          href="/claimsales/nieuw"
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
-        >
-          + {tc("createTitle")}
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <OfferTabs
+        userId={session.user.id}
+        action={
+          <Link href="/claimsales/nieuw" className={buttonVariants()}>
+            + {tc("createTitle")}
+          </Link>
+        }
+      />
 
       {claimsales.length === 0 ? (
         <p className="mt-8 text-sm text-muted-foreground">

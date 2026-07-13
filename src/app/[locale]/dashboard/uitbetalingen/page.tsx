@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { WithdrawalForm } from "@/components/dashboard/withdrawal-form";
 import { WithdrawalHistory } from "@/components/dashboard/withdrawal-history";
+import { FinanceTabs } from "@/components/dashboard/cluster-tabs";
 import { WITHDRAWAL_MIN_AMOUNT } from "@/lib/withdrawal-config";
 import { maskIban } from "@/lib/validations/iban";
 
@@ -40,7 +41,7 @@ export default async function MyWithdrawalsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+      <FinanceTabs />
 
       <div className="glass rounded-xl p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">

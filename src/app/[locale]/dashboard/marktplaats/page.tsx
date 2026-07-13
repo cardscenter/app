@@ -2,8 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Upload } from "lucide-react";
+import { OfferTabs } from "@/components/dashboard/cluster-tabs";
+import { buttonVariants } from "@/components/ui/button";
 import { ListingCard } from "@/components/listing/listing-card";
 import { ListingStatusBadge } from "@/components/listing/listing-status-badge";
 import { hasFeature } from "@/lib/subscription-tiers";
@@ -39,27 +41,23 @@ export default async function DashboardMarktplaatsPage({
   const sold            = listings.filter((l) => l.status === "SOLD");
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-foreground">{t("myListings")}</h1>
-        <div className="flex items-center gap-2">
-          {canBulkUpload && (
-            <Link
-              href={`/${locale}/marktplaats/bulk-upload`}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
-            >
-              <Upload className="h-4 w-4" />
-              Bulk-upload
+    <div className="space-y-6">
+      <OfferTabs
+        userId={session.user.id}
+        action={
+          <>
+            {canBulkUpload && (
+              <Link href="/marktplaats/bulk-upload" className={buttonVariants({ variant: "outline" })}>
+                <Upload className="h-4 w-4" />
+                Bulk-upload
+              </Link>
+            )}
+            <Link href="/marktplaats/nieuw" className={buttonVariants()}>
+              + {t("createTitle")}
             </Link>
-          )}
-          <Link
-            href={`/${locale}/marktplaats/nieuw`}
-            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all hover:bg-primary-hover hover:shadow-lg"
-          >
-            + {t("createTitle")}
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <Section title={t("sections.active")} status="ACTIVE" items={active} locale={locale} emptyKey="noListings" />
       {partiallySold.length > 0 && <Section title={t("sections.partiallySold")} status="PARTIALLY_SOLD" items={partiallySold} locale={locale} emptyKey="" />}

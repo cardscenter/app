@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { Link } from "@/i18n/navigation";
-import { ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { FinanceTabs } from "@/components/dashboard/cluster-tabs";
 
 export default async function PendingFeesPage({
   params,
@@ -24,20 +24,12 @@ export default async function PendingFeesPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/dashboard/saldo"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Terug naar saldo
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold text-foreground">Openstaande platformkosten</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Niet-inbare boetes/borgen worden geregistreerd als schuld en automatisch
-          verrekend bij je volgende inkomst (deposit, verkoop, refund).
-        </p>
-      </div>
+      <FinanceTabs />
+
+      <p className="text-sm text-muted-foreground">
+        Niet-inbare boetes/borgen worden geregistreerd als schuld en automatisch
+        verrekend bij je volgende inkomst (deposit, verkoop, refund).
+      </p>
 
       {fees.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">

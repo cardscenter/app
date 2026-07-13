@@ -10,6 +10,12 @@ export type PageTab = {
   badge?: number;
   /** Alleen actief bij exacte pathname-match (voor parent-routes met subroutes in dezelfde tabset). */
   exact?: boolean;
+  /**
+   * Verberg de tab tenzij hij actief is (deep-link blijft dan visueel geen
+   * wees) — gebruikt voor de Evenementen-tab wanneer de user nog geen events
+   * heeft.
+   */
+  hideUnlessActive?: boolean;
 };
 
 type PageTabsProps = {
@@ -41,6 +47,7 @@ export function PageTabs({ tabs }: PageTabsProps) {
     <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1">
       {tabs.map((tab) => {
         const active = tab.href === activeHref;
+        if (tab.hideUnlessActive && !active) return null;
         return (
           <Link
             key={tab.href}

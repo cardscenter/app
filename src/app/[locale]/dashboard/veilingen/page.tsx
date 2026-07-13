@@ -7,6 +7,8 @@ import { Clock } from "lucide-react";
 import { SellerAuctionCard, type SellerAuctionCardData } from "@/components/dashboard/seller-auction-card";
 import { EndedAuctionRow } from "@/components/dashboard/ended-auction-row";
 import { VeilingenRealtimeWatcher } from "@/components/dashboard/veilingen-realtime-watcher";
+import { OfferTabs } from "@/components/dashboard/cluster-tabs";
+import { buttonVariants } from "@/components/ui/button";
 
 const LIVE_STATUSES = new Set(["ACTIVE", "SCHEDULED"]);
 
@@ -121,23 +123,17 @@ export default async function MyAuctionsPage({
   const endedAuctions = auctions.filter((a) => !LIVE_STATUSES.has(a.status));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <VeilingenRealtimeWatcher liveAuctionIds={liveAuctions.map((a) => a.id)} />
 
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{t("myAuctions")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Volg, beheer en pas je actieve en geplande veilingen aan.
-          </p>
-        </div>
-        <Link
-          href="/veilingen/nieuw"
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
-        >
-          + {ta("createTitle")}
-        </Link>
-      </header>
+      <OfferTabs
+        userId={session.user.id}
+        action={
+          <Link href="/veilingen/nieuw" className={buttonVariants()}>
+            + {ta("createTitle")}
+          </Link>
+        }
+      />
 
       {/* LIVE-sectie */}
       <section>

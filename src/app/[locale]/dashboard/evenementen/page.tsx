@@ -5,6 +5,9 @@ import { Plus, CalendarDays } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { MyEventRow } from "@/components/events/my-event-row";
 import { EventVendorRequestsPanel } from "@/components/events/event-vendor-requests-panel";
+import { OfferTabs } from "@/components/dashboard/cluster-tabs";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function MyEventsPage({
   params,
@@ -47,27 +50,29 @@ export default async function MyEventsPage({
   }));
 
   return (
-    <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Mijn evenementen</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Beheer de evenementen die je hebt aangemaakt.</p>
-        </div>
-        <Link
-          href="/evenementen/nieuw"
-          className="inline-flex items-center gap-2 self-start rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-        >
-          <Plus className="h-4 w-4" /> Nieuw evenement
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <OfferTabs
+        userId={session.user.id}
+        action={
+          <Link href="/evenementen/nieuw" className={buttonVariants()}>
+            <Plus className="h-4 w-4" /> Nieuw evenement
+          </Link>
+        }
+      />
 
       {rows.length === 0 ? (
-        <div className="mt-6 flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-card/50 py-16 text-center">
-          <CalendarDays className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Je hebt nog geen evenementen aangemaakt.</p>
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="Nog geen evenementen"
+          description="Je hebt nog geen evenementen aangemaakt."
+          action={
+            <Link href="/evenementen/nieuw" className={buttonVariants({ size: "sm" })}>
+              <Plus className="h-4 w-4" /> Nieuw evenement
+            </Link>
+          }
+        />
       ) : (
-        <div className="mt-6 space-y-3">
+        <div className="space-y-3">
           {rows.map((e) => (
             <div key={e.id}>
               <MyEventRow event={e} />

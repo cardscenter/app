@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getSellerStats, getSellerReviews } from "@/actions/review";
 import { SellerReputationCard } from "@/components/ui/seller-reputation-card";
 import { ReviewList } from "@/components/ui/review-list";
+import { ReputationTabs } from "@/components/dashboard/cluster-tabs";
 
 export default async function DashboardReviewsPage({
   params,
@@ -29,7 +30,7 @@ export default async function DashboardReviewsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">{t("reviews")}</h1>
+      <ReputationTabs />
 
       <SellerReputationCard stats={stats} />
 
