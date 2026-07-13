@@ -22,10 +22,13 @@ export const registerSchema = z.object({
   cocNumber: z.string().max(50).optional().or(z.literal("")),
   vatNumber: z.string().max(50).optional().or(z.literal("")),
 
-  // Step 3: Address (optional)
-  street: z.string().max(100).optional().or(z.literal("")),
-  houseNumber: z.string().max(20).optional().or(z.literal("")),
-  postalCode: z.string().max(20).optional().or(z.literal("")),
+  // Step 3: Address — verplicht sinds Fase 43 zodat elk account vanaf dag 1
+  // hasValidShippingAddress-geldig is en gekoppeld aan de verzendmethoden van
+  // het land. Postcode-format bewust vrij (EU-breed; land-specifieke validatie
+  // is een follow-up).
+  street: z.string().min(1, "Straatnaam is verplicht").max(100),
+  houseNumber: z.string().min(1, "Huisnummer is verplicht").max(20),
+  postalCode: z.string().min(1, "Postcode is verplicht").max(20),
 
   // Step 4: Avatar (optional)
   avatarUrl: z.string().optional().or(z.literal("")),

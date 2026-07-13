@@ -147,6 +147,10 @@ function MultiStepRegisterForm() {
     if (step === 2) {
       if (!formData.firstName.trim()) errors.firstName = "Verplicht";
       if (!formData.lastName.trim()) errors.lastName = "Verplicht";
+      // Adres verplicht sinds Fase 43 — account moet direct shipping-geldig zijn.
+      if (!formData.street.trim()) errors.street = "Verplicht";
+      if (!formData.houseNumber.trim()) errors.houseNumber = "Verplicht";
+      if (!formData.postalCode.trim()) errors.postalCode = "Verplicht";
       if (!formData.city.trim()) errors.city = "Verplicht";
       if (!formData.country) errors.country = "Verplicht";
       if (formData.accountKind === "BUSINESS") {
@@ -507,6 +511,7 @@ function StepDetails({ formData, updateField, errors, t, locale }: StepProps & {
             onChange={(e) => updateField("street", e.target.value)}
             className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
           />
+          <FieldError error={errors.street} />
         </div>
         <div>
           <label htmlFor="houseNumber" className="block text-sm font-medium text-foreground">
@@ -519,6 +524,7 @@ function StepDetails({ formData, updateField, errors, t, locale }: StepProps & {
             onChange={(e) => updateField("houseNumber", e.target.value)}
             className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
           />
+          <FieldError error={errors.houseNumber} />
         </div>
       </div>
 
@@ -534,6 +540,7 @@ function StepDetails({ formData, updateField, errors, t, locale }: StepProps & {
             onChange={(e) => updateField("postalCode", e.target.value)}
             className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
           />
+          <FieldError error={errors.postalCode} />
         </div>
         <div>
           <label htmlFor="city" className="block text-sm font-medium text-foreground">
