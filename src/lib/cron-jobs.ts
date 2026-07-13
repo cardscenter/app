@@ -44,6 +44,8 @@ const CLEANUP_SOLD_IMAGES_DAYS = 30;
 const RUNNER_UP_DECISION_HOURS = 72;
 const PAYMENT_DEADLINE_DAYS = 5;
 const MAX_RUNNER_UP_ATTEMPTS_CAP = 3;
+// Meldingen-retentie (Fase 44): 10 pagina's à 25 op /dashboard/meldingen.
+const MAX_NOTIFICATIONS_PER_USER = 250;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -304,6 +306,7 @@ export const CRON_JOB_NAMES = [
   "reset-free-upsells",
   "cleanup-sold-images",
   "email-unread-messages",
+  "cleanup-notifications",
 ] as const;
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
 
@@ -461,6 +464,12 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     description:
       "Mailt ontvangers van een chatbericht dat na 15 minuten nog ongelezen is (max 1 mail per ongelezen-episode per conversatie; respecteert e-mailvoorkeuren en alleen geverifieerde adressen). Ruimt ook EmailLog-rijen >90 dagen op. Draait primair in-process elke 5 min; deze route is safety-net + handmatige run.",
     schedule: "Elke 10 min",
+    allowManualRun: true,
+  },
+  "cleanup-notifications": {
+    description:
+      `Houdt per gebruiker maximaal ${MAX_NOTIFICATIONS_PER_USER} meldingen aan (= 10 pagina's à 25): alles daarboven wordt oudste-eerst verwijderd. Draait primair in-process elk uur via de order-maintenance-scheduler.`,
+    schedule: "Elk uur (in-process)",
     allowManualRun: true,
   },
 };
@@ -1658,6 +1667,34 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     const { sendUnreadChatEmails } = await import("@/lib/email/unread-chat-emails");
     const r = await sendUnreadChatEmails();
     return { itemsProcessed: r.emailsSent, result: r };
+  },
+  "cleanup-notifications": async () => {
+    // Retentie: max MAX_NOTIFICATIONS_PER_USER meldingen per gebruiker
+    // (Fase 44). Oudste-eerst verwijderen boven de cap — de meldingen-pagina
+    // pagineert op 25/pagina, dus de cap = precies 10 pagina's historie.
+    const overLimit = await prisma.notification.groupBy({
+      by: ["userId"],
+      _count: { userId: true },
+      having: { userId: { _count: { gt: MAX_NOTIFICATIONS_PER_USER } } },
+    });
+
+    let deleted = 0;
+    for (const row of overLimit) {
+      // Pak de id's ná de cap (nieuwste eerst → skip cap = alles daarboven).
+      const excess = await prisma.notification.findMany({
+        where: { userId: row.userId },
+        orderBy: { createdAt: "desc" },
+        skip: MAX_NOTIFICATIONS_PER_USER,
+        select: { id: true },
+      });
+      if (excess.length === 0) continue;
+      const res = await prisma.notification.deleteMany({
+        where: { id: { in: excess.map((e) => e.id) } },
+      });
+      deleted += res.count;
+    }
+
+    return { itemsProcessed: deleted, result: { usersOverLimit: overLimit.length, deleted } };
   },
 };
 

@@ -16,9 +16,11 @@
 //
 // NIET in deze set (bewust): reset-free-upsells (maand-semantiek — uurlijks
 // draaien zou quota continu bijvullen), payment-failure-decay + prune-bid-ips
-// (week-cadans, niet order-kritisch), cleanup-* (destructief), check-
-// subscriptions (eigen domein), en alles met een eigen in-process scheduler
-// (auction-finalize/activate, expire-claims, email-unread-messages).
+// (week-cadans, niet order-kritisch), cleanup-archived-chats + cleanup-
+// sold-images (destructief op user-content), check-subscriptions (eigen
+// domein), en alles met een eigen in-process scheduler (auction-finalize/
+// activate, expire-claims, email-unread-messages). cleanup-notifications
+// draait WEL mee: bounded per-user retentie (max 250), geen user-content.
 //
 // Patroon identiek aan expire-claims-scheduler: direct de CRON_JOBS-runners
 // aanroepen (geen CronRun-rij per tick — dat zou 24×/dag bloat geven), de
@@ -45,6 +47,7 @@ const JOBS = [
   "auto-confirm",
   "auto-resolve-disputes",
   "auto-resolve-disputes-v2",
+  "cleanup-notifications",
 ] as const;
 
 interface SchedulerHandle {

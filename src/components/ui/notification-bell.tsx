@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getUnreadCount, getRecentNotifications, markAsRead } from "@/actions/notification";
+import { localizeNotificationLink } from "@/lib/notification-display";
 import { useRealtime } from "@/components/providers/realtime-provider";
 
 type RecentNotification = Awaited<ReturnType<typeof getRecentNotifications>>[number];
@@ -215,11 +216,14 @@ export function NotificationBell() {
                       </div>
                     </div>
                   );
+                  // DB-links zijn deels wel/niet locale-prefixed — altijd
+                  // normaliseren, anders 404 (zelfde fix als meldingen-lijst).
+                  const localizedLink = localizeNotificationLink(n.link, locale);
                   return (
                     <li key={n.id}>
-                      {n.link ? (
+                      {localizedLink ? (
                         <Link
-                          href={n.link}
+                          href={localizedLink}
                           onClick={() => handleNotificationClick(n)}
                           className="block"
                         >
@@ -267,7 +271,7 @@ export function NotificationBell() {
                 <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{flashing.body}</p>
                 {flashing.link && (
                   <Link
-                    href={flashing.link}
+                    href={localizeNotificationLink(flashing.link, locale)!}
                     onClick={() => handleNotificationClick(flashing)}
                     className="mt-2 inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-white hover:bg-primary-hover"
                   >
