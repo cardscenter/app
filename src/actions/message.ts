@@ -9,6 +9,13 @@ export async function startConversation(recipientId: string, auctionId?: string,
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   if (session.user.id === recipientId) return { error: "Je kunt geen bericht naar jezelf sturen" };
 
+  // Fase 43 — chatten vereist een bevestigd e-mailadres (anti-spam vanaf
+  // wegwerp-accounts). Vroege gate: voorkomt dat iemand in een lege chat
+  // belandt waar hij niets kan sturen. Dekt ook contactSeller.
+  const { requireEmailVerified } = await import("@/lib/email-verification");
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
+
   // Check for existing conversation between these users for this context
   const existing = await prisma.conversation.findFirst({
     where: {
@@ -59,6 +66,11 @@ export async function sendMessage(conversationId: string, body: string, imageUrl
   const { requireNotSuspended } = await import("@/lib/suspension");
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — chatten vereist een bevestigd e-mailadres.
+  const { requireEmailVerified } = await import("@/lib/email-verification");
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   // Verify user is participant
   const participant = await prisma.conversationParticipant.findFirst({

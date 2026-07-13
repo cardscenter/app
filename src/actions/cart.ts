@@ -7,6 +7,7 @@ import { createNotification } from "@/actions/notification";
 import { generateOrderNumber } from "@/lib/order-number";
 import { expireClaimedItems, unclaimItem, closeClaimsaleIfDepleted } from "@/actions/claimsale";
 import { requireNotSuspended } from "@/lib/suspension";
+import { requireEmailVerified } from "@/lib/email-verification";
 import { requiresSignedShipping } from "@/lib/shipping/tracked-threshold";
 import { publish, claimsaleChannel, userChannel } from "@/lib/realtime";
 
@@ -224,6 +225,10 @@ export async function checkout(
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — afrekenen vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   // Check buyer has address
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });

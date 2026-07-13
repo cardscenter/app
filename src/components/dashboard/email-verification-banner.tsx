@@ -5,9 +5,10 @@ import { MailWarning, CheckCircle2 } from "lucide-react";
 import { resendVerificationEmail } from "@/actions/auth";
 
 /**
- * Zachte "bevestig je e-mailadres"-banner (Fase 42). Verschijnt in het dashboard
- * zolang `emailVerifiedAt` null is. Blokkeert niets — browsen/kopen blijft vrij;
- * verkopen/uitbetalen wordt los geguard via `requireEmailVerified`.
+ * "Bevestig je e-mailadres"-banner (Fase 42, aangescherpt in Fase 43).
+ * Verschijnt in het dashboard zolang `emailVerifiedAt` null is. Sinds Fase 43
+ * is verificatie een harde eis voor kopen/bieden/claimen/chatten/verkopen/
+ * storten/uitbetalen — de banner is de primaire route naar de resend-mail.
  */
 export function EmailVerificationBanner() {
   const [pending, startTransition] = useTransition();
@@ -31,7 +32,8 @@ export function EmailVerificationBanner() {
           <p className="font-semibold">Bevestig je e-mailadres</p>
           <p className="mt-0.5 text-amber-700 dark:text-amber-300/90">
             We hebben je een verificatielink gestuurd. Bevestigen is nodig
-            voordat je kunt verkopen of uitbetalen.
+            voordat je kunt kopen, bieden, chatten, verkopen, storten of
+            uitbetalen.
           </p>
         </div>
       </div>

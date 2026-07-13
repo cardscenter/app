@@ -448,6 +448,10 @@ export async function buyListing(
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
 
+  // Fase 43 — kopen vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
+
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },
     include: {

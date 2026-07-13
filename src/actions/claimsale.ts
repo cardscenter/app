@@ -659,6 +659,10 @@ export async function claimItem(claimsaleItemId: string) {
   const susp = await requireNotSuspended(userId);
   if ("error" in susp) return { error: susp.error };
 
+  // Fase 43 — claimen vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(userId);
+  if ("error" in verified) return { error: verified.error };
+
   const item = await prisma.claimsaleItem.findUnique({
     where: { id: claimsaleItemId },
     include: { claimsale: true },
@@ -768,6 +772,14 @@ export async function claimAllItems(claimsaleId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
+
+  // Ontbrak hier — claimItem had de guard al (inconsistentie gedicht in Fase 43).
+  const susp = await requireNotSuspended(userId);
+  if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — claimen vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(userId);
+  if ("error" in verified) return { error: verified.error };
 
   const claimsale = await prisma.claimsale.findUnique({
     where: { id: claimsaleId },

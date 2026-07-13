@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireNotSuspended } from "@/lib/suspension";
+import { requireEmailVerified } from "@/lib/email-verification";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { publishNewMessageForConversation } from "@/actions/message";
@@ -141,6 +142,10 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — voorstellen doen vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   const buyerId = session.user.id;
 
@@ -383,6 +388,10 @@ export async function counterBundleOffer(input: { parentProposalId: string; tota
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
 
+  // Fase 43 — tegenvoorstel = nieuw voorstel, vereist bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
+
   const parsed = counterBundleOfferSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
@@ -516,6 +525,13 @@ export async function respondToBundleOffer(
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — ACCEPT gaat een nieuwe verplichting aan en vereist een bevestigd
+  // e-mailadres; REJECT moet altijd kunnen.
+  if (action === "ACCEPT") {
+    const verified = await requireEmailVerified(session.user.id);
+    if ("error" in verified) return { error: verified.error };
+  }
 
   const bp = await prisma.bundleProposal.findUnique({
     where: { id: bundleProposalId },

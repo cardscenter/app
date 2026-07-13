@@ -431,6 +431,10 @@ export async function placeBid(auctionId: string, amount: number, deliveryChoice
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
 
+  // Fase 43 — bieden vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
+
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };
   if (auction.status === "SCHEDULED" || (auction.startTime && new Date() < auction.startTime)) {
@@ -643,6 +647,10 @@ export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKU
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — kopen vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };
@@ -1167,6 +1175,10 @@ export async function setAutoBid(auctionId: string, maxAmount: number, deliveryC
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
 
+  // Fase 43 — bieden vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
+
   const auction = await prisma.auction.findUnique({ where: { id: auctionId } });
   if (!auction) return { error: "Veiling niet gevonden" };
   if (auction.status === "SCHEDULED" || (auction.startTime && new Date() < auction.startTime)) {
@@ -1676,6 +1688,11 @@ export async function acceptRunnerUpOffer(offerId: string) {
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — accepteren = nieuwe koopverplichting aangaan; declinen blijft
+  // altijd mogelijk (strafvrij).
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   const offer = await prisma.auctionRunnerUpOffer.findUnique({
     where: { id: offerId },

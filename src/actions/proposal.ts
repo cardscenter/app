@@ -9,6 +9,7 @@ import { publishNewMessageForConversation } from "@/actions/message";
 import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { requireNotSuspended } from "@/lib/suspension";
+import { requireEmailVerified } from "@/lib/email-verification";
 
 // Helper: bereken nieuwe listing-status na een items-status-flip.
 // SOLD als geen items meer AVAILABLE/RESERVED, anders PARTIALLY_SOLD.
@@ -62,6 +63,10 @@ export async function createPartialSaleProposal(input: {
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — voorstellen doen vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   if (input.totalAmount <= 0) return { error: "Bedrag moet groter zijn dan 0" };
   if (!input.itemIds || input.itemIds.length === 0) return { error: "Selecteer minimaal één item" };
@@ -150,6 +155,10 @@ export async function createProposal(
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — voorstellen doen vereist een bevestigd e-mailadres.
+  const verified = await requireEmailVerified(session.user.id);
+  if ("error" in verified) return { error: verified.error };
 
   if (amount <= 0) return { error: "Bedrag moet groter zijn dan 0" };
 
@@ -283,6 +292,14 @@ export async function respondToProposal(
 
   const susp = await requireNotSuspended(session.user.id);
   if ("error" in susp) return { error: susp.error };
+
+  // Fase 43 — ACCEPT gaat een nieuwe koopverplichting aan en vereist een
+  // bevestigd e-mailadres; REJECT moet altijd kunnen (deal niet kunstmatig
+  // open houden).
+  if (action === "ACCEPT") {
+    const verified = await requireEmailVerified(session.user.id);
+    if ("error" in verified) return { error: verified.error };
+  }
 
   const proposal = await prisma.proposal.findUnique({
     where: { id: proposalId },
