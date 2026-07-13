@@ -9,7 +9,16 @@ import { getAddressCooldownInfo } from "@/lib/address-cooldown";
 import { CountryFlag } from "@/components/ui/country-flag";
 import type { User } from "@prisma/client";
 
-export function AddressForm({ user }: { user: User }) {
+export function AddressForm({
+  user,
+  onSaved,
+}: {
+  user: User;
+  /** Fase 43 — optionele callback na succesvol opslaan (onboarding-wizard
+   *  schuift ermee door naar de volgende stap). Bestaande callsites
+   *  (profiel, verzending) laten 'm weg. */
+  onSaved?: () => void;
+}) {
   const t = useTranslations("shipping");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -41,6 +50,7 @@ export function AddressForm({ user }: { user: User }) {
           country: formData.get("country") as string,
         });
         setEditing(false);
+        onSaved?.();
       }
       return result ?? null;
     },

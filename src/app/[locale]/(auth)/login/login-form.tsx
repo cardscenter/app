@@ -48,7 +48,18 @@ export function LoginForm({ locale }: LoginFormProps) {
     startTransition(async () => {
       const result = await login(formData);
       if (result && "success" in result && result.success) {
-        window.location.href = `/${locale}`;
+        // Fase 43 — callbackUrl honoreren (bv. verify-email op ander device →
+        // login → /welkom). Alleen interne paden: moet met "/" beginnen en
+        // niet met "//" (open-redirect-preventie). Locale-prefix toevoegen als
+        // die ontbreekt. Op submit-moment gelezen — geen useSearchParams nodig.
+        const rawCallback = new URLSearchParams(window.location.search).get("callbackUrl");
+        let target = `/${locale}`;
+        if (rawCallback && rawCallback.startsWith("/") && !rawCallback.startsWith("//")) {
+          target = rawCallback.startsWith(`/${locale}/`) || rawCallback === `/${locale}`
+            ? rawCallback
+            : `/${locale}${rawCallback}`;
+        }
+        window.location.href = target;
         return;
       }
       if (result && "totpRequired" in result && result.totpRequired) {

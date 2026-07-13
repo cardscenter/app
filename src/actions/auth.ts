@@ -259,7 +259,7 @@ export async function login(formData: FormData) {
  */
 export async function verifyEmail(
   token: string,
-): Promise<{ success: true } | { error: string }> {
+): Promise<{ success: true; userId: string } | { error: string }> {
   if (!token) return { error: "Ontbrekende of ongeldige verificatielink." };
 
   const record = await prisma.emailVerificationToken.findUnique({
@@ -268,7 +268,9 @@ export async function verifyEmail(
   });
 
   if (!record) return { error: "Deze verificatielink is ongeldig." };
-  if (record.user.emailVerifiedAt) return { success: true };
+  // userId in de success-return (Fase 43) zodat de verify-pagina kan bepalen
+  // of de ingelogde sessie bij dit account hoort (link op ander device).
+  if (record.user.emailVerifiedAt) return { success: true, userId: record.userId };
   if (record.usedAt) return { error: "Deze verificatielink is al gebruikt." };
   if (record.expiresAt < new Date()) {
     return { error: "Deze verificatielink is verlopen. Vraag een nieuwe aan." };
@@ -285,7 +287,7 @@ export async function verifyEmail(
     }),
   ]);
 
-  return { success: true };
+  return { success: true, userId: record.userId };
 }
 
 /**
