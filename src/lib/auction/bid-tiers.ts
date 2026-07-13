@@ -12,21 +12,20 @@ export const BID_RESERVE_RATE = 0.10;
 
 // Bids ≥ €2000 vereisen `User.isVerified === true` (tenzij admin-vrijgesteld
 // via `isBusinessBidExempt`). Onder deze drempel is verificatie niet nodig.
-// Drempel is gelijkgetrokken met de borg-trigger: 10% × €2000 = €200 borg —
-// één getal, één regel.
 export const VERIFIED_BID_THRESHOLD = 2000;
 
-// €200 forfait dat verbeurd wordt bij wanbetaling op een ≥€2000-bid.
-// Forfait wordt afgeboekt van User.balance op het moment dat cron
-// auction-payment-deadline PAYMENT_FAILED flagt. Geen pre-storting.
-// Gaat volledig naar het platform — seller is al beschermd via runner-up cascade.
-export const BID_FORFEIT_AMOUNT = 200;
+// Borg-forfait bij wanbetaling (Fase 44): de VOLLEDIGE 10%-reservering
+// (10% × (bod + 2,9% veilingkosten), zie `calculateReserveForBid` in
+// balance-check.ts) verbeurt aan het platform — voor élk bedrag. De reserve
+// stond tijdens AWAITING_PAYMENT al vast op het saldo, dus het forfait is in
+// de praktijk altijd inbaar; de clamp + PendingPlatformFee blijven als
+// safety-net. Verving het vaste €200-forfait dat alleen ≥€2000 gold
+// (BID_FORFEIT_AMOUNT, verwijderd) — 10% van ≥€2000 is altijd ≥€205,80, dus
+// niemand ging er door deze wijziging op vooruit.
 
 // Universele payment-failure-fee: 2,9% × bod, ALLE bedragen, geclampt op
-// User.balance. Stackt op BID_FORFEIT_AMOUNT (≥€2000). Voorbeeld €1000-bod:
-// €0 forfait + €29 fee = €29 boete. €2500-bod: €200 forfait + €72,50 fee.
-// Het 10%-commitment in reservedBalance dekt de fee altijd zolang user
-// niets uitgaf na winnen — clamp op `max(balance - forfeit, 0)` als safety.
+// User.balance ná het reservering-forfait. Voorbeeld €1000-bod: €102,90
+// forfait + €29 fee = €131,90 boete. €45-bod: €4,63 + €1,31 = €5,94.
 // Gaat 100% naar platform via Transaction.type = "BID_PAYMENT_FAILURE_FEE".
 export const PAYMENT_FAILURE_FEE_RATE = 0.029;
 

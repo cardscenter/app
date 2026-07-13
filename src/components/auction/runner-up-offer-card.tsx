@@ -190,7 +190,7 @@ export function RunnerUpOfferCard({ offer, availableBalance }: Props) {
                 </p>
                 <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">
                   Je kunt nog accepteren — bij accept krijg je 5 dagen om te betalen. Mis je die deadline, dan
-                  volgt een 2,9% boete + €200 borg (≥€2000) + strike.
+                  verbeurt de 10%-reservering als borg + 2,9% boete + strike.
                 </p>
                 <Link
                   href="/dashboard/saldo"
@@ -205,8 +205,8 @@ export function RunnerUpOfferCard({ offer, availableBalance }: Props) {
           <div className="flex items-start gap-2 rounded-xl border border-border bg-card p-3 text-xs text-muted-foreground">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
-              Bij accept moet je binnen 5 dagen betalen. Bij wanbetaling: strike + 2,9% boete
-              {offer.bidAmount >= 2000 ? " + €200 borg" : ""}. Weigeren is gratis en heeft geen gevolgen.
+              Bij accept moet je binnen 5 dagen betalen. Bij wanbetaling: strike + 2,9% boete + verbeurde
+              10%-reservering als borg. Weigeren is gratis en heeft geen gevolgen.
             </p>
           </div>
 
@@ -253,8 +253,8 @@ export function RunnerUpOfferCard({ offer, availableBalance }: Props) {
               </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              Je hebt 5 dagen om te betalen na acceptatie. Bij wanbetaling: strike + 2,9% boete
-              {offer.bidAmount >= 2000 ? " + €200 borg" : ""}.
+              Je hebt 5 dagen om te betalen na acceptatie. Bij wanbetaling: strike + 2,9% boete + verbeurde
+              10%-reservering als borg.
             </p>
             <div className="mt-5 flex gap-2">
               <button

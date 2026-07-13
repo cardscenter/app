@@ -14,7 +14,7 @@ type Props = {
 /**
  * Toggle voor borg-vrijstelling op BUSINESS-accounts (Fase 29).
  *
- * Effect: gebruiker mag bids ≥ €2500 plaatsen zonder geverifieerd ID. Borg-
+ * Effect: gebruiker mag bids ≥ €2000 plaatsen zonder geverifieerd ID. Borg-
  * forfait blijft gelden. UI wordt alleen gerenderd voor BUSINESS-accounts
  * met valide vatNumber + cocNumber (guard in parent page).
  */
@@ -72,8 +72,8 @@ export function BidDepositExemptionToggle({ userId, userName, currentlyExempt }:
         <form onSubmit={handleSubmit} className="space-y-2 rounded-md border border-border bg-card p-3">
           <p className="text-xs text-muted-foreground">
             {currentlyExempt
-              ? `Vrijstelling voor ${userName} intrekken — bids ≥ €2500 vereisen weer een geverifieerd account.`
-              : `${userName} vrijstellen van verified-eis bij bids ≥ €2500. Borg-forfait blijft van toepassing bij wanbetaling.`}
+              ? `Vrijstelling voor ${userName} intrekken — bids ≥ €2000 vereisen weer een geverifieerd account.`
+              : `${userName} vrijstellen van verified-eis bij bids ≥ €2000. Borg-forfait blijft van toepassing bij wanbetaling.`}
           </p>
           <textarea
             value={reason}

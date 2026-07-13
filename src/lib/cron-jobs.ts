@@ -16,15 +16,13 @@ import { populateEmptyMappedSets, topUpGrowingSets } from "@/lib/pokewallet/popu
 import { backfillTcgdexPricing } from "@/lib/pokewallet/tcgdex-pricing";
 import { mirrorCardImage, mirrorSetLogo, mapPaced } from "@/lib/pokewallet/mirror-images";
 import { createNotification } from "@/actions/notification";
-import { syncReservedBalance } from "@/lib/balance-check";
+import { syncReservedBalance, calculateReserveForBid } from "@/lib/balance-check";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { PICKUP_RESERVATION_DAYS } from "@/lib/bundle-offer-config";
 import { finalizeAuction } from "@/actions/auction";
 import { refundEscrow, refundAuctionPremium } from "@/actions/wallet";
 import { publish, userChannel, listingChannel, auctionChannel, claimsaleChannel } from "@/lib/realtime";
 import {
-  VERIFIED_BID_THRESHOLD,
-  BID_FORFEIT_AMOUNT,
   PAYMENT_FAILURE_FEE_RATE,
   STRIKE_TEMP_SUSPEND_THRESHOLD,
   STRIKE_TEMP_SUSPEND_DAYS,
@@ -375,7 +373,7 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   },
   "auction-payment-deadline": {
     description:
-      "Verwerkt veilingen waarvan de 5-dagen betaaltermijn verlopen is: strike + 2,9%-fee + €200-borg op de wanbetaler (niet-inbare deel naar PendingPlatformFee). Daarna runner-up-aanbod (72u-window) of finaliseren als PAYMENT_FAILED.",
+      "Verwerkt veilingen waarvan de 5-dagen betaaltermijn verlopen is: strike + 2,9%-fee + verbeurde 10%-reservering als borg op de wanbetaler (niet-inbare deel naar PendingPlatformFee). Daarna runner-up-aanbod (72u-window) of finaliseren als PAYMENT_FAILED.",
     schedule: "Dagelijks",
     allowManualRun: true,
   },
@@ -800,9 +798,13 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         continue;
       }
 
-      // Strike + fee + forfait op wanbetaler. Niet-inbare deel naar
+      // Strike + fee + forfait op wanbetaler. Het forfait = de volledige
+      // 10%-reservering (bod + veilingkosten) die tijdens AWAITING_PAYMENT
+      // al op het saldo vaststond — voor élk bedrag (Fase 44; verving het
+      // vaste €200-forfait dat alleen ≥€2000 gold). Omdat de reserve nog
+      // niet is vrijgegeven op dit punt (syncReservedBalance komt later) is
+      // het forfait in de praktijk altijd inbaar. Niet-inbare deel naar
       // PendingPlatformFee zodat het bij volgende inkomst wordt afgeroomd.
-      const isHighBid = previousWinnerPrice >= VERIFIED_BID_THRESHOLD;
       const wanbetaler = await prisma.user.findUnique({
         where: { id: previousWinnerId },
         select: { balance: true },
@@ -812,7 +814,7 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
       let forfeitShortfall = 0;
       let feeCharged = 0;
       let feeShortfall = 0;
-      const forfeitTarget = isHighBid ? BID_FORFEIT_AMOUNT : 0;
+      const forfeitTarget = calculateReserveForBid(previousWinnerPrice);
       const feeTarget = Math.round(previousWinnerPrice * PAYMENT_FAILURE_FEE_RATE * 100) / 100;
 
       if (wanbetaler) {
@@ -840,7 +842,7 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
                   amount: -forfeitCharged,
                   balanceBefore: wanbetaler.balance,
                   balanceAfter: balanceAfterForfeit,
-                  description: `Borg verbeurd: niet betaald op veiling "${previousWinnerTitle}"`,
+                  description: `Borg verbeurd (10%-reservering): niet betaald op veiling "${previousWinnerTitle}"`,
                   relatedAuctionId: auction.id,
                 },
               });
@@ -866,7 +868,7 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
                 type: "BID_DEPOSIT_FORFEIT",
                 shortfallAmount: forfeitShortfall,
                 originalAmount: forfeitTarget,
-                description: `Borg verbeurd: niet betaald op veiling "${previousWinnerTitle}"`,
+                description: `Borg verbeurd (10%-reservering): niet betaald op veiling "${previousWinnerTitle}"`,
                 relatedAuctionId: auction.id,
               });
             }

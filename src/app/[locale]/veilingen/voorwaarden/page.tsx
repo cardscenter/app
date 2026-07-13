@@ -4,7 +4,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import {
   BID_RESERVE_RATE,
   VERIFIED_BID_THRESHOLD,
-  BID_FORFEIT_AMOUNT,
+  PAYMENT_FAILURE_FEE_RATE,
   STRIKE_TEMP_SUSPEND_THRESHOLD,
   STRIKE_TEMP_SUSPEND_DAYS,
   STRIKE_PERMANENT_THRESHOLD,
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 // review (zelfde aanpak als /verkoop-calculator/voorwaarden).
 
 const RESERVE_PERCENTAGE_DISPLAY = `${Math.round(BID_RESERVE_RATE * 100)}%`;
+const FAILURE_FEE_DISPLAY = `${(PAYMENT_FAILURE_FEE_RATE * 100).toFixed(1).replace(/\.0$/, "").replace(".", ",")}%`;
 
 export default function VeilingenVoorwaardenPage() {
   return (
@@ -193,25 +194,33 @@ export default function VeilingenVoorwaardenPage() {
           </p>
           <p className="mb-2">
             <strong>10.2.</strong>{" "}
-            <strong>Borg-forfait €{BID_FORFEIT_AMOUNT}</strong> — bij wanbetaling op een veiling met eindbedrag vanaf
-            €{VERIFIED_BID_THRESHOLD} verbeurt een forfaitair bedrag van €{BID_FORFEIT_AMOUNT} aan Cards Center, ter
-            vergoeding van administratieve kosten. Het bedrag wordt afgeschreven van het saldo van de wanbetaler. Bij
-            ontoereikend saldo wordt zoveel mogelijk afgeschreven met een ondergrens van €0.
+            <strong>Borg-forfait: de {RESERVE_PERCENTAGE_DISPLAY}-reservering verbeurt</strong> — bij wanbetaling
+            verbeurt de volledige {RESERVE_PERCENTAGE_DISPLAY}-reservering ({RESERVE_PERCENTAGE_DISPLAY} van het
+            winnende bod plus veilingkosten) die bij het bieden op het saldo werd vastgehouden, aan Cards Center, ter
+            vergoeding van administratieve kosten. Dit geldt voor elk eindbedrag. Bij ontoereikend saldo wordt zoveel
+            mogelijk afgeschreven met een ondergrens van €0; het restant blijft als openstaande schuld geregistreerd en
+            wordt verrekend met de eerstvolgende inkomsten op het account.
           </p>
           <p className="mb-2">
             <strong>10.3.</strong>{" "}
+            <strong>Wanbetalingskosten {FAILURE_FEE_DISPLAY}</strong> — daarnaast wordt {FAILURE_FEE_DISPLAY} van het
+            winnende bod als kosten in rekening gebracht, eveneens voor elk eindbedrag en met dezelfde
+            schuld-verrekening bij ontoereikend saldo.
+          </p>
+          <p className="mb-2">
+            <strong>10.4.</strong>{" "}
             <strong>Strike</strong> — bij elke wanbetaling (ongeacht het bedrag) wordt aan het account één{" "}
             <em>strike</em> toegevoegd. Strikes blijven {STRIKE_DECAY_DAYS} dagen op het account staan; daarna verlaagt
             het systeem automatisch de teller met één per ronde.
           </p>
           <p className="mb-2">
-            <strong>10.4.</strong> <strong>Runner-up rotatie</strong> — als de Verkoper deze optie heeft ingeschakeld
+            <strong>10.5.</strong> <strong>Runner-up rotatie</strong> — als de Verkoper deze optie heeft ingeschakeld
             (standaard aan), wordt het kavel automatisch toegewezen aan de eerstvolgende hoogste bieder die nog niet als
             wanbetaler is gemarkeerd. Deze runner-up krijgt een nieuwe 5-dagen-betaaltermijn voor diens oorspronkelijke
             bod-bedrag.
           </p>
           <p>
-            <strong>10.5.</strong> De Bieder erkent dat de bovenstaande gevolgen contractueel rechtvaardig en
+            <strong>10.6.</strong> De Bieder erkent dat de bovenstaande gevolgen contractueel rechtvaardig en
             proportioneel zijn voor het ondervangen van de schade en operationele last die wanbetaling veroorzaakt.
           </p>
         </section>
@@ -356,9 +365,11 @@ export default function VeilingenVoorwaardenPage() {
             Samenvatting — wanneer krijg je geld terug, wanneer ben je het kwijt?
           </h2>
           <p className="mb-3 text-sm text-muted-foreground">
-            <strong>Reserveringen zijn altijd tijdelijk:</strong> ze vallen vrij zodra je bod niet meer actief is
-            (overboden, veiling afgelopen, betaald). Geld is alleen permanent verloren bij wanprestatie boven de €
-            {VERIFIED_BID_THRESHOLD}-grens — als je een veiling wint en niet binnen 5 dagen betaalt.
+            <strong>Reserveringen zijn tijdelijk zolang je je afspraken nakomt:</strong> ze vallen vrij zodra je bod
+            niet meer actief is (overboden, veiling afgelopen) en tellen mee in je betaling als je wint. Geld is alleen
+            permanent verloren bij wanbetaling — win je een veiling en betaal je niet binnen 5 dagen, dan verbeurt de{" "}
+            {RESERVE_PERCENTAGE_DISPLAY}-reservering als borg en betaal je {FAILURE_FEE_DISPLAY} wanbetalingskosten,
+            ongeacht het bedrag.
           </p>
 
           <div className="overflow-x-auto">
@@ -404,24 +415,16 @@ export default function VeilingenVoorwaardenPage() {
                 </tr>
                 <tr>
                   <td className="border border-border px-2 py-1.5">
-                    Je wint maar mist 5d-deadline, finalPrice &lt; €{VERIFIED_BID_THRESHOLD}
+                    Je wint maar mist de 5-dagen-betaaltermijn
                   </td>
-                  <td className="border border-border px-2 py-1.5">Valt vrij</td>
-                  <td className="border border-border px-2 py-1.5">Geen</td>
-                  <td className="border border-border px-2 py-1.5 text-amber-700 dark:text-amber-400">
-                    Niets verloren, +1 strike
-                  </td>
-                </tr>
-                <tr>
-                  <td className="border border-border px-2 py-1.5">
-                    Je wint maar mist 5d-deadline, finalPrice ≥ €{VERIFIED_BID_THRESHOLD}
-                  </td>
-                  <td className="border border-border px-2 py-1.5">Valt vrij</td>
                   <td className="border border-border px-2 py-1.5 font-semibold text-red-700 dark:text-red-400">
-                    €{BID_FORFEIT_AMOUNT} verbeurd
+                    Verbeurt als borg
+                  </td>
+                  <td className="border border-border px-2 py-1.5 font-semibold text-red-700 dark:text-red-400">
+                    {RESERVE_PERCENTAGE_DISPLAY} van bod + veilingkosten
                   </td>
                   <td className="border border-border px-2 py-1.5 text-red-700 dark:text-red-400">
-                    €{BID_FORFEIT_AMOUNT} afgeboekt, +1 strike
+                    Borg + {FAILURE_FEE_DISPLAY} kosten afgeboekt, +1 strike
                   </td>
                 </tr>
                 <tr>
