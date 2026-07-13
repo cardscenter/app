@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { BalanceSummary } from "@/components/dashboard/balance-summary";
 import { DepositMethods } from "@/components/dashboard/deposit-methods";
+import { DepositVerifyGate } from "@/components/dashboard/deposit-verify-gate";
 import { PendingAuctionPayments } from "@/components/dashboard/pending-auction-payments";
 import { PendingFeesBanner } from "@/components/dashboard/pending-fees-banner";
 
@@ -24,6 +25,7 @@ export default async function BalancePage({
       reservedBalance: true,
       heldBalance: true,
       bankTransferReference: true,
+      emailVerifiedAt: true,
     },
   });
 
@@ -84,11 +86,17 @@ export default async function BalancePage({
         </div>
       )}
 
-      {/* Deposit methods */}
+      {/* Deposit methods — verborgen tot e-mail bevestigd is (Fase 43),
+          zodat de bankreferentie nooit aan onbevestigde accounts getoond
+          wordt. */}
       <div className="mt-6">
-        <DepositMethods
-          bankTransferReference={user.bankTransferReference}
-        />
+        {user.emailVerifiedAt ? (
+          <DepositMethods
+            bankTransferReference={user.bankTransferReference}
+          />
+        ) : (
+          <DepositVerifyGate />
+        )}
       </div>
 
       {/* Transaction history */}
