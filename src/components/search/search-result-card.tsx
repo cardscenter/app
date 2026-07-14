@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { Clock, Gavel, Tag, Store } from "lucide-react";
 import Image from "next/image";
 import { parseImageUrls } from "@/lib/upload";
-import type { SearchResult } from "@/actions/search";
+import type { SearchResult } from "@/lib/global-search";
 
 interface SearchResultCardProps {
   result: SearchResult;

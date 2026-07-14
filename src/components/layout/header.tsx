@@ -1,11 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import { useSession, SessionProvider } from "next-auth/react";
 import { UserBalance } from "./user-balance";
-import { useState, useEffect, useRef } from "react";
-import { Menu, X, Search, Bell, MessageCircle, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, Bell, MessageCircle, ChevronRight } from "lucide-react";
+import { GlobalSearch } from "@/components/search/global-search";
 import { NotificationBell } from "@/components/ui/notification-bell";
 import { MessageIcon } from "@/components/ui/message-icon";
 import { CartIcon } from "@/components/ui/cart-icon";
@@ -139,8 +140,9 @@ function HeaderContent() {
         {/* Right side — ml-auto duwt alles naar rechts; de nav neemt links de
             ruimte. De zoekbalk is een loep-icoon dat naar links openklapt. */}
         <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-1.5">
-          {/* Zoeken: loep-icoon dat over de nav heen naar links uitklapt (md+) */}
-          <HeaderSearchToggle />
+          {/* Zoeken: loep-icoon dat over de nav heen naar links uitklapt (md+),
+              met live suggesties per categorie */}
+          <GlobalSearch variant="desktop" />
 
           {session?.user ? (
             <>
@@ -212,8 +214,8 @@ function HeaderContent() {
       {/* Mobile menu */}
       {mobileMenuOpen && (
         <div className="border-t border-white/10 bg-slate-950 px-4 pb-5 pt-3 md:hidden">
-          {/* Mobile search */}
-          <MobileSearchBar />
+          {/* Mobile search met live suggesties */}
+          <GlobalSearch variant="mobile" onNavigate={() => setMobileMenuOpen(false)} />
 
           {session?.user ? (
             <>
@@ -399,121 +401,6 @@ function HeaderContent() {
         </div>
       )}
     </header>
-  );
-}
-
-function MobileSearchBar() {
-  const t = useTranslations("search");
-  const router = useRouter();
-  const [value, setValue] = useState("");
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = value.trim();
-    if (trimmed) {
-      router.push(`/zoeken?q=${encodeURIComponent(trimmed)}`);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={t("placeholder")}
-          className="w-full rounded-lg bg-white/10 pl-9 pr-3 py-2.5 text-base text-white placeholder:text-slate-400 focus:bg-white/15 focus:outline-none focus:ring-1 focus:ring-white/30"
-        />
-      </div>
-    </form>
-  );
-}
-
-// Zoek-loep die op desktop (md+) naar links openklapt over de nav heen.
-// Klik buiten de balk of Escape klapt 'm weer in.
-function HeaderSearchToggle() {
-  const t = useTranslations("search");
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDocClick(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [open]);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = value.trim();
-    if (trimmed) {
-      router.push(`/zoeken?q=${encodeURIComponent(trimmed)}`);
-      setOpen(false);
-    }
-  }
-
-  return (
-    <div ref={wrapperRef} className="relative hidden md:flex md:items-center">
-      {/* Loep-trigger — verborgen zodra de balk open is zodat alleen de balk telt */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={t("placeholder")}
-        className={`rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${
-          open ? "pointer-events-none opacity-0" : "opacity-100"
-        }`}
-      >
-        <Search className="h-5 w-5" />
-      </button>
-
-      {/* Uitklappende zoekbalk — geanimeerd naar links, over de nav heen */}
-      <form
-        onSubmit={handleSubmit}
-        className={`absolute right-0 top-1/2 z-50 flex -translate-y-1/2 items-center overflow-hidden rounded-lg bg-slate-800/95 shadow-lg ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300 ease-out ${
-          open ? "w-[min(70vw,400px)] opacity-100" : "pointer-events-none w-0 opacity-0"
-        }`}
-      >
-        <Search className="ml-3 h-4 w-4 shrink-0 text-slate-400" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={t("placeholder")}
-          tabIndex={open ? 0 : -1}
-          className="min-w-0 flex-1 bg-transparent px-2 py-2 text-base text-white placeholder:text-slate-400 focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={() => { setOpen(false); setValue(""); }}
-          tabIndex={open ? 0 : -1}
-          aria-label="Sluit"
-          className="mr-1 shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </form>
-    </div>
   );
 }
 

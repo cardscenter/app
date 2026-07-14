@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCardImageUrl } from "@/lib/card-image";
-import { normalizeForSearch } from "@/lib/search-utils";
+import {
+  normalizeForSearch,
+  buildCardTokenClauses,
+  CARD_SEARCH_BASE_WHERE,
+} from "@/lib/search-utils";
 
 // Public search over the local Card table for the /kaarten database page.
 // Uses the searchName column for accent/diacritics-insensitive matching:
@@ -62,38 +66,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: [], totalCount: 0 });
   }
 
-  const tokens = q.split(/\s+/).filter(Boolean);
-  const normalizedTokens = tokens.map((t) => normalizeForSearch(t));
-
-  const andClauses: Array<Record<string, unknown>> = [];
-
-  if (q.length >= 2) {
-    for (let i = 0; i < normalizedTokens.length; i++) {
-      const nt = normalizedTokens[i];
-      const original = tokens[i];
-      const isNumeric = /^\d+$/.test(original);
-      const ors: Array<Record<string, unknown>> = [
-        { searchName: { contains: nt } },
-        { name: { contains: original } },
-        { cardSet: { name: { contains: original } } },
-      ];
-      if (isNumeric) {
-        const n = parseInt(original, 10);
-        const variants = Array.from(
-          new Set([
-            String(n),
-            String(n).padStart(2, "0"),
-            String(n).padStart(3, "0"),
-            String(n).padStart(4, "0"),
-          ])
-        );
-        ors.push({ localId: { in: variants } });
-      } else {
-        ors.push({ localId: { contains: original } });
-      }
-      andClauses.push({ OR: ors });
-    }
-  }
+  const andClauses: Array<Record<string, unknown>> =
+    q.length >= 2 ? buildCardTokenClauses(q) : [];
 
   // Price range (priceAvg)
   if (!Number.isNaN(priceMin)) andClauses.push({ priceAvg: { gte: priceMin } });
@@ -151,9 +125,7 @@ export async function GET(request: Request) {
   // promo-only McDonald's sets (not in scope for buyback).
   const buybackOnly = searchParams.get("buybackOnly") === "true";
 
-  const where: Record<string, unknown> = {
-    cardSet: { series: { tcgdexSeriesId: { notIn: ["tcgp"] } } },
-  };
+  const where: Record<string, unknown> = { ...CARD_SEARCH_BASE_WHERE };
   if (andClauses.length > 0) where.AND = andClauses;
 
   if (buybackOnly) {
