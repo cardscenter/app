@@ -21,7 +21,7 @@ export async function AuthMarketingAside({ variant = "default" }: AuthMarketingA
 
   const eyebrow =
     variant === "login"
-      ? t("asideLoginEyebrow")
+      ? null
       : variant === "register"
         ? t("asideRegisterEyebrow")
         : t("asideDefaultEyebrow");
@@ -70,9 +70,11 @@ export async function AuthMarketingAside({ variant = "default" }: AuthMarketingA
             priority
             className="h-20 w-auto xl:h-24"
           />
-          <div className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white/80 ring-1 ring-white/20">
-            {eyebrow}
-          </div>
+          {eyebrow && (
+            <div className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white/80 ring-1 ring-white/20">
+              {eyebrow}
+            </div>
+          )}
           <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white xl:text-5xl">
             {title}
           </h2>

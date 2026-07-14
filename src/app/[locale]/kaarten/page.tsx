@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 import { KaartenSearch } from "@/components/card/kaarten-search";
 import { PageContainer } from "@/components/layout/page-container";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
-import { DatabaseStats } from "@/components/card/database-stats";
 import { DatabaseMarquee } from "@/components/card/database-marquee";
 import { DatabaseTrending, type TrendingCard } from "@/components/card/database-trending";
 import { getCardImageUrl, getSetLogoUrl } from "@/lib/card-image";
@@ -341,11 +340,6 @@ const getCardsOverviewData = unstable_cache(
 
 export default async function CardsOverviewPage() {
   const {
-    totalCards,
-    totalSets,
-    totalMarketValueEur,
-    latestSetName,
-    latestSetSlug,
     marqueeItems,
     risers,
     fallers,
@@ -370,16 +364,6 @@ export default async function CardsOverviewPage() {
           Bekijk alle kaarten per set, vergelijk marktprijzen en zie wat er nu te koop is.
         </p>
       </header>
-
-      <div className="mb-6">
-        <DatabaseStats
-          totalCards={totalCards}
-          totalSets={totalSets}
-          totalMarketValueEur={totalMarketValueEur}
-          latestSetName={latestSetName}
-          latestSetSlug={latestSetSlug}
-        />
-      </div>
 
       <KaartenSearch rarityOptions={rarityOptions} seriesOptions={seriesOptions}>
         {marqueeItems.length > 0 && (

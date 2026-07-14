@@ -35,14 +35,14 @@ function Tile({ card, draggingRef }: { card: MarqueeCard; draggingRef: React.Mut
         }
       }}
     >
-      <div className="relative aspect-[5/7] w-[160px] overflow-hidden rounded-xl bg-muted shadow-md transition-transform group-hover:-translate-y-1 group-hover:shadow-xl">
+      <div className="relative aspect-[5/7] w-[190px] overflow-hidden rounded-xl bg-muted shadow-md transition-transform group-hover:-translate-y-1 group-hover:shadow-xl">
         {card.imageUrl && (
           <Image
             src={card.imageUrl}
             alt={card.name}
             fill
             className="object-cover"
-            sizes="160px"
+            sizes="190px"
             unoptimized
             draggable={false}
           />
