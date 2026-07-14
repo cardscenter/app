@@ -211,6 +211,14 @@ function SinceLastVisitStrip({
       iconColor: "text-orange-300",
     },
     {
+      key: "runnerUpOffers",
+      count: counts.runnerUpOffers,
+      href: "/dashboard/aankopen",
+      Icon: Gavel,
+      ring: "ring-indigo-400/40",
+      iconColor: "text-indigo-300",
+    },
+    {
       key: "bundlesToShip",
       count: counts.bundlesToShip,
       href: "/dashboard/verkopen",

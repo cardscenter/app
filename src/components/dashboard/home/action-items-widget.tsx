@@ -7,6 +7,7 @@ import {
   Bell,
   AlertTriangle,
   CreditCard,
+  Gavel,
   Package,
   XCircle,
   CheckCircle2,
@@ -72,6 +73,16 @@ export function ActionItemsWidget({
       icon: CreditCard,
       iconColor: "text-orange-600 dark:text-orange-400",
       bgColor: "bg-orange-500/10",
+    },
+    {
+      // Runner-up-aanbod: 72u-beslisvenster, dus tijdgevoeliger dan de
+      // meeste andere tegels. Sectie met accept/decline staat op /aankopen.
+      key: "runnerUpOffers",
+      count: counts.runnerUpOffers,
+      href: "/dashboard/aankopen",
+      icon: Gavel,
+      iconColor: "text-indigo-600 dark:text-indigo-400",
+      bgColor: "bg-indigo-500/10",
     },
     {
       key: "bundlesToShip",

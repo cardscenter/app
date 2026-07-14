@@ -6,6 +6,8 @@ export type ActionItemsCounts = {
   unreadNotifications: number;
   openDisputes: number;
   awaitingPaymentAuctions: number;
+  /** Openstaande runner-up-aanboden (72u-window) — accepteren of afslaan. */
+  runnerUpOffers: number;
   bundlesToShip: number;
   pendingCancellations: number;
   pendingPickups: number;
@@ -17,6 +19,7 @@ export async function fetchActionItems(userId: string): Promise<ActionItemsCount
     unreadNotifications,
     openDisputes,
     awaitingPaymentAuctions,
+    runnerUpOffers,
     bundlesToShip,
     pendingCancellations,
     pendingPickups,
@@ -48,6 +51,13 @@ export async function fetchActionItems(userId: string): Promise<ActionItemsCount
     }),
     prisma.auction.count({
       where: { winnerId: userId, paymentStatus: "AWAITING_PAYMENT" },
+    }),
+    // Runner-up-aanboden binnen het 72u-beslisvenster: de winnaar betaalde
+    // niet en deze user mag de veiling overnemen — tijdgevoelig, dus
+    // prominent in de action-items widget (zelfde filter als
+    // getActiveRunnerUpOffersForUser; de cron zet verlopen offers op EXPIRED).
+    prisma.auctionRunnerUpOffer.count({
+      where: { bidderId: userId, status: "AWAITING_DECISION" },
     }),
     prisma.shippingBundle.count({
       where: { sellerId: userId, status: "PAID" },
@@ -92,6 +102,7 @@ export async function fetchActionItems(userId: string): Promise<ActionItemsCount
     unreadNotifications,
     openDisputes,
     awaitingPaymentAuctions,
+    runnerUpOffers,
     bundlesToShip,
     pendingCancellations,
     pendingPickups,
