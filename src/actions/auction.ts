@@ -965,6 +965,14 @@ export async function finalizeAuction(auctionId: string) {
       where: { id: auctionId },
       data: { status: "ENDED_RESERVE_NOT_MET" },
     });
+    // Post-flip re-sync: de loop bovenaan draaide toen de status nog ACTIVE
+    // was, dus de 10%-reserve van de hoogste bieder (en van autobidders)
+    // telde toen nog mee. Nu de veiling terminal is komt alles vrij —
+    // zonder deze re-sync bleef die reserve eeuwig hangen (bug: admin zag
+    // €14,92 "vastgehouden voor biedingen" op een allang afgelopen veiling).
+    for (const { bidderId } of allBidderIds) {
+      await syncReservedBalance(bidderId);
+    }
     await createNotification(
       auction.sellerId,
       "ITEM_SOLD",
@@ -1053,9 +1061,11 @@ export async function finalizeAuction(auctionId: string) {
 
     // Fase 27.98: post-flip sync. Status is nu ENDED_SOLD/PAID, dus winner-bid
     // telt niet meer als ACTIVE. Winner heeft volledig betaald → reserve = 0.
-    // Sync zet reservedBalance correct, anders blijft de stale waarde van vóór
-    // de status-flip hangen (loop on regel 510-512 was vóór de flip).
-    await syncReservedBalance(highestBid.bidderId);
+    // Alle bieders opnieuw syncen (niet alleen de winnaar): verliezers met
+    // een nog-triggerbare autobid hielden vóór de flip ook reserve vast.
+    for (const { bidderId } of allBidderIds) {
+      await syncReservedBalance(bidderId);
+    }
 
     // Notify seller about auction sale
     await createNotification(
@@ -1097,9 +1107,11 @@ export async function finalizeAuction(auctionId: string) {
 
     // Fase 27.98: post-flip sync. Winner-bid is niet meer ACTIVE; in plaats
     // daarvan pakt recalculateTotalReserved nu de AWAITING_PAYMENT-tak op.
-    // Effect: 15% van finalPrice blijft gereserveerd tot completeAuctionPayment
-    // (Fase 29 — was 40%).
-    await syncReservedBalance(highestBid.bidderId);
+    // Effect: 10% van finalPrice blijft gereserveerd tot completeAuctionPayment.
+    // Alle bieders syncen: verliezers met armed autobid komen nu ook vrij.
+    for (const { bidderId } of allBidderIds) {
+      await syncReservedBalance(bidderId);
+    }
 
     // Pre-create a PENDING ShippingBundle so the buyer sees a "wacht op
     // betaling" order and the seller sees a pending sale. Address fields

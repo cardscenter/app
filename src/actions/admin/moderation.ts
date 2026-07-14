@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { logAdminAction } from "@/lib/admin-audit";
 import { createNotification } from "@/actions/notification";
+import { syncReservedBalance } from "@/lib/balance-check";
 import { revalidatePath } from "next/cache";
 
 async function notifySellerRemoved(sellerId: string, kind: "veiling" | "listing" | "claimsale", title: string, reason: string) {
@@ -58,6 +59,20 @@ export async function bulkRemoveAuctions(ids: string[], reason: string) {
     // Auction has no DELETED status — CANCELLED is the closest equivalent.
     // The audit log makes it clear this came from an admin removal.
     await prisma.auction.update({ where: { id: it.id }, data: { status: "CANCELLED" } });
+
+    // Reserves van bieders vrijgeven ná de status-flip: op een ACTIVE veiling
+    // houdt de hoogste bieder (en elke armed autobidder) 10% vast; zonder
+    // deze sync bleef dat geld eeuwig "vastgehouden voor biedingen" staan
+    // (zelfde bug-familie als de ENDED_RESERVE_NOT_MET-fix in finalizeAuction).
+    const bidders = await prisma.auctionBid.findMany({
+      where: { auctionId: it.id },
+      select: { bidderId: true },
+      distinct: ["bidderId"],
+    });
+    for (const { bidderId } of bidders) {
+      await syncReservedBalance(bidderId);
+    }
+
     await notifySellerRemoved(it.sellerId, "veiling", it.title, reason.trim());
   }
 
