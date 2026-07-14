@@ -68,6 +68,16 @@ export interface Species {
   habitat: { name: string; url: string } | null;
   is_legendary: boolean;
   is_mythical: boolean;
+  is_baby: boolean;
+  /** Female-kans in achtsten (0-8); -1 = geslachtloos. */
+  gender_rate: number;
+  /** 0-255, hoger = makkelijker te vangen. */
+  capture_rate: number;
+  base_happiness: number | null;
+  growth_rate: { name: string; url: string } | null;
+  egg_groups: { name: string; url: string }[];
+  generation: { name: string; url: string } | null;
+  color: { name: string; url: string } | null;
 }
 
 export interface EvolutionDetail {

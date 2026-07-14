@@ -3,16 +3,21 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { CardCarousel } from "@/components/card/card-carousel";
-import { PokedexHero } from "@/components/pokedex/pokedex-hero";
+import { PokedexHeader } from "@/components/pokedex/pokedex-header";
+import { PokedexProfile } from "@/components/pokedex/pokedex-profile";
 import { PokedexStats } from "@/components/pokedex/pokedex-stats";
 import { PokedexEvolutionChain } from "@/components/pokedex/pokedex-evolution-chain";
+import { PokedexTabs } from "@/components/pokedex/pokedex-tabs";
+import { PokedexCardsGrid, type PokedexCard } from "@/components/pokedex/pokedex-cards-grid";
 import { parsePokedexSlug } from "@/lib/pokeapi/slug";
 import { getPokemon, getSpecies, getEvolutionChain } from "@/lib/pokeapi/client";
 import { pickFlavorText } from "@/lib/pokeapi/flavor-text";
 import { PageContainer } from "@/components/layout/page-container";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { getCardImageUrl } from "@/lib/card-image";
+import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
+import { hasReverseHoloSignal } from "@/lib/buyback-pricing";
+import { Layers } from "lucide-react";
 
 export const revalidate = 86400; // 1d — species data is immutable upstream
 
@@ -44,6 +49,10 @@ function pickGenus(
   return en?.genus ?? null;
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const parsed = parsePokedexSlug(slug);
@@ -54,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name = pickName(species, locale);
   return {
     title: `${name} #${parsed.dexId} — Pokédex — Cards Center`,
-    description: `Ontdek alles over ${name}: types, stats, evoluties en alle kaarten die we in de Cards Center database hebben.`,
+    description: `Ontdek alles over ${name}: alle kaarten in de Cards Center database, types, stats en evoluties.`,
   };
 }
 
@@ -83,43 +92,93 @@ export default async function PokedexPage({ params }: Props) {
   const [evolutionChain, relatedCardsRaw] = await Promise.all([
     getEvolutionChain(species.evolution_chain.url),
     prisma.card.findMany({
-      where: {
-        // Match cards whose name equals or contains the species (English)
-        // name — same patterns the card-detail page uses for its siblings
-        // carousel.
-        OR: [
-          { name: { equals: englishName } },
-          { name: { startsWith: `${englishName} ` } },
-          { name: { contains: ` ${englishName} ` } },
-          { name: { endsWith: ` ${englishName}` } },
-          { name: { startsWith: `Mega ${englishName}` } },
-        ],
+      // Brede DB-match op substring; de precieze woordgrens-check gebeurt in
+      // JS hieronder. Dekt ook duo-kaarten ("Pikachu & Zekrom-GX") en
+      // suffix-vormen ("Reshiram-GX", "Dark Pikachu") die de oude
+      // spatie-patronen misten.
+      where: { name: { contains: englishName } },
+      select: {
+        id: true,
+        name: true,
+        localId: true,
+        rarity: true,
+        imageUrl: true,
+        imageUrlFull: true,
+        imageMirrorKey: true,
+        variants: true,
+        // Velden voor de Marktprijs-formule
+        priceAvg: true,
+        priceLow: true,
+        priceTrend: true,
+        priceAvg7: true,
+        priceAvg30: true,
+        priceReverseAvg: true,
+        priceReverseLow: true,
+        priceReverseTrend: true,
+        priceReverseAvg7: true,
+        priceTcgplayerNormalMarket: true,
+        priceTcgplayerHolofoilMarket: true,
+        priceTcgplayerReverseMarket: true,
+        priceTcgplayerReverseMid: true,
+        priceOverrideAvg: true,
+        priceOverrideReverseAvg: true,
+        cardSet: {
+          select: { name: true, tcgdexSetId: true, releaseDate: true },
+        },
       },
-      include: {
-        cardSet: { select: { name: true, tcgdexSetId: true, releaseDate: true } },
-      },
-      take: 100,
+      take: 500,
     }),
   ]);
 
-  const relatedCards = relatedCardsRaw
-    .sort((a, b) => (b.cardSet.releaseDate ?? "").localeCompare(a.cardSet.releaseDate ?? ""))
+  // Woordgrens-filter: "Mew" mag niet matchen op "Mewtwo", maar "Reshiram"
+  // moet wel matchen op "Pikachu & Reshiram-GX".
+  const boundaryRe = new RegExp(
+    `(^|[^a-z])${escapeRegex(englishName)}([^a-z]|$)`,
+    "i"
+  );
+
+  const relatedCards: PokedexCard[] = relatedCardsRaw
+    .filter((c) => boundaryRe.test(c.name) && c.cardSet.tcgdexSetId)
     .map((c) => ({
       id: c.id,
       name: c.name,
       localId: c.localId,
       rarity: c.rarity,
-      setName: c.cardSet.name,
-      setSlug: c.cardSet.tcgdexSetId ?? "",
       imageUrl: getCardImageUrl(c, "low"),
-    }))
-    .filter((c) => c.setSlug);
+      setName: c.cardSet.name,
+      setSlug: c.cardSet.tcgdexSetId!,
+      releaseDate: c.cardSet.releaseDate,
+      marktprijs: getMarktprijs(c),
+      // Alleen RH-prijs tonen als er een echt reverse-holo printing bestaat.
+      marktprijsRH: hasReverseHoloSignal({ ...c, releaseDate: c.cardSet.releaseDate })
+        ? getMarktprijsReverseHolo(c)
+        : null,
+    }));
 
   const flavorText = pickFlavorText(species.flavor_text_entries, locale);
   const genus = pickGenus(species, locale);
 
+  const cardsTab = relatedCards.length > 0 ? (
+    <PokedexCardsGrid cards={relatedCards} />
+  ) : (
+    <div className="rounded-2xl border border-border bg-muted/30 p-12 text-center text-sm text-muted-foreground">
+      <Layers className="mx-auto mb-3 size-8 text-muted-foreground/30" />
+      {t("noCardsYet")}
+    </div>
+  );
+
+  const infoTab = (
+    <div className="space-y-6">
+      <PokedexProfile pokemon={pokemon} species={species} flavorText={flavorText} />
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <PokedexStats stats={pokemon.stats} />
+        {evolutionChain && <PokedexEvolutionChain chain={evolutionChain.chain} />}
+      </div>
+    </div>
+  );
+
   return (
-    <PageContainer width="default" className="py-8">
+    <PageContainer width="wide" className="py-8">
       <ScrollToTop />
       <Breadcrumbs
         items={[
@@ -128,36 +187,15 @@ export default async function PokedexPage({ params }: Props) {
         ]}
       />
 
-      <div className="space-y-6">
-        <PokedexHero
-          pokemon={pokemon}
-          species={species}
-          genus={genus}
-          flavorText={flavorText}
-        />
+      <PokedexHeader pokemon={pokemon} species={species} genus={genus} />
 
-        <PokedexStats stats={pokemon.stats} />
-
-        {evolutionChain && (
-          <PokedexEvolutionChain chain={evolutionChain.chain} />
-        )}
-      </div>
-
-      {relatedCards.length > 0 ? (
-        <CardCarousel
-          title={t("allCardsOf", { name: displayName, count: relatedCards.length })}
-          items={relatedCards}
-        />
-      ) : (
-        <section className="mt-12 border-t border-border pt-8">
-          <h2 className="mb-3 text-lg font-bold text-foreground">
-            {t("allCardsOfEmpty", { name: displayName })}
-          </h2>
-          <p className="rounded-xl border border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-            {t("noCardsYet")}
-          </p>
-        </section>
-      )}
+      <PokedexTabs
+        cardsLabel={t("tabCards", { count: relatedCards.length })}
+        infoLabel={t("tabInfo")}
+        cardsContent={cardsTab}
+        infoContent={infoTab}
+        defaultTab={relatedCards.length > 0 ? "cards" : "info"}
+      />
     </PageContainer>
   );
 }
