@@ -91,10 +91,14 @@ function HeaderContent() {
     };
   }, [status, subscribe]);
 
-  // Menu sluiten bij navigatie (bv. via back-knop) en body-scroll vastzetten.
-  useEffect(() => {
+  // Menu sluiten bij navigatie (bv. via back-knop): state aanpassen tijdens
+  // render op een prop-wijziging (React-patroon, geen setState-in-effect).
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
     setMobileMenuOpen(false);
-  }, [pathname]);
+  }
+  // Body-scroll vastzetten zolang het menu open is.
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const prev = document.body.style.overflow;

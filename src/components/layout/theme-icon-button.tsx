@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { MoonIcon, SunIcon } from "lucide-react";
 import { HEADER_ICON_BTN } from "./header-styles";
+
+// Hydratie-veilig "mounted"-signaal zonder setState-in-effect: server en
+// eerste client-render geven false, daarna true.
+const subscribeNoop = () => () => {};
+const useMounted = () => useSyncExternalStore(subscribeNoop, () => true, () => false);
 
 // Ronde thema-knop voor de header (één icoon, geen switch — dat blijft de
 // ThemeToggle in de footer/instellingen). Toont het icoon van het thema
 // waar je NAARTOE gaat, zoals in de referentie: maan = "ga naar donker".
 export function ThemeIconButton() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const isDark = mounted && resolvedTheme === "dark";
 
