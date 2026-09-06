@@ -149,9 +149,11 @@ function HeaderContent() {
           />
         </Link>
 
-        {/* Desktop nav — rechts uitgelijnd, direct naast de acties */}
-        <nav className="ml-auto hidden items-center gap-0.5 md:flex" aria-label="Hoofdmenu">
-          {navLinks.map((link) => {
+        {/* Desktop nav — handelscategorieën links tegen het logo, de overige
+            links rechts naast de acties (ml-auto op de tweede groep). */}
+        <nav className="hidden items-center gap-0.5 md:contents" aria-label="Hoofdmenu">
+          {navLinks.map((link, i) => {
+            const firstOfRightGroup = i === 3;
             const active = isActivePath(link.href);
             const a = link.accent ? ACCENT[link.accent] : null;
             return (
@@ -161,7 +163,7 @@ function HeaderContent() {
                 aria-current={active ? "page" : undefined}
                 className={`${NAV_LINK} ${a ? `inline-flex items-center gap-1.5 ${a.underline}` : ""} ${
                   active ? "text-white after:scale-x-100" : "text-white/70"
-                }`}
+                } ${i === 0 ? "ml-4 lg:ml-8" : ""} ${firstOfRightGroup ? "ml-auto" : ""}`}
               >
                 {a && <span aria-hidden className={`inline-block size-1.5 rounded-full ${a.dot}`} />}
                 {link.label}
@@ -171,7 +173,7 @@ function HeaderContent() {
         </nav>
 
         {/* Acties */}
-        <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-2 md:gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-3 md:gap-1.5">
           <GlobalSearch variant="desktop" />
           <span className="hidden md:block">
             <ThemeIconButton />
