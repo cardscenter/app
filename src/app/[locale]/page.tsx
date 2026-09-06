@@ -13,7 +13,8 @@ import { LoggedInHeroV2 } from "@/components/home/logged-in-hero-v2";
 import { SponsoredSpotlight } from "@/components/home/sponsored-spotlight";
 import { HowItWorksThreePaths } from "@/components/home/how-it-works-three-paths";
 import { TrustPillarsSection } from "@/components/home/trust-pillars-section";
-import { TestimonialsSection } from "@/components/home/testimonials-section";
+// TestimonialsSection: tijdelijk uit (zie sectie 12 hieronder).
+// import { TestimonialsSection } from "@/components/home/testimonials-section";
 import { LiveAuctionsZone } from "@/components/home/live-auctions-zone";
 import { ClaimsalesScrollStory } from "@/components/home/claimsales-scroll-story";
 import { SectionHeader } from "@/components/home/section-header";
@@ -268,14 +269,16 @@ async function HomePageContent({
     });
   }
 
-  // 12. Testimonials (logged-out only, alleen bij ≥3 echte 5★-reviews; anders
-  //     rendert de sectie null) — bg-background
-  if (!isLoggedIn && data.fiveStarReviewCount >= 3) {
-    sections.push({
-      surface: "bg",
-      node: <TestimonialsSection fiveStarCount={data.fiveStarReviewCount} />,
-    });
-  }
+  // 12. Testimonials — UITGESCHAKELD tot er echte quotes zijn. De teksten in
+  //     `home.testimonial*` zijn placeholders; de gate op fiveStarReviewCount
+  //     telt echte reviews maar zou die verzonnen quotes automatisch tonen.
+  //     Heropenen: import + dit blok terugzetten en de i18n-quotes vervangen.
+  // if (!isLoggedIn && data.fiveStarReviewCount >= 3) {
+  //   sections.push({
+  //     surface: "bg",
+  //     node: <TestimonialsSection fiveStarCount={data.fiveStarReviewCount} />,
+  //   });
+  // }
 
   // 13. FAQ — voor iedereen — bg-background
   sections.push({ surface: "bg", node: <FaqSection bgClass="bg-background" /> });

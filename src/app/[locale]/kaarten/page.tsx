@@ -396,7 +396,7 @@ export default async function CardsOverviewPage() {
           </Link>
 
           <Link
-            href="/verkoop-calculator/collectie"
+            href="/verkopen/losse-kaarten"
             className="group flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/50"
           >
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">

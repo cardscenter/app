@@ -797,7 +797,7 @@ export default async function CardDetailPage({ params }: Props) {
 
           {/* Sell to us CTA */}
           <Link
-            href="/verkoop-calculator/collectie"
+            href="/verkopen/losse-kaarten"
             className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/50"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">

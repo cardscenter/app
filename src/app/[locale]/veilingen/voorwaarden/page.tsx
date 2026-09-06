@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 // Legal-document — NL als source of truth. EN-versie volgt na juridische
-// review (zelfde aanpak als /verkoop-calculator/voorwaarden).
+// review (zelfde aanpak als /verkopen/voorwaarden-bulk).
 
 const RESERVE_PERCENTAGE_DISPLAY = `${Math.round(BID_RESERVE_RATE * 100)}%`;
 const FAILURE_FEE_DISPLAY = `${(PAYMENT_FAILURE_FEE_RATE * 100).toFixed(1).replace(/\.0$/, "").replace(".", ",")}%`;

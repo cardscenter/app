@@ -24,6 +24,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/nl/marktplaats`, changeFrequency: "hourly", priority: 0.8 },
     { url: `${BASE_URL}/nl/veilingen`, changeFrequency: "hourly", priority: 0.8 },
     { url: `${BASE_URL}/nl/claimsales`, changeFrequency: "hourly", priority: 0.8 },
+    { url: `${BASE_URL}/nl/evenementen`, changeFrequency: "daily", priority: 0.7 },
+    // Inkoopservice — de calculators zelf zijn login-gated en staan er niet in.
+    { url: `${BASE_URL}/nl/verkopen`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${BASE_URL}/nl/verkopen/verpakken`, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${BASE_URL}/nl/verkopen/voorwaarden-bulk`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${BASE_URL}/nl/verkopen/voorwaarden-losse-kaarten`, changeFrequency: "monthly", priority: 0.3 },
   ];
 
   try {

@@ -11,19 +11,12 @@ import { BulkFaq } from "./bulk-faq";
 import { submitBulkBuyback } from "@/actions/buyback";
 import {
   BULK_PRICING,
+  BULK_CATEGORY_TOOLTIPS,
   MINIMUM_BULK_VALUE,
   MAX_SHIPPING_WEIGHT_KG,
   getStoreCreditBonus,
 } from "@/lib/buyback-pricing";
 import type { PayoutMethod } from "@/types";
-
-// Human-readable expansions shown in the tooltip on categories whose UI label
-// is a shorter brand name than the set of rarities the price actually covers.
-// Keyed by BULK_PRICING key so the tooltip stays in sync with the catalog.
-const CATEGORY_TOOLTIPS: Partial<Record<string, string>> = {
-  ULTRA_RARE:
-    "Omvat Ultra Rare, Double Rare, ACE SPEC Rare, Radiant Rare, Illustration Rare en Trainer Gallery",
-};
 
 export function BulkCalculator() {
   const t = useTranslations("buyback");
@@ -77,7 +70,7 @@ export function BulkCalculator() {
     return {
       key,
       label: t(config.labelKey),
-      tooltip: CATEGORY_TOOLTIPS[key],
+      tooltip: BULK_CATEGORY_TOOLTIPS[key as keyof typeof BULK_PRICING],
       price: config.price,
       group: config.group,
       weightGrams: config.weightGrams,
@@ -311,7 +304,7 @@ export function BulkCalculator() {
               <span>
                 {t("confirmTermsPrefix")}{" "}
                 <Link
-                  href="/verkoop-calculator/voorwaarden"
+                  href="/verkopen/voorwaarden-bulk"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"

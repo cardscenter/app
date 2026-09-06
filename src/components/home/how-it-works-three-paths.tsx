@@ -181,6 +181,20 @@ export function HowItWorksThreePaths({ stats }: HowItWorksThreePathsProps) {
             );
           })}
         </StaggerContainer>
+
+        {/* Vierde route zonder het 3-koloms ritme te breken: verkoop aan ons. */}
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          {t.rich("threePathsSellToUs", {
+            link: (chunks) => (
+              <Link
+                href="/verkopen"
+                className="font-medium text-foreground underline-offset-2 hover:underline"
+              >
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
       </div>
     </section>
   );

@@ -1,10 +1,10 @@
-import { HelpCircle, ChevronDown } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { BuybackFaq, type BuybackFaqItem } from "./buyback-faq";
 
 // Copy is kept inline in Dutch (no i18n) because the FAQ content is customer-
 // support style copy that evolves without translation review. Moving to i18n
 // later is mechanical: wrap each string in `t("faq.<key>")`.
-const FAQ_ITEMS: { q: string; a: string | React.ReactNode }[] = [
+export const BULK_FAQ_ITEMS: BuybackFaqItem[] = [
   {
     q: "Waar stuur ik de bulk naartoe?",
     a: (
@@ -31,7 +31,7 @@ const FAQ_ITEMS: { q: string; a: string | React.ReactNode }[] = [
       <p>
         We hebben een uitgebreid stappenplan met verzendadres, vervoerders-tarieven en tips:{" "}
         <Link
-          href="/verkoop-calculator/verpakken"
+          href="/verkopen/verpakken"
           target="_blank"
           rel="noopener noreferrer"
           className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
@@ -99,29 +99,7 @@ const FAQ_ITEMS: { q: string; a: string | React.ReactNode }[] = [
   },
 ];
 
+/** Bulk-FAQ zoals getoond binnen de bulk-calculator (dunne wrapper). */
 export function BulkFaq() {
-  return (
-    <section>
-      <div className="mb-3 flex items-center gap-2">
-        <HelpCircle className="h-5 w-5 text-muted-foreground" />
-        <h2 className="text-lg font-bold text-foreground">Veelgestelde vragen</h2>
-      </div>
-      <div className="space-y-2">
-        {FAQ_ITEMS.map((item, i) => (
-          <details
-            key={i}
-            className="group rounded-xl border border-border bg-card transition-colors open:border-primary/40"
-          >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-muted/40">
-              <span>{item.q}</span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="border-t border-border/50 px-4 py-3 text-sm text-muted-foreground">
-              {item.a}
-            </div>
-          </details>
-        ))}
-      </div>
-    </section>
-  );
+  return <BuybackFaq title="Veelgestelde vragen" items={BULK_FAQ_ITEMS} />;
 }

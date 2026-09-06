@@ -5,6 +5,17 @@ import { BETA_COOKIE, betaToken } from "./lib/beta-gate";
 
 const intlMiddleware = createMiddleware(routing);
 
+/** Verhuizing /verkoop-calculator* → /verkopen* (launch-prep). Oud segment →
+ *  nieuw segment; alleen locale-geprefixte paden komen door de matcher. */
+const LEGACY_SELL_SEGMENTS: Record<string, string> = {
+  "": "",
+  collectie: "losse-kaarten",
+  bulk: "bulk",
+  verpakken: "verpakken",
+  voorwaarden: "voorwaarden-bulk",
+  "voorwaarden-collectie": "voorwaarden-losse-kaarten",
+};
+
 /** Matcht de unlock-pagina (`/beta`, `/nl/beta`, `/en/beta`) — die moet altijd
  *  bereikbaar blijven, anders kan niemand de gate ontgrendelen. */
 function isBetaUnlockPath(pathname: string): boolean {
@@ -23,6 +34,24 @@ export default async function middleware(request: NextRequest) {
       url.pathname = `/${custMatch[1]}/dashboard`;
       url.search = "";
       return NextResponse.redirect(url);
+    }
+  }
+
+  // Permanente redirect van de oude inkoop-URL's naar /verkopen/*. Vóór de
+  // beta-gate zodat de bezoeker direct op het nieuwe pad landt. Onbekende
+  // sub-segmenten vallen door naar de intl-middleware (404 zoals voorheen).
+  {
+    const legacy = request.nextUrl.pathname.match(
+      /^\/(nl|en)\/verkoop-calculator(?:\/([^/]+))?\/?$/,
+    );
+    if (legacy) {
+      const [, locale, segment = ""] = legacy;
+      const target = LEGACY_SELL_SEGMENTS[segment];
+      if (target !== undefined) {
+        const url = request.nextUrl.clone();
+        url.pathname = `/${locale}/verkopen${target ? `/${target}` : ""}`;
+        return NextResponse.redirect(url, 308);
+      }
     }
   }
 

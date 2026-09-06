@@ -73,6 +73,8 @@ function HeaderContent() {
   const secondaryLinks = [
     { href: "/evenementen" as const, label: t("events") },
     { href: "/kaarten" as const, label: t("cards") },
+    // "Verkopen" = verkopen aan Cards Center (inkoopservice), niet /dashboard/verkopen.
+    { href: "/verkopen" as const, label: t("sell") },
   ];
 
   const accentClasses: Record<"blue" | "amber" | "emerald", { active: string; idle: string; dot: string }> = {

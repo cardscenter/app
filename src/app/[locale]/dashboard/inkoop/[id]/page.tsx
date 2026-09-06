@@ -1,11 +1,10 @@
 import { auth } from "@/lib/auth";
-import { redirect } from "@/i18n/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { BuybackRequestDetail } from "@/components/buyback/buyback-request-detail";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 export default async function BuybackDetailPage({
   params,
@@ -15,8 +14,7 @@ export default async function BuybackDetailPage({
   const { locale, id } = await params;
   const session = await auth();
   if (!session?.user?.id) {
-    redirect({ href: "/auth/login", locale });
-    return null;
+    redirect(`/${locale}/login?callbackUrl=/dashboard/inkoop/${id}`);
   }
 
   const t = await getTranslations("buyback");

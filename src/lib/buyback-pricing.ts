@@ -30,7 +30,7 @@ export interface BuybackEligibilityResult {
  * Modernere rare-subtypes (Holo Rare V / VMAX / VSTAR / LV.X etc.) gaan WEL
  * door de Collectie Calculator, dus exact-match i.p.v. prefix.
  */
-const BULK_ONLY_RARITIES = new Set([
+export const BULK_ONLY_RARITIES = new Set([
   "common",
   "uncommon",
   "rare",
@@ -101,6 +101,15 @@ export const BULK_PRICING = {
 export const MAX_SHIPPING_WEIGHT_KG = 22;
 
 export type BulkCategoryKey = keyof typeof BULK_PRICING;
+
+// Human-readable expansions shown in the tooltip on categories whose UI label
+// is a shorter brand name than the set of rarities the price actually covers.
+// Keyed by BULK_PRICING key so the tooltip stays in sync with the catalog.
+// Gedeeld door de bulk-calculator en de publieke /verkopen-prijstabel.
+export const BULK_CATEGORY_TOOLTIPS: Partial<Record<BulkCategoryKey, string>> = {
+  ULTRA_RARE:
+    "Omvat Ultra Rare, Double Rare, ACE SPEC Rare, Radiant Rare, Illustration Rare en Trainer Gallery",
+};
 
 // ── Foil detection ───────────────────────────────────────────────────────────
 

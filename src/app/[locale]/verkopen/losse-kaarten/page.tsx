@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 import { CollectionCalculator } from "@/components/buyback/collection-calculator";
 import { AlertTriangle } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
@@ -14,8 +14,7 @@ export default async function CollectionCalculatorPage({
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect({ href: "/auth/login", locale });
-    return null;
+    redirect(`/${locale}/login?callbackUrl=/verkopen/losse-kaarten`);
   }
 
   const t = await getTranslations("buyback");

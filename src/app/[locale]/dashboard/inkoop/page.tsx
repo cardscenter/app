@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { BuybackDashboard } from "@/components/buyback/buyback-dashboard";
@@ -16,8 +16,7 @@ export default async function DashboardInkoopPage({
   const { locale } = await params;
   const session = await auth();
   if (!session?.user?.id) {
-    redirect({ href: "/auth/login", locale });
-    return null;
+    redirect(`/${locale}/login?callbackUrl=/dashboard/inkoop`);
   }
 
   const t = await getTranslations("buyback");
@@ -33,7 +32,7 @@ export default async function DashboardInkoopPage({
       <DashboardPageHeader
         title={t("title")}
         action={
-          <Link href="/verkoop-calculator" className={buttonVariants()}>
+          <Link href="/verkopen" className={buttonVariants()}>
             <Plus className="h-4 w-4" /> {t("createNew")}
           </Link>
         }

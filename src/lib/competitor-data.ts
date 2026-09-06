@@ -93,7 +93,7 @@ export const COMPETITORS: CompetitorRow[] = [
       fees: [
         { status: "yes", value: "2,9%" },
         { status: "yes", value: "0%" },
-        { status: "yes", labelKey: "competitorCellIdealFree" },
+        { status: "yes", labelKey: "competitorCellBankTransferFree" },
         { status: "yes", value: "0–3%" },
         { status: "yes", value: "€0" },
       ],

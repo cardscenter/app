@@ -14,7 +14,7 @@ export default function VerpakkenPage() {
     <PageContainer width="narrow" className="py-8">
       <Breadcrumbs
         items={[
-          { label: "Verkoop calculator", href: "/verkoop-calculator" },
+          { label: "Verkopen", href: "/verkopen" },
           { label: "Verpakkingsinstructies" },
         ]}
       />

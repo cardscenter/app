@@ -16,7 +16,7 @@ export default function VoorwaardenCollectiePage() {
     <PageContainer width="narrow" className="py-8">
       <Breadcrumbs
         items={[
-          { label: "Verkoop calculator", href: "/verkoop-calculator" },
+          { label: "Verkopen", href: "/verkopen" },
           { label: "Voorwaarden Collectie" },
         ]}
       />

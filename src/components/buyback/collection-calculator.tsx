@@ -177,7 +177,7 @@ export function CollectionCalculator() {
                 </p>
               )}
               <Link
-                href="/verkoop-calculator/bulk"
+                href="/verkopen/bulk"
                 className="mt-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200">
@@ -260,7 +260,7 @@ export function CollectionCalculator() {
               <span>
                 {t("confirmTermsPrefix")}{" "}
                 <Link
-                  href="/verkoop-calculator/voorwaarden-collectie"
+                  href="/verkopen/voorwaarden-losse-kaarten"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"

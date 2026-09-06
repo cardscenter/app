@@ -38,7 +38,7 @@ export function BuybackSuccess({ requestId }: BuybackSuccessProps) {
           {t("viewMyRequest")} <ArrowRight className="h-4 w-4" />
         </Link>
         <Link
-          href="/verkoop-calculator"
+          href="/verkopen"
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-input px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/50"
         >
           {t("createNew")}

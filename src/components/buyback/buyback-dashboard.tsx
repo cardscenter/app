@@ -68,7 +68,7 @@ export function BuybackDashboard({ requests }: BuybackDashboardProps) {
             <p className="text-sm text-muted-foreground">{t("noRequestsDesc")}</p>
           </div>
           <Link
-            href="/verkoop-calculator"
+            href="/verkopen"
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
           >
             <Calculator className="h-4 w-4" /> {t("createNew")}
