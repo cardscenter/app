@@ -28,12 +28,15 @@ import {
   HandCoins,
   LifeBuoy,
   ChevronsUpDown,
+  ChevronDown,
 } from "lucide-react";
 
-// Sidebar in fintech-stijl (sept 2026, naar de Sequence-referentie): platte
-// groepen met kleine uppercase-labels (geen inklappen meer — localStorage-
-// open-state is vervallen), actieve rij als zachte pil, onderaan een vaste
-// strook met Admin/Help/Uitloggen en de gebruikerskaart mét level-voortgang.
+// Sidebar in fintech-stijl (sept 2026, naar de Sequence-referentie): een
+// volledige kolom met eigen achtergrond (bg-card + rechterrand, in de layout),
+// platte groepen met kleine uppercase-labels, actieve rij als zachte pil.
+// Account is één uitklaprij met chevron (zoals "Cards" in de referentie) zodat
+// de lijst kort blijft; onderaan Help/Uitloggen, de gebruikerskaart met
+// level-voortgang en een copyright-regel. Geen localStorage, geen intern scrollen.
 // De AdminNav-swap voor /dashboard/admin/* blijft ongewijzigd.
 
 type NavItem = {
@@ -49,7 +52,13 @@ type NavItem = {
   match?: string[];
 };
 
-type NavGroup = { id: string; labelKey: string; items: NavItem[] };
+type NavGroup = {
+  id: string;
+  labelKey: string;
+  items: NavItem[];
+  /** Render de groep als één uitklaprij (icoon + label + chevron) i.p.v. een sectie. */
+  collapsible?: { icon: typeof LayoutDashboard };
+};
 
 interface LevelInfo {
   name: string;
@@ -172,11 +181,13 @@ function DashboardNavInner({ accountType, level, user, counts }: DashboardNavPro
           { href: "/dashboard/aankopen", labelKey: "myPurchases", icon: ShoppingBag },
           { href: "/dashboard/biedingen", labelKey: "myBids", icon: HandCoins, liveIndicator: true },
           { href: "/dashboard/volglijst", labelKey: "myWatchlist", icon: Heart },
+          { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
         ],
       },
       {
         id: "account",
         labelKey: "sectionAccount",
+        collapsible: { icon: User },
         items: [
           { href: "/dashboard/profiel", labelKey: "profile", icon: User },
           {
@@ -191,11 +202,6 @@ function DashboardNavInner({ accountType, level, user, counts }: DashboardNavPro
           { href: "/dashboard/reviews", labelKey: "myReputation", icon: Star, match: ["/dashboard/level"] },
         ],
       },
-      {
-        id: "support",
-        labelKey: "sectionSupport",
-        items: [{ href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale }],
-      },
     ],
     [offerBadge],
   );
@@ -207,6 +213,11 @@ function DashboardNavInner({ accountType, level, user, counts }: DashboardNavPro
     if (isPathActive(item.href)) return true;
     return item.match?.some((m) => isPathActive(m)) ?? false;
   }
+
+  // Account-uitklaprij: open zolang een kind actief is, anders handmatig.
+  const accountActive = groups.find((g) => g.id === "account")?.items.some((i) => isActive(i)) ?? false;
+  const [accountOpenManual, setAccountOpenManual] = useState<boolean | null>(null);
+  const accountOpen = accountOpenManual ?? accountActive;
 
   const allItems = groups.flatMap((g) => g.items);
   const activeItem = allItems.find((item) => isActive(item)) ?? allItems[0];
@@ -260,14 +271,41 @@ function DashboardNavInner({ accountType, level, user, counts }: DashboardNavPro
     );
   }
 
-  const navGroups = groups.map((group) => (
-    <div key={group.id}>
-      <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-        {t(group.labelKey)}
-      </p>
-      <div className="space-y-0.5">{group.items.map(renderItem)}</div>
-    </div>
-  ));
+  const navGroups = groups.map((group) => {
+    if (group.collapsible) {
+      const GroupIcon = group.collapsible.icon;
+      const open = accountOpen;
+      return (
+        <div key={group.id}>
+          <button
+            type="button"
+            onClick={() => setAccountOpenManual(!open)}
+            aria-expanded={open}
+            className={`${ROW} w-full ${accountActive && !open ? "text-foreground" : ROW_IDLE}`}
+          >
+            <GroupIcon className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
+            <span className="flex-1 truncate text-left">{t(group.labelKey)}</span>
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
+            />
+          </button>
+          {open && (
+            <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-2">
+              {group.items.map(renderItem)}
+            </div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div key={group.id}>
+        <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+          {t(group.labelKey)}
+        </p>
+        <div className="space-y-0.5">{group.items.map(renderItem)}</div>
+      </div>
+    );
+  });
 
   const helpLink = (
     <Link href="/support" className={`${ROW} ${ROW_IDLE}`}>
@@ -338,13 +376,16 @@ function DashboardNavInner({ accountType, level, user, counts }: DashboardNavPro
   );
 
   const bottomBlock = (
-    <div className="space-y-2 border-t border-border pt-3">
+    <div className="space-y-3 border-t border-border pt-3">
       <div className="space-y-0.5">
         {adminLink}
         {helpLink}
         {logoutButton}
       </div>
       {userCard}
+      <p className="px-1 text-center text-[11px] text-muted-foreground/70">
+        {"\u00a9"} {new Date().getFullYear()} Cards Center
+      </p>
     </div>
   );
 
@@ -372,7 +413,9 @@ function DashboardNavInner({ accountType, level, user, counts }: DashboardNavPro
       </div>
 
       {/* Desktop: vaste sidebar-kaart, sticky onder de header */}
-      <nav className="sticky top-24 hidden max-h-[calc(100dvh-7rem)] flex-col gap-4 overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-card md:flex">
+      {/* Desktop: de kolom-achtergrond komt van de <aside> in de layout; hier
+          alleen de inhoud, sticky onder de header. */}
+      <nav className="hidden md:sticky md:top-[88px] md:flex md:flex-col md:gap-5">
         {navGroups}
         {bottomBlock}
       </nav>
