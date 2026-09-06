@@ -51,47 +51,6 @@ export async function getBalanceSummary() {
   };
 }
 
-// Admin action: manually deposit balance for a user
-export async function adminDeposit(userId: string, amount: number, description?: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Niet ingelogd" };
-
-  // TODO: Add proper admin check
-  if (amount < 15) return { error: "Minimale storting is €15,00" };
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return { error: "Gebruiker niet gevonden" };
-
-  const { remaining, settledTotal } = await settlePendingFees(userId, amount);
-
-  const balanceBefore = user.balance;
-  const balanceAfter = balanceBefore + remaining;
-
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: userId },
-      data: { balance: balanceAfter },
-    }),
-    prisma.transaction.create({
-      data: {
-        userId,
-        type: "DEPOSIT",
-        amount: remaining,
-        balanceBefore,
-        balanceAfter,
-        description: withSettlementSuffix(
-          description ?? `Storting €${amount.toFixed(2)}`,
-          settledTotal,
-        ),
-      },
-    }),
-  ]);
-
-  publish(userChannel(userId), { type: "balance-changed", payload: {} });
-
-  return { success: true, newBalance: balanceAfter };
-}
-
 // Admin action: confirm a bank transfer deposit
 //
 // Fase 32: optioneel `senderIban` — als admin de IBAN invult waarmee de user

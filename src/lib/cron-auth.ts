@@ -1,11 +1,19 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const isProduction = process.env.NODE_ENV === "production";
+let warnedMissingSecret = false;
+
 /**
  * Authorize a cron-route call. Two paths:
  *  1. External scheduler: `Authorization: Bearer <CRON_SECRET>` → returns "cron"
  *  2. Admin manual run: signed-in admin session → returns adminId
  * Returns null if neither authorizes.
+ *
+ * Zonder CRON_SECRET: in dev open (lokale curl-tests), in productie DICHT —
+ * anders zou elke /api/cron/*-route (incl. het destructieve
+ * cleanup-archived-chats) publiek aanroepbaar zijn. De in-process schedulers
+ * roepen CRON_JOBS direct aan en hebben het secret niet nodig.
  */
 export async function resolveCronTrigger(request: Request): Promise<string | null> {
   const cronSecret = process.env.CRON_SECRET;
@@ -15,9 +23,15 @@ export async function resolveCronTrigger(request: Request): Promise<string | nul
     return "cron";
   }
 
-  // No CRON_SECRET configured? In dev that's the case — allow anyway, mark as "cron".
   if (!cronSecret) {
-    return "cron";
+    if (!isProduction) return "cron";
+    if (!warnedMissingSecret) {
+      warnedMissingSecret = true;
+      // eslint-disable-next-line no-console
+      console.error(
+        "[cron-auth] CRON_SECRET ontbreekt in productie — /api/cron/* weigert externe calls (admin-sessie werkt nog).",
+      );
+    }
   }
 
   // Admin manual run via UI

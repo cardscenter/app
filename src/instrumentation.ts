@@ -87,4 +87,25 @@ export async function register() {
     // eslint-disable-next-line no-console
     console.error("[instrumentation] order-maintenance scheduler boot failed", err);
   }
+
+  // Dagelijkse onderhoudscrons (04:30 UTC): check-subscriptions,
+  // payment-failure-decay, prune-bid-ips, cleanup-sold-images,
+  // cleanup-archived-chats + reset-free-upsells op de 1e van de maand.
+  // Hiermee heeft geen enkele cron nog een externe scheduler nodig.
+  try {
+    const { startDailyMaintenanceScheduler } = await import("@/lib/daily-maintenance-scheduler");
+    startDailyMaintenanceScheduler("boot");
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[instrumentation] daily-maintenance scheduler boot failed", err);
+  }
+
+  // Route-hardening: zonder CRON_SECRET weigert /api/cron/* in productie alle
+  // externe calls (zie src/lib/cron-auth.ts). Eén keer luid loggen bij boot.
+  if (process.env.NODE_ENV === "production" && !process.env.CRON_SECRET) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[instrumentation] CRON_SECRET ontbreekt — /api/cron/* is dicht voor externe calls; zet de Railway service-var.",
+    );
+  }
 }
