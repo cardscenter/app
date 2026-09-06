@@ -423,7 +423,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
   // Desktop: loep-icoon dat naar links uitklapt, dropdown onder de balk
   // ---------------------------------------------------------------------
   return (
-    <div ref={wrapperRef} className="relative hidden md:flex md:items-center">
+    <div ref={wrapperRef} className="relative hidden xl:flex xl:items-center">
       {/* Loep-trigger — verborgen zodra de balk open is */}
       <button
         type="button"

@@ -30,7 +30,7 @@ import {
 
 /** Desktop nav-link: platte tekst + onderstreep die van links inschuift. */
 const NAV_LINK =
-  "relative rounded-md px-3.5 py-2 text-[15px] font-medium transition-colors after:absolute after:inset-x-3.5 after:bottom-1 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-[var(--nav-accent,currentColor)] after:transition-transform after:duration-200 after:ease-out hover:text-white hover:after:scale-x-100 motion-reduce:after:transition-none";
+  "relative rounded-md px-2.5 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-2.5 after:bottom-1 2xl:px-3.5 2xl:text-[15px] 2xl:after:inset-x-3.5 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-[var(--nav-accent,currentColor)] after:transition-transform after:duration-200 after:ease-out hover:text-white hover:after:scale-x-100 motion-reduce:after:transition-none";
 
 /** Mobiel nav-rij. */
 const MOBILE_ROW =
@@ -140,7 +140,7 @@ function HeaderContent() {
 
   return (
     <header className="sticky top-0 z-50 bg-slate-950/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/85">
-      <div className="mx-auto flex h-16 w-full max-w-[1880px] items-center gap-3 px-[clamp(1rem,3vw,4rem)] md:h-[72px]">
+      <div className="mx-auto flex h-16 w-full max-w-[1880px] items-center gap-3 px-[clamp(1rem,3vw,4rem)] xl:h-[72px]">
         {/* Logo — plain <img>: de Next image-optimizer faalt op Railway. */}
         <Link href="/" className="flex shrink-0 items-center" aria-label="Cards Center — home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -149,13 +149,14 @@ function HeaderContent() {
             alt="Cards Center"
             width={160}
             height={45}
-            className="h-9 w-auto md:h-10"
+            className="h-9 w-auto xl:h-10"
           />
         </Link>
 
-        {/* Desktop nav — handelscategorieën links tegen het logo, de overige
-            links rechts naast de acties (ml-auto op de tweede groep). */}
-        <nav className="hidden items-center gap-0.5 md:contents" aria-label="Hoofdmenu">
+        {/* Desktop nav (vanaf xl — daaronder past de volle balk niet en toont de
+            hamburger-header) — handelscategorieën links tegen het logo, de
+            overige links rechts naast de acties (ml-auto op de tweede groep). */}
+        <nav className="hidden items-center gap-0.5 xl:contents" aria-label="Hoofdmenu">
           {navLinks.map((link, i) => {
             const firstOfRightGroup = i === 3;
             const active = isActivePath(link.href);
@@ -167,7 +168,7 @@ function HeaderContent() {
                 aria-current={active ? "page" : undefined}
                 className={`${NAV_LINK} ${a ? `inline-flex items-center gap-1.5 ${a.underline}` : ""} ${
                   active ? "text-white after:scale-x-100" : "text-white/70"
-                } ${i === 0 ? "ml-4 lg:ml-8" : ""} ${firstOfRightGroup ? "ml-auto" : ""}`}
+                } ${i === 0 ? "ml-3 2xl:ml-8" : ""} ${firstOfRightGroup ? "ml-auto" : ""}`}
               >
                 {a && <span aria-hidden className={`inline-block size-1.5 rounded-full ${a.dot}`} />}
                 {link.label}
@@ -177,9 +178,9 @@ function HeaderContent() {
         </nav>
 
         {/* Acties */}
-        <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-3 md:gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1 xl:ml-2 2xl:ml-3 2xl:gap-1.5">
           <GlobalSearch variant="desktop" />
-          <span className="hidden md:block">
+          <span className="hidden xl:block">
             <ThemeIconButton />
           </span>
 
@@ -189,7 +190,7 @@ function HeaderContent() {
               <UserBalance />
 
               {/* Desktop-only iconen */}
-              <div className="hidden items-center gap-1.5 md:flex">
+              <div className="hidden items-center gap-1 xl:flex 2xl:gap-1.5">
                 <NotificationBell />
                 <AdminShield />
                 <MessageIcon />
@@ -197,18 +198,22 @@ function HeaderContent() {
 
               <CartIcon />
 
-              {/* Avatar-pil → dashboard (desktop) */}
+              {/* Avatar → dashboard. Altijd zichtbaar; op mobiel/tablet alleen
+                  het plaatje (ronde pil), de naam pas vanaf 2xl. Let op: geen
+                  `hidden` combineren met de `inline-flex` uit HEADER_PILL_GHOST —
+                  die twee display-utilities botsen (pil bleef op mobiel zichtbaar). */}
               <Link
                 href="/dashboard"
-                className={`${HEADER_PILL_GHOST} hidden pl-1 pr-3.5 md:inline-flex`}
+                className={`${HEADER_PILL_GHOST} px-1 2xl:pr-3.5`}
                 title={t("dashboard")}
+                aria-label={t("dashboard")}
               >
                 {avatar("md")}
-                <span className="max-w-[120px] truncate">{session.user.name}</span>
+                <span className="hidden max-w-[120px] truncate 2xl:inline">{session.user.name}</span>
               </Link>
             </>
           ) : (
-            <div className="hidden items-center gap-1.5 md:flex">
+            <div className="hidden items-center gap-1.5 xl:flex">
               <Link
                 href="/login"
                 className="rounded-full px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
@@ -224,7 +229,7 @@ function HeaderContent() {
           {/* Mobiel: menu-knop */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className={`${HEADER_ICON_BTN} md:hidden`}
+            className={`${HEADER_ICON_BTN} xl:hidden`}
             aria-label="Menu"
             aria-expanded={mobileMenuOpen}
           >
@@ -235,7 +240,7 @@ function HeaderContent() {
 
       {/* Mobiel menu — full-height overlay onder de balk */}
       {mobileMenuOpen && (
-        <div className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-white/[0.06] bg-slate-950 px-4 pb-6 pt-3 md:hidden">
+        <div className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-white/[0.06] bg-slate-950 px-4 pb-6 pt-3 xl:hidden">
           <GlobalSearch variant="mobile" onNavigate={() => setMobileMenuOpen(false)} />
 
           {session?.user ? (
