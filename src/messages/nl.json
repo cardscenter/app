@@ -1150,6 +1150,48 @@
         "noTrend": "Te weinig data voor een trendgrafiek"
       }
     },
+    "home": {
+      "greeting": "Welkom terug, {name}",
+      "totalBalance": "Totaal saldo",
+      "available": "Beschikbaar",
+      "reserved": "Gereserveerd",
+      "escrow": "In escrow",
+      "availableHint": "Direct te besteden aan biedingen, claims en aankopen.",
+      "escrowHint": "Wordt vrijgegeven zodra de koper de levering bevestigt.",
+      "reservedHint": "10% van je actieve biedingen, komt vrij als je overboden wordt.",
+      "now": "Nu",
+      "deposit": "Storten",
+      "withdraw": "Uitbetalen",
+      "newListing": "Nieuw aanbod",
+      "cashFlow": "Cash flow",
+      "weekly": "Wekelijks",
+      "daily": "Dagelijks",
+      "statistics": "Statistieken",
+      "sales": "Verkopen",
+      "purchases": "Aankopen",
+      "orders": "{count, plural, =0 {geen orders} =1 {1 order} other {# orders}}",
+      "cashFlowEmpty": "Nog geen verkopen of aankopen in deze periode.",
+      "recentActivity": "Recente activiteit",
+      "allSales": "Alle verkopen",
+      "allPurchases": "Alle aankopen",
+      "noOrders": "Nog geen orders",
+      "noOrdersDesc": "Zodra je iets koopt of verkoopt verschijnt het hier.",
+      "colType": "Type",
+      "colAmount": "Bedrag",
+      "colStatus": "Status",
+      "colCounterparty": "Tegenpartij",
+      "sale": "Verkoop",
+      "purchase": "Aankoop",
+      "status": {
+            "PENDING": "In afwachting",
+            "PAID": "Betaald",
+            "SCHEDULED": "Afspraak",
+            "SHIPPED": "Verzonden",
+            "COMPLETED": "Afgerond",
+            "CANCELLED": "Geannuleerd",
+            "DISPUTED": "Geschil"
+      }
+    },
     "essentials": {
       "actionItems": {
         "title": "Actie nodig",

@@ -268,3 +268,134 @@ export async function fetchRecentBundles(userId: string): Promise<RecentBundles>
     })),
   };
 }
+
+// ── Dashboard-home (fintech-stijl, sept 2026) ────────────────────────────────
+
+import { getPeriodRange, bucketKey, calculatePeriodComparison } from "@/lib/statistics-helpers";
+
+export type CashFlowPoint = { key: string; label: string; sales: number; purchases: number };
+export type CashFlowTotals = { sales: number; purchases: number; net: number; salesCount: number; purchaseCount: number };
+export type CashFlow = {
+  period: string;
+  range: { start: Date; end: Date };
+  /** Per dag, alle dagen in de periode (ook zonder mutaties) zodat de as doorloopt. */
+  days: CashFlowPoint[];
+  /** Per week (maandag-start), afgeleid van `days`. */
+  weeks: CashFlowPoint[];
+  current: CashFlowTotals;
+  previous: CashFlowTotals;
+  comparison: {
+    sales: ReturnType<typeof calculatePeriodComparison>;
+    purchases: ReturnType<typeof calculatePeriodComparison>;
+    net: ReturnType<typeof calculatePeriodComparison>;
+  };
+};
+
+/**
+ * Aankopen vs verkopen uit de wallet (Transaction) per dag/week, plus totalen
+ * voor de huidige én vorige periode van gelijke lengte.
+ * - verkopen  = `SALE` met amount > 0 (escrow-vrijgave naar de verkoper, netto na commissie)
+ * - aankopen  = `PURCHASE` / `AUCTION_PREMIUM` met amount < 0 (betaling vanuit saldo)
+ * Refunds (positieve PURCHASE) en balance-neutrale rijen (ESCROW_HOLD,
+ * PLATFORM_FEE_SETTLEMENT) tellen bewust niet mee — dit is handel, geen saldo.
+ */
+export async function fetchCashFlow(userId: string, period: string): Promise<CashFlow> {
+  const range = getPeriodRange(period);
+  const rows = await prisma.transaction.findMany({
+    where: {
+      userId,
+      createdAt: { gte: range.previousStart, lt: range.end },
+      type: { in: ["SALE", "PURCHASE", "AUCTION_PREMIUM"] },
+    },
+    select: { type: true, amount: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const empty = (): CashFlowTotals => ({ sales: 0, purchases: 0, net: 0, salesCount: 0, purchaseCount: 0 });
+  const current = empty();
+  const previous = empty();
+  const dayMap = new Map<string, CashFlowPoint>();
+
+  // Alle dagen van de huidige periode vooraf vullen. Bij open-einde-periodes
+  // ("all" = 10 jaar) starten we bij de eerste transactie in de periode, en
+  // nooit meer dan ~400 dagen terug — anders krijgt de grafiek duizenden lege
+  // staven en vallen recente mutaties buiten de gevulde buckets.
+  const MAX_FILL_DAYS = 400;
+  const firstCurrentTx = rows.find((r) => r.createdAt >= range.start)?.createdAt ?? null;
+  const minFillStart = new Date(range.end.getTime() - MAX_FILL_DAYS * 24 * 60 * 60 * 1000);
+  let fillStart = range.start;
+  if (fillStart < minFillStart) fillStart = firstCurrentTx && firstCurrentTx > minFillStart ? firstCurrentTx : minFillStart;
+  const cursor = new Date(fillStart.getFullYear(), fillStart.getMonth(), fillStart.getDate());
+  let guard = 0;
+  while (cursor < range.end && guard < MAX_FILL_DAYS + 1) {
+    const { key, label } = bucketKey(cursor, "day");
+    dayMap.set(key, { key, label, sales: 0, purchases: 0 });
+    cursor.setDate(cursor.getDate() + 1);
+    guard++;
+  }
+
+  for (const r of rows) {
+    const isSale = r.type === "SALE" && r.amount > 0;
+    const isPurchase = (r.type === "PURCHASE" || r.type === "AUCTION_PREMIUM") && r.amount < 0;
+    if (!isSale && !isPurchase) continue;
+    const inCurrent = r.createdAt >= range.start;
+    const bucket = inCurrent ? current : previous;
+    if (isSale) {
+      bucket.sales += r.amount;
+      bucket.salesCount += 1;
+    } else {
+      bucket.purchases += Math.abs(r.amount);
+      bucket.purchaseCount += 1;
+    }
+    if (inCurrent) {
+      const { key } = bucketKey(r.createdAt, "day");
+      const p = dayMap.get(key);
+      if (p) {
+        if (isSale) p.sales += r.amount;
+        else p.purchases += Math.abs(r.amount);
+      }
+    }
+  }
+  for (const b of [current, previous]) {
+    b.sales = Math.round(b.sales * 100) / 100;
+    b.purchases = Math.round(b.purchases * 100) / 100;
+    b.net = Math.round((b.sales - b.purchases) * 100) / 100;
+  }
+
+  const days = Array.from(dayMap.values());
+  const weekMap = new Map<string, CashFlowPoint>();
+  for (const d of days) {
+    const { key, label } = bucketKey(d.key, "week");
+    const w = weekMap.get(key) ?? { key, label, sales: 0, purchases: 0 };
+    w.sales += d.sales;
+    w.purchases += d.purchases;
+    weekMap.set(key, w);
+  }
+
+  return {
+    period,
+    range: { start: range.start, end: range.end },
+    days,
+    weeks: Array.from(weekMap.values()),
+    current,
+    previous,
+    comparison: {
+      sales: calculatePeriodComparison(current.sales, previous.sales),
+      purchases: calculatePeriodComparison(current.purchases, previous.purchases),
+      net: calculatePeriodComparison(current.net, previous.net),
+    },
+  };
+}
+
+export type RecentOrderRow = BundleRow & { role: "sale" | "purchase" };
+
+/** Laatste N orders (verkopen + aankopen samen, nieuwste eerst) voor de activiteitentabel. */
+export async function fetchRecentOrders(userId: string, take = 8): Promise<RecentOrderRow[]> {
+  const { sales, purchases } = await fetchRecentBundles(userId);
+  return [
+    ...sales.map((b) => ({ ...b, role: "sale" as const })),
+    ...purchases.map((b) => ({ ...b, role: "purchase" as const })),
+  ]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, take);
+}

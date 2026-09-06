@@ -23,6 +23,8 @@ type Props = {
   /** Fase 43: false → "vul je verzendadres aan"-tegel onderaan (vangnet voor
    *  accounts van vóór het verplichte registratie-adres). */
   hasShippingAddress?: boolean;
+  /** "list" = compacte rijen (voor een smalle kolom), "grid" = tegels (default). */
+  layout?: "grid" | "list";
 };
 
 type Item = {
@@ -38,7 +40,9 @@ export function ActionItemsWidget({
   counts,
   totpEnabled = true,
   hasShippingAddress = true,
+  layout = "grid",
 }: Props) {
+  const isList = layout === "list";
   const t = useTranslations("dashboard.essentials.actionItems");
 
   const items: Item[] = [
@@ -134,24 +138,35 @@ export function ActionItemsWidget({
             <p className="text-sm text-muted-foreground">{t("allClear")}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={isList ? "grid grid-cols-1 gap-2" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
             {visibleItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.key}
                   href={item.href}
-                  className="group flex items-center gap-3 rounded-xl border border-border p-4 transition-all hover:bg-muted/30 hover:shadow-card-hover"
+                  className={`group flex items-center gap-3 rounded-xl border border-border transition-all hover:bg-muted/30 hover:shadow-card-hover ${
+                    isList ? "p-3" : "p-4"
+                  }`}
                 >
-                  <div className={`shrink-0 rounded-xl ${item.bgColor} p-2.5`}>
-                    <Icon className={`h-5 w-5 ${item.iconColor}`} />
+                  <div className={`shrink-0 rounded-xl ${item.bgColor} ${isList ? "p-2" : "p-2.5"}`}>
+                    <Icon className={`${isList ? "h-4 w-4" : "h-5 w-5"} ${item.iconColor}`} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-2xl font-bold leading-tight tabular-nums text-foreground">
-                      {item.count}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{t(item.key)}</p>
-                  </div>
+                  {isList ? (
+                    <>
+                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{t(item.key)}</p>
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold tabular-nums text-primary">
+                        {item.count}
+                      </span>
+                    </>
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <p className="text-2xl font-bold leading-tight tabular-nums text-foreground">
+                        {item.count}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{t(item.key)}</p>
+                    </div>
+                  )}
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </Link>
               );

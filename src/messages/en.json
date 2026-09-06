@@ -1150,6 +1150,48 @@
         "noTrend": "Not enough data for a trend chart"
       }
     },
+    "home": {
+      "greeting": "Welcome back, {name}",
+      "totalBalance": "Total balance",
+      "available": "Available",
+      "reserved": "Reserved",
+      "escrow": "In escrow",
+      "availableHint": "Ready to spend on bids, claims and purchases.",
+      "escrowHint": "Released once the buyer confirms delivery.",
+      "reservedHint": "10% of your active bids, freed when you are outbid.",
+      "now": "Now",
+      "deposit": "Deposit",
+      "withdraw": "Withdraw",
+      "newListing": "New listing",
+      "cashFlow": "Cash flow",
+      "weekly": "Weekly",
+      "daily": "Daily",
+      "statistics": "Statistics",
+      "sales": "Sales",
+      "purchases": "Purchases",
+      "orders": "{count, plural, =0 {no orders} =1 {1 order} other {# orders}}",
+      "cashFlowEmpty": "No sales or purchases in this period yet.",
+      "recentActivity": "Recent activity",
+      "allSales": "All sales",
+      "allPurchases": "All purchases",
+      "noOrders": "No orders yet",
+      "noOrdersDesc": "As soon as you buy or sell something it shows up here.",
+      "colType": "Type",
+      "colAmount": "Amount",
+      "colStatus": "Status",
+      "colCounterparty": "Counterparty",
+      "sale": "Sale",
+      "purchase": "Purchase",
+      "status": {
+            "PENDING": "Pending",
+            "PAID": "Paid",
+            "SCHEDULED": "Scheduled",
+            "SHIPPED": "Shipped",
+            "COMPLETED": "Completed",
+            "CANCELLED": "Cancelled",
+            "DISPUTED": "Disputed"
+      }
+    },
     "essentials": {
       "actionItems": {
         "title": "Action needed",
