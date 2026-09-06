@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { ArrowUpRight, Lock, Plus, ShieldCheck, Store, Wallet } from "lucide-react";
+import { ArrowUpRight, Lock, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import type { BalanceOverview } from "@/lib/dashboard-queries";
 
@@ -71,13 +71,6 @@ export async function BalanceHero({ balance }: Props) {
           >
             <ArrowUpRight className="size-4" />
             {t("withdraw")}
-          </Link>
-          <Link
-            href="/marktplaats/nieuw"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-white/15"
-          >
-            <Store className="size-4" />
-            {t("newListing")}
           </Link>
         </div>
       </div>

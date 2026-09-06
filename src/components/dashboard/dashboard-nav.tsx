@@ -26,34 +26,30 @@ import {
   LogOut,
   Shield,
   HandCoins,
-  ChevronDown,
+  LifeBuoy,
+  ChevronsUpDown,
 } from "lucide-react";
+
+// Sidebar in fintech-stijl (sept 2026, naar de Sequence-referentie): platte
+// groepen met kleine uppercase-labels (geen inklappen meer — localStorage-
+// open-state is vervallen), actieve rij als zachte pil, onderaan een vaste
+// strook met Admin/Help/Uitloggen en de gebruikerskaart mét level-voortgang.
+// De AdminNav-swap voor /dashboard/admin/* blijft ongewijzigd.
 
 type NavItem = {
   href: string;
   labelKey: string;
   icon: typeof LayoutDashboard;
   comingSoon?: boolean;
-  /** Toon een pulserend rood "Live"-bolletje achter de label (Live Hub). */
+  /** Toon een pulserend rood "Live"-bolletje i.p.v. het icoon (Live Hub). */
   liveIndicator?: boolean;
   /** Live-count badge naast de label. Hidden bij 0 of undefined. */
   badge?: number;
-  /**
-   * Extra route-prefixes waarop dit item ook actief is (Fase 44) — voor
-   * cluster-items waarvan de subroutes via PageTabs bereikbaar zijn, zoals
-   * Aanbod (claimsales/marktplaats/evenementen) en Financiën (uitbetalingen).
-   */
+  /** Extra route-prefixes waarop dit item ook actief is (cluster-tabs). */
   match?: string[];
 };
 
-// A group with `labelKey` collapses behind a chevron-button header. Without
-// `labelKey` the items render as plain top/bottom links (used for Overzicht +
-// Personalisatie/Geschillen).
-type NavGroup = {
-  id: string;
-  labelKey?: string;
-  items: NavItem[];
-};
+type NavGroup = { id: string; labelKey: string; items: NavItem[] };
 
 interface LevelInfo {
   name: string;
@@ -68,22 +64,24 @@ interface LevelInfo {
 type DashboardNavProps = {
   accountType?: string;
   level?: LevelInfo;
-  adminPendingCounts?: { disputes?: number; verifications?: number; withdrawals?: number; buybacks?: number; reports?: number; sellerWarnings?: number; enterpriseRequests?: number };
-  /** Live counts voor de "offer"-groep — auctions = ACTIVE+SCHEDULED,
-   *  claimsales = LIVE+SCHEDULED, listings = ACTIVE, events = alles behalve
-   *  DELETED (0 = nav-item verborgen). */
+  /** Voor de gebruikerskaart onderaan. */
+  user?: { name: string; email: string | null; image: string | null };
+  adminPendingCounts?: {
+    disputes?: number;
+    verifications?: number;
+    withdrawals?: number;
+    buybacks?: number;
+    reports?: number;
+    sellerWarnings?: number;
+    enterpriseRequests?: number;
+  };
+  /** Live counts voor het Aanbod-item — auctions = ACTIVE+SCHEDULED,
+   *  claimsales = LIVE+SCHEDULED, listings = ACTIVE, events = niet-DELETED. */
   counts?: { auctions: number; listings: number; claimsales: number; events?: number };
 };
 
-// v2 sinds Fase 44: de groep-ids zijn hernoemd (selling/buying/account) — de
-// oude key zou dode open-state bevatten.
-const OPEN_STATE_STORAGE_KEY = "dashboard-nav-open-v2";
-
-// Thin wrapper: decides which nav to render based on path + admin status.
-// Splitting the swap from the inner component avoids React reconciliation
-// confusion (the inner DashboardNavInner has many hooks, AdminNav has 3 —
-// keeping them as siblings instead of a parent-with-early-return makes
-// hook-counts stable per fiber).
+// Thin wrapper: admin-routes krijgen de AdminNav (aparte hook-set, dus als
+// sibling i.p.v. early-return binnen één component).
 export function DashboardNav(props: DashboardNavProps) {
   const pathname = usePathname();
   if (props.accountType === "ADMIN" && pathname.startsWith("/dashboard/admin")) {
@@ -92,7 +90,12 @@ export function DashboardNav(props: DashboardNavProps) {
   return <DashboardNavInner {...props} />;
 }
 
-function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
+const ROW =
+  "group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors";
+const ROW_ACTIVE = "bg-primary/10 text-primary dark:bg-primary/20";
+const ROW_IDLE = "text-muted-foreground hover:bg-muted hover:text-foreground";
+
+function DashboardNavInner({ accountType, level, user, counts }: DashboardNavProps) {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
   const pathname = usePathname();
@@ -105,6 +108,13 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
     };
   }, []);
+
+  // Mobiel menu sluiten bij navigatie (state-aanpassing tijdens render).
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setMobileOpen(false);
+  }
 
   const isAdmin = accountType === "ADMIN";
 
@@ -127,10 +137,17 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
   const groups: NavGroup[] = useMemo(
     () => [
       {
-        id: "overview",
+        id: "general",
+        labelKey: "sectionGeneral",
         items: [
           { href: "/dashboard", labelKey: "title", icon: LayoutDashboard },
           { href: "/dashboard/statistieken", labelKey: "myStatistics", icon: BarChart3 },
+          {
+            href: "/dashboard/saldo",
+            labelKey: "navFinance",
+            icon: Wallet,
+            match: ["/dashboard/uitbetalingen"],
+          },
         ],
       },
       {
@@ -142,13 +159,7 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
             labelKey: "navOffer",
             icon: Store,
             badge: offerBadge,
-            // Claimsales/marktplaats/evenementen zijn tabs binnen het
-            // Aanbod-cluster (Fase 44) — nav-item licht op alle vier op.
-            match: [
-              "/dashboard/claimsales",
-              "/dashboard/marktplaats",
-              "/dashboard/evenementen",
-            ],
+            match: ["/dashboard/claimsales", "/dashboard/marktplaats", "/dashboard/evenementen"],
           },
           { href: "/dashboard/verkopen", labelKey: "mySales", icon: Package },
           { href: "/dashboard/inkoop", labelKey: "myBuyback", icon: ArrowDownToLine },
@@ -164,18 +175,6 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
         ],
       },
       {
-        id: "finance",
-        items: [
-          {
-            href: "/dashboard/saldo",
-            labelKey: "navFinance",
-            icon: Wallet,
-            // Uitbetalingen + openstaande kosten zijn tabs binnen Financiën.
-            match: ["/dashboard/uitbetalingen"],
-          },
-        ],
-      },
-      {
         id: "account",
         labelKey: "sectionAccount",
         items: [
@@ -184,207 +183,74 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
             href: "/dashboard/instellingen",
             labelKey: "mySettings",
             icon: Settings,
-            // Blokkeerlijst is bereikbaar via Instellingen → Privacy.
             match: ["/dashboard/blokkeerlijst"],
           },
           { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
           { href: "/dashboard/verificatie", labelKey: "myVerification", icon: ShieldCheck },
           { href: "/dashboard/abonnement", labelKey: "mySubscription", icon: CreditCard },
-          {
-            href: "/dashboard/reviews",
-            labelKey: "myReputation",
-            icon: Star,
-            // Level & XP is een tab binnen Reputatie; de levelCard boven de
-            // nav linkt er ook heen.
-            match: ["/dashboard/level"],
-          },
+          { href: "/dashboard/reviews", labelKey: "myReputation", icon: Star, match: ["/dashboard/level"] },
         ],
       },
       {
-        id: "extras",
+        id: "support",
+        labelKey: "sectionSupport",
         items: [{ href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale }],
       },
     ],
-    [counts, offerBadge]
+    [offerBadge],
   );
 
   function isPathActive(href: string) {
     return pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
   }
-
   function isActive(item: NavItem) {
     if (isPathActive(item.href)) return true;
     return item.match?.some((m) => isPathActive(m)) ?? false;
   }
 
-  // Which collapsible group contains the active route? That one is always open.
-  const activeGroupId = useMemo(() => {
-    return groups.find((g) => g.labelKey && g.items.some((item) => isActive(item)))?.id;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, groups]);
-
-  // "selling" en "buying" zijn de meest-gebruikte secties — die staan altijd
-  // open na een refresh, tenzij de user ze expliciet inklapt (localStorage).
-  // De actieve sectie wordt áltijd geforceerd open, ook als user 'm gesloten
-  // had — anders zien ze hun huidige page-link niet.
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = { selling: true, buying: true };
-    if (activeGroupId) initial[activeGroupId] = true;
-    return initial;
-  });
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(OPEN_STATE_STORAGE_KEY);
-      if (raw) {
-        const stored = JSON.parse(raw) as Record<string, boolean>;
-        setOpenSections((prev) => {
-          // stored overschrijft defaults zodat user-close-keuze persist
-          const merged = { ...prev, ...stored };
-          if (activeGroupId) merged[activeGroupId] = true;
-          return merged;
-        });
-      }
-    } catch {
-      // ignore — corrupt JSON of geen localStorage
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Force the active section open on navigation.
-  useEffect(() => {
-    if (activeGroupId) {
-      setOpenSections((prev) => (prev[activeGroupId] ? prev : { ...prev, [activeGroupId]: true }));
-    }
-  }, [activeGroupId]);
-
-  function toggleSection(id: string) {
-    setOpenSections((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
-      try {
-        localStorage.setItem(OPEN_STATE_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }
-
-  // Active item for mobile compact-bar header
   const allItems = groups.flatMap((g) => g.items);
   const activeItem = allItems.find((item) => isActive(item)) ?? allItems[0];
   const ActiveIcon = activeItem.icon;
 
-  const isLevelActive = pathname === "/dashboard/level";
-
-  const levelCard = level && (
-    <Link
-      href="/dashboard/level"
-      onClick={() => setMobileOpen(false)}
-      className={`block rounded-xl border p-3 transition-all ${
-        isLevelActive
-          ? `${level.bgColor} ${level.borderColor} ring-2 ring-primary/30`
-          : `${level.bgColor} ${level.borderColor} hover:ring-1 hover:ring-primary/20`
-      }`}
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-lg">{level.icon}</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-muted-foreground">{t("myLevel")}</p>
-          <p className={`text-sm font-bold truncate ${level.color}`}>{level.name}</p>
-        </div>
-      </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
-          style={{ width: `${level.progress}%` }}
-        />
-      </div>
-    </Link>
-  );
-
-  const logoutButton = (
-    <button
-      type="button"
-      onClick={handleLogoutClick}
-      className={`flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all ${
-        confirmLogout
-          ? "border-red-600 bg-red-600 text-white hover:bg-red-700"
-          : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
-      }`}
-    >
-      <LogOut className="h-4 w-4 shrink-0" />
-      {confirmLogout ? tc("logoutConfirm") : tc("logout")}
-    </button>
-  );
-
-  const adminPanelButton = isAdmin ? (
-    <Link
-      href="/dashboard/admin"
-      onClick={() => setMobileOpen(false)}
-      className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800 transition-all hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50"
-    >
-      <Shield className="h-4 w-4 shrink-0" />
-      {t("adminPanel")}
-    </Link>
-  ) : null;
-
   function renderItem(item: NavItem) {
     const Icon = item.icon;
-
     if (item.comingSoon) {
       return (
         <div
           key={item.href}
-          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground/60 cursor-not-allowed"
+          className={`${ROW} cursor-not-allowed text-muted-foreground/60`}
           aria-disabled="true"
           title="Binnenkort beschikbaar"
         >
-          <Icon className="h-4 w-4 shrink-0" />
+          <Icon className="size-4 shrink-0" />
           <span className="flex-1 truncate">{t(item.labelKey)}</span>
-          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
             Soon
           </span>
         </div>
       );
     }
-
     const active = isActive(item);
     return (
       <Link
         key={item.href}
         href={item.href}
-        onClick={() => setMobileOpen(false)}
-        className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
-          active
-            ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        }`}
+        aria-current={active ? "page" : undefined}
+        className={`${ROW} ${active ? ROW_ACTIVE : ROW_IDLE}`}
       >
         {item.liveIndicator ? (
-          // Live-bolletje vervangt het icoon voor de Live Hub. Wordt gehouden
-          // op dezelfde 4×4-slot zodat de label-uitlijning gelijk loopt met
-          // andere nav-items in dezelfde groep.
-          <span
-            className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center"
-            aria-label="Live"
-          >
-            <span
-              className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-rose-500 opacity-75"
-              aria-hidden="true"
-            />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500" />
+          <span className="relative inline-flex size-4 shrink-0 items-center justify-center" aria-label="Live">
+            <span className="absolute inline-flex size-2.5 animate-ping rounded-full bg-rose-500 opacity-75" aria-hidden />
+            <span className="relative inline-flex size-2.5 rounded-full bg-rose-500" />
           </span>
         ) : (
-          <Icon className="h-4 w-4 shrink-0" />
+          <Icon className={`size-4 shrink-0 ${active ? "" : "text-muted-foreground group-hover:text-foreground"}`} />
         )}
         <span className="flex-1 truncate">{t(item.labelKey)}</span>
         {typeof item.badge === "number" && item.badge > 0 && (
           <span
             className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
-              active
-                ? "bg-primary/20 text-primary"
-                : "bg-muted text-muted-foreground"
+              active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
             }`}
           >
             {item.badge}
@@ -394,81 +260,122 @@ function DashboardNavInner({ accountType, level, counts }: DashboardNavProps) {
     );
   }
 
-  const navLinks = groups.map((group, idx) => {
-    if (!group.labelKey) {
-      // Flat group — no header, no collapse. Add a small top divider when it's
-      // a bottom-block (the "extras" group after the collapsible groups).
-      const isBottomFlat = idx > 0 && groups[idx - 1].labelKey != null;
-      return (
-        <div key={group.id} className={isBottomFlat ? "mt-2 border-t border-border pt-2 space-y-0.5" : "space-y-0.5"}>
-          {group.items.map(renderItem)}
-        </div>
-      );
-    }
+  const navGroups = groups.map((group) => (
+    <div key={group.id}>
+      <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        {t(group.labelKey)}
+      </p>
+      <div className="space-y-0.5">{group.items.map(renderItem)}</div>
+    </div>
+  ));
 
-    const isOpen = !!openSections[group.id];
-    const groupHasActive = group.items.some((item) => isActive(item));
+  const helpLink = (
+    <Link href="/support" className={`${ROW} ${ROW_IDLE}`}>
+      <LifeBuoy className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
+      <span className="flex-1 truncate">{t("help")}</span>
+    </Link>
+  );
 
-    return (
-      <div key={group.id} className="mt-1">
-        <button
-          type="button"
-          onClick={() => toggleSection(group.id)}
-          className={`flex w-full items-center justify-between gap-2 rounded-xl px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-            groupHasActive ? "text-foreground" : "text-muted-foreground/70 hover:text-foreground"
-          }`}
-          aria-expanded={isOpen}
-        >
-          <span>{t(group.labelKey)}</span>
-          <ChevronDown
-            className={`h-3.5 w-3.5 shrink-0 transition-transform duration-150 ${isOpen ? "" : "-rotate-90"}`}
-          />
-        </button>
-        {isOpen && <div className="mt-0.5 space-y-0.5">{group.items.map(renderItem)}</div>}
+  const adminLink = isAdmin ? (
+    <Link
+      href="/dashboard/admin"
+      className={`${ROW} text-amber-700 hover:bg-amber-500/10 dark:text-amber-300`}
+    >
+      <Shield className="size-4 shrink-0" />
+      <span className="flex-1 truncate">{t("adminPanel")}</span>
+    </Link>
+  ) : null;
+
+  const logoutButton = (
+    <button
+      type="button"
+      onClick={handleLogoutClick}
+      className={`${ROW} w-full ${
+        confirmLogout
+          ? "bg-red-600 text-white hover:bg-red-700"
+          : "text-red-600 hover:bg-red-500/10 dark:text-red-400"
+      }`}
+    >
+      <LogOut className="size-4 shrink-0" />
+      <span className="flex-1 truncate text-left">{confirmLogout ? tc("logoutConfirm") : tc("logout")}</span>
+    </button>
+  );
+
+  const isLevelActive = pathname === "/dashboard/level";
+  const userCard = user && (
+    <Link
+      href="/dashboard/level"
+      className={`flex items-center gap-3 rounded-xl border border-border bg-background p-2.5 transition-colors hover:bg-muted ${
+        isLevelActive ? "ring-2 ring-primary/30" : ""
+      }`}
+      title={level ? `${t("myLevel")}: ${level.name}` : undefined}
+    >
+      {user.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={user.image} alt="" className="size-9 shrink-0 rounded-full object-cover" />
+      ) : (
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+          {user.name.charAt(0).toUpperCase()}
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-foreground">{user.name}</span>
+        {level ? (
+          <>
+            <span className={`block truncate text-xs ${level.color}`}>
+              {level.icon} {level.name}
+            </span>
+            <span className="mt-1 block h-1 w-full overflow-hidden rounded-full bg-muted">
+              <span className="block h-full rounded-full bg-primary" style={{ width: `${level.progress}%` }} />
+            </span>
+          </>
+        ) : (
+          <span className="block truncate text-xs text-muted-foreground">{user.email}</span>
+        )}
+      </span>
+      <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+    </Link>
+  );
+
+  const bottomBlock = (
+    <div className="space-y-2 border-t border-border pt-3">
+      <div className="space-y-0.5">
+        {adminLink}
+        {helpLink}
+        {logoutButton}
       </div>
-    );
-  });
+      {userCard}
+    </div>
+  );
 
   return (
     <>
-      {/* Mobile: compact bar + expandable menu */}
+      {/* Mobiel: compacte balk + uitklapmenu */}
       <div className="md:hidden">
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="glass-nav flex w-full items-center justify-between rounded-xl px-4 py-3"
+          className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-card"
+          aria-expanded={mobileOpen}
         >
           <div className="flex items-center gap-2.5">
-            <ActiveIcon className="h-4 w-4 text-primary" />
+            <ActiveIcon className="size-4 text-primary" />
             <span className="text-sm font-medium text-foreground">{t(activeItem.labelKey)}</span>
           </div>
-          {mobileOpen ? (
-            <X className="h-5 w-5 text-muted-foreground" />
-          ) : (
-            <Menu className="h-5 w-5 text-muted-foreground" />
-          )}
+          {mobileOpen ? <X className="size-5 text-muted-foreground" /> : <Menu className="size-5 text-muted-foreground" />}
         </button>
-
         {mobileOpen && (
-          <>
-            <div className="glass-nav mt-2 rounded-xl p-2 space-y-0.5">
-              {levelCard && <div className="mb-2">{levelCard}</div>}
-              {navLinks}
-            </div>
-            {adminPanelButton && <div className="mt-3">{adminPanelButton}</div>}
-            <div className="mt-3">{logoutButton}</div>
-          </>
+          <nav className="mt-2 space-y-4 rounded-2xl border border-border bg-card p-3 shadow-card">
+            {navGroups}
+            {bottomBlock}
+          </nav>
         )}
       </div>
 
-      {/* Desktop: full sidebar */}
-      <div className="hidden md:block">
-        <nav className="glass-nav rounded-xl p-2 space-y-0.5">
-          {levelCard && <div className="mb-2">{levelCard}</div>}
-          {navLinks}
-        </nav>
-        {adminPanelButton && <div className="mt-3">{adminPanelButton}</div>}
-        <div className="mt-3">{logoutButton}</div>
-      </div>
+      {/* Desktop: vaste sidebar-kaart, sticky onder de header */}
+      <nav className="sticky top-24 hidden max-h-[calc(100dvh-7rem)] flex-col gap-4 overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-card md:flex">
+        {navGroups}
+        {bottomBlock}
+      </nav>
     </>
   );
 }

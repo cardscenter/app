@@ -32,6 +32,9 @@ export default async function DashboardLayout({
       suspensionType: true,
       suspensionReason: true,
       emailVerifiedAt: true,
+      displayName: true,
+      email: true,
+      avatarUrl: true,
     },
   });
 
@@ -50,9 +53,14 @@ export default async function DashboardLayout({
     <PageContainer width="wide" className="py-8">
       <RealtimePageRefresh events={["suspension-changed"]} />
       <div className="flex flex-col gap-8 md:flex-row">
-        <aside className="w-full md:w-64 shrink-0">
+        <aside className="w-full shrink-0 md:w-[260px]">
           <DashboardNav
             accountType={user?.accountType}
+            user={
+              user
+                ? { name: user.displayName, email: user.email, image: user.avatarUrl }
+                : undefined
+            }
             level={{
               name: currentLevel.name,
               icon: currentLevel.icon,
