@@ -63,7 +63,7 @@ export function LoggedInHeroV2({ userName, stats, bannerSrc, actionItems }: Logg
         />
       </div>
 
-      <div className="relative mx-auto w-full max-w-[1680px] px-4 py-20 sm:px-6 lg:px-8 lg:py-32 xl:px-10 xl:py-36">
+      <div className="relative mx-auto w-full max-w-[1880px] px-[clamp(1rem,3vw,4rem)] py-20 lg:py-32 xl:py-36">
         <div className="max-w-xl lg:max-w-2xl">
           <motion.p
             initial={{ opacity: 0, y: 12 }}

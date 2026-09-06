@@ -30,11 +30,20 @@ import {
 
 /** Desktop nav-link: platte tekst + onderstreep die van links inschuift. */
 const NAV_LINK =
-  "relative rounded-md px-3.5 py-2 text-[15px] font-medium transition-colors after:absolute after:inset-x-3.5 after:bottom-1 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-current after:transition-transform after:duration-200 after:ease-out hover:text-white hover:after:scale-x-100 motion-reduce:after:transition-none";
+  "relative rounded-md px-3.5 py-2 text-[15px] font-medium transition-colors after:absolute after:inset-x-3.5 after:bottom-1 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-[var(--nav-accent,currentColor)] after:transition-transform after:duration-200 after:ease-out hover:text-white hover:after:scale-x-100 motion-reduce:after:transition-none";
 
 /** Mobiel nav-rij. */
 const MOBILE_ROW =
   "flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-medium transition-colors";
+
+/** Brand-accent per handelscategorie: bolletje + onderstreep-kleur. */
+// De onderstreep leest --nav-accent (fallback currentColor), zodat de
+// kleur niet afhangt van de volgorde van after:bg-*-utilities in de CSS.
+const ACCENT = {
+  blue: { dot: "bg-blue-400", underline: "[--nav-accent:#60a5fa]" },
+  amber: { dot: "bg-amber-400", underline: "[--nav-accent:#fbbf24]" },
+  emerald: { dot: "bg-emerald-400", underline: "[--nav-accent:#34d399]" },
+} as const;
 
 function HeaderContent() {
   const t = useTranslations("common");
@@ -95,15 +104,17 @@ function HeaderContent() {
     };
   }, [mobileMenuOpen]);
 
-  // Eén platte lijst — geen primair/secundair onderscheid meer in de balk.
+  // Eén platte lijst in de balk. De drie handelscategorieën houden hun eigen
+  // brand-kleur (blauw/amber/groen — zelfde als hun pagina's) als klein
+  // bolletje + gekleurde onderstreep; de overige links zijn neutraal.
   // "Verkopen" = verkopen aan Cards Center (inkoopservice), niet /dashboard/verkopen.
   const navLinks = [
-    { href: "/veilingen" as const, label: t("auctions") },
-    { href: "/claimsales" as const, label: t("claimsales") },
-    { href: "/marktplaats" as const, label: t("marketplace") },
-    { href: "/evenementen" as const, label: t("events") },
-    { href: "/kaarten" as const, label: t("cards") },
-    { href: "/verkopen" as const, label: t("sell") },
+    { href: "/veilingen" as const, label: t("auctions"), accent: "blue" as const },
+    { href: "/claimsales" as const, label: t("claimsales"), accent: "amber" as const },
+    { href: "/marktplaats" as const, label: t("marketplace"), accent: "emerald" as const },
+    { href: "/evenementen" as const, label: t("events"), accent: null },
+    { href: "/kaarten" as const, label: t("cards"), accent: null },
+    { href: "/verkopen" as const, label: t("sell"), accent: null },
   ];
 
   const isActivePath = (href: string) => pathname === href || pathname.startsWith(href + "/");
@@ -125,7 +136,7 @@ function HeaderContent() {
 
   return (
     <header className="sticky top-0 z-50 bg-slate-950/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/85">
-      <div className="mx-auto flex h-16 w-full max-w-[1680px] items-center gap-3 px-4 sm:px-6 md:h-[72px] lg:px-8 xl:px-10">
+      <div className="mx-auto flex h-16 w-full max-w-[1880px] items-center gap-3 px-[clamp(1rem,3vw,4rem)] md:h-[72px]">
         {/* Logo — plain <img>: de Next image-optimizer faalt op Railway. */}
         <Link href="/" className="flex shrink-0 items-center" aria-label="Cards Center — home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -142,13 +153,17 @@ function HeaderContent() {
         <nav className="ml-auto hidden items-center gap-0.5 md:flex" aria-label="Hoofdmenu">
           {navLinks.map((link) => {
             const active = isActivePath(link.href);
+            const a = link.accent ? ACCENT[link.accent] : null;
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className={`${NAV_LINK} ${active ? "text-white after:scale-x-100" : "text-white/70"}`}
+                className={`${NAV_LINK} ${a ? `inline-flex items-center gap-1.5 ${a.underline}` : ""} ${
+                  active ? "text-white after:scale-x-100" : "text-white/70"
+                }`}
               >
+                {a && <span aria-hidden className={`inline-block size-1.5 rounded-full ${a.dot}`} />}
                 {link.label}
               </Link>
             );
@@ -263,6 +278,7 @@ function HeaderContent() {
           <nav className="mt-4 space-y-0.5" aria-label="Hoofdmenu">
             {navLinks.map((link) => {
               const active = isActivePath(link.href);
+              const a = link.accent ? ACCENT[link.accent] : null;
               return (
                 <Link
                   key={link.href}
@@ -273,6 +289,7 @@ function HeaderContent() {
                     active ? "bg-white/10 text-white" : "text-white/75 hover:bg-white/5 hover:text-white"
                   }`}
                 >
+                  {a && <span aria-hidden className={`inline-block size-2 rounded-full ${a.dot}`} />}
                   <span className="flex-1">{link.label}</span>
                   <ChevronRight className="size-4 opacity-40" />
                 </Link>

@@ -26,7 +26,7 @@ export function SpotlightEvents({
 
   return (
     <section className={`py-12 lg:py-16 ${bgClass}`}>
-      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
         <AnimatedSection>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">

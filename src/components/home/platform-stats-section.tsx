@@ -45,7 +45,7 @@ export function PlatformStatsSection({ stats }: PlatformStatsSectionProps) {
 
   return (
     <section className="bg-card py-12 lg:py-16">
-      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
         <AnimatedSection>
           <h2 className="text-center text-2xl font-bold text-foreground">{t("platformStats")}</h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">{t("platformStatsDesc")}</p>

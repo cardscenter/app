@@ -99,7 +99,7 @@ export function HowItWorksThreePaths({ stats }: HowItWorksThreePathsProps) {
 
   return (
     <section className="bg-card py-16 lg:py-24">
-      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             {t("threePathsTitle")}

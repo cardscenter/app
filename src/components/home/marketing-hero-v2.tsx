@@ -45,7 +45,7 @@ export function MarketingHeroV2({ stats, platformStats }: MarketingHeroV2Props) 
       </div>
 
       {/* Content */}
-      <div className="relative mx-auto w-full max-w-[1680px] px-4 py-20 sm:px-6 lg:px-8 lg:py-32 xl:px-10 xl:py-36">
+      <div className="relative mx-auto w-full max-w-[1880px] px-[clamp(1rem,3vw,4rem)] py-20 lg:py-32 xl:py-36">
         <div className="max-w-xl lg:max-w-2xl">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
             {t("heroV2Eyebrow")}

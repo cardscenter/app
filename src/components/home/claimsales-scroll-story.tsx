@@ -123,7 +123,7 @@ export function ClaimsalesScrollStory() {
   return (
     <section className="bg-background">
       {/* Header — scrolt normaal boven de sticky scroll-story */}
-      <div className="mx-auto max-w-[1680px] px-4 pt-20 sm:px-6 lg:px-8 lg:pt-24 xl:px-10">
+      <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)] pt-20 lg:pt-24">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30">
             <Tag className="size-3" />
@@ -140,7 +140,7 @@ export function ClaimsalesScrollStory() {
 
       <div ref={ref} className="relative h-[400vh]">
         <div className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden">
-          <div className="mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
+          <div className="mx-auto w-full max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
             {/* Desktop: 2-koloms (image links, text rechts), col-12 leeg */}
             <div className="hidden grid-cols-12 items-center gap-8 lg:grid">
               <div className="col-span-6 flex justify-center">

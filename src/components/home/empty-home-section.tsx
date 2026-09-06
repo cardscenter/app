@@ -22,7 +22,7 @@ export function EmptyHomeSection({
 }: EmptyHomeSectionProps) {
   return (
     <section className={`py-12 lg:py-16 ${bgClass}`}>
-      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
         <div className="mx-auto max-w-2xl rounded-2xl border border-dashed border-border bg-card/40 px-6 py-10 text-center sm:px-12 sm:py-14">
           <div className={`mx-auto inline-flex h-12 w-12 items-center justify-center rounded-xl ${iconClass}`}>
             {icon}

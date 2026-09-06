@@ -348,7 +348,7 @@ function ItemSection({
 }) {
   return (
     <section className={`py-12 lg:py-16 ${bgClass}`}>
-      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
         <AnimatedSection>
           <SectionHeader
             icon={icon}

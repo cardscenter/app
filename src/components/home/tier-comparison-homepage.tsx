@@ -56,7 +56,7 @@ export function TierComparisonHomepage({ bgClass = "section-gradient", isLoggedI
 
   return (
     <section className={`py-16 lg:py-24 ${bgClass}`}>
-      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
         <AnimatedSection>
           {/* Header */}
           <div className="mx-auto max-w-3xl text-center">

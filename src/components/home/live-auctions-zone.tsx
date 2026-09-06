@@ -38,7 +38,7 @@ export function LiveAuctionsZone({ endingSoon, trending, recent }: LiveAuctionsZ
         }}
       />
 
-      <div className="relative mx-auto w-full max-w-[1680px] px-4 py-16 sm:px-6 lg:px-8 lg:py-20 xl:px-10">
+      <div className="relative mx-auto w-full max-w-[1880px] px-[clamp(1rem,3vw,4rem)] py-16 lg:py-20">
         {/* Zone header */}
         <AnimatedSection>
           <div className="flex flex-wrap items-end justify-between gap-4">

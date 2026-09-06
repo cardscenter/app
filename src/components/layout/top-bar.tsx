@@ -8,7 +8,7 @@ export function TopBar() {
 
   return (
     <div className="hidden border-b border-border bg-muted/60 text-xs text-muted-foreground sm:block">
-      <div className="mx-auto flex h-8 w-full max-w-[1680px] items-center justify-end gap-4 px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto flex h-8 w-full max-w-[1880px] items-center justify-end gap-4 px-[clamp(1rem,3vw,4rem)]">
         {/* Live Webwinkelkeur rating */}
         <div className="flex items-center">
           <WebwinkelkeurWidget />
