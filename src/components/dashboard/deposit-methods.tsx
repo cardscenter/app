@@ -2,13 +2,11 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { PLATFORM, PLATFORM_IBAN_DISPLAY } from "@/lib/platform-config";
 
 interface DepositMethodsProps {
   bankTransferReference: string | null;
 }
-
-const PLACEHOLDER_IBAN = "NL00 ABNA 0000 0000 00";
-const PLACEHOLDER_NAME = "Cards Center B.V.";
 
 export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
   const t = useTranslations("wallet");
@@ -64,14 +62,30 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
               <div>
                 <p className="text-xs text-muted-foreground">IBAN</p>
                 <p className="font-mono text-sm font-medium text-foreground">
-                  {PLACEHOLDER_IBAN}
+                  {PLATFORM_IBAN_DISPLAY}
                 </p>
               </div>
               <button
-                onClick={() => copyToClipboard(PLACEHOLDER_IBAN.replace(/\s/g, ""), "iban")}
+                onClick={() => copyToClipboard(PLATFORM.bank.iban, "iban")}
                 className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
               >
                 {copied === "iban" ? t("copied") : t("copy")}
+              </button>
+            </div>
+
+            {/* BIC — handig voor stortingen vanuit BE/DE */}
+            <div className="flex items-center justify-between rounded-md bg-muted/50 px-4 py-3">
+              <div>
+                <p className="text-xs text-muted-foreground">{t("bic")}</p>
+                <p className="font-mono text-sm font-medium text-foreground">
+                  {PLATFORM.bank.bic}
+                </p>
+              </div>
+              <button
+                onClick={() => copyToClipboard(PLATFORM.bank.bic, "bic")}
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+              >
+                {copied === "bic" ? t("copied") : t("copy")}
               </button>
             </div>
 
@@ -80,11 +94,11 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
               <div>
                 <p className="text-xs text-muted-foreground">{t("accountName")}</p>
                 <p className="text-sm font-medium text-foreground">
-                  {PLACEHOLDER_NAME}
+                  {PLATFORM.bank.accountHolder}
                 </p>
               </div>
               <button
-                onClick={() => copyToClipboard(PLACEHOLDER_NAME, "name")}
+                onClick={() => copyToClipboard(PLATFORM.bank.accountHolder, "name")}
                 className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
               >
                 {copied === "name" ? t("copied") : t("copy")}

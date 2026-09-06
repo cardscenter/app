@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/page-container";
+import { PLATFORM } from "@/lib/platform-config";
+import { CompanyIdentity } from "@/components/legal/company-identity";
 
 export const metadata: Metadata = {
   title: "Privacybeleid — Cards Center",
@@ -16,7 +18,7 @@ export default function PrivacyPage() {
       <article className="prose prose-slate max-w-none dark:prose-invert">
         <h1 className="text-3xl font-bold text-foreground">Privacybeleid</h1>
         <p className="text-sm text-muted-foreground">
-          Laatst bijgewerkt: 24 mei 2026
+          Laatst bijgewerkt: 6 september 2026
         </p>
 
         <p className="mt-6 text-muted-foreground">
@@ -25,6 +27,8 @@ export default function PrivacyPage() {
           verwerken gegevens conform de Algemene Verordening Gegevensbescherming
           (AVG/GDPR).
         </p>
+
+        <CompanyIdentity heading="Verwerkingsverantwoordelijke" />
 
         <Section title="1. Welke gegevens we verzamelen">
           <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
@@ -96,10 +100,10 @@ export default function PrivacyPage() {
             van je gegevens, en je kunt bezwaar maken tegen verwerking. Neem
             hiervoor contact op via{" "}
             <a
-              href="mailto:info@cards-center.eu"
+              href={`mailto:${PLATFORM.supportEmail}`}
               className="font-medium text-primary hover:underline"
             >
-              info@cards-center.eu
+              {PLATFORM.supportEmail}
             </a>
             .
           </p>
@@ -109,10 +113,10 @@ export default function PrivacyPage() {
           <p className="text-muted-foreground">
             Vragen over dit privacybeleid? Mail{" "}
             <a
-              href="mailto:info@cards-center.eu"
+              href={`mailto:${PLATFORM.supportEmail}`}
               className="font-medium text-primary hover:underline"
             >
-              info@cards-center.eu
+              {PLATFORM.supportEmail}
             </a>
             .
           </p>

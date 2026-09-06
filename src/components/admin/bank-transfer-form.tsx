@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { confirmBankTransfer } from "@/actions/wallet";
 import { useRouter } from "@/i18n/navigation";
 import { Check, X } from "lucide-react";
+import { PLATFORM, PLATFORM_IBAN_DISPLAY } from "@/lib/platform-config";
 
 export function BankTransferForm({
   userId,
@@ -75,6 +76,10 @@ export function BankTransferForm({
     <form onSubmit={submit} className="space-y-2 rounded-lg border border-border bg-muted p-3">
       <div className="text-xs text-muted-foreground">
         {userName} — huidig saldo €{currentBalance.toFixed(2)}
+      </div>
+      <div className="text-xs text-muted-foreground">
+        Controleer de bijschrijving op <span className="font-mono">{PLATFORM_IBAN_DISPLAY}</span>{" "}
+        ({PLATFORM.bank.accountHolder}) — de referentiecode van de gebruiker moet in de omschrijving staan.
       </div>
       <div className="flex gap-2">
         <div className="relative flex-1">

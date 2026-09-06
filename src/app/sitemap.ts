@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { cardSlug } from "@/lib/card-helpers";
+import { getSiteUrl } from "@/lib/site-url";
 
 // Public sitemap covering the card-database (Fase 4) so search engines can
 // index every Pokémon card page. Marketplace listings/auctions are NOT
@@ -14,7 +15,7 @@ import { cardSlug } from "@/lib/card-helpers";
 // een request draait de app mét database.
 export const dynamic = "force-dynamic";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const BASE_URL = getSiteUrl();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [

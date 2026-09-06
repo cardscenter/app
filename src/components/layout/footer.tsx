@@ -7,6 +7,9 @@ import { ThemeToggle } from "@/components/toggle-theme";
 import { LanguageSwitcher } from "./language-switcher";
 import { PageContainer } from "@/components/layout/page-container";
 import { ZDivider } from "@/components/ui/z-divider";
+import { PLATFORM, formatPlatformAddress, hasKvk, hasVat } from "@/lib/platform-config";
+
+const FOOTER_LINK_CLASS = "text-sm text-muted-foreground transition-colors hover:text-foreground";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -52,25 +55,14 @@ export function Footer() {
             <h3 className="text-sm font-semibold text-foreground">
               {t("navigation")}
             </h3>
+            {/* Zelfde volgorde als de header: primaire secties, dan de secundaire. */}
             <div className="mt-3 flex flex-col gap-2">
-              <Link
-                href="/veilingen"
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {tc("auctions")}
-              </Link>
-              <Link
-                href="/claimsales"
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {tc("claimsales")}
-              </Link>
-              <Link
-                href="/marktplaats"
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {tc("marketplace")}
-              </Link>
+              <Link href="/veilingen" className={FOOTER_LINK_CLASS}>{tc("auctions")}</Link>
+              <Link href="/claimsales" className={FOOTER_LINK_CLASS}>{tc("claimsales")}</Link>
+              <Link href="/marktplaats" className={FOOTER_LINK_CLASS}>{tc("marketplace")}</Link>
+              <Link href="/evenementen" className={FOOTER_LINK_CLASS}>{tc("events")}</Link>
+              <Link href="/kaarten" className={FOOTER_LINK_CLASS}>{tc("cards")}</Link>
+              <Link href="/verkopen" className={FOOTER_LINK_CLASS}>{tc("sell")}</Link>
             </div>
           </div>
 
@@ -80,18 +72,9 @@ export function Footer() {
               {t("legal")}
             </h3>
             <div className="mt-3 flex flex-col gap-2">
-              <Link
-                href="/privacy"
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {t("privacyPolicy")}
-              </Link>
-              <Link
-                href="/voorwaarden"
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {t("terms")}
-              </Link>
+              <Link href="/privacy" className={FOOTER_LINK_CLASS}>{t("privacyPolicy")}</Link>
+              <Link href="/voorwaarden" className={FOOTER_LINK_CLASS}>{t("terms")}</Link>
+              <Link href="/support" className={FOOTER_LINK_CLASS}>{t("contact")}</Link>
             </div>
           </div>
 
@@ -104,9 +87,21 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-8 border-t border-border pt-4">
-          <p className="text-xs text-muted-foreground">
+        {/* Bottom bar: wettelijk verplichte bedrijfsgegevens + copyright.
+            KvK/btw verschijnen pas zodra ze in platform-config.ts staan. */}
+        <div className="mt-8 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end sm:justify-between">
+          <address className="not-italic text-xs leading-relaxed text-muted-foreground">
+            <span className="font-medium text-foreground">{PLATFORM.legalName}</span>
+            {" · "}
+            {formatPlatformAddress()}
+            {" · "}
+            <a href={`mailto:${PLATFORM.supportEmail}`} className="transition-colors hover:text-foreground">
+              {PLATFORM.supportEmail}
+            </a>
+            {hasKvk() && <>{" · "}{t("kvk")}: {PLATFORM.kvkNumber}</>}
+            {hasVat() && <>{" · "}{t("vat")}: {PLATFORM.vatId}</>}
+          </address>
+          <p className="shrink-0 text-xs text-muted-foreground">
             {t("copyright", { year: currentYear })}
           </p>
         </div>

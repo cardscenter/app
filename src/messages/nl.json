@@ -25,6 +25,7 @@
     "marketplace": "Marktplaats",
     "events": "Evenementen",
     "cards": "Database",
+    "sell": "Verkopen",
     "customization": "Personalisatie",
     "orderDetail": {
       "sortBy": "Sorteer:",
@@ -952,6 +953,7 @@
     "bankTransfer": "Bankoverschrijving",
     "bankTransferInstructions": "Maak het gewenste bedrag over naar onderstaande rekening met je persoonlijke referentiecode. Je saldo wordt binnen 1-2 werkdagen bijgeschreven.",
     "accountName": "Tenaamstelling",
+    "bic": "BIC",
     "referenceCode": "Referentiecode (omschrijving)",
     "referenceWarning": "Vermeld altijd je referentiecode bij de overschrijving. Zonder referentiecode kunnen we je betaling niet koppelen aan je account.",
     "copy": "Kopieer",
@@ -2193,6 +2195,9 @@
     "legal": "Juridisch",
     "privacyPolicy": "Privacybeleid",
     "terms": "Algemene voorwaarden",
+    "contact": "Contact",
+    "kvk": "KvK",
+    "vat": "Btw-id",
     "copyright": "© {year} Cards Center. Alle rechten voorbehouden."
   },
   "cart": {
@@ -2914,7 +2919,6 @@
     "successDesc": "Je aanvraag is succesvol verwerkt. Verzend je pakket binnen 5 dagen en vul daarna je Track & Trace-code in via je dashboard.",
     "referenceLabel": "Referentienummer",
     "shippingTitle": "Verstuur je kaarten",
-    "shippingAddress": "Cards Center\nT.a.v. Inkoop\nVoorbeeldstraat 1\n1234 AB Amsterdam\nNederland",
     "packingInstructions": "Verpakkingsinstructies",
     "packingStep1": "Sorteer de kaarten per categorie (bij bulk)",
     "packingStep2": "Plaats de kaarten in sleeves of toploaders",

@@ -10,6 +10,7 @@ import {
   Clock,
 } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
+import { PLATFORM } from "@/lib/platform-config";
 
 type RequestWithItems = BuybackRequest & {
   items: BuybackItem[];
@@ -202,8 +203,8 @@ function RejectedInfo() {
       </p>
       <p>
         Je ontvangt het Track &amp; Trace-nummer van de retourzending per e-mail. Heb je vragen? Mail ons via{" "}
-        <a className="underline underline-offset-2" href="mailto:info@cards-center.nl">
-          info@cards-center.nl
+        <a className="underline underline-offset-2" href={`mailto:${PLATFORM.supportEmail}`}>
+          {PLATFORM.supportEmail}
         </a>
         .
       </p>

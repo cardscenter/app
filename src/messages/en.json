@@ -25,6 +25,7 @@
     "marketplace": "Marketplace",
     "events": "Events",
     "cards": "Database",
+    "sell": "Sell",
     "customization": "Customization",
     "orderDetail": {
       "sortBy": "Sort:",
@@ -952,6 +953,7 @@
     "bankTransfer": "Bank transfer",
     "bankTransferInstructions": "Transfer the desired amount to the account below using your personal reference code. Your balance will be credited within 1-2 business days.",
     "accountName": "Account name",
+    "bic": "BIC",
     "referenceCode": "Reference code (description)",
     "referenceWarning": "Always include your reference code with the transfer. Without it, we cannot link your payment to your account.",
     "copy": "Copy",
@@ -2193,6 +2195,9 @@
     "legal": "Legal",
     "privacyPolicy": "Privacy Policy",
     "terms": "Terms & Conditions",
+    "contact": "Contact",
+    "kvk": "Chamber of Commerce",
+    "vat": "VAT ID",
     "copyright": "© {year} Cards Center. All rights reserved."
   },
   "cart": {
@@ -2914,7 +2919,6 @@
     "successDesc": "Your request has been processed. Ship your package within 5 days and submit your tracking code via your dashboard.",
     "referenceLabel": "Reference number",
     "shippingTitle": "Ship your cards",
-    "shippingAddress": "Cards Center\nAttn: Buyback\nVoorbeeldstraat 1\n1234 AB Amsterdam\nNetherlands",
     "packingInstructions": "Packing instructions",
     "packingStep1": "Sort cards by category (for bulk)",
     "packingStep2": "Place cards in sleeves or toploaders",

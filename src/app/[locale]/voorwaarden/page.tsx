@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/page-container";
+import { PLATFORM } from "@/lib/platform-config";
+import { CompanyIdentity } from "@/components/legal/company-identity";
 
 export const metadata: Metadata = {
   title: "Algemene voorwaarden — Cards Center",
@@ -17,7 +19,7 @@ export default function VoorwaardenPage() {
           Algemene voorwaarden
         </h1>
         <p className="text-sm text-muted-foreground">
-          Laatst bijgewerkt: 24 mei 2026
+          Laatst bijgewerkt: 6 september 2026
         </p>
 
         <p className="mt-6 text-muted-foreground">
@@ -25,6 +27,8 @@ export default function VoorwaardenPage() {
           met veilingen, claimsales en directe verkoop. Door een account aan te
           maken of het platform te gebruiken, ga je akkoord met deze voorwaarden.
         </p>
+
+        <CompanyIdentity heading="Identiteit van de ondernemer" />
 
         <Section title="1. Het platform">
           <p className="text-muted-foreground">
@@ -98,10 +102,10 @@ export default function VoorwaardenPage() {
             We kunnen deze voorwaarden aanpassen. Bij belangrijke wijzigingen
             informeren we je tijdig. Vragen? Mail{" "}
             <a
-              href="mailto:info@cards-center.eu"
+              href={`mailto:${PLATFORM.supportEmail}`}
               className="font-medium text-primary hover:underline"
             >
-              info@cards-center.eu
+              {PLATFORM.supportEmail}
             </a>
             .
           </p>

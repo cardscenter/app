@@ -11,9 +11,11 @@
  * Rijkere per-type varianten (bv. prijstabel) kunnen later via de bodyHtml-slot.
  */
 
-/** App-URL helper — gebruikt NEXTAUTH_URL of fallback voor links in e-mails. */
+import { getSiteUrl } from "@/lib/site-url";
+
+/** App-URL helper voor absolute links in e-mails (NEXT_PUBLIC_SITE_URL / NEXTAUTH_URL). */
 export function getAppUrl(): string {
-  return process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  return getSiteUrl();
 }
 
 /** Minimalistische HTML-escape voor user-input in mail-templates. */
@@ -60,7 +62,7 @@ ${args.title}
 
 ${args.body}
 ${ctaUrl ? `\n${ctaLabel}: ${ctaUrl}\n` : ""}
-Hulp nodig? Open een support ticket: ${supportUrl}
+Hulp nodig? Neem contact op via ${supportUrl}
 
 — Team Cards Center${
     args.unsubscribeUrl
@@ -169,7 +171,7 @@ Hulp nodig? Open een support ticket: ${supportUrl}
           </tr>
           <tr>
             <td class="footer" width="100%">
-              <p style="margin-bottom:8px;font-size:14px;">Hulp nodig? <a href="${supportUrl}" style="color:#2563eb;text-decoration:underline;font-weight:500;">Open een support ticket</a>. Dit adres wordt niet gelezen.</p>
+              <p style="margin-bottom:8px;font-size:14px;">Hulp nodig? <a href="${supportUrl}" style="color:#2563eb;text-decoration:underline;font-weight:500;">Neem contact op</a>. Dit adres wordt niet gelezen.</p>
               <p style="color:#6b7c8d;font-size:14px;margin-bottom:0;">&copy; Cards Center &ndash; Alle rechten voorbehouden</p>
               ${
                 args.unsubscribeUrl

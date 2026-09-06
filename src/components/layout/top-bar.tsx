@@ -15,7 +15,7 @@ export function TopBar() {
         </div>
         <span aria-hidden className="text-border">·</span>
         <Link
-          href="/help"
+          href="/support"
           className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
         >
           <HelpCircle className="size-3.5" />

@@ -2,9 +2,9 @@ import { useTranslations } from "next-intl";
 import { HelpCircle, ChevronDown, MessageSquare } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { AnimatedSection } from "@/components/home/animated-section";
+import { PLATFORM } from "@/lib/platform-config";
 
-// Support-mailto fallback tot /contact-route bestaat (Fase 36 follow-up).
-const SUPPORT_EMAIL = "support@cardscenter.nl";
+const SUPPORT_EMAIL = PLATFORM.supportEmail;
 
 // Per FAQ-antwoord optioneel een dashboard-pad waar de inline <link>...</link>
 // in de i18n-string naar wijst. Niet alle antwoorden hebben een link; voor
@@ -29,7 +29,7 @@ export function FaqSection({ bgClass = "bg-background" }: { bgClass?: string }) 
   const t = useTranslations("home");
 
   return (
-    <section className={`py-16 lg:py-24 ${bgClass}`}>
+    <section id="faq" className={`scroll-mt-20 py-16 lg:py-24 ${bgClass}`}>
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <AnimatedSection>
           {/* Header */}

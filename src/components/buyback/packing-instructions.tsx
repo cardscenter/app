@@ -8,10 +8,11 @@ import {
   Sparkles,
   ShieldCheck,
 } from "lucide-react";
+import { PLATFORM } from "@/lib/platform-config";
 
 // Single source of truth for the bulk-buyback packing guide. Used after
-// submission (BuybackSuccess) and on the standalone /verkoop-calculator/
-// verpakken page so users can revisit it from their dashboard.
+// submission (BuybackSuccess) and on the standalone /verkopen/verpakken
+// page so users can revisit it from their dashboard.
 
 const CARRIER_TABLE: { carrier: string; service: string; spec: string; price: string }[] = [
   { carrier: "PostNL", service: "Klein pakket",       spec: "3 kg / 34×28×12 cm",   price: "€5,95" },
@@ -53,10 +54,10 @@ function ShippingAddressCard() {
             <MapPin className="h-3.5 w-3.5" /> Postadres
           </div>
           <address className="not-italic text-sm leading-relaxed text-amber-900 dark:text-amber-100">
-            <p className="font-bold">Cards Center — Bulk</p>
-            <p>Oude Drydijck 41</p>
-            <p>4564CT Sint Jansteen</p>
-            <p>Nederland</p>
+            <p className="font-bold">{PLATFORM.legalName} — Bulk</p>
+            <p>{PLATFORM.address.street} {PLATFORM.address.houseNumber}</p>
+            <p>{PLATFORM.address.postalCode} {PLATFORM.address.city}</p>
+            <p>{PLATFORM.address.country}</p>
           </address>
         </div>
         <div className="rounded-xl border border-amber-200 bg-white/60 p-4 dark:border-amber-800/40 dark:bg-amber-950/40">
@@ -65,8 +66,8 @@ function ShippingAddressCard() {
           </div>
           <p className="text-sm leading-relaxed text-amber-900 dark:text-amber-100">
             <strong>E-mail:</strong>{" "}
-            <a className="underline underline-offset-2 hover:text-amber-700 dark:hover:text-amber-300" href="mailto:info@cards-center.nl">
-              info@cards-center.nl
+            <a className="underline underline-offset-2 hover:text-amber-700 dark:hover:text-amber-300" href={`mailto:${PLATFORM.supportEmail}`}>
+              {PLATFORM.supportEmail}
             </a>
           </p>
           <p className="mt-2 text-sm text-amber-800/90 dark:text-amber-200/90">
@@ -161,8 +162,8 @@ function PackingStepsCard() {
           </p>
           <p className="mb-2">
             Vul bij het label ons e-mailadres in:{" "}
-            <a className="underline underline-offset-2 hover:text-primary" href="mailto:info@cards-center.nl">
-              info@cards-center.nl
+            <a className="underline underline-offset-2 hover:text-primary" href={`mailto:${PLATFORM.supportEmail}`}>
+              {PLATFORM.supportEmail}
             </a>{" "}
             — dan ontvangen wij ook de Track &amp; Trace-code.
           </p>
@@ -307,8 +308,8 @@ function ImportantWarningCard() {
         </li>
         <li>
           • Vragen? Mail naar{" "}
-          <a className="underline underline-offset-2" href="mailto:info@cards-center.nl">
-            info@cards-center.nl
+          <a className="underline underline-offset-2" href={`mailto:${PLATFORM.supportEmail}`}>
+            {PLATFORM.supportEmail}
           </a>.
         </li>
       </ul>

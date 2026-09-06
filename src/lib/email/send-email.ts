@@ -55,7 +55,7 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
       );
     }
     // Optioneel reply-adres (Fase 16): noreply@ als afzender, maar replies
-    // komen binnen op bv. info@poke-center.nl zonder mailbox op het domein.
+    // komen binnen op bv. info@cards-center.eu zonder mailbox op het domein.
     const replyTo = process.env.EMAIL_REPLY_TO;
     const { data, error } = await getResendClient().emails.send({
       from,

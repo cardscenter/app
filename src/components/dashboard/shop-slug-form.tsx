@@ -3,12 +3,15 @@
 import { useState, useTransition } from "react";
 import { Globe, Check, Loader2 } from "lucide-react";
 import { updateShopSlug } from "@/actions/profile";
+import { getSiteHost } from "@/lib/site-url";
 
 interface Props {
   currentSlug: string | null;
 }
 
 const SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/;
+// NEXT_PUBLIC_SITE_URL is build-time ingelined, dus ook client-side beschikbaar.
+const SHOP_URL_PREFIX = `${getSiteHost()}/winkel/`;
 
 export function ShopSlugForm({ currentSlug }: Props) {
   const [slug, setSlug] = useState(currentSlug ?? "");
@@ -42,7 +45,7 @@ export function ShopSlugForm({ currentSlug }: Props) {
       <div className="flex items-stretch gap-2">
         <div className="flex flex-1 items-center rounded-lg border border-border bg-card focus-within:border-primary">
           <span className="select-none border-r border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-            cards-center.nl/winkel/
+            {SHOP_URL_PREFIX}
           </span>
           <input
             type="text"
@@ -101,7 +104,7 @@ export function ShopSlugForm({ currentSlug }: Props) {
             rel="noopener noreferrer"
             className="mt-1 block font-medium text-primary hover:underline"
           >
-            cards-center.nl/winkel/{savedSlug}
+            {SHOP_URL_PREFIX}{savedSlug}
           </a>
         </div>
       )}

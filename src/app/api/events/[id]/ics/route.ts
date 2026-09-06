@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const runtime = "nodejs";
 
@@ -33,7 +34,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Evenement niet gevonden" }, { status: 404 });
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const siteUrl = getSiteUrl();
   const location = `${event.venueName}, ${event.street} ${event.houseNumber}, ${event.postalCode} ${event.city}`;
 
   const lines = [
