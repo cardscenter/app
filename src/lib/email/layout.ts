@@ -47,10 +47,13 @@ export function renderNotificationEmail(args: RenderArgs): { html: string; text:
   const logoUrl = `${appUrl}/images/logo-white-bg.png`;
   const dashboardUrl = `${appUrl}/nl/dashboard`;
   const supportUrl = `${appUrl}/nl/support`;
+  // Notification.link is soms al locale-geprefixt (/nl/...) en soms niet —
+  // strip een bestaande prefix zodat er nooit `/nl/nl/...` in de mail staat.
+  const ctaPath = args.ctaUrl?.replace(/^\/?(?:nl|en)(?=\/|$)/, "") ?? null;
   const ctaUrl = args.ctaUrl
     ? args.ctaUrl.startsWith("http")
       ? args.ctaUrl
-      : `${appUrl}/nl${args.ctaUrl.startsWith("/") ? "" : "/"}${args.ctaUrl}`
+      : `${appUrl}/nl${ctaPath!.startsWith("/") ? "" : "/"}${ctaPath}`
     : null;
   const ctaLabel = args.ctaLabel ?? "Bekijk op Cards Center";
 

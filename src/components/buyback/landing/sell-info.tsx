@@ -196,9 +196,10 @@ export async function SellCtaBand() {
       <p className="mt-6 inline-flex items-center gap-1.5 text-xs text-slate-400">
         <Mail className="size-3.5" />
         {t.rich("landing.questions", {
-          email: () => (
+          email: PLATFORM.supportEmail,
+          link: (chunks) => (
             <a href={`mailto:${PLATFORM.supportEmail}`} className="font-medium text-slate-200 hover:underline">
-              {PLATFORM.supportEmail}
+              {chunks}
             </a>
           ),
         })}

@@ -2873,7 +2873,7 @@
       "faqBulk": "Bulk",
       "ctaBandTitle": "Ready to sell?",
       "ctaBandDesc": "Pick your route and see instantly what your cards are worth. An account is free.",
-      "questions": "Questions? Email us at {email}"
+      "questions": "Questions? Email us at <link>{email}</link>"
     },
     "title": "Sell Calculator",
     "subtitle": "Sell your Pokémon cards to Cards Center",

@@ -2873,7 +2873,7 @@
       "faqBulk": "Bulk",
       "ctaBandTitle": "Klaar om te verkopen?",
       "ctaBandDesc": "Kies je route en zie direct wat je kaarten opleveren. Een account is gratis.",
-      "questions": "Vragen? Mail ons op {email}"
+      "questions": "Vragen? Mail ons op <link>{email}</link>"
     },
     "title": "Verkoop Calculator",
     "subtitle": "Verkoop je Pokémon-kaarten aan Cards Center",
