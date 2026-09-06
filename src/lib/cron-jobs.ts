@@ -339,7 +339,7 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   "check-subscriptions": {
     description:
       "Downgrade-t verlopen PRO/UNLIMITED-abonnementen terug naar FREE. Vergelijkt premiumExpiresAt met nu.",
-    schedule: "Elk uur",
+    schedule: "Dagelijks 04:30 UTC (in-process daily-maintenance-scheduler)",
     allowManualRun: true,
   },
   "expire-claims": {
@@ -401,10 +401,10 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   "cleanup-archived-chats": {
     description:
       "Permanent verwijderen van conversations + messages + proposals voor participants die >60 dagen ARCHIVED zijn. Dit is destructief en niet reversibel.",
-    schedule: "Dagelijks",
+    schedule: "Dagelijks 04:30 UTC (in-process daily-maintenance-scheduler)",
     allowManualRun: false,
     runWarning:
-      "Hard-delete van conversations en messages — kan niet teruggedraaid worden. Wordt alleen door de scheduler gedraaid.",
+      "Hard-delete van conversations en messages — kan niet teruggedraaid worden. Wordt alleen door de in-process scheduler gedraaid.",
   },
   "bundle-offer-expiry": {
     description:
@@ -439,25 +439,25 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   "payment-failure-decay": {
     description:
       `Verlaagt User.paymentFailureCount met 1 voor users wiens laatste wanbetaling >${STRIKE_DECAY_DAYS} dagen geleden is. Suspend wordt niet automatisch opgeheven — alleen de strike-counter verzacht na een jaar zonder problemen.`,
-    schedule: "Wekelijks",
+    schedule: "Dagelijks 04:30 UTC (in-process; idempotent — decrement max 1× per 365d)",
     allowManualRun: true,
   },
   "prune-bid-ips": {
     description:
       `Anonimiseert AuctionBid.bidderIp voor bids ouder dan ${BID_IP_RETENTION_DAYS} dagen (privacy/retentie). Login-IPs op User worden bij elke nieuwe login overschreven, dus geen apart prune nodig.`,
-    schedule: "Wekelijks",
+    schedule: "Dagelijks 04:30 UTC (in-process; idempotent)",
     allowManualRun: true,
   },
   "reset-free-upsells": {
     description:
-      "Reset op de 1e van de maand de gratis HOMEPAGE_SPOTLIGHT-quota voor alle PRO/Unlimited/Enterprise-abonnees naar de tier-default (1 / 5 / 999). Schedule deze cron op de 1e om 00:05 zodat alle users tegelijk hun nieuwe quota krijgen.",
-    schedule: "Maandelijks (1e)",
+      "Reset op de 1e van de maand de gratis HOMEPAGE_SPOTLIGHT-quota voor alle PRO/Unlimited/Enterprise-abonnees naar de tier-default (1 / 5 / 999). Draait via de in-process daily-maintenance-scheduler alleen op de 1e van de maand, zodat alle users tegelijk hun nieuwe quota krijgen.",
+    schedule: "1e van de maand 04:30 UTC (in-process daily-maintenance-scheduler)",
     allowManualRun: true,
   },
   "cleanup-sold-images": {
     description:
       "Verwijdert 30 dagen na voltooide verkoop (deliveredAt) de geüploade foto-bestanden van die verkoop (R2/schijf) en maakt de DB-foto-velden leeg — alle tekstdata blijft. Slaat bestellingen met lopend geschil/ticket over. Idempotent via imagesPurgedAt. Gedeelde foto's (listing met restvoorraad, claimsale-cover) blijven tot ook die volledig klaar zijn.",
-    schedule: "Dagelijks",
+    schedule: "Dagelijks 04:30 UTC (in-process daily-maintenance-scheduler)",
     allowManualRun: true,
   },
   "email-unread-messages": {

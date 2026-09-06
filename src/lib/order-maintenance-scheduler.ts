@@ -14,13 +14,14 @@
 // - auction-runner-up-decision-deadline vóór auction-payment-deadline:
 //   verlopen 72u-windows eerst doorschuiven, daarna nieuwe wanbetalers.
 //
-// NIET in deze set (bewust): reset-free-upsells (maand-semantiek — uurlijks
-// draaien zou quota continu bijvullen), payment-failure-decay + prune-bid-ips
-// (week-cadans, niet order-kritisch), cleanup-archived-chats + cleanup-
-// sold-images (destructief op user-content), check-subscriptions (eigen
-// domein), en alles met een eigen in-process scheduler (auction-finalize/
-// activate, expire-claims, email-unread-messages). cleanup-notifications
-// draait WEL mee: bounded per-user retentie (max 250), geen user-content.
+// NIET in deze set (bewust): de dag-/maand-cadans-jobs (check-subscriptions,
+// payment-failure-decay, prune-bid-ips, cleanup-sold-images, cleanup-
+// archived-chats, reset-free-upsells) draaien in daily-maintenance-scheduler.ts
+// (04:30 UTC) — uurlijks zou reset-free-upsells quota continu bijvullen en de
+// destructieve cleanups onnodig vaak raken. Alles met een eigen in-process
+// scheduler (auction-finalize/activate, expire-claims, email-unread-messages)
+// zit hier ook niet in. cleanup-notifications draait WEL mee: bounded
+// per-user retentie (max 250), geen user-content.
 //
 // Patroon identiek aan expire-claims-scheduler: direct de CRON_JOBS-runners
 // aanroepen (geen CronRun-rij per tick — dat zou 24×/dag bloat geven), de

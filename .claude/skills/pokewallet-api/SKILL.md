@@ -413,7 +413,7 @@ GROUP BY cs.id ORDER BY unmatched DESC LIMIT 10;
 
 ## Cron-automation
 
-`vercel.json` heeft `0 4 * * *` daily sync naar `/api/cron/sync-pokewallet`. Na elke deploy draait de sync zelfstandig elke nacht. Volledige refresh duurt ~4 minuten (135 sets × ~1.7s).
+De in-process `src/lib/pokewallet-scheduler.ts` draait de sync dagelijks om 03:00 UTC (geboot in `src/instrumentation.ts`); `/api/cron/sync-pokewallet` blijft als "Run nu"/safety-net. Na elke deploy draait de sync zelfstandig elke nacht. Volledige refresh duurt ~4 minuten (135 sets × ~1.7s).
 
 **Budget-vuistregels (geverifieerd 2026-04-19):**
 - Hele DB refresh via `/search?q=<set_id>&limit=100`: ~600 calls (1,2% budget) — BB had 4 calls voor 342 cards
