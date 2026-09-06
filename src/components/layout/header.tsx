@@ -11,9 +11,30 @@ import { NotificationBell } from "@/components/ui/notification-bell";
 import { MessageIcon } from "@/components/ui/message-icon";
 import { CartIcon } from "@/components/ui/cart-icon";
 import { AdminShield } from "@/components/layout/admin-shield";
+import { ThemeIconButton } from "@/components/layout/theme-icon-button";
 import { getUnreadCount } from "@/actions/notification";
 import { getUnreadConversationCount } from "@/actions/message";
 import { useRealtime } from "@/components/providers/realtime-provider";
+import {
+  HEADER_ICON_BTN,
+  HEADER_PILL_GHOST,
+  HEADER_PILL_LIGHT,
+} from "./header-styles";
+
+// Cleane header (sept 2026, naar de "Cards Center Home 2.0"-referentie):
+// donkere band, logo links, platte nav-links met onderstreep-animatie,
+// rechts ronde icoonknoppen (loep, thema, bel, admin, berichten, winkelwagen)
+// en pillen (saldo, avatar / Registreren). Geen brand-bolletjes, geen divider.
+// Alle functionaliteit van de vorige header blijft (SSE-badges, popovers,
+// mobiel menu met quick-actions).
+
+/** Desktop nav-link: platte tekst + onderstreep die van links inschuift. */
+const NAV_LINK =
+  "relative rounded-md px-3.5 py-2 text-[15px] font-medium transition-colors after:absolute after:inset-x-3.5 after:bottom-1 after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-current after:transition-transform after:duration-200 after:ease-out hover:text-white hover:after:scale-x-100 motion-reduce:after:transition-none";
+
+/** Mobiel nav-rij. */
+const MOBILE_ROW =
+  "flex items-center gap-3 rounded-xl px-3.5 py-3 text-[15px] font-medium transition-colors";
 
 function HeaderContent() {
   const t = useTranslations("common");
@@ -61,77 +82,72 @@ function HeaderContent() {
     };
   }, [status, subscribe]);
 
-  // Primary sections get subtle brand accents matching their page colors
-  // (blue / amber / emerald). "Kaarten" and any later additions are
-  // secondary — separated by a vertical divider.
-  const primaryLinks = [
-    { href: "/veilingen" as const, label: t("auctions"),    accent: "blue" as const },
-    { href: "/claimsales" as const, label: t("claimsales"), accent: "amber" as const },
-    { href: "/marktplaats" as const, label: t("marketplace"), accent: "emerald" as const },
-  ];
-  // Secondary sections — geen brand-accent/bolletje, achter de divider.
-  const secondaryLinks = [
+  // Menu sluiten bij navigatie (bv. via back-knop) en body-scroll vastzetten.
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileMenuOpen]);
+
+  // Eén platte lijst — geen primair/secundair onderscheid meer in de balk.
+  // "Verkopen" = verkopen aan Cards Center (inkoopservice), niet /dashboard/verkopen.
+  const navLinks = [
+    { href: "/veilingen" as const, label: t("auctions") },
+    { href: "/claimsales" as const, label: t("claimsales") },
+    { href: "/marktplaats" as const, label: t("marketplace") },
     { href: "/evenementen" as const, label: t("events") },
     { href: "/kaarten" as const, label: t("cards") },
-    // "Verkopen" = verkopen aan Cards Center (inkoopservice), niet /dashboard/verkopen.
     { href: "/verkopen" as const, label: t("sell") },
   ];
 
-  const accentClasses: Record<"blue" | "amber" | "emerald", { active: string; idle: string; dot: string }> = {
-    blue:    { active: "bg-blue-500/15 text-blue-100",       idle: "text-slate-300 hover:bg-blue-500/10 hover:text-blue-200",       dot: "bg-blue-400" },
-    amber:   { active: "bg-amber-500/15 text-amber-100",     idle: "text-slate-300 hover:bg-amber-500/10 hover:text-amber-200",     dot: "bg-amber-400" },
-    emerald: { active: "bg-emerald-500/15 text-emerald-100", idle: "text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-200", dot: "bg-emerald-400" },
+  const isActivePath = (href: string) => pathname === href || pathname.startsWith(href + "/");
+
+  const avatar = (size: "sm" | "md") => {
+    const cls = size === "sm" ? "size-7" : "size-8";
+    const src = avatarOverride || session?.user?.image;
+    return src ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt="" className={`${cls} shrink-0 rounded-full object-cover ring-2 ring-white/20`} />
+    ) : (
+      <span
+        className={`${cls} flex shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white`}
+      >
+        {session?.user?.name?.charAt(0).toUpperCase()}
+      </span>
+    );
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/85">
-      <div className="mx-auto flex h-16 w-full max-w-[1680px] items-center gap-4 px-4 sm:px-6 lg:px-8 xl:px-10">
-        {/* Logo — plain <img>: de Next image-optimizer faalt op Railway, dus
-            net als elders in de app serveren we het statische bestand direct. */}
-        <Link href="/" className="mr-2 flex shrink-0 items-center gap-2 lg:mr-6">
+    <header className="sticky top-0 z-50 bg-slate-950/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/85">
+      <div className="mx-auto flex h-16 w-full max-w-[1680px] items-center gap-3 px-4 sm:px-6 md:h-[72px] lg:px-8 xl:px-10">
+        {/* Logo — plain <img>: de Next image-optimizer faalt op Railway. */}
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Cards Center — home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/logo-dark-mode.png"
             alt="Cards Center"
             width={160}
             height={45}
-            className="h-10 w-auto"
+            className="h-9 w-auto md:h-10"
           />
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-1 md:flex">
-          {primaryLinks.map((link) => {
-            const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-            const a = accentClasses[link.accent];
+        {/* Desktop nav — rechts uitgelijnd, direct naast de acties */}
+        <nav className="ml-auto hidden items-center gap-0.5 md:flex" aria-label="Hoofdmenu">
+          {navLinks.map((link) => {
+            const active = isActivePath(link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  isActive ? a.active : a.idle
-                }`}
-              >
-                <span className={`inline-block size-1.5 rounded-full ${a.dot}`} />
-                {link.label}
-              </Link>
-            );
-          })}
-
-          {/* Divider separating primary sections from auxiliary links */}
-          <span aria-hidden className="mx-2 h-5 w-px bg-white/15" />
-
-          {secondaryLinks.map((link) => {
-            const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-white/15 text-white"
-                    : "text-slate-300 hover:bg-white/10 hover:text-white"
-                }`}
+                aria-current={active ? "page" : undefined}
+                className={`${NAV_LINK} ${active ? "text-white after:scale-x-100" : "text-white/70"}`}
               >
                 {link.label}
               </Link>
@@ -139,266 +155,153 @@ function HeaderContent() {
           })}
         </nav>
 
-        {/* Right side — ml-auto duwt alles naar rechts; de nav neemt links de
-            ruimte. De zoekbalk is een loep-icoon dat naar links openklapt. */}
-        <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-1.5">
-          {/* Zoeken: loep-icoon dat over de nav heen naar links uitklapt (md+),
-              met live suggesties per categorie */}
+        {/* Acties */}
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-2 md:gap-1.5">
           <GlobalSearch variant="desktop" />
+          <span className="hidden md:block">
+            <ThemeIconButton />
+          </span>
 
           {session?.user ? (
             <>
-              {/* Saldo — ALTIJD zichtbaar (mobile + desktop). Click-popover
-                  toont beschikbaar/vastgehouden/totaal saldo. */}
+              {/* Saldo — altijd zichtbaar (mobiel + desktop) */}
               <UserBalance />
 
-              {/* Desktop-only iconen: notifications, admin, messages */}
-              <div className="hidden items-center gap-1 md:flex md:gap-1.5">
+              {/* Desktop-only iconen */}
+              <div className="hidden items-center gap-1.5 md:flex">
                 <NotificationBell />
                 <AdminShield />
                 <MessageIcon />
               </div>
 
-              {/* Winkelwagen — ALTIJD zichtbaar (mobile + desktop) */}
               <CartIcon />
 
-              {/* Dashboard / Avatar — desktop-only (mobile heeft 'm in menu) */}
+              {/* Avatar-pil → dashboard (desktop) */}
               <Link
                 href="/dashboard"
-                className="ml-1 hidden shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/20 md:flex"
+                className={`${HEADER_PILL_GHOST} hidden pl-1 pr-3.5 md:inline-flex`}
+                title={t("dashboard")}
               >
-                {(avatarOverride || session.user.image) ? (
-                  <img
-                    src={avatarOverride || session.user.image!}
-                    alt=""
-                    className="h-6 w-6 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
-                    {session.user.name?.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                {avatar("md")}
                 <span className="max-w-[120px] truncate">{session.user.name}</span>
               </Link>
             </>
           ) : (
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="hidden items-center gap-1.5 md:flex">
               <Link
                 href="/login"
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-full px-4 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {t("login")}
               </Link>
-              <Link
-                href="/register"
-                className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-              >
+              <Link href="/register" className={HEADER_PILL_LIGHT}>
                 {t("register")}
               </Link>
             </div>
           )}
 
-          {/* Mobile menu button */}
+          {/* Mobiel: menu-knop */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 md:hidden"
+            className={`${HEADER_ICON_BTN} md:hidden`}
             aria-label="Menu"
+            aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
+            {mobileMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobiel menu — full-height overlay onder de balk */}
       {mobileMenuOpen && (
-        <div className="border-t border-white/10 bg-slate-950 px-4 pb-5 pt-3 md:hidden">
-          {/* Mobile search met live suggesties */}
+        <div className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-white/[0.06] bg-slate-950 px-4 pb-6 pt-3 md:hidden">
           <GlobalSearch variant="mobile" onNavigate={() => setMobileMenuOpen(false)} />
 
           {session?.user ? (
             <>
-              {/* QUICK ACTIONS — Berichten + Meldingen icons (met unread-badge)
-                  links, Dashboard-pill rechts. Tap navigeert direct, geen
-                  popover (popovers worden door header-bell/icon op desktop
-                  afgehandeld). */}
+              {/* Quick-actions: berichten + meldingen (met badge) en dashboard */}
               <div className="mt-3 flex items-center gap-2">
                 <Link
                   href="/berichten"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-label={`${t("messages")}${unreadMessages > 0 ? ` (${unreadMessages})` : ""}`}
-                  className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition-colors hover:bg-white/15"
+                  className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/85 transition-colors hover:bg-white/15"
                 >
                   <MessageCircle className="size-5" />
                   {unreadMessages > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white ring-2 ring-slate-950">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white ring-2 ring-slate-950">
                       {unreadMessages > 9 ? "9+" : unreadMessages}
                     </span>
                   )}
                 </Link>
-
                 <Link
                   href="/dashboard/meldingen"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-label={`${tn("title")}${unreadNotifs > 0 ? ` (${unreadNotifs})` : ""}`}
-                  className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-slate-200 transition-colors hover:bg-white/15"
+                  className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/85 transition-colors hover:bg-white/15"
                 >
                   <Bell className="size-5" />
                   {unreadNotifs > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-950">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-950">
                       {unreadNotifs > 9 ? "9+" : unreadNotifs}
                     </span>
                   )}
                 </Link>
-
                 <Link
                   href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="ml-auto flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-hover px-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40"
+                  className="ml-auto flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-white pl-1.5 pr-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-slate-200"
                 >
-                  {(avatarOverride || session.user.image) ? (
-                    <img
-                      src={avatarOverride || session.user.image!}
-                      alt=""
-                      className="h-7 w-7 shrink-0 rounded-full object-cover ring-2 ring-white/30"
-                    />
-                  ) : (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-                      {session.user.name?.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  {avatar("sm")}
                   <span className="min-w-0 flex-1 truncate">{t("dashboard")}</span>
-                  <ChevronRight className="size-4 shrink-0 opacity-80" />
-                </Link>
-              </div>
-
-              {/* Section label */}
-              <p className="mt-5 mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Categorieën
-              </p>
-
-              {/* Primary nav cards — gekleurde bolletjes + active-state highlight */}
-              <nav className="space-y-1">
-                {primaryLinks.map((link) => {
-                  const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-                  const a = accentClasses[link.accent];
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`group/menu flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors ${
-                        isActive ? a.active : a.idle
-                      }`}
-                    >
-                      <span
-                        className={`relative inline-flex size-2.5 shrink-0 rounded-full ${a.dot}`}
-                        aria-hidden
-                      >
-                        {isActive && (
-                          <span className={`absolute inset-0 animate-ping rounded-full ${a.dot} opacity-60`} />
-                        )}
-                      </span>
-                      <span className="flex-1">{link.label}</span>
-                      <ChevronRight className="size-4 opacity-40 transition-opacity group-hover/menu:opacity-70" />
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              {/* Secondary — Kaarten en eventuele extra */}
-              {secondaryLinks.length > 0 && (
-                <>
-                  <p className="mt-5 mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Overig
-                  </p>
-                  <nav className="space-y-1">
-                    {secondaryLinks.map((link) => {
-                      const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-                      return (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors ${
-                            isActive
-                              ? "bg-white/15 text-white"
-                              : "text-slate-300 hover:bg-white/10 hover:text-white"
-                          }`}
-                        >
-                          <span className="flex-1">{link.label}</span>
-                          <ChevronRight className="size-4 opacity-40" />
-                        </Link>
-                      );
-                    })}
-                  </nav>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {/* Logged-out: primary + secondary nav, dan login/register-knoppen */}
-              <p className="mt-4 mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Categorieën
-              </p>
-              <nav className="space-y-1">
-                {primaryLinks.map((link) => {
-                  const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-                  const a = accentClasses[link.accent];
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors ${
-                        isActive ? a.active : a.idle
-                      }`}
-                    >
-                      <span className={`inline-block size-2.5 shrink-0 rounded-full ${a.dot}`} />
-                      <span className="flex-1">{link.label}</span>
-                      <ChevronRight className="size-4 opacity-40" />
-                    </Link>
-                  );
-                })}
-                {secondaryLinks.map((link) => {
-                  const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors ${
-                        isActive
-                          ? "bg-white/15 text-white"
-                          : "text-slate-300 hover:bg-white/10 hover:text-white"
-                      }`}
-                    >
-                      <span className="flex-1">{link.label}</span>
-                      <ChevronRight className="size-4 opacity-40" />
-                    </Link>
-                  );
-                })}
-              </nav>
-              <div className="mt-5 flex gap-2 border-t border-white/10 pt-4">
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 rounded-xl border border-white/20 px-4 py-3 text-center text-sm font-medium text-slate-300 transition-colors hover:bg-white/10"
-                >
-                  {t("login")}
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex-1 rounded-xl bg-primary px-4 py-3 text-center text-sm font-medium text-white shadow-lg shadow-primary/20 transition-colors hover:bg-primary-hover"
-                >
-                  {t("register")}
+                  <ChevronRight className="size-4 shrink-0 opacity-60" />
                 </Link>
               </div>
             </>
+          ) : null}
+
+          <nav className="mt-4 space-y-0.5" aria-label="Hoofdmenu">
+            {navLinks.map((link) => {
+              const active = isActivePath(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  className={`${MOBILE_ROW} ${
+                    active ? "bg-white/10 text-white" : "text-white/75 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span className="flex-1">{link.label}</span>
+                  <ChevronRight className="size-4 opacity-40" />
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-4">
+            <span className="text-xs font-medium text-white/50">Thema</span>
+            <ThemeIconButton />
+          </div>
+
+          {!session?.user && (
+            <div className="mt-3 flex gap-2">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex h-11 flex-1 items-center justify-center rounded-full border border-white/20 text-sm font-medium text-white/85 transition-colors hover:bg-white/10"
+              >
+                {t("login")}
+              </Link>
+              <Link
+                href="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`${HEADER_PILL_LIGHT} h-11 flex-1`}
+              >
+                {t("register")}
+              </Link>
+            </div>
           )}
         </div>
       )}

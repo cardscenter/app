@@ -1,6 +1,7 @@
 "use client";
 
 import { ShoppingCart } from "lucide-react";
+import { HEADER_ICON_BTN, HEADER_BADGE } from "@/components/layout/header-styles";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { useEffect, useState } from "react";
@@ -42,12 +43,12 @@ export function CartIcon() {
   return (
     <Link
       href={`/${locale}/winkelwagen`}
-      className="relative rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+      className={HEADER_ICON_BTN}
       title="Winkelwagen"
     >
       <ShoppingCart className="h-5 w-5" />
       {count > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+        <span className={`${HEADER_BADGE} bg-primary`}>
           {count > 99 ? "99+" : count}
         </span>
       )}

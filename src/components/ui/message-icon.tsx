@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle, X } from "lucide-react";
+import { HEADER_ICON_BTN, HEADER_BADGE } from "@/components/layout/header-styles";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -133,14 +134,12 @@ export function MessageIcon() {
       <Link
         href={`/${locale}/berichten`}
         aria-label={t("messages")}
-        className={`relative block rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${
-          shaking ? "animate-bell-shake" : ""
-        }`}
+        className={`${HEADER_ICON_BTN} ${shaking ? "animate-bell-shake" : ""}`}
         title={t("messages")}
       >
         <MessageCircle className="h-5 w-5" />
         {count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          <span className={`${HEADER_BADGE} bg-red-500`}>
             {count > 99 ? "99+" : count}
           </span>
         )}

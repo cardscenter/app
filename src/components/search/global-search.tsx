@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { HEADER_ICON_BTN } from "@/components/layout/header-styles";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Search, X, BadgeCheck, ArrowRight, Gavel, Tag, Store, User as UserIcon } from "lucide-react";
@@ -428,9 +429,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t("placeholder")}
-        className={`rounded-md p-2 text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${
-          open ? "pointer-events-none opacity-0" : "opacity-100"
-        }`}
+        className={`${HEADER_ICON_BTN} ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
         <Search className="h-5 w-5" />
       </button>

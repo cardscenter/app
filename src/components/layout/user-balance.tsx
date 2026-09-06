@@ -1,6 +1,7 @@
 "use client";
 
 import { Link } from "@/i18n/navigation";
+import { HEADER_PILL_GHOST } from "./header-styles";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRealtime } from "@/components/providers/realtime-provider";
@@ -117,7 +118,7 @@ export function UserBalance() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="flex items-center gap-1.5 whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-white/20"
+        className={`${HEADER_PILL_GHOST} px-3.5`}
       >
         {/* Wallet icon */}
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
