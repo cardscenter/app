@@ -108,7 +108,7 @@ export default async function BalancePage({
         {transactions.length === 0 ? (
           <EmptyState icon={Receipt} title={t("noTransactions")} compact />
         ) : (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+          <div className="mt-4 overflow-hidden dash-card">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>

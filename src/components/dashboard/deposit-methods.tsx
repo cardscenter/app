@@ -51,7 +51,7 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
 
       {/* Bank transfer tab */}
       {activeTab === "bank" && (
-        <div className="mt-4 border border-border bg-card shadow-card rounded-2xl p-6">
+        <div className="mt-4 dash-card p-5">
           <p className="text-sm text-muted-foreground">
             {t("bankTransferInstructions")}
           </p>
@@ -138,7 +138,7 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
 
       {/* iDEAL tab */}
       {activeTab === "ideal" && (
-        <div className="mt-4 border border-border bg-card shadow-card rounded-2xl p-6">
+        <div className="mt-4 dash-card p-5">
           <div className="flex flex-col items-center py-8 text-center">
             <div className="rounded-full bg-muted p-4">
               <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">

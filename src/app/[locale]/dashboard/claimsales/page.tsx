@@ -54,7 +54,7 @@ export default async function MyClaimsalesPage({
             <Link
               key={cs.id}
               href={`/claimsales/${cs.id}`}
-              className="block rounded-2xl border border-border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover"
+              className="block dash-card p-4 shadow-card transition-colors hover:bg-muted/40"
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-medium text-foreground">{cs.title}</h3>

@@ -100,7 +100,7 @@ export function EndedAuctionRow({ auction }: EndedAuctionRowProps) {
   return (
     <Link
       href={`/veilingen/${auction.id}`}
-      className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-3 transition-colors hover:bg-muted/40"
+      className="group flex items-center gap-4 dash-card p-3 transition-colors hover:bg-muted/40"
     >
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
         {firstImage ? (

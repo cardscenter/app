@@ -74,7 +74,7 @@ export default async function VerificationPage({
         pendingDescription=""
       >
         {!status.isIbanVerified && (
-          <div className="rounded-2xl border border-border bg-card p-6 text-sm">
+          <div className="dash-card p-5 text-sm">
             {!hasIban ? (
               <>
                 <p className="text-foreground">

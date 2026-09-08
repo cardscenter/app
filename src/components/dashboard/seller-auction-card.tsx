@@ -80,7 +80,7 @@ export function SellerAuctionCard({ auction }: SellerAuctionCardProps) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+      <div className="overflow-hidden dash-card">
         {/* Top-strip: image + main info */}
         <div className="flex gap-4 p-4">
           <Link

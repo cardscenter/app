@@ -46,7 +46,7 @@ export function CancelledAuctionsSection({ auctions, perspective }: Props) {
         {auctions.map((a) => (
           <div
             key={a.id}
-            className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+            className="flex items-center gap-3 dash-card p-3"
           >
             {a.imageUrl && (
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border">

@@ -45,7 +45,7 @@ export default async function EnterpriseAanvraagPage({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <div className="dash-card p-5 shadow-card">
         <h2 className="mb-3 text-base font-semibold text-foreground">Wat krijg je?</h2>
         <ul className="space-y-2 text-sm text-foreground">
           <li>0% verkoopcommissie — alleen het vaste maandbedrag</li>

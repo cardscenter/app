@@ -35,7 +35,7 @@ export default async function DashboardReviewsPage({
       <SellerReputationCard stats={stats} />
 
       {/* Reviews received */}
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <div className="dash-card p-5 shadow-card">
         <h3 className="mb-4 text-lg font-bold text-foreground">
           {t("reviewsReceived")} ({reviews.length})
         </h3>

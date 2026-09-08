@@ -126,7 +126,7 @@ export function DisputesOverview({ disputes }: { disputes: DisputeItem[] }) {
       </div>
 
       {/* Description */}
-      <div className="border border-border bg-card shadow-card rounded-xl p-4">
+      <div className="dash-card p-4">
         <p className="text-sm text-muted-foreground">
           {activeTab === "buyer"
             ? "Geschillen die je als koper hebt geopend over bestellingen die je hebt gedaan."
@@ -136,7 +136,7 @@ export function DisputesOverview({ disputes }: { disputes: DisputeItem[] }) {
 
       {/* Dispute list */}
       {activeDisputes.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card shadow-card p-8 text-center">
+        <div className="dash-card p-6 text-center">
           <p className="text-sm text-muted-foreground">{t("noDisputes")}</p>
         </div>
       ) : (
@@ -153,7 +153,7 @@ export function DisputesOverview({ disputes }: { disputes: DisputeItem[] }) {
               <Link
                 key={dispute.id}
                 href={`/dashboard/geschillen/${dispute.id}`}
-                className={`block rounded-xl border border-border bg-card shadow-card p-4 transition-colors hover:bg-muted/30 ${
+                className={`block dash-card p-4 transition-colors hover:bg-muted/30 ${
                   isActive ? "border-l-4 border-l-amber-400 dark:border-l-amber-500" : ""
                 }`}
               >

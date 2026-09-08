@@ -278,7 +278,7 @@ function OverviewCard({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+    <div className="dash-card p-4 shadow-card">
       <div className="flex items-center gap-2 text-muted-foreground">
         {icon}
         <span className="text-xs font-medium">{label}</span>

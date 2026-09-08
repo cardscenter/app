@@ -31,7 +31,7 @@ export default async function BlockedListPage({
         backLabel="Terug naar instellingen"
       />
 
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <div className="dash-card p-5 shadow-card">
         <BlockedListContent
           rows={rows.map((r) => ({
             id: r.id,

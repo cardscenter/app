@@ -84,7 +84,7 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Revenue by type - Donut */}
         {data.revenueByType.some((d) => d.value > 0) ? (
-          <div className="border border-border bg-card shadow-card rounded-xl p-5">
+          <div className="dash-card p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("revenueByType")}</h4>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height={220}>
@@ -124,7 +124,7 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
         {/* Omzetverloop — lijn met een dot per bucket (dag/week/maand),
             zelfde stijl als de prijsgrafiek op kaart-detail (Fase 44). */}
         {data.revenueOverTime.length > 0 ? (
-          <div className="border border-border bg-card shadow-card rounded-xl p-5">
+          <div className="dash-card p-5">
             <h4 className="text-sm font-semibold text-foreground mb-4">{t("revenueOverTime")}</h4>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer width="100%" height={220}>
@@ -172,7 +172,7 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
 
       {/* Average price over time - Line */}
       {data.avgPriceOverTime.length > 1 ? (
-        <div className="border border-border bg-card shadow-card rounded-xl p-5">
+        <div className="dash-card p-5">
           <h4 className="text-sm font-semibold text-foreground mb-4">{t("avgPriceOverTime")}</h4>
           <div style={{ width: "100%", height: 192 }}>
             <ResponsiveContainer width="100%" height={192}>

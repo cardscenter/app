@@ -107,7 +107,7 @@ export function PendingAuctionPayments({
           return (
             <div
               key={auction.id}
-              className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+              className="overflow-hidden dash-card"
             >
               {/* Kop: titel + deadline */}
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-muted/30 px-4 py-3">

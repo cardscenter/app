@@ -270,7 +270,7 @@ export function PurchasesContent({
           tabs tonen de filtered bundle-list. */}
       {activeTab === "PENDING" ? (
         pendingAuctionPayments.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card shadow-card p-8 text-center">
+          <div className="dash-card p-6 text-center">
             <p className="text-sm text-muted-foreground">{t("noPurchases")}</p>
           </div>
         ) : (
@@ -287,7 +287,7 @@ export function PurchasesContent({
           />
         )
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card shadow-card p-8 text-center">
+        <div className="dash-card p-6 text-center">
           <p className="text-sm text-muted-foreground">{t("noPurchases")}</p>
         </div>
       ) : (
@@ -369,7 +369,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
       : t("noShippingMethod");
 
   return (
-    <div className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
+    <div className="dash-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-3 min-w-0">

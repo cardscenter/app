@@ -105,7 +105,7 @@ export default async function WatchlistPage({
               <Link
                 key={item.id}
                 href={href}
-                className={`flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover ${
+                className={`flex items-center justify-between dash-card p-4 shadow-card transition-colors hover:bg-muted/40 ${
                   notBuyable ? "opacity-70" : ""
                 }`}
               >

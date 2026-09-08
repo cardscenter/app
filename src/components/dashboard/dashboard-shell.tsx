@@ -38,6 +38,7 @@ export function DashboardShell({ nav, children }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    const openButton = openButtonRef.current;
     closeButtonRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -47,7 +48,7 @@ export function DashboardShell({ nav, children }: Props) {
       window.removeEventListener("keydown", onKey);
       if (openedViaButtonRef.current) {
         openedViaButtonRef.current = false;
-        openButtonRef.current?.focus();
+        openButton?.focus();
       }
     };
   }, [open]);

@@ -89,7 +89,7 @@ export default async function PendingFeesPage({
                 {settled.map((fee) => (
                   <div
                     key={fee.id}
-                    className="rounded-xl border border-border bg-card p-4 opacity-70"
+                    className="dash-card p-4 opacity-70"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>

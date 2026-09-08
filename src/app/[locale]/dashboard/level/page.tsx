@@ -197,7 +197,7 @@ export default async function DashboardLevelPage({
             return (
               <div
                 key={source.key}
-                className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-card"
+                className="flex flex-col dash-card p-5 shadow-card"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">

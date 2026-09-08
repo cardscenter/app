@@ -45,7 +45,7 @@ export function ShippingMethodsManager({ methods, availableCarriers, hasCountry,
 
   if (!hasCountry) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-center">
+      <div className="dash-card p-5 text-center">
         <p className="text-sm text-muted-foreground">{t("noCountrySetMessage")}</p>
         <a href="/dashboard/profiel" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
           {t("noCountrySetCta")}
@@ -56,7 +56,7 @@ export function ShippingMethodsManager({ methods, availableCarriers, hasCountry,
 
   if (methods.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+      <div className="dash-card p-5 text-center text-sm text-muted-foreground">
         {t("noMethodsAvailable")}
       </div>
     );
