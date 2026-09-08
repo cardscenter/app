@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
+import { NAV_ROW, NAV_ROW_ACTIVE, NAV_ROW_IDLE, NAV_ICON_IDLE, NAV_GROUP_LABEL } from "@/components/dashboard/nav-styles";
 import {
   LayoutDashboard,
   Scale,
@@ -17,8 +17,6 @@ import {
   Settings,
   Activity,
   History,
-  Menu,
-  X,
   Shield,
   ArrowLeft,
   AlertTriangle,
@@ -26,6 +24,11 @@ import {
   Truck,
   CalendarDays,
 } from "lucide-react";
+
+// Admin-sidebar in dezelfde donkere aside als de gebruikers-nav (zie
+// dashboard-shell.tsx): gedeelde rij-stijlen uit nav-styles.ts, geen eigen
+// kaart-achtergrond en geen eigen mobiele toggle meer (de drawer regelt dat).
+// Volledige admin-restyle volgt later; dit is de compat-pass.
 
 type Section = {
   label: string;
@@ -51,7 +54,6 @@ export function AdminNav({
 }) {
   const t = useTranslations("admin");
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const sections: Section[] = [
     {
@@ -100,51 +102,40 @@ export function AdminNav({
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  const allItems = sections.flatMap((s) => s.items);
-  const activeItem = allItems.find((i) => isActive(i.href)) ?? allItems[0];
-  const ActiveIcon = activeItem.icon;
-
   const navLinks = sections.map((section) => (
     <div key={section.label}>
-      <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-        {t(section.label)}
-      </p>
-      {section.items.map((item) => {
-        const active = isActive(item.href);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-              active
-                ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            <span className="flex items-center gap-2.5 min-w-0">
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t(item.labelKey)}</span>
-            </span>
-            {item.badge != null && item.badge > 0 && (
-              <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500/15 px-1.5 text-[11px] font-semibold text-red-600 dark:text-red-400">
-                {item.badge}
-              </span>
-            )}
-          </Link>
-        );
-      })}
+      <p className={NAV_GROUP_LABEL}>{t(section.label)}</p>
+      <div className="space-y-0.5">
+        {section.items.map((item) => {
+          const active = isActive(item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={`${NAV_ROW} ${active ? NAV_ROW_ACTIVE : NAV_ROW_IDLE}`}
+            >
+              <Icon className={`size-4 shrink-0 ${active ? "" : NAV_ICON_IDLE}`} />
+              <span className="flex-1 truncate">{t(item.labelKey)}</span>
+              {item.badge != null && item.badge > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-red-500/20 px-1.5 text-[11px] font-semibold text-red-300">
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   ));
 
   const personalDashboardLink = (
     <Link
       href="/dashboard"
-      onClick={() => setMobileOpen(false)}
-      className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-muted"
+      className={`${NAV_ROW} w-full justify-center border border-sidebar-border bg-white/5 text-sidebar-foreground hover:bg-white/10 hover:text-white`}
     >
-      <ArrowLeft className="h-4 w-4 shrink-0" />
+      <ArrowLeft className="size-4 shrink-0" />
       {t("switchToUserDashboard")}
     </Link>
   );
@@ -152,52 +143,23 @@ export function AdminNav({
   const adminBadge = (
     <Link
       href="/dashboard/admin"
-      className="block rounded-xl border border-amber-300/50 bg-gradient-to-br from-amber-50 to-amber-100 p-3 dark:border-amber-700/40 dark:from-amber-950/40 dark:to-amber-900/30"
+      className="block rounded-md border border-amber-400/30 bg-amber-400/10 p-2.5 transition-colors hover:bg-amber-400/15"
     >
       <div className="flex items-center gap-2">
-        <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        <Shield className="size-5 shrink-0 text-amber-300" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-amber-700/80 dark:text-amber-300/80">{t("modeLabel")}</p>
-          <p className="text-sm font-bold text-amber-900 dark:text-amber-100 truncate">{t("panelTitle")}</p>
+          <p className="text-[11px] font-medium text-amber-300/80">{t("modeLabel")}</p>
+          <p className="truncate text-[13px] font-bold text-amber-100">{t("panelTitle")}</p>
         </div>
       </div>
     </Link>
   );
 
   return (
-    <>
-      {/* Mobile: compact bar + expandable menu */}
-      <div className="md:hidden">
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="glass-nav flex w-full items-center justify-between rounded-xl px-4 py-3"
-        >
-          <div className="flex items-center gap-2.5">
-            <ActiveIcon className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">{t(activeItem.labelKey)}</span>
-          </div>
-          {mobileOpen ? <X className="h-5 w-5 text-muted-foreground" /> : <Menu className="h-5 w-5 text-muted-foreground" />}
-        </button>
-
-        {mobileOpen && (
-          <>
-            <div className="glass-nav mt-2 rounded-xl p-2 space-y-1">
-              <div className="mb-2">{adminBadge}</div>
-              {navLinks}
-            </div>
-            <div className="mt-3">{personalDashboardLink}</div>
-          </>
-        )}
-      </div>
-
-      {/* Desktop sidebar */}
-      <div className="hidden md:block">
-        <nav className="glass-nav rounded-xl p-2 space-y-0.5">
-          <div className="mb-2">{adminBadge}</div>
-          {navLinks}
-        </nav>
-        <div className="mt-3">{personalDashboardLink}</div>
-      </div>
-    </>
+    <nav className="flex flex-1 flex-col gap-4 px-3 py-4">
+      {adminBadge}
+      {navLinks}
+      <div className="mt-auto border-t border-sidebar-border pt-3">{personalDashboardLink}</div>
+    </nav>
   );
 }

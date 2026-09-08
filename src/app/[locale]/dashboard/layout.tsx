@@ -2,8 +2,10 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getSellerStats } from "@/actions/review";
 import { fetchActiveActivity } from "@/lib/dashboard-queries";
+import { getUnreadConversationCountFor, getUnreadNotificationCountFor } from "@/lib/unread-counts";
 import { getLevel, getNextLevel, getLevelProgress } from "@/lib/seller-levels";
 import { isUserSuspended } from "@/lib/suspension";
 import { SuspensionBanner } from "@/components/dashboard/suspension-banner";
@@ -39,9 +41,11 @@ export default async function DashboardLayout({
 
   const suspended = user ? isUserSuspended(user) : false;
 
-  const [stats, activity] = await Promise.all([
+  const [stats, activity, unreadMessages, unreadNotifications] = await Promise.all([
     getSellerStats(session.user.id!),
     fetchActiveActivity(session.user.id!),
+    getUnreadConversationCountFor(session.user.id!),
+    getUnreadNotificationCountFor(session.user.id!),
   ]);
   const xp = stats?.xp ?? 0;
   const currentLevel = getLevel(xp);
@@ -49,12 +53,11 @@ export default async function DashboardLayout({
   const progress = getLevelProgress(xp);
 
   return (
-    // Twee kolommen zoals de fintech-referentie: sidebar-kolom met eigen
-    // achtergrond (bg-card + rechterrand, strekt mee over de volle hoogte),
-    // content rechts op bg-background. Max 1880px zoals de rest van de site.
-    <div className="mx-auto flex w-full max-w-[1880px] flex-col md:flex-row">
-      <RealtimePageRefresh events={["suspension-changed"]} />
-      <aside className="w-full shrink-0 border-border bg-card px-4 py-4 md:w-[260px] md:border-r md:py-6">
+    // TailAdmin-stijl (sept 2026): DashboardShell rendert de donkere navy
+    // sidebar (sticky kolom op md+, off-canvas drawer op mobiel) en de lichte
+    // content-kolom. Max 1880px zoals de rest van de site.
+    <DashboardShell
+      nav={
         <DashboardNav
           accountType={user?.accountType}
           user={
@@ -72,19 +75,20 @@ export default async function DashboardLayout({
             nextLevelName: nextLevel?.name ?? null,
           }}
           counts={activity.counts}
+          unread={{ messages: unreadMessages, notifications: unreadNotifications }}
         />
-      </aside>
-      <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 md:py-8 lg:px-8">
-        {suspended && user && (
-          <SuspensionBanner
-            type={user.suspensionType ?? "TEMPORARY"}
-            until={user.suspendedUntil?.toISOString() ?? null}
-            reason={user.suspensionReason}
-          />
-        )}
-        {user && !user.emailVerifiedAt && <EmailVerificationBanner />}
-        {children}
-      </div>
-    </div>
+      }
+    >
+      <RealtimePageRefresh events={["suspension-changed"]} />
+      {suspended && user && (
+        <SuspensionBanner
+          type={user.suspensionType ?? "TEMPORARY"}
+          until={user.suspendedUntil?.toISOString() ?? null}
+          reason={user.suspensionReason}
+        />
+      )}
+      {user && !user.emailVerifiedAt && <EmailVerificationBanner />}
+      {children}
+    </DashboardShell>
   );
 }

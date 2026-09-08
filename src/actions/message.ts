@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { publish, userChannel } from "@/lib/realtime";
+import { getUnreadConversationCountFor } from "@/lib/unread-counts";
 
 export async function startConversation(recipientId: string, auctionId?: string, claimsaleId?: string, listingId?: string) {
   const session = await auth();
@@ -171,31 +172,8 @@ export async function publishNewMessageForConversation(
   }
 }
 
-// Helper: hoeveel conversaties hebben unread berichten voor deze user.
-// Telt elke conversatie max 1 keer (niet per bericht) — match wat het
-// message-icon in de header laat zien.
-async function getUnreadConversationCountFor(userId: string): Promise<number> {
-  const participations = await prisma.conversationParticipant.findMany({
-    where: { userId, status: { not: "DELETED" } },
-    select: { conversationId: true, lastReadAt: true },
-  });
-  if (participations.length === 0) return 0;
-
-  let unreadCount = 0;
-  for (const p of participations) {
-    const hasUnread = await prisma.message.findFirst({
-      where: {
-        conversationId: p.conversationId,
-        senderId: { not: userId },
-        ...(p.lastReadAt ? { createdAt: { gt: p.lastReadAt } } : {}),
-      },
-      select: { id: true },
-    });
-    if (hasUnread) unreadCount++;
-  }
-  return unreadCount;
-}
-
+// De per-userId teller staat in src/lib/unread-counts.ts (gedeeld met de
+// dashboard-layout voor de sidebar-badge).
 export async function getUnreadConversationCount(): Promise<number> {
   const session = await auth();
   if (!session?.user?.id) return 0;
