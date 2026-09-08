@@ -52,15 +52,16 @@
   --chart-4: #f59e0b;
   --chart-5: #64748b;
 
-  /* Sidebar — net iets witter dan bg, contrast met content */
-  --sidebar: #fafbfc;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #2563eb;
+  /* Sidebar — dashboard-sidebar in TailAdmin-navy, bewust identiek in light
+     én dark (de aside draagt zelf class="dark"; zie dashboard-shell.tsx) */
+  --sidebar: #1c2434;
+  --sidebar-foreground: #dee4ee;
+  --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e8eaee;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e1e4ea;
-  --sidebar-ring: #2563eb;
+  --sidebar-accent: #333a48;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2e3a47;
+  --sidebar-ring: #3b82f6;
 
   /* Card-elevation shadows (Fase 26) */
   --shadow-card:       0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.05);
@@ -111,14 +112,14 @@
   --chart-4: #fbbf24;
   --chart-5: #94a3b8;
 
-  /* Sidebar */
-  --sidebar: #0f172a;
-  --sidebar-foreground: #f1f5f9;
+  /* Sidebar — zelfde navy als light (zie :root) */
+  --sidebar: #1c2434;
+  --sidebar-foreground: #dee4ee;
   --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #334155;
+  --sidebar-accent: #333a48;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2e3a47;
   --sidebar-ring: #3b82f6;
 
   /* Card-elevation shadows — diepere variant voor dark-mode */
@@ -197,6 +198,8 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Dashboard-kaarten (TailAdmin-stijl): vaste 6px, los van --radius → rounded-dash */
+  --radius-dash: 0.375rem;
 
   /* Shadows (Fase 26 — card-elevation tokens) */
   --shadow-card: var(--shadow-card);
@@ -355,6 +358,19 @@ body {
        Next's scrollIntoView de content niet achter de header verstoppen. */
     scroll-padding-top: 5rem;
   }
+}
+
+/* ── Dashboard-kaart (TailAdmin-stijl, sept 2026) ──
+   Dé kaart voor /dashboard/*: vlak, 6px radius, 1px rand, nauwelijks schaduw.
+   Eén bron zodat radius/schaduw later in één regel te tunen zijn. */
+@utility dash-card {
+  border-radius: var(--radius-dash);
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.03);
+}
+.dark .dash-card {
+  box-shadow: none;
 }
 
 /* ── Card / Panel Styling ──
