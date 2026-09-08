@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Flag, Check, EyeOff, ExternalLink } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { reviewEventReport } from "@/actions/admin/events";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 
 const REASON_LABELS: Record<string, string> = {
   MISLEADING: "Misleidend",
@@ -33,9 +35,7 @@ interface ReportRow {
 export function AdminEventReportsList({ reports }: { reports: ReportRow[] }) {
   if (reports.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-        Geen openstaande meldingen.
-      </div>
+      <EmptyState icon={Flag} title="Geen openstaande meldingen." compact />
     );
   }
 
@@ -61,11 +61,9 @@ function ReportCard({ report }: { report: ReportRow }) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+    <div className="dash-card p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-          <Flag className="h-3 w-3" /> {REASON_LABELS[report.reason] ?? report.reason}
-        </span>
+        <StatusBadge tone="danger" icon={Flag}>{REASON_LABELS[report.reason] ?? report.reason}</StatusBadge>
         <Link href={`/evenementen/${report.event.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-foreground hover:text-primary">
           {report.event.title} <ExternalLink className="h-3 w-3" />
         </Link>
@@ -85,21 +83,21 @@ function ReportCard({ report }: { report: ReportRow }) {
         onChange={(e) => setNote(e.target.value)}
         placeholder="Interne notitie (optioneel)…"
         rows={1}
-        className="mt-3 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+        className="mt-3 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
       />
 
       <div className="mt-2 flex flex-wrap gap-2">
         <button
           onClick={() => handle("DISMISS")}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:opacity-50"
         >
           <Check className="h-4 w-4" /> Afwijzen (geen actie)
         </button>
         <button
           onClick={() => handle("ACTION_TAKEN")}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
         >
           <EyeOff className="h-4 w-4" /> Evenement verbergen
         </button>

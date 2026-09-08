@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { upsertAppConfig, deleteAppConfig } from "@/actions/admin/app-config";
-import { Save, Trash2, Edit2, X, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Save, Trash2, Edit2, X, Plus, AlertCircle, CheckCircle2, Settings2 } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 
 type Entry = { key: string; value: string; updatedAt: string };
 
@@ -18,7 +19,7 @@ export function AppConfigEditor({ entries }: { entries: Entry[] }) {
         {!creating && (
           <button
             onClick={() => setCreating(true)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
           >
             <Plus className="h-4 w-4" /> Nieuwe key
           </button>
@@ -34,9 +35,7 @@ export function AppConfigEditor({ entries }: { entries: Entry[] }) {
 
       <div className="space-y-2">
         {entries.length === 0 && !creating && (
-          <p className="rounded-xl border border-dashed border-border bg-muted p-8 text-center text-sm text-muted-foreground">
-            Nog geen AppConfig-records.
-          </p>
+          <EmptyState icon={Settings2} title="Nog geen AppConfig-records." compact />
         )}
         {entries.map((e) => (
           <ConfigRow key={e.key} entry={e} />
@@ -72,7 +71,7 @@ function ConfigRow({ entry }: { entry: Entry }) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+    <div className="dash-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <code className="rounded bg-muted px-2 py-0.5 text-sm font-semibold">{entry.key}</code>
@@ -161,7 +160,7 @@ function ConfigForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border-2 border-primary/30 bg-card p-4 shadow-card">
+    <form onSubmit={submit} className="space-y-3 dash-card border-primary/40 p-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{mode === "create" ? "Nieuwe AppConfig key" : `Bewerken: ${entry?.key}`}</h3>
         <button type="button" onClick={onClose} className="rounded-md p-1 hover:bg-muted">
@@ -217,7 +216,7 @@ function ConfigForm({
         <button
           type="submit"
           disabled={pending || !validationStatus.ok}
-          className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {pending ? "Opslaan…" : "Opslaan"}

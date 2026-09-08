@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AdminBuybackList } from "@/components/buyback/admin-buyback-list";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function AdminBuybackPage() {
   const t = await getTranslations("buyback");
@@ -15,8 +16,8 @@ export default async function AdminBuybackPage() {
   });
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">{t("adminTitle")}</h1>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("adminTitle")} />
       <AdminBuybackList requests={JSON.parse(JSON.stringify(requests))} />
     </div>
   );

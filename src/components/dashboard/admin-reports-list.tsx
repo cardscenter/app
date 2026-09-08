@@ -7,6 +7,16 @@ import { ExternalLink, Flag, AlertOctagon } from "lucide-react";
 import { toast } from "sonner";
 import { reviewReport } from "@/actions/block-report";
 import { suspendUser, liftSuspension } from "@/actions/admin-suspension";
+import { DashboardSection } from "@/components/dashboard/ui/section";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
+
+const REPORT_STATUS_TONE: Record<string, StatusTone> = {
+  OPEN: "warning",
+  REVIEWING: "info",
+  ACTION_TAKEN: "success",
+  DISMISSED: "neutral",
+};
 
 interface Report {
   id: string;
@@ -34,11 +44,11 @@ export function AdminReportsList({ groups }: { groups: Group[] }) {
   const t = useTranslations("blockReport");
 
   if (groups.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t("noReports")}</p>;
+    return <EmptyState icon={Flag} title={t("noReports")} compact />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {groups.map((group) => (
         <ReportedUserGroup key={group.reportedId} group={group} />
       ))}
@@ -48,30 +58,21 @@ export function AdminReportsList({ groups }: { groups: Group[] }) {
 
 function ReportedUserGroup({ group }: { group: Group }) {
   const t = useTranslations("blockReport");
+  const [showSuspendForm, setShowSuspendForm] = useState(false);
 
   return (
-    <section className="glass rounded-xl p-5">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">
-            <Flag className="inline h-4 w-4 mr-1" />
-            {group.reportedName}
-            <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
-              {group.reportedAccountType}
-            </span>
-            {group.reportedSuspended && (
-              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-400">
-                <AlertOctagon className="h-3 w-3" />
-                {t("suspended")}
-              </span>
-            )}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {t("totalReports", { count: group.reports.length })} —{" "}
-            {t("openReports", { count: group.openCount })}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <DashboardSection
+      title={group.reportedName}
+      icon={<Flag className="h-4 w-4" />}
+      description={`${t("totalReports", { count: group.reports.length })} — ${t("openReports", { count: group.openCount })}`}
+      action={
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <StatusBadge tone="neutral">{group.reportedAccountType}</StatusBadge>
+          {group.reportedSuspended && (
+            <StatusBadge tone="danger" icon={AlertOctagon}>
+              {t("suspended")}
+            </StatusBadge>
+          )}
           <a
             href={`/nl/verkoper/${group.reportedId}`}
             className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
@@ -81,57 +82,43 @@ function ReportedUserGroup({ group }: { group: Group }) {
           </a>
           <SuspendUserActions
             targetId={group.reportedId}
-            targetName={group.reportedName}
             isSuspended={group.reportedSuspended}
+            formOpen={showSuspendForm}
+            onToggleForm={() => setShowSuspendForm((s) => !s)}
           />
         </div>
-      </div>
-
-      <div className="space-y-3">
-        {group.reports.map((r) => (
-          <ReportRow key={r.id} report={r} />
-        ))}
-      </div>
-    </section>
+      }
+      contentClassName="space-y-3 p-4"
+    >
+      {showSuspendForm && !group.reportedSuspended && (
+        <SuspendUserForm
+          targetId={group.reportedId}
+          targetName={group.reportedName}
+          onClose={() => setShowSuspendForm(false)}
+        />
+      )}
+      {group.reports.map((r) => (
+        <ReportRow key={r.id} report={r} />
+      ))}
+    </DashboardSection>
   );
 }
 
+/** Header-knop: opschorting opheffen (isSuspended) of het opschort-formulier togglen. */
 function SuspendUserActions({
   targetId,
-  targetName,
   isSuspended,
+  formOpen,
+  onToggleForm,
 }: {
   targetId: string;
-  targetName: string;
   isSuspended: boolean;
+  formOpen: boolean;
+  onToggleForm: () => void;
 }) {
   const t = useTranslations("blockReport");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [showForm, setShowForm] = useState(false);
-  const [type, setType] = useState<"TEMPORARY" | "PERMANENT">("TEMPORARY");
-  const [days, setDays] = useState("7");
-  const [reason, setReason] = useState("");
-
-  function handleSuspend(e: React.FormEvent) {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.set("type", type);
-    formData.set("reason", reason);
-    if (type === "TEMPORARY") formData.set("days", days);
-
-    startTransition(async () => {
-      const result = await suspendUser(targetId, formData);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(t("suspendSuccess", { name: targetName }));
-      setShowForm(false);
-      setReason("");
-      router.refresh();
-    });
-  }
 
   function handleLift() {
     if (!confirm(t("confirmLift"))) return;
@@ -151,7 +138,7 @@ function SuspendUserActions({
       <button
         onClick={handleLift}
         disabled={pending}
-        className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+        className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
       >
         {t("liftSuspension")}
       </button>
@@ -159,79 +146,117 @@ function SuspendUserActions({
   }
 
   return (
-    <>
-      <button
-        onClick={() => setShowForm((s) => !s)}
-        disabled={pending}
-        className="rounded-lg border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
-      >
-        {t("suspendUser")}
-      </button>
-      {showForm && (
-        <form
-          onSubmit={handleSuspend}
-          className="mt-3 w-full space-y-2 rounded-lg border border-red-300 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-950/30"
-        >
-          <div className="flex flex-wrap gap-2 text-xs">
-            <label className="inline-flex items-center gap-1">
-              <input
-                type="radio"
-                checked={type === "TEMPORARY"}
-                onChange={() => setType("TEMPORARY")}
-              />
-              {t("temporary")}
-            </label>
-            <label className="inline-flex items-center gap-1">
-              <input
-                type="radio"
-                checked={type === "PERMANENT"}
-                onChange={() => setType("PERMANENT")}
-              />
-              {t("permanent")}
-            </label>
-          </div>
-          {type === "TEMPORARY" && (
-            <div className="flex items-center gap-2 text-xs">
-              <label htmlFor={`days-${targetId}`}>{t("days")}:</label>
-              <input
-                id={`days-${targetId}`}
-                type="number"
-                min={1}
-                max={365}
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
-                className="w-20 glass-input px-2 py-1 text-foreground"
-              />
-            </div>
-          )}
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={2}
-            placeholder={t("suspendReasonPlaceholder")}
-            className="block w-full glass-input px-2 py-1.5 text-sm text-foreground"
-            required
+    <button
+      onClick={onToggleForm}
+      disabled={pending}
+      aria-expanded={formOpen}
+      className="rounded-md border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
+    >
+      {t("suspendUser")}
+    </button>
+  );
+}
+
+/** Opschort-formulier — gerenderd in de kaart-body (niet in de header-slot) zodat het volle breedte krijgt. */
+function SuspendUserForm({
+  targetId,
+  targetName,
+  onClose,
+}: {
+  targetId: string;
+  targetName: string;
+  onClose: () => void;
+}) {
+  const t = useTranslations("blockReport");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [type, setType] = useState<"TEMPORARY" | "PERMANENT">("TEMPORARY");
+  const [days, setDays] = useState("7");
+  const [reason, setReason] = useState("");
+
+  function handleSuspend(e: React.FormEvent) {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.set("type", type);
+    formData.set("reason", reason);
+    if (type === "TEMPORARY") formData.set("days", days);
+
+    startTransition(async () => {
+      const result = await suspendUser(targetId, formData);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t("suspendSuccess", { name: targetName }));
+      setReason("");
+      onClose();
+      router.refresh();
+    });
+  }
+
+  return (
+    <form
+      onSubmit={handleSuspend}
+      className="space-y-2 rounded-md border border-red-300 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-950/30"
+    >
+      <div className="flex flex-wrap gap-2 text-xs">
+        <label className="inline-flex items-center gap-1">
+          <input
+            type="radio"
+            checked={type === "TEMPORARY"}
+            onChange={() => setType("TEMPORARY")}
           />
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={pending || reason.trim().length < 5}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-            >
-              {pending ? "..." : t("confirmSuspend")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              disabled={pending}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
-            >
-              {t("cancel")}
-            </button>
-          </div>
-        </form>
+          {t("temporary")}
+        </label>
+        <label className="inline-flex items-center gap-1">
+          <input
+            type="radio"
+            checked={type === "PERMANENT"}
+            onChange={() => setType("PERMANENT")}
+          />
+          {t("permanent")}
+        </label>
+      </div>
+      {type === "TEMPORARY" && (
+        <div className="flex items-center gap-2 text-xs">
+          <label htmlFor={`days-${targetId}`}>{t("days")}:</label>
+          <input
+            id={`days-${targetId}`}
+            type="number"
+            min={1}
+            max={365}
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+            className="w-20 glass-input px-2 py-1 text-foreground"
+          />
+        </div>
       )}
-    </>
+      <textarea
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        rows={2}
+        placeholder={t("suspendReasonPlaceholder")}
+        className="block w-full glass-input px-2 py-1.5 text-sm text-foreground"
+        required
+      />
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={pending || reason.trim().length < 5}
+          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+        >
+          {pending ? "..." : t("confirmSuspend")}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={pending}
+          className="rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+        >
+          {t("cancel")}
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -259,26 +284,14 @@ function ReportRow({ report }: { report: Report }) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-muted p-3 text-sm">
+    <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-400">
-              {t(`reason.${report.reason}` as never)}
-            </span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                report.status === "OPEN"
-                  ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400"
-                  : report.status === "REVIEWING"
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
-                    : report.status === "ACTION_TAKEN"
-                      ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
-                      : "bg-muted text-muted-foreground"
-              }`}
-            >
+            <StatusBadge tone="danger">{t(`reason.${report.reason}` as never)}</StatusBadge>
+            <StatusBadge tone={REPORT_STATUS_TONE[report.status] ?? "neutral"}>
               {t(`status.${report.status}` as never)}
-            </span>
+            </StatusBadge>
             <span className="text-xs text-muted-foreground">
               {t("byReporter", { name: report.reporterName })} —{" "}
               {new Date(report.createdAt).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}
@@ -323,21 +336,21 @@ function ReportRow({ report }: { report: Report }) {
             <button
               onClick={() => setShowNote((s) => !s)}
               disabled={pending}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               {showNote ? t("hideNote") : t("addNote")}
             </button>
             <button
               onClick={() => handleAction("ACTION_TAKEN")}
               disabled={pending}
-              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
             >
               {t("markActionTaken")}
             </button>
             <button
               onClick={() => handleAction("DISMISS")}
               disabled={pending}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               {t("dismissReport")}
             </button>

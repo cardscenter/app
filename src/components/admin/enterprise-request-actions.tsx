@@ -52,7 +52,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
         <button
           type="button"
           onClick={() => setMode("approve")}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+          className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
           <Check className="h-4 w-4" />
           Goedkeuren
@@ -60,7 +60,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
         <button
           type="button"
           onClick={() => setMode("reject")}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500 bg-rose-500/5 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+          className="inline-flex items-center gap-1.5 rounded-md border border-rose-500 bg-rose-500/5 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
         >
           <X className="h-4 w-4" />
           Afwijzen
@@ -71,7 +71,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
 
   if (mode === "approve") {
     return (
-      <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
+      <div className="space-y-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4">
         <h4 className="text-sm font-semibold text-foreground">Goedkeuren</h4>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -82,7 +82,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
               step={1}
               value={monthlyPrice}
               onChange={(e) => setMonthlyPrice(parseInt(e.target.value) || 0)}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+              className="mt-1 w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm"
             />
           </div>
           <div>
@@ -90,7 +90,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
             <select
               value={billingCycle}
               onChange={(e) => setBillingCycle(e.target.value as "MONTHLY" | "YEARLY")}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+              className="mt-1 w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm"
             >
               <option value="MONTHLY">Maandelijks</option>
               <option value="YEARLY">Jaarlijks</option>
@@ -103,7 +103,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
             type="button"
             onClick={handleApprove}
             disabled={isPending}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Bevestig goedkeuring"}
           </button>
@@ -111,7 +111,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
             type="button"
             onClick={() => setMode("none")}
             disabled={isPending}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground"
+            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
           >
             Annuleren
           </button>
@@ -121,7 +121,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-rose-500/30 bg-rose-500/5 p-4">
+    <div className="space-y-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-4">
       <h4 className="text-sm font-semibold text-foreground">Afwijzen</h4>
       <textarea
         value={rejectionReason}
@@ -130,7 +130,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
         minLength={5}
         maxLength={500}
         placeholder="Reden voor afwijzing (zichtbaar voor de aanvrager)..."
-        className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm"
+        className="w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm"
       />
       {error && <p className="text-xs text-rose-600">{error}</p>}
       <div className="flex gap-2">
@@ -138,7 +138,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
           type="button"
           onClick={handleReject}
           disabled={isPending}
-          className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Bevestig afwijzing"}
         </button>
@@ -146,7 +146,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
           type="button"
           onClick={() => setMode("none")}
           disabled={isPending}
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground"
+          className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
         >
           Annuleren
         </button>

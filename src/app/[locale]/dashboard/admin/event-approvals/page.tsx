@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/admin";
 import { AdminEventApprovalList } from "@/components/dashboard/admin-event-approval-list";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function AdminEventApprovalsPage() {
   await requireAdminPage();
@@ -52,16 +53,12 @@ export default async function AdminEventApprovalsPage() {
   }));
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">Evenementen ter beoordeling</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Nieuwe evenementen wachten op goedkeuring voordat ze publiek zichtbaar worden.
-        Markeer betrouwbare organisatoren als &ldquo;vertrouwd&rdquo; zodat hun toekomstige
-        evenementen direct live gaan.
-      </p>
-      <div className="mt-6">
-        <AdminEventApprovalList events={events} />
-      </div>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Evenementen ter beoordeling"
+        subtitle="Nieuwe evenementen wachten op goedkeuring voordat ze publiek zichtbaar worden. Markeer betrouwbare organisatoren als “vertrouwd” zodat hun toekomstige evenementen direct live gaan."
+      />
+      <AdminEventApprovalList events={events} />
     </div>
   );
 }

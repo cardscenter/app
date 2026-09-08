@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AdminVerificationList } from "@/components/dashboard/admin-verification-list";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function AdminVerificationsPage() {
   const t = await getTranslations("verification");
@@ -26,9 +27,8 @@ export default async function AdminVerificationsPage() {
   });
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">{t("adminTitle")}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{t("adminDescription")}</p>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("adminTitle")} subtitle={t("adminDescription")} />
       <AdminVerificationList requests={pendingRequests} />
     </div>
   );

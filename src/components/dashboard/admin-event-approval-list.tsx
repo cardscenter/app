@@ -23,6 +23,8 @@ import { getEventTypeLabel, EVENT_TYPE_PILL_CLASSES, type EventType } from "@/li
 import { getEventCountryName } from "@/lib/events/countries";
 import { formatEventDateRange } from "@/lib/events/timezones";
 import { CountryFlag } from "@/components/ui/country-flag";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 
 interface OrganizerInfo {
   id: string;
@@ -65,9 +67,7 @@ interface EventRow {
 export function AdminEventApprovalList({ events }: { events: EventRow[] }) {
   if (events.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-        Geen evenementen in de wachtrij.
-      </div>
+      <EmptyState icon={Calendar} title="Geen evenementen in de wachtrij." compact />
     );
   }
 
@@ -127,10 +127,10 @@ function EventApprovalCard({ event }: { event: EventRow }) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+    <div className="dash-card p-4">
       <div className="flex flex-col gap-4 sm:flex-row">
         {/* Thumbnail */}
-        <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:h-28 sm:w-44">
+        <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-md bg-muted sm:h-28 sm:w-44">
           {event.coverImage ? (
             <Image src={event.coverImage} alt={event.title} fill className="object-cover" sizes="200px" unoptimized />
           ) : (
@@ -176,19 +176,15 @@ function EventApprovalCard({ event }: { event: EventRow }) {
           )}
 
           {/* Organisator */}
-          <div className="mt-3 rounded-lg bg-muted/60 p-2.5 text-sm">
+          <div className="mt-3 rounded-md border border-border bg-muted/40 p-2.5 text-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium text-foreground">{event.organizer.displayName ?? "Onbekend"}</span>
               <span className="text-muted-foreground">{event.organizer.email}</span>
               {event.organizer.isVerified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                  <ShieldCheck className="h-3 w-3" /> ID
-                </span>
+                <StatusBadge tone="info" icon={ShieldCheck}>ID</StatusBadge>
               )}
               {event.organizer.isTrustedEventOrganizer && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                  <Star className="h-3 w-3" /> Vertrouwd
-                </span>
+                <StatusBadge tone="warning" icon={Star}>Vertrouwd</StatusBadge>
               )}
             </div>
           </div>
@@ -200,24 +196,24 @@ function EventApprovalCard({ event }: { event: EventRow }) {
         <button
           onClick={handleApprove}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
         >
           <Check className="h-4 w-4" /> Goedkeuren
         </button>
         <button
           onClick={() => setShowReject((v) => !v)}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
         >
           <X className="h-4 w-4" /> Afwijzen
         </button>
         <button
           onClick={handleToggleOfficial}
           disabled={isPending}
-          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${
+          className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${
             event.isOfficial
               ? "border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-300"
-              : "border-border text-muted-foreground hover:bg-muted"
+              : "border-border bg-card text-muted-foreground hover:bg-muted"
           }`}
         >
           <ShieldCheck className="h-4 w-4" /> {event.isOfficial ? "Geverifieerd" : "Markeer geverifieerd"}
@@ -225,10 +221,10 @@ function EventApprovalCard({ event }: { event: EventRow }) {
         <button
           onClick={handleToggleTrusted}
           disabled={isPending}
-          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${
+          className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${
             event.organizer.isTrustedEventOrganizer
               ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300"
-              : "border-border text-muted-foreground hover:bg-muted"
+              : "border-border bg-card text-muted-foreground hover:bg-muted"
           }`}
         >
           <Star className="h-4 w-4" /> {event.organizer.isTrustedEventOrganizer ? "Vertrouwd" : "Markeer organisator vertrouwd"}
@@ -242,12 +238,12 @@ function EventApprovalCard({ event }: { event: EventRow }) {
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reden voor afwijzing (zichtbaar voor de organisator)…"
             rows={2}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
           />
           <button
             onClick={handleReject}
             disabled={isPending}
-            className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+            className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
           >
             Bevestig afwijzing
           </button>

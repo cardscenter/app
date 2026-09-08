@@ -2,19 +2,22 @@ import { getCronStatus } from "@/actions/admin/crons";
 import { CronRunNowButton } from "@/components/admin/cron-run-now-button";
 import { getSchedulerState } from "@/lib/auction-scheduler";
 import { CheckCircle2, AlertCircle, Loader2, Clock, AlertTriangle, Calendar, Zap } from "lucide-react";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { DashboardSection } from "@/components/dashboard/ui/section";
+import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
 
-function StatusBadge({ status }: { status: string }) {
-  const cls = {
-    SUCCESS: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-    FAILED: "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300",
-    RUNNING: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  }[status] ?? "bg-muted text-muted-foreground";
-  const Icon = status === "SUCCESS" ? CheckCircle2 : status === "FAILED" ? AlertCircle : status === "RUNNING" ? Loader2 : Clock;
+const RUN_STATUS_META: Record<string, { tone: StatusTone; icon: typeof CheckCircle2 }> = {
+  SUCCESS: { tone: "success", icon: CheckCircle2 },
+  FAILED: { tone: "danger", icon: AlertCircle },
+  RUNNING: { tone: "warning", icon: Loader2 },
+};
+
+function CronStatusPill({ status }: { status: string }) {
+  const meta = RUN_STATUS_META[status] ?? { tone: "neutral" as StatusTone, icon: Clock };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${cls}`}>
-      <Icon className={`h-3 w-3 ${status === "RUNNING" ? "animate-spin" : ""}`} />
+    <StatusBadge tone={meta.tone} icon={meta.icon}>
       {status}
-    </span>
+    </StatusBadge>
   );
 }
 
@@ -31,28 +34,21 @@ export default async function AdminCronsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Crons</h1>
-        <p className="text-sm text-muted-foreground">
-          Status van geplande taken. &quot;Run nu&quot; voert de job direct uit en logt het resultaat.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Crons"
+        subtitle="Status van geplande taken. “Run nu” voert de job direct uit en logt het resultaat."
+      />
 
-      <div className="rounded-xl border border-border bg-card p-4 shadow-card">
-        <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-amber-500" />
-          <h2 className="text-base font-semibold">Auction-end scheduler</h2>
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-              scheduler.hasTimer
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
+      <DashboardSection
+        title="Auction-end scheduler"
+        icon={<Zap className="size-4 text-amber-500" />}
+        action={
+          <StatusBadge tone={scheduler.hasTimer ? "success" : "neutral"}>
             {scheduler.hasTimer ? "Actief" : "Idle"}
-          </span>
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">
+          </StatusBadge>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
           Sub-seconde-nauwkeurige finalize via in-process setTimeout. De cron <code>auction-finalize</code> hieronder is de
           safety-net (5 min). Generation: {scheduler.generation}.
         </p>
@@ -87,7 +83,7 @@ export default async function AdminCronsPage() {
               </thead>
               <tbody>
                 {scheduler.history.map((h, i) => (
-                  <tr key={i} className="border-t">
+                  <tr key={i} className="border-t border-border">
                     <td className="py-1 tabular-nums">{new Date(h.firedAt).toLocaleString("nl-NL", { hour12: false })}</td>
                     <td className="py-1 text-right tabular-nums">{h.processed}</td>
                     <td className="py-1 text-right tabular-nums">{h.errors}</td>
@@ -101,24 +97,23 @@ export default async function AdminCronsPage() {
             </table>
           </details>
         )}
-      </div>
+      </DashboardSection>
 
       <div className="space-y-3">
         {jobs.map((job) => (
-          <div key={job.name} className="rounded-xl border border-border bg-card p-4 shadow-card">
+          <div key={job.name} className="dash-card p-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <code className="font-mono text-sm font-semibold">{job.name}</code>
-                  {job.latest && <StatusBadge status={job.latest.status} />}
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
+                  {job.latest && <CronStatusPill status={job.latest.status} />}
+                  <StatusBadge tone="neutral" icon={Calendar}>
                     {job.schedule}
-                  </span>
+                  </StatusBadge>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{job.description}</p>
                 {job.runWarning && (
-                  <p className="mt-2 inline-flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
+                  <p className="mt-2 inline-flex items-start gap-1.5 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-400">
                     <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                     <span>{job.runWarning}</span>
                   </p>
@@ -144,7 +139,7 @@ export default async function AdminCronsPage() {
                     {job.latest.errorMessage && (
                       <div className="col-span-2 md:col-span-4">
                         <span className="text-muted-foreground">Error</span>
-                        <p className="rounded bg-rose-50 p-2 text-[11px] text-rose-700 dark:bg-rose-950/30">
+                        <p className="rounded-md bg-red-500/10 p-2 text-[11px] text-red-700 dark:text-red-400">
                           {job.latest.errorMessage}
                         </p>
                       </div>
@@ -183,9 +178,9 @@ export default async function AdminCronsPage() {
                   </thead>
                   <tbody>
                     {job.recentRuns.map((r) => (
-                      <tr key={r.id} className="border-t">
+                      <tr key={r.id} className="border-t border-border">
                         <td className="py-1 tabular-nums">{new Date(r.startedAt).toLocaleString("nl-NL")}</td>
-                        <td className="py-1"><StatusBadge status={r.status} /></td>
+                        <td className="py-1"><CronStatusPill status={r.status} /></td>
                         <td className="py-1 text-right tabular-nums">{r.itemsProcessed}</td>
                         <td className="py-1">{r.triggeredBy === "cron" ? "scheduler" : `admin`}</td>
                       </tr>

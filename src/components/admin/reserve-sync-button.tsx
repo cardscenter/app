@@ -37,7 +37,7 @@ export function ReserveSyncButton({ userId }: { userId: string }) {
       type="button"
       onClick={handleClick}
       disabled={pending}
-      className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-700 disabled:opacity-60"
+      className="inline-flex shrink-0 items-center gap-2 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
     >
       {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
       Sync nu

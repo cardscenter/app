@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { BankTransferForm } from "@/components/admin/bank-transfer-form";
-import { Search, CreditCard } from "lucide-react";
+import { Search, CreditCard, History } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { DashboardSection } from "@/components/dashboard/ui/section";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 
 export default async function BankTransfersPage({
   searchParams,
@@ -44,13 +47,10 @@ export default async function BankTransfersPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Banktransfers bevestigen</h1>
-        <p className="text-sm text-muted-foreground">
-          Zoek een gebruiker op naam, e-mailadres of bank-reference, en bevestig de ontvangen overboeking.
-          Het bedrag wordt direct toegevoegd aan hun saldo en gelogd in de audit log.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Banktransfers bevestigen"
+        subtitle="Zoek een gebruiker op naam, e-mailadres of bank-reference, en bevestig de ontvangen overboeking. Het bedrag wordt direct toegevoegd aan hun saldo en gelogd in de audit log."
+      />
 
       <form method="get" className="flex gap-2">
         <div className="relative flex-1">
@@ -66,35 +66,35 @@ export default async function BankTransfersPage({
         </div>
         <button
           type="submit"
-          className="rounded-md bg-primary px-4 text-sm font-medium text-white hover:bg-primary-hover"
+          className="rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
         >
           Zoek
         </button>
       </form>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-        <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">
-            {query ? `Resultaten voor "${query}" (${matches.length})` : "Zoekresultaten"}
-          </h2>
+        <DashboardSection
+          variant="plain"
+          title={query ? `Resultaten voor "${query}" (${matches.length})` : "Zoekresultaten"}
+        >
           {!query && (
-            <div className="rounded-xl border border-dashed border-border bg-muted p-8 text-center text-sm text-muted-foreground">
-              <CreditCard className="mx-auto mb-2 h-6 w-6 opacity-40" />
-              Vul een zoekterm in om gebruikers te vinden.
-            </div>
+            <EmptyState
+              icon={CreditCard}
+              title="Vul een zoekterm in om gebruikers te vinden."
+              compact
+            />
           )}
           {query && matches.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border bg-muted p-8 text-center text-sm text-muted-foreground">
-              Geen gebruikers gevonden voor &quot;{query}&quot;.
-            </div>
+            <EmptyState
+              icon={Search}
+              title={`Geen gebruikers gevonden voor "${query}".`}
+              compact
+            />
           )}
           {matches.length > 0 && (
             <div className="space-y-3">
               {matches.map((u) => (
-                <div
-                  key={u.id}
-                  className="rounded-xl border border-border bg-card p-4 shadow-card"
-                >
+                <div key={u.id} className="dash-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <Link
@@ -128,17 +128,12 @@ export default async function BankTransfersPage({
               ))}
             </div>
           )}
-        </section>
+        </DashboardSection>
 
-        <aside>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Laatste bevestigingen
-          </h2>
+        <DashboardSection variant="plain" title="Laatste bevestigingen">
           <div className="space-y-2">
             {recent.length === 0 && (
-              <p className="rounded-xl border border-dashed border-border bg-muted p-4 text-center text-xs text-muted-foreground">
-                Nog geen bevestigingen gelogd.
-              </p>
+              <EmptyState icon={History} title="Nog geen bevestigingen gelogd." compact />
             )}
             {recent.map((r) => {
               let amount: number | null = null;
@@ -151,7 +146,7 @@ export default async function BankTransfersPage({
                 /* swallow */
               }
               return (
-                <div key={r.id} className="rounded-lg border border-border bg-card p-3 text-xs shadow-card">
+                <div key={r.id} className="dash-card p-3 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">€{amount?.toFixed(2) ?? "?"}</span>
                     <span className="text-muted-foreground">{r.createdAt.toLocaleString("nl-NL")}</span>
@@ -163,7 +158,7 @@ export default async function BankTransfersPage({
               );
             })}
           </div>
-        </aside>
+        </DashboardSection>
       </div>
     </div>
   );

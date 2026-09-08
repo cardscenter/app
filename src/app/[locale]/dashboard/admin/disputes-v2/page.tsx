@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { Scale, Clock } from "lucide-react";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
 
 export default async function AdminDisputesV2Page() {
   // requireAdminPage zit in de admin-layout, dus deze pagina is alleen voor admins
@@ -17,35 +20,28 @@ export default async function AdminDisputesV2Page() {
   const now = Date.now();
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">Geschillen v2 — admin-queue</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Geëscaleerde geschillen die wachten op admin-beoordeling. SLA: 5 dagen na escalatie.
-      </p>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Geschillen v2 — admin-queue"
+        subtitle="Geëscaleerde geschillen die wachten op admin-beoordeling. SLA: 5 dagen na escalatie."
+      />
 
       {escalated.length === 0 ? (
-        <div className="mt-6 rounded-xl glass-subtle p-8 text-center">
-          <Scale className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">Geen geëscaleerde geschillen op dit moment.</p>
-        </div>
+        <EmptyState icon={Scale} title="Geen geëscaleerde geschillen op dit moment." compact />
       ) : (
-        <div className="mt-6 space-y-3">
+        <div className="space-y-3">
           {escalated.map((d) => {
             const remaining = d.bundle.totalCost - (d.bundle.refundedAmount ?? 0);
             const slaMs = d.adminSLADeadline ? d.adminSLADeadline.getTime() - now : 0;
             const slaDays = Math.ceil(slaMs / 86_400_000);
             const slaOverdue = slaMs < 0;
-            const slaToneClass = slaOverdue
-              ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
-              : slaDays <= 2
-              ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-              : "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300";
+            const slaTone: StatusTone = slaOverdue ? "danger" : slaDays <= 2 ? "warning" : "info";
 
             return (
               <Link
                 key={d.id}
                 href={`/dashboard/geschillen-v2/${d.id}`}
-                className="block rounded-xl glass p-4 transition-colors hover:bg-muted/30"
+                className="block dash-card p-4 transition-colors hover:bg-muted/40"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -63,12 +59,11 @@ export default async function AdminDisputesV2Page() {
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{d.buyerStatement}</p>
                   </div>
-                  <div className="shrink-0 text-right">
+                  <div className="flex shrink-0 flex-col items-end gap-1 text-right">
                     <p className="text-sm font-semibold text-foreground tabular-nums">&euro;{remaining.toFixed(2)}</p>
-                    <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${slaToneClass}`}>
-                      <Clock className="h-3 w-3" />
+                    <StatusBadge tone={slaTone} icon={Clock}>
                       {slaOverdue ? `SLA verstreken (${Math.abs(slaDays)}d)` : `SLA ${slaDays}d`}
-                    </span>
+                    </StatusBadge>
                   </div>
                 </div>
               </Link>

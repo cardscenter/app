@@ -2,12 +2,17 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import { ArrowLeft, ShieldCheck, Ban, AlertCircle } from "lucide-react";
+import { ShieldCheck, Ban, AlertCircle, Inbox } from "lucide-react";
 import { isUserSuspended } from "@/lib/suspension";
 import { maskIban, formatIbanForDisplay } from "@/lib/validations/iban";
 import { UserActionBar } from "@/components/admin/user-action-bar";
 import { BidDepositExemptionToggle } from "@/components/admin/bid-deposit-exemption-toggle";
 import { ReserveBreakdownCard } from "@/components/admin/reserve-breakdown-card";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { DashboardSection } from "@/components/dashboard/ui/section";
+import { StatCard } from "@/components/dashboard/ui/stat-card";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 
 const USER_DETAIL_SELECT = {
   id: true, displayName: true, email: true, firstName: true, lastName: true,
@@ -65,58 +70,50 @@ export default async function AdminUserDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/dashboard/admin/users"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Terug naar users
-      </Link>
+      <DashboardPageHeader
+        title={user.displayName}
+        subtitle={user.email}
+        backHref="/dashboard/admin/users"
+        backLabel="Terug naar users"
+        action={
+          <UserActionBar
+            userId={user.id}
+            userName={user.displayName}
+            isSuspended={suspended}
+            hasIban={!!user.iban}
+            hasUsernameCooldown={!!user.lastUsernameChange}
+          />
+        }
+      />
 
-      {/* Header */}
-      <header className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-card md:flex-row md:items-start md:justify-between">
-        <div className="flex items-start gap-4">
-          {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-white">
-              {user.displayName.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold">{user.displayName}</h1>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <code className="rounded bg-muted px-2 py-0.5 text-[11px]">
-                {user.accountType}
-              </code>
-              {user.isVerified ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                  <ShieldCheck className="h-3 w-3" /> Geverifieerd
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                  <AlertCircle className="h-3 w-3" /> Ongeverifieerd
-                </span>
-              )}
-              {suspended && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
-                  <Ban className="h-3 w-3" /> {user.suspensionType === "PERMANENT" ? "Permanent geschorst" : `Geschorst tot ${user.suspendedUntil?.toLocaleDateString("nl-NL")}`}
-                </span>
-              )}
-            </div>
+      {/* Identiteits-kaart: avatar + status-pills */}
+      <div className="flex items-center gap-4 dash-card p-4">
+        {user.avatarUrl ? (
+          <img src={user.avatarUrl} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
+            {user.displayName.charAt(0).toUpperCase()}
           </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <code className="rounded bg-muted px-2 py-0.5 text-[11px]">
+            {user.accountType}
+          </code>
+          {user.isVerified ? (
+            <StatusBadge tone="success" icon={ShieldCheck}>Geverifieerd</StatusBadge>
+          ) : (
+            <StatusBadge tone="neutral" icon={AlertCircle}>Ongeverifieerd</StatusBadge>
+          )}
+          {suspended && (
+            <StatusBadge tone="danger" icon={Ban}>
+              {user.suspensionType === "PERMANENT" ? "Permanent geschorst" : `Geschorst tot ${user.suspendedUntil?.toLocaleDateString("nl-NL")}`}
+            </StatusBadge>
+          )}
         </div>
-        <UserActionBar
-          userId={user.id}
-          userName={user.displayName}
-          isSuspended={suspended}
-          hasIban={!!user.iban}
-          hasUsernameCooldown={!!user.lastUsernameChange}
-        />
-      </header>
+      </div>
 
       {/* Tab nav */}
-      <nav className="flex flex-wrap gap-1 rounded-xl border border-border bg-card p-1 shadow-card">
+      <nav className="inline-flex flex-wrap gap-1 dash-card p-1">
         {TABS.map((t) => {
           const active = t.key === tab;
           return (
@@ -126,11 +123,11 @@ export default async function AdminUserDetailPage({
                 pathname: `/dashboard/admin/users/${user.id}`,
                 query: { tab: t.key },
               }}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={
                 active
-                  ? "bg-primary text-white"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
+                  ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                  : "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              }
             >
               {t.label}
             </Link>
@@ -139,7 +136,7 @@ export default async function AdminUserDetailPage({
       </nav>
 
       {/* Tab content */}
-      <section className="rounded-xl border border-border bg-card p-5 shadow-card">
+      <section className="dash-card p-5">
         {tab === "profile" && <ProfileTab user={user} />}
         {tab === "wallet" && <WalletTab userId={user.id} userName={user.displayName} balance={user.balance} held={user.heldBalance} reserved={user.reservedBalance} />}
         {tab === "sales" && <SalesTab userId={user.id} />}
@@ -195,7 +192,7 @@ function ProfileTab({ user }: { user: UserDetailPayload }) {
       {user.suspensionReason && <Field label="Suspension reden" value={user.suspensionReason} />}
 
       {/* Fase 29: veiling-status — strikes, borg-vrijstelling, IP-tracking */}
-      <div className="md:col-span-3 mt-2 rounded-lg border border-border bg-muted/30 p-4">
+      <div className="md:col-span-3 mt-2 rounded-md border border-border bg-muted/30 p-4">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Veiling-status (Fase 29)
         </h3>
@@ -217,9 +214,7 @@ function ProfileTab({ user }: { user: UserDetailPayload }) {
             label="Borg-vrijstelling"
             value={
               user.isBusinessBidExempt ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                  Actief
-                </span>
+                <StatusBadge tone="success">Actief</StatusBadge>
               ) : (
                 <span className="text-muted-foreground">Niet vrijgesteld</span>
               )
@@ -256,48 +251,48 @@ async function WalletTab({ userId, userName, balance, held, reserved }: { userId
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KPI label="Balance" value={`€${balance.toFixed(2)}`} />
-        <KPI label="Beschikbaar" value={`€${(balance - reserved).toFixed(2)}`} />
-        <KPI label="Held (escrow)" value={`€${held.toFixed(2)}`} />
-        <KPI label="Reserved" value={`€${reserved.toFixed(2)}`} />
+        <StatCard label="Balance" value={`€${balance.toFixed(2)}`} />
+        <StatCard label="Beschikbaar" value={`€${(balance - reserved).toFixed(2)}`} />
+        <StatCard label="Held (escrow)" value={`€${held.toFixed(2)}`} />
+        <StatCard label="Reserved" value={`€${reserved.toFixed(2)}`} />
       </div>
 
       <ReserveBreakdownCard userId={userId} userName={userName} />
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">
-        Laatste 100 transacties
-      </h3>
-      {transactions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Geen transacties.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted text-left">
-              <tr>
-                <th className="px-3 py-2 font-medium">Tijd</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium text-right">Bedrag</th>
-                <th className="px-3 py-2 font-medium text-right">Saldo na</th>
-                <th className="px-3 py-2 font-medium">Beschrijving</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((t) => (
-                <tr key={t.id} className="border-t">
-                  <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                    {t.createdAt.toLocaleString("nl-NL")}
-                  </td>
-                  <td className="px-3 py-2"><code className="text-xs">{t.type}</code></td>
-                  <td className={`px-3 py-2 text-right tabular-nums ${t.amount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                    €{t.amount.toFixed(2)}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">€{t.balanceAfter.toFixed(2)}</td>
-                  <td className="px-3 py-2 text-xs">{t.description}</td>
+
+      <DashboardSection variant="plain" title="Laatste 100 transacties">
+        {transactions.length === 0 ? (
+          <EmptyState icon={Inbox} title="Geen transacties." compact />
+        ) : (
+          <div className="overflow-x-auto dash-card">
+            <table className="w-full text-sm">
+              <thead className="bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-2.5">Tijd</th>
+                  <th className="px-4 py-2.5">Type</th>
+                  <th className="px-4 py-2.5 text-right">Bedrag</th>
+                  <th className="px-4 py-2.5 text-right">Saldo na</th>
+                  <th className="px-4 py-2.5">Beschrijving</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-border">
+                {transactions.map((t) => (
+                  <tr key={t.id} className="hover:bg-muted/40">
+                    <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                      {t.createdAt.toLocaleString("nl-NL")}
+                    </td>
+                    <td className="px-4 py-3"><code className="text-xs">{t.type}</code></td>
+                    <td className={`px-4 py-3 text-right tabular-nums ${t.amount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      €{t.amount.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">€{t.balanceAfter.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-xs">{t.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </DashboardSection>
     </div>
   );
 }
@@ -449,9 +444,9 @@ async function EmberTab({ userId, ember, bonusXP, loginStreak }: { userId: strin
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        <KPI label="Ember balance" value={ember.toLocaleString("nl-NL")} />
-        <KPI label="Bonus XP" value={bonusXP.toLocaleString("nl-NL")} />
-        <KPI label="Login streak" value={`${loginStreak} dagen`} />
+        <StatCard label="Ember balance" value={ember.toLocaleString("nl-NL")} />
+        <StatCard label="Bonus XP" value={bonusXP.toLocaleString("nl-NL")} />
+        <StatCard label="Login streak" value={`${loginStreak} dagen`} />
       </div>
       <SimpleList
         title={`Ember-transacties (${txs.length})`}
@@ -488,25 +483,15 @@ async function AuditTab({ userId }: { userId: string }) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
-function KPI({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-lg border border-border bg-muted p-3">
-      <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70">{label}</p>
-      <p className="mt-1 text-lg font-bold tabular-nums">{value}</p>
-    </div>
-  );
-}
-
 function SimpleList({ title, items }: { title: string; items: { id: string; primary: string; secondary?: string; when: Date }[] }) {
   return (
-    <div>
-      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">{title}</h3>
+    <DashboardSection variant="plain" title={title}>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Geen entries.</p>
+        <EmptyState icon={Inbox} title="Geen entries." compact />
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border bg-card shadow-card">
+        <ul className="divide-y divide-border dash-card">
           {items.map((it) => (
-            <li key={it.id} className="flex flex-col gap-1 p-3 md:flex-row md:items-center md:justify-between">
+            <li key={it.id} className="flex flex-col gap-1 px-4 py-3 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <p className="font-medium">{it.primary}</p>
                 {it.secondary && <p className="text-xs text-muted-foreground truncate">{it.secondary}</p>}
@@ -518,6 +503,6 @@ function SimpleList({ title, items }: { title: string; items: { id: string; prim
           ))}
         </ul>
       )}
-    </div>
+    </DashboardSection>
   );
 }

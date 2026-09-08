@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { History } from "lucide-react";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 const PAGE_SIZE = 50;
 
@@ -85,12 +86,9 @@ export default async function AdminAuditPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{t("navAudit")}</h1>
-        <p className="text-sm text-muted-foreground">{total} entries</p>
-      </div>
+      <DashboardPageHeader title={t("navAudit")} subtitle={`${total} entries`} />
 
-      <form className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-3 shadow-card" method="get">
+      <form className="flex flex-wrap gap-2 dash-card p-3" method="get">
         <select
           name="action"
           defaultValue={sp.action ?? ""}
@@ -120,7 +118,7 @@ export default async function AdminAuditPage({
         />
         <button
           type="submit"
-          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
         >
           Filter
         </button>
@@ -132,32 +130,32 @@ export default async function AdminAuditPage({
         </Link>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
+      <div className="overflow-x-auto dash-card">
         <table className="w-full text-sm">
-          <thead className="bg-muted text-left">
+          <thead className="bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="px-3 py-2 font-medium">Tijdstip</th>
-              <th className="px-3 py-2 font-medium">Admin</th>
-              <th className="px-3 py-2 font-medium">Action</th>
-              <th className="px-3 py-2 font-medium">Target</th>
-              <th className="px-3 py-2 font-medium">Metadata</th>
+              <th className="px-4 py-2.5">Tijdstip</th>
+              <th className="px-4 py-2.5">Admin</th>
+              <th className="px-4 py-2.5">Action</th>
+              <th className="px-4 py-2.5">Target</th>
+              <th className="px-4 py-2.5">Metadata</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border">
             {entries.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-12 text-center text-muted-foreground">
+                <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
                   <History className="mx-auto mb-2 h-6 w-6 opacity-40" />
                   {t("noRecentActivity")}
                 </td>
               </tr>
             )}
             {entries.map((e) => (
-              <tr key={e.id} className="border-t border-border align-top">
-                <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+              <tr key={e.id} className="align-top hover:bg-muted/40">
+                <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                   {e.createdAt.toLocaleString("nl-NL")}
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   {e.admin ? (
                     <Link
                       href={`/dashboard/admin/users/${e.admin.id}`}
@@ -169,10 +167,10 @@ export default async function AdminAuditPage({
                     <span className="text-xs italic text-muted-foreground">systeem</span>
                   )}
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{e.action}</code>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span className="text-xs text-muted-foreground">{e.targetType}</span>
                   {e.targetId && (
                     <>
@@ -181,7 +179,7 @@ export default async function AdminAuditPage({
                     </>
                   )}
                 </td>
-                <td className="px-3 py-2 max-w-md">
+                <td className="px-4 py-3 max-w-md">
                   {e.metadata && (
                     <pre className="whitespace-pre-wrap break-words text-[11px] text-muted-foreground">
                       {(() => {
@@ -212,7 +210,7 @@ export default async function AdminAuditPage({
                   pathname: "/dashboard/admin/audit",
                   query: { ...sp, page: String(page - 1) },
                 }}
-                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
+                className="rounded-md border border-border bg-card px-3 py-1.5 hover:bg-muted"
               >
                 Vorige
               </Link>
@@ -223,7 +221,7 @@ export default async function AdminAuditPage({
                   pathname: "/dashboard/admin/audit",
                   query: { ...sp, page: String(page + 1) },
                 }}
-                className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
+                className="rounded-md border border-border bg-card px-3 py-1.5 hover:bg-muted"
               >
                 Volgende
               </Link>

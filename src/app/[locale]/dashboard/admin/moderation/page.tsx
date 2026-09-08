@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { ModerationTable } from "@/components/admin/moderation-table";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 const TABS = [
   { key: "listings", label: "Listings" },
@@ -103,23 +104,23 @@ export default async function AdminModerationPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Content moderatie</h1>
-        <p className="text-sm text-muted-foreground">
-          Actieve listings, veilingen en claimsales. Filter op &quot;alleen verkopers met open rapporten&quot; en verwijder bulk met reden.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Content moderatie"
+        subtitle="Actieve listings, veilingen en claimsales. Filter op “alleen verkopers met open rapporten” en verwijder bulk met reden."
+      />
 
-      <nav className="flex gap-1 rounded-xl border border-border bg-card p-1 shadow-card">
+      <nav className="inline-flex flex-wrap gap-1 dash-card p-1">
         {TABS.map((t) => {
           const active = t.key === tab;
           return (
             <Link
               key={t.key}
               href={{ pathname: "/dashboard/admin/moderation", query: { tab: t.key } }}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                active ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"
-              }`}
+              className={
+                active
+                  ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                  : "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              }
             >
               {t.label}
             </Link>
@@ -130,13 +131,21 @@ export default async function AdminModerationPage({
       <div className="flex gap-2">
         <Link
           href={{ pathname: "/dashboard/admin/moderation", query: { tab } }}
-          className={`rounded-md border px-3 py-1.5 text-sm ${flaggedOnly ? "" : "border-primary bg-primary text-white"}`}
+          className={
+            flaggedOnly
+              ? "rounded-md border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+              : "rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+          }
         >
           Alle
         </Link>
         <Link
           href={{ pathname: "/dashboard/admin/moderation", query: { tab, flagged: "1" } }}
-          className={`rounded-md border px-3 py-1.5 text-sm ${flaggedOnly ? "border-primary bg-primary text-white" : ""}`}
+          className={
+            flaggedOnly
+              ? "rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+              : "rounded-md border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+          }
         >
           Alleen met open rapport
         </Link>

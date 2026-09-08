@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { adminReviewVerification } from "@/actions/verification";
+import { ShieldCheck } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 
 interface VerificationRequest {
   id: string;
@@ -62,9 +65,9 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
 
   if (pending.length === 0) {
     return (
-      <p className="mt-6 text-sm text-muted-foreground">
-        {t("noPendingRequests")}
-      </p>
+      <div className="mt-6">
+        <EmptyState icon={ShieldCheck} title={t("noPendingRequests")} compact />
+      </div>
     );
   }
 
@@ -93,9 +96,9 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
       {pending.map((request) => (
         <div
           key={request.id}
-          className="glass rounded-2xl p-4"
+          className="dash-card p-4"
         >
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-medium text-foreground">
                 {request.user.displayName}
@@ -104,15 +107,9 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
                 {request.user.email}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                    request.type === "ADDRESS"
-                      ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300"
-                      : "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300"
-                  }`}
-                >
+                <StatusBadge tone={request.type === "ADDRESS" ? "primary" : "info"}>
                   {request.type === "ADDRESS" ? "Adres" : "ID"}
-                </span>
+                </StatusBadge>
                 <span>{documentTypeLabel(request)}</span>
                 <span>{t("submittedOn")} {new Date(request.createdAt).toLocaleDateString("nl-NL")}</span>
                 <span>{t("memberSince")} {new Date(request.user.createdAt).toLocaleDateString("nl-NL")}</span>
@@ -125,7 +122,7 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
             </div>
             <button
               onClick={() => setExpandedId(expandedId === request.id ? null : request.id)}
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+              className="shrink-0 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
             >
               {expandedId === request.id ? t("collapse") : t("review")}
             </button>
@@ -160,7 +157,7 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
                 <button
                   onClick={() => handleDecision(request.id, "APPROVED")}
                   disabled={loading}
-                  className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {t("approve")}
                 </button>

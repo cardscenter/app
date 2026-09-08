@@ -54,7 +54,7 @@ export function CatalogEditForm({ fields, action, id, triggerLabel = "Bewerk", a
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-lg border border-border bg-muted p-3">
+    <form onSubmit={submit} className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
       <div className={`grid gap-2 ${fields.length > 4 ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
         {fields.map((f) => (
           <div key={f.name} className="space-y-1">

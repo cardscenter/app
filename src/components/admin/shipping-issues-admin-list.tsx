@@ -15,6 +15,8 @@ import {
   SHIPPING_ISSUE_TYPE_LABELS,
   type ShippingIssueType,
 } from "@/lib/shipping-issue/config";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
 
 type IssueData = {
   id: string;
@@ -37,23 +39,13 @@ type IssueData = {
   };
 };
 
-const STATUS_LABELS: Record<string, { label: string; tone: string }> = {
-  OPEN: { label: "Open", tone: "amber" },
-  INVESTIGATING: { label: "In onderzoek", tone: "sky" },
-  RESOLVED_GOODWILL: { label: "Goodwill", tone: "emerald" },
-  RESOLVED_NO_ACTION: { label: "Geen actie", tone: "slate" },
-  ESCALATED_TO_DISPUTE: { label: "Geëscaleerd", tone: "rose" },
+const STATUS_LABELS: Record<string, { label: string; tone: StatusTone }> = {
+  OPEN: { label: "Open", tone: "warning" },
+  INVESTIGATING: { label: "In onderzoek", tone: "info" },
+  RESOLVED_GOODWILL: { label: "Goodwill", tone: "success" },
+  RESOLVED_NO_ACTION: { label: "Geen actie", tone: "neutral" },
+  ESCALATED_TO_DISPUTE: { label: "Geëscaleerd", tone: "danger" },
 };
-
-function toneClass(tone: string): string {
-  switch (tone) {
-    case "amber": return "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300";
-    case "sky": return "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300";
-    case "emerald": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300";
-    case "rose": return "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300";
-    default: return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
-  }
-}
 
 const STATUS_TABS = ["OPEN", "INVESTIGATING", "RESOLVED_GOODWILL", "RESOLVED_NO_ACTION", "ESCALATED_TO_DISPUTE", "ALL"] as const;
 
@@ -69,16 +61,16 @@ export function ShippingIssuesAdminList({
   return (
     <div className="mt-6 space-y-4">
       {/* Status tabs */}
-      <div className="flex flex-wrap gap-2">
+      <div className="inline-flex flex-wrap gap-1 dash-card p-1">
         {STATUS_TABS.map((s) => (
           <button
             key={s}
             onClick={() => router.push(`/dashboard/admin/shipping-issues?status=${s}`)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            className={
               currentStatus === s
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/70"
-            }`}
+                ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                : "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            }
           >
             {s === "ALL" ? "Alle" : STATUS_LABELS[s]?.label ?? s}
           </button>
@@ -86,10 +78,7 @@ export function ShippingIssuesAdminList({
       </div>
 
       {issues.length === 0 ? (
-        <div className="rounded-xl glass-subtle p-8 text-center">
-          <Truck className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">Geen tickets in deze status.</p>
-        </div>
+        <EmptyState icon={Truck} title="Geen tickets in deze status." compact />
       ) : (
         <div className="space-y-3">
           {issues.map((issue) => <IssueCard key={issue.id} issue={issue} />)}
@@ -107,7 +96,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
   const [resolution, setResolution] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const statusMeta = STATUS_LABELS[issue.status] ?? { label: issue.status, tone: "slate" };
+  const statusMeta = STATUS_LABELS[issue.status] ?? { label: issue.status, tone: "neutral" as StatusTone };
   const isActive = issue.status === "OPEN" || issue.status === "INVESTIGATING";
 
   async function handleStartInvestigating() {
@@ -153,16 +142,14 @@ function IssueCard({ issue }: { issue: IssueData }) {
   }
 
   return (
-    <div className="rounded-xl glass overflow-hidden">
+    <div className="overflow-hidden dash-card">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/20"
+        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/40"
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${toneClass(statusMeta.tone)}`}>
-              {statusMeta.label}
-            </span>
+            <StatusBadge tone={statusMeta.tone}>{statusMeta.label}</StatusBadge>
             <span className="text-xs font-medium text-foreground">
               {SHIPPING_ISSUE_TYPE_LABELS[issue.type as ShippingIssueType] ?? issue.type}
             </span>
@@ -184,7 +171,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
       </button>
 
       {expanded && (
-        <div className="space-y-4 border-t border-border/50 p-4">
+        <div className="space-y-4 border-t border-border p-4">
           <div>
             <p className="text-xs font-semibold text-muted-foreground">Beschrijving van {issue.reporter.displayName}:</p>
             <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{issue.description}</p>
@@ -208,7 +195,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
           </div>
 
           {issue.resolution && (
-            <div className="rounded-md border border-border bg-muted/30 p-3">
+            <div className="rounded-md border border-border bg-muted/40 p-3">
               <p className="text-xs font-semibold text-muted-foreground">Admin-onderbouwing</p>
               <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{issue.resolution}</p>
             </div>
@@ -216,12 +203,12 @@ function IssueCard({ issue }: { issue: IssueData }) {
 
           {/* Admin actions */}
           {isActive && (
-            <div className="space-y-3 border-t border-border/50 pt-3">
+            <div className="space-y-3 border-t border-border pt-3">
               {issue.status === "OPEN" && (
                 <button
                   onClick={handleStartInvestigating}
                   disabled={loading}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
                 >
                   <Clock className="h-3 w-3" /> Markeer als onder onderzoek
                 </button>
@@ -230,24 +217,24 @@ function IssueCard({ issue }: { issue: IssueData }) {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setAction(action === "goodwill" ? null : "goodwill")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    action === "goodwill" ? "bg-emerald-600 text-white" : "border border-border text-foreground hover:bg-muted/50"
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    action === "goodwill" ? "bg-emerald-600 text-white" : "border border-border bg-card text-foreground hover:bg-muted"
                   }`}
                 >
                   <CheckCircle2 className="h-3 w-3" /> Goodwill-credit
                 </button>
                 <button
                   onClick={() => setAction(action === "noaction" ? null : "noaction")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    action === "noaction" ? "bg-slate-600 text-white" : "border border-border text-foreground hover:bg-muted/50"
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    action === "noaction" ? "bg-foreground text-background" : "border border-border bg-card text-foreground hover:bg-muted"
                   }`}
                 >
                   <XCircle className="h-3 w-3" /> Sluit zonder actie
                 </button>
                 <button
                   onClick={() => setAction(action === "escalate" ? null : "escalate")}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    action === "escalate" ? "bg-rose-600 text-white" : "border border-border text-foreground hover:bg-muted/50"
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    action === "escalate" ? "bg-rose-600 text-white" : "border border-border bg-card text-foreground hover:bg-muted"
                   }`}
                 >
                   <AlertTriangle className="h-3 w-3" /> Escaleer naar geschil
@@ -255,7 +242,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
               </div>
 
               {action && (
-                <div className="space-y-2 rounded-md border border-border/60 p-3">
+                <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
                   {action === "goodwill" && (
                     <div>
                       <label className="text-xs font-medium text-foreground">Bedrag (max €{GOODWILL_REFUND_MAX.toFixed(2)})</label>
@@ -284,7 +271,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
                   <button
                     onClick={handleSubmit}
                     disabled={loading || resolution.length < 20}
-                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+                    className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
                   >
                     {loading ? "Bezig..." : "Bevestig"}
                   </button>

@@ -12,6 +12,8 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 
 type AdminDispute = {
   id: string;
@@ -50,9 +52,8 @@ export function AdminDisputesList({ disputes }: { disputes: AdminDispute[] }) {
 
   if (disputes.length === 0) {
     return (
-      <div className="mt-8 rounded-xl glass-subtle p-8 text-center">
-        <Scale className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground">Geen geëscaleerde geschillen om te beoordelen.</p>
+      <div className="mt-8">
+        <EmptyState icon={Scale} title="Geen geëscaleerde geschillen om te beoordelen." compact />
       </div>
     );
   }
@@ -103,7 +104,7 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
   }
 
   return (
-    <div className="rounded-xl glass overflow-hidden">
+    <div className="overflow-hidden dash-card">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 p-4">
         <div className="min-w-0">
@@ -111,9 +112,7 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
             <span className="text-sm font-semibold text-foreground">
               {dispute.bundle.buyerName} vs {dispute.bundle.sellerName}
             </span>
-            <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700 dark:bg-purple-950 dark:text-purple-400">
-              {t("statusEscalated")}
-            </span>
+            <StatusBadge tone="danger" icon={AlertTriangle}>{t("statusEscalated")}</StatusBadge>
           </div>
           <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
             <span>{t(REASON_KEYS[dispute.reason])}</span>
@@ -125,16 +124,16 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+          className="rounded-md border border-border bg-card p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
       </div>
 
       {expanded && (
-        <div className="border-t border-border/50 p-4 space-y-4">
+        <div className="space-y-4 border-t border-border p-4">
           {/* Buyer's complaint */}
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 dark:bg-amber-950/20 dark:border-amber-900">
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
             <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">
               Koper — {dispute.bundle.buyerName}
             </p>
@@ -143,7 +142,7 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
 
           {/* Seller's response */}
           {dispute.sellerResponse && (
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 dark:bg-blue-950/20 dark:border-blue-900">
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
               <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1">
                 Verkoper — {dispute.bundle.sellerName}
               </p>
@@ -179,7 +178,7 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
           {/* (Fase 40) Verzend-proof-foto's seller — admin moet hier het sterkste
            * "wel verstuurd"-bewijs kunnen zien naast de evidence van beide partijen */}
           {dispute.bundle.shippingProofUrls.length > 0 && (
-            <div className="rounded-lg border border-sky-200/60 bg-sky-50/40 p-3 dark:border-sky-900/40 dark:bg-sky-950/20">
+            <div className="rounded-md border border-sky-200/60 bg-sky-50/40 p-3 dark:border-sky-900/40 dark:bg-sky-950/20">
               <p className="mb-2 text-xs font-semibold text-sky-700 dark:text-sky-300">
                 Verzend-bewijs verkoper ({dispute.bundle.shippingProofUrls.length} foto{dispute.bundle.shippingProofUrls.length === 1 ? "" : "'s"})
               </p>
@@ -202,7 +201,7 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
 
           {/* Koper's evidence-foto's (bij dispute-opening) */}
           {dispute.evidenceUrls.length > 0 && (
-            <div className="rounded-lg border border-amber-200/60 bg-amber-50/40 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+            <div className="rounded-md border border-amber-200/60 bg-amber-50/40 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
               <p className="mb-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
                 Bewijs koper ({dispute.evidenceUrls.length} foto{dispute.evidenceUrls.length === 1 ? "" : "'s"})
               </p>
@@ -225,7 +224,7 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
 
           {/* Verkoper's evidence-foto's (bij response) */}
           {dispute.sellerEvidenceUrls.length > 0 && (
-            <div className="rounded-lg border border-blue-200/60 bg-blue-50/40 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+            <div className="rounded-md border border-blue-200/60 bg-blue-50/40 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
               <p className="mb-2 text-xs font-semibold text-blue-700 dark:text-blue-300">
                 Bewijs verkoper bij response ({dispute.sellerEvidenceUrls.length} foto{dispute.sellerEvidenceUrls.length === 1 ? "" : "'s"})
               </p>
@@ -247,16 +246,16 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
           )}
 
           {/* Decision form */}
-          <div className="border-t border-border/50 pt-4 space-y-3">
+          <div className="space-y-3 border-t border-border pt-4">
             <p className="text-sm font-semibold text-foreground">{t("adminDecision")}</p>
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <button
                 onClick={() => setDecision("BUYER")}
-                className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                className={`rounded-md border p-3 text-left text-sm transition-colors ${
                   decision === "BUYER"
-                    ? "border-green-500 bg-green-50 dark:bg-green-950/30"
-                    : "border-border hover:bg-muted/50"
+                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
+                    : "border-border bg-card hover:bg-muted/40"
                 }`}
               >
                 <p className="font-medium">{t("adminResolveBuyer")}</p>
@@ -264,10 +263,10 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
               </button>
               <button
                 onClick={() => setDecision("SELLER")}
-                className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                className={`rounded-md border p-3 text-left text-sm transition-colors ${
                   decision === "SELLER"
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
-                    : "border-border hover:bg-muted/50"
+                    : "border-border bg-card hover:bg-muted/40"
                 }`}
               >
                 <p className="font-medium">{t("adminResolveSeller")}</p>
@@ -275,10 +274,10 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
               </button>
               <button
                 onClick={() => setDecision("PARTIAL")}
-                className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                className={`rounded-md border p-3 text-left text-sm transition-colors ${
                   decision === "PARTIAL"
-                    ? "border-purple-500 bg-purple-50 dark:bg-purple-950/30"
-                    : "border-border hover:bg-muted/50"
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:bg-muted/40"
                 }`}
               >
                 <p className="font-medium">{t("adminResolvePartial")}</p>
@@ -319,7 +318,7 @@ function AdminDisputeCard({ dispute }: { dispute: AdminDispute }) {
             <button
               onClick={handleResolve}
               disabled={loading || !decision || !adminNotes || (decision === "PARTIAL" && (!partialAmount || parseFloat(partialAmount) <= 0))}
-              className="rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+              className="rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
             >
               {loading ? "..." : t("adminResolve")}
             </button>

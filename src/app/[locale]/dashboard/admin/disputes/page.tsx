@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AdminDisputesList } from "@/components/dashboard/admin-disputes-list";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function AdminDisputesPage() {
   const t = await getTranslations("disputes");
@@ -56,9 +57,8 @@ export default async function AdminDisputesPage() {
   }));
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">{t("adminPanel")}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">{t("adminSubtitle")}</p>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("adminPanel")} subtitle={t("adminSubtitle")} />
       <AdminDisputesList disputes={serialized} />
     </div>
   );

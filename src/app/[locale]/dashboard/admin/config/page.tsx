@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppConfigEditor } from "@/components/admin/app-config-editor";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function AdminConfigPage() {
   const records = await prisma.appConfig.findMany({
@@ -14,13 +15,10 @@ export default async function AdminConfigPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">AppConfig</h1>
-        <p className="text-sm text-muted-foreground">
-          Key-value records voor runtime-instellingen. Wijzigingen worden direct van kracht en gelogd in audit log.
-          De waarde moet geldige JSON zijn (kan een primitive, object of array zijn).
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="AppConfig"
+        subtitle="Key-value records voor runtime-instellingen. Wijzigingen worden direct van kracht en gelogd in audit log. De waarde moet geldige JSON zijn (kan een primitive, object of array zijn)."
+      />
       <AppConfigEditor entries={entries} />
     </div>
   );

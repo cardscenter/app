@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ShippingIssuesAdminList } from "@/components/admin/shipping-issues-admin-list";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function AdminShippingIssuesPage({
   searchParams,
@@ -52,12 +53,11 @@ export default async function AdminShippingIssuesPage({
   }));
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">Trackingtickets (ShippingIssue)</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Lichtgewicht tickets voor tracking-problemen — voor scenario&apos;s waar een zware geschillen-flow disproportioneel zou zijn.
-      </p>
-
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Trackingtickets (ShippingIssue)"
+        subtitle="Lichtgewicht tickets voor tracking-problemen — voor scenario’s waar een zware geschillen-flow disproportioneel zou zijn."
+      />
       <ShippingIssuesAdminList issues={serialized} currentStatus={statusFilter} />
     </div>
   );

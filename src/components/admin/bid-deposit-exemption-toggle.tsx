@@ -69,7 +69,7 @@ export function BidDepositExemptionToggle({ userId, userName, currentlyExempt }:
       </button>
 
       {open && (
-        <form onSubmit={handleSubmit} className="space-y-2 rounded-md border border-border bg-card p-3">
+        <form onSubmit={handleSubmit} className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
           <p className="text-xs text-muted-foreground">
             {currentlyExempt
               ? `Vrijstelling voor ${userName} intrekken — bids ≥ €2000 vereisen weer een geverifieerd account.`
@@ -88,7 +88,7 @@ export function BidDepositExemptionToggle({ userId, userName, currentlyExempt }:
             <button
               type="submit"
               disabled={pending}
-              className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
             >
               {pending ? "Bezig..." : currentlyExempt ? "Intrekken" : "Toekennen"}
             </button>
@@ -99,7 +99,7 @@ export function BidDepositExemptionToggle({ userId, userName, currentlyExempt }:
                 setReason("");
                 setError(null);
               }}
-              className="rounded-md bg-muted px-3 py-1 text-xs hover:bg-muted/80"
+              className="rounded-md border border-border bg-card px-3 py-1 text-xs hover:bg-muted"
             >
               Annuleren
             </button>

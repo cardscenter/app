@@ -124,13 +124,13 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
       </div>
 
       {suspendOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
           <form
             onSubmit={handleSuspend}
-            className="w-full max-w-md space-y-3 rounded-xl border border-border bg-card p-5 shadow-lg"
+            className="w-full max-w-md space-y-3 rounded-dash border border-border bg-card p-5 shadow-lg"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Opschorten: {userName}</h3>
+              <h3 className="text-[15px] font-semibold">Opschorten: {userName}</h3>
               <button
                 type="button"
                 onClick={() => setSuspendOpen(false)}
@@ -143,7 +143,7 @@ export function UserActionBar({ userId, userName, isSuspended, hasIban, hasUsern
               <label className="text-sm font-medium">Type</label>
               <div className="flex gap-2">
                 {(["TEMPORARY", "PERMANENT"] as const).map((t) => (
-                  <label key={t} className="flex flex-1 cursor-pointer items-center gap-2 rounded-md border p-2 text-sm">
+                  <label key={t} className="flex flex-1 cursor-pointer items-center gap-2 rounded-md border border-border p-2 text-sm hover:bg-muted/40">
                     <input
                       type="radio"
                       name="type"

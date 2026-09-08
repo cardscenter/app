@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { approveWithdrawal, rejectWithdrawal, markWithdrawalPaid } from "@/actions/withdrawal";
 import { formatIbanForDisplay } from "@/lib/validations/iban";
+import { Banknote } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
 
 interface Row {
   id: string;
@@ -28,7 +30,7 @@ export function AdminWithdrawalsList({ rows, mode }: { rows: Row[]; mode: Mode }
   const t = useTranslations("withdrawal");
 
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t("noRecords")}</p>;
+    return <EmptyState icon={Banknote} title={t("noRecords")} compact />;
   }
 
   return (
@@ -92,7 +94,7 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
   }
 
   return (
-    <li className="rounded-lg border border-border bg-muted px-4 py-3">
+    <li className="dash-card px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="font-semibold text-foreground">
@@ -130,14 +132,14 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
               <button
                 onClick={handleApprove}
                 disabled={pending}
-                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
               >
                 {t("approveAction")}
               </button>
               <button
                 onClick={() => setShowReject((s) => !s)}
                 disabled={pending}
-                className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                className="rounded-md border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
               >
                 {t("rejectAction")}
               </button>
@@ -148,14 +150,14 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
               <button
                 onClick={handleMarkPaid}
                 disabled={pending}
-                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
               >
                 {t("markPaidAction")}
               </button>
               <button
                 onClick={() => setShowReject((s) => !s)}
                 disabled={pending}
-                className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                className="rounded-md border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
               >
                 {t("rejectAction")}
               </button>
@@ -165,7 +167,7 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
       </div>
 
       {showReject && (mode === "pending" || mode === "approved") && (
-        <div className="mt-3 space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+        <div className="mt-3 space-y-2 rounded-md border border-border bg-muted/40 p-3">
           <label className="block text-xs font-medium text-foreground">{t("rejectReasonLabel")}</label>
           <input
             type="text"
@@ -178,7 +180,7 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
             <button
               onClick={handleReject}
               disabled={pending || !rejectReason.trim()}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             >
               {t("rejectConfirm")}
             </button>
@@ -188,7 +190,7 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
                 setRejectReasonText("");
               }}
               disabled={pending}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               {t("cancel")}
             </button>

@@ -63,7 +63,7 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
     <>
       <div className="space-y-3">
         {selected.size > 0 && (
-          <div className="flex items-center justify-between rounded-lg border border-rose-200 bg-rose-50 p-3 dark:border-rose-900/50 dark:bg-rose-950/20">
+          <div className="flex items-center justify-between rounded-md border border-rose-200 bg-rose-50 p-3 dark:border-rose-900/50 dark:bg-rose-950/20">
             <p className="text-sm font-medium text-rose-700 dark:text-rose-300">
               {selected.size} geselecteerd
             </p>
@@ -76,46 +76,46 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
+        <div className="overflow-x-auto dash-card">
           <table className="w-full text-sm">
-            <thead className="bg-muted text-left">
+            <thead className="bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 w-8">
+                <th className="w-8 px-4 py-2.5">
                   <input
                     type="checkbox"
                     checked={selected.size === items.length && items.length > 0}
                     onChange={toggleAll}
                   />
                 </th>
-                <th className="px-3 py-2 font-medium">Titel</th>
-                <th className="px-3 py-2 font-medium">Verkoper</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium text-right">Reports verkoper</th>
-                <th className="px-3 py-2 font-medium">Aangemaakt</th>
-                <th className="px-3 py-2 font-medium text-right">Bedrag</th>
+                <th className="px-4 py-2.5">Titel</th>
+                <th className="px-4 py-2.5">Verkoper</th>
+                <th className="px-4 py-2.5">Status</th>
+                <th className="px-4 py-2.5 text-right">Reports verkoper</th>
+                <th className="px-4 py-2.5">Aangemaakt</th>
+                <th className="px-4 py-2.5 text-right">Bedrag</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-12 text-center text-muted-foreground">Geen resultaten.</td>
+                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">Geen resultaten.</td>
                 </tr>
               )}
               {items.map((it) => (
-                <tr key={it.id} className={`border-t ${it.sellerOpenReports > 0 ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}`}>
-                  <td className="px-3 py-2">
+                <tr key={it.id} className={`transition-colors hover:bg-muted/40 ${it.sellerOpenReports > 0 ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}`}>
+                  <td className="px-4 py-3">
                     <input type="checkbox" checked={selected.has(it.id)} onChange={() => toggle(it.id)} />
                   </td>
-                  <td className="px-3 py-2 font-medium">{it.title}</td>
-                  <td className="px-3 py-2 text-xs">
+                  <td className="px-4 py-3 font-medium">{it.title}</td>
+                  <td className="px-4 py-3 text-xs">
                     <a href={`/nl/dashboard/admin/users/${it.sellerId}`} className="text-primary hover:underline">
                       {it.sellerName}
                     </a>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3">
                     <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{it.status}</code>
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-4 py-3 text-right">
                     {it.sellerOpenReports > 0 ? (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
                         <AlertTriangle className="h-3 w-3" /> {it.sellerOpenReports}
@@ -124,10 +124,10 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                  <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-muted-foreground">
                     {new Date(it.createdAt).toLocaleDateString("nl-NL")}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-xs">
+                  <td className="px-4 py-3 text-right text-xs tabular-nums">
                     {it.amount != null ? `€${it.amount.toFixed(2)}` : "—"}
                   </td>
                 </tr>
@@ -138,10 +138,10 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md space-y-3 rounded-xl border border-border bg-card p-5 shadow-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="w-full max-w-md space-y-3 rounded-dash border border-border bg-card p-5 shadow-lg">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{selected.size} item(s) verwijderen</h3>
+              <h3 className="text-[15px] font-semibold">{selected.size} item(s) verwijderen</h3>
               <button onClick={() => setShowModal(false)} className="rounded-md p-1 hover:bg-muted">
                 <X className="h-4 w-4" />
               </button>

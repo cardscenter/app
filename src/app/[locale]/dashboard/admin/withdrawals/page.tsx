@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AdminWithdrawalsList } from "@/components/dashboard/admin-withdrawals-list";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { DashboardSection } from "@/components/dashboard/ui/section";
 
 export default async function AdminWithdrawalsPage() {
   const t = await getTranslations("withdrawal");
@@ -48,32 +50,24 @@ export default async function AdminWithdrawalsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-foreground">{t("adminTitle")}</h1>
+    <div className="space-y-6">
+      <DashboardPageHeader title={t("adminTitle")} />
 
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-3">
-          {t("pendingTitle")} ({pending.length})
-        </h2>
+      <DashboardSection variant="plain" title={`${t("pendingTitle")} (${pending.length})`}>
         <AdminWithdrawalsList rows={serialize(pending)} mode="pending" />
-      </section>
+      </DashboardSection>
 
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-3">
-          {t("approvedTitle")} ({approved.length})
-        </h2>
+      <DashboardSection variant="plain" title={`${t("approvedTitle")} (${approved.length})`}>
         <AdminWithdrawalsList rows={serialize(approved)} mode="approved" />
-      </section>
+      </DashboardSection>
 
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-3">{t("paidTitle")}</h2>
+      <DashboardSection variant="plain" title={t("paidTitle")}>
         <AdminWithdrawalsList rows={serialize(paid)} mode="paid" />
-      </section>
+      </DashboardSection>
 
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-3">{t("rejectedTitle")}</h2>
+      <DashboardSection variant="plain" title={t("rejectedTitle")}>
         <AdminWithdrawalsList rows={serialize(rejected)} mode="rejected" />
-      </section>
+      </DashboardSection>
     </div>
   );
 }

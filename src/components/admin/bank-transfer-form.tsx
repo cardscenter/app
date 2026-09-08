@@ -73,7 +73,7 @@ export function BankTransferForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-lg border border-border bg-muted p-3">
+    <form onSubmit={submit} className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
       <div className="text-xs text-muted-foreground">
         {userName} — huidig saldo €{currentBalance.toFixed(2)}
       </div>

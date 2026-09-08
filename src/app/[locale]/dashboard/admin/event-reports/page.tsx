@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/admin";
 import { AdminEventReportsList } from "@/components/dashboard/admin-event-reports-list";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function AdminEventReportsPage() {
   await requireAdminPage();
@@ -26,15 +27,12 @@ export default async function AdminEventReportsPage() {
   }));
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-foreground">Gemelde evenementen</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Meldingen van bezoekers. Bij &ldquo;Actie ondernemen&rdquo; wordt het evenement
-        verborgen (uit publicatie gehaald).
-      </p>
-      <div className="mt-6">
-        <AdminEventReportsList reports={rows} />
-      </div>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="Gemelde evenementen"
+        subtitle="Meldingen van bezoekers. Bij “Actie ondernemen” wordt het evenement verborgen (uit publicatie gehaald)."
+      />
+      <AdminEventReportsList reports={rows} />
     </div>
   );
 }

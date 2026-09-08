@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AdminReportsList } from "@/components/dashboard/admin-reports-list";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { isUserSuspended } from "@/lib/suspension";
 
 export default async function AdminReportsPage() {
@@ -62,7 +63,7 @@ export default async function AdminReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">{t("adminTitle")}</h1>
+      <DashboardPageHeader title={t("adminTitle")} />
       <AdminReportsList groups={groups} />
     </div>
   );

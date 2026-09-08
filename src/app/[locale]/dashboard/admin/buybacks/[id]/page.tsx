@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { AdminBuybackDetail } from "@/components/buyback/admin-buyback-detail";
-import { Link } from "@/i18n/navigation";
-import { ArrowLeft } from "lucide-react";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { notFound } from "next/navigation";
 
 export default async function AdminBuybackDetailPage({
@@ -25,13 +24,12 @@ export default async function AdminBuybackDetailPage({
   if (!request) notFound();
 
   return (
-    <div>
-      <Link
-        href="/dashboard/admin/buybacks"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> {t("backToOverview")}
-      </Link>
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title={t("requestDetail")}
+        backHref="/dashboard/admin/buybacks"
+        backLabel={t("backToOverview")}
+      />
       <AdminBuybackDetail request={JSON.parse(JSON.stringify(request))} />
     </div>
   );
