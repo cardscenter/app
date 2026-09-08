@@ -149,7 +149,7 @@ function HeaderContent() {
             alt="Cards Center"
             width={160}
             height={45}
-            className="h-9 w-auto xl:h-10"
+            className="h-10 w-auto xl:h-11"
           />
         </Link>
 

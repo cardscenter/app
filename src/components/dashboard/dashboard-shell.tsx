@@ -13,6 +13,9 @@ import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 // en tokens erbinnen (level-kleuren, amber-pills, AdminNav) automatisch hun
 // donkere versie renderen; de sidebar-*-tokens zijn in beide thema's navy.
 // Site-header blijft ongemoeid: de hamburger zit bovenin de content-kolom.
+// Uitlijning op de header-gutter (px-[clamp(1rem,3vw,4rem)]): de nav-rijen
+// beginnen op dezelfde x als het logo (sidebar = 248px + gutter, nav pl = gutter)
+// en de content eindigt rechts op dezelfde x als de avatar-pil (pr = gutter).
 
 type Props = {
   nav: ReactNode;
@@ -62,8 +65,17 @@ export function DashboardShell({ nav, children }: Props) {
     // Buitenste wrapper: volle breedte met een navy vulling voor de linkerhelft,
     // zodat op ultrawide-schermen de sidebar binnen de 1880px-frame kan staan
     // maar de ruimte links ervan tóch in sidebar-kleur doorloopt.
+    // De strook onder de shell (top-full, 108px = mt-16 + ZDivider van de
+    // site-footer) loopt met negatieve z-index dóór tot achter de schuine
+    // footer-rand, precies ter breedte van viewport-rand → sidebar-rechterrand
+    // (frame-offset max(0, 50% − 940px) + 248px + gutter), zodat de navy kolom
+    // niet ophoudt boven de footer en de divider er gewoon overheen tekent.
     <div className="relative w-full">
       <div aria-hidden className="absolute inset-y-0 left-0 hidden w-1/2 bg-sidebar md:block" />
+      <div
+        aria-hidden
+        className="absolute left-0 top-full -z-10 hidden h-[108px] w-[calc(max(0px,50%_-_940px)+248px+clamp(1rem,3vw,4rem))] bg-sidebar md:block"
+      />
       <div className="relative mx-auto flex w-full max-w-[1880px] md:flex-row">
       {/* Backdrop — alleen mobiel */}
       <button
@@ -76,12 +88,16 @@ export function DashboardShell({ nav, children }: Props) {
         }`}
       />
 
+      {/* Kolom-wrapper: strekt mee tot de footer zodat de navy kolom op desktop
+          niet ophoudt bij de viewport-hoogte van de sticky aside. Op mobiel
+          display:contents zodat de fixed drawer ongehinderd rendert. */}
+      <div className={`contents md:block md:w-[calc(248px+clamp(1rem,3vw,4rem))] md:shrink-0 md:border-r md:border-sidebar-border md:bg-sidebar`}>
       <aside
         id="dashboard-sidebar"
         aria-label={t("navLabel")}
         className={`dark fixed inset-y-0 left-0 z-[70] flex w-[272px] max-w-[85vw] flex-col overflow-y-auto overscroll-contain scrollbar-none bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out motion-reduce:transition-none ${
           open ? "translate-x-0" : "-translate-x-full"
-        } md:sticky md:top-16 md:bottom-auto md:left-auto md:z-auto md:h-[calc(100dvh-4rem)] md:w-[260px] md:max-w-none md:shrink-0 md:translate-x-0 md:self-start md:border-r md:border-sidebar-border md:transition-none xl:top-[72px] xl:h-[calc(100dvh-72px)]`}
+        } md:sticky md:top-16 md:bottom-auto md:left-auto md:z-auto md:h-[calc(100dvh-4rem)] md:w-full md:max-w-none md:translate-x-0 md:transition-none xl:top-[72px] xl:h-[calc(100dvh-72px)]`}
       >
         <div className="flex items-center justify-end px-3 pt-3 md:hidden">
           <button
@@ -96,6 +112,7 @@ export function DashboardShell({ nav, children }: Props) {
         </div>
         {nav}
       </aside>
+      </div>
 
       <div className="min-w-0 flex-1 bg-background">
         {/* Hamburger-balk — sticky onder de site-header, alleen mobiel */}
@@ -112,7 +129,7 @@ export function DashboardShell({ nav, children }: Props) {
             {t("openMenu")}
           </button>
         </div>
-        <div className="px-4 py-5 sm:px-6 md:py-6 lg:px-6">{children}</div>
+        <div className="px-4 py-5 sm:px-6 md:py-6 md:pl-6 md:pr-[clamp(1rem,3vw,4rem)]">{children}</div>
       </div>
       </div>
     </div>

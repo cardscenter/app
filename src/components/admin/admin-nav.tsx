@@ -156,7 +156,7 @@ export function AdminNav({
   );
 
   return (
-    <nav className="flex flex-1 flex-col gap-4 px-3 py-4">
+    <nav className="flex flex-1 flex-col gap-4 px-3 py-4 md:pl-[clamp(1rem,3vw,4rem)] md:pr-3">
       {adminBadge}
       {navLinks}
       <div className="mt-auto border-t border-sidebar-border pt-3">{personalDashboardLink}</div>

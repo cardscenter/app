@@ -424,7 +424,7 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
   );
 
   return (
-    <nav className="flex flex-1 flex-col gap-4 px-3 py-4">
+    <nav className="flex flex-1 flex-col gap-4 px-3 py-4 md:pl-[clamp(1rem,3vw,4rem)] md:pr-3">
       {navGroups}
       <div className="mt-auto space-y-2 border-t border-sidebar-border pt-3">
         {adminLink}
