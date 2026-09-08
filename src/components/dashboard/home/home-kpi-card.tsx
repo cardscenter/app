@@ -2,11 +2,13 @@ import type { LucideIcon } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { ChangeIndicator } from "@/components/dashboard/statistics/change-indicator";
 
-// KPI-kaart in fintech-stijl: icoon + label links, periode-hint rechts, groot
-// getal met trend, en een "vs vorige periode"-regel eronder.
+// KPI-tegel in TailAdmin-anatomie (sept 2026): icoon-cirkel linksboven,
+// daaronder groot getal + label, rechtsonder de delta (of een periode-hint).
+// Optionele voetnoot voor uitleg in één regel.
 
 type Props = {
   icon: LucideIcon;
+  /** Kleur van het icoon (de cirkel zelf is altijd bg-muted). */
   iconClass?: string;
   label: string;
   hint?: string;
@@ -19,27 +21,26 @@ type Props = {
 export function HomeKpiCard({ icon: Icon, iconClass, label, hint, value, comparison, footnote, href }: Props) {
   const body = (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className={`flex size-8 items-center justify-center rounded-lg ${iconClass ?? "bg-primary/10 text-primary"}`}>
-            <Icon className="size-4" />
-          </span>
-          <p className="text-sm font-semibold text-foreground">{label}</p>
+      <span className="flex size-11 items-center justify-center rounded-full bg-muted">
+        <Icon className={`size-5 ${iconClass ?? "text-primary"}`} />
+      </span>
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{label}</p>
         </div>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-      </div>
-      <div className="mt-4 flex flex-wrap items-baseline gap-x-2">
-        <p className="text-3xl font-bold tabular-nums tracking-tight text-foreground">{value}</p>
-        {comparison && (
+        {comparison ? (
           <ChangeIndicator change={comparison.change} direction={comparison.direction} invert={comparison.invert} />
-        )}
+        ) : hint ? (
+          <p className="shrink-0 text-xs text-muted-foreground">{hint}</p>
+        ) : null}
       </div>
       {footnote && <p className="mt-2 text-xs text-muted-foreground">{footnote}</p>}
     </>
   );
-  const cls = "block rounded-2xl border border-border bg-card p-5 shadow-card";
+  const cls = "block dash-card p-4";
   return href ? (
-    <Link href={href} className={`${cls} transition-shadow hover:shadow-card-hover`}>
+    <Link href={href} className={`${cls} transition-colors hover:bg-muted/40`}>
       {body}
     </Link>
   ) : (

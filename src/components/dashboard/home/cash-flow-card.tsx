@@ -21,8 +21,10 @@ import { ChangeIndicator } from "@/components/dashboard/statistics/change-indica
 // Cash flow = verkopen (staven omhoog) vs aankopen (staven omlaag), met
 // week/dag-toggle. Rechts de totalen van de periode met "vs vorige periode".
 
-const SALES_COLOR = "#10b981"; // emerald-500 — geld erin
-const PURCHASE_COLOR = "#3b82f6"; // blue-500 — geld eruit
+// Semantisch: geld erin = success-groen, geld eruit = primary-blauw (tokens,
+// dus thema-bewust). Zelfde kleuren als de iconen in de samenvatting rechts.
+const SALES_COLOR = "var(--success)";
+const PURCHASE_COLOR = "var(--primary)";
 
 type Props = { data: CashFlow; showStatsLink: boolean };
 
@@ -41,22 +43,22 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
   const hasData = data.current.sales > 0 || data.current.purchases > 0;
 
   return (
-    <section className="rounded-2xl border border-border bg-card shadow-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+    <section className="overflow-hidden dash-card">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <ArrowUpDown className="size-4 text-muted-foreground" />
-          <h2 className="text-base font-semibold text-foreground">{t("cashFlow")}</h2>
+          <h2 className="text-[15px] font-semibold text-foreground">{t("cashFlow")}</h2>
         </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5 text-xs font-medium">
+          <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5 text-xs font-medium">
             {(["week", "day"] as const).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMode(m)}
                 aria-pressed={mode === m}
-                className={`rounded-md px-3 py-1.5 transition-colors ${
-                  mode === m ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"
+                className={`rounded px-3 py-1 transition-colors ${
+                  mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {m === "week" ? t("weekly") : t("daily")}
@@ -66,7 +68,7 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
           {showStatsLink && (
             <Link
               href="/dashboard/statistieken"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
             >
               <BarChart3 className="size-3.5" />
               {t("statistics")}
@@ -75,8 +77,8 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-6 p-5 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid gap-5 p-4 2xl:grid-cols-3">
+        <div className="2xl:col-span-2">
           {hasData ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={points} stackOffset="sign" barGap={2} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -101,7 +103,7 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
                   contentStyle={{
                     backgroundColor: "var(--card)",
                     border: "1px solid var(--border)",
-                    borderRadius: "0.75rem",
+                    borderRadius: "var(--radius-dash)",
                     fontSize: "0.75rem",
                     color: "var(--foreground)",
                   }}
@@ -115,13 +117,13 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-[240px] items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
+            <div className="flex h-[240px] items-center justify-center rounded-dash border border-dashed border-border text-sm text-muted-foreground">
               {t("cashFlowEmpty")}
             </div>
           )}
         </div>
 
-        <div className="flex flex-col justify-center divide-y divide-border lg:border-l lg:border-border lg:pl-6">
+        <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-1 2xl:gap-0 2xl:divide-y 2xl:divide-border 2xl:self-center 2xl:border-l 2xl:border-border 2xl:pl-5">
           <SummaryRow
             Icon={ArrowDownLeft}
             iconClass="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
@@ -170,14 +172,14 @@ function SummaryRow({
   invert?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
-      <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>
+    <div className="flex items-center gap-3 2xl:py-4 2xl:first:pt-0 2xl:last:pb-0">
+      <span className={`flex size-11 shrink-0 items-center justify-center rounded-full ${iconClass}`}>
         <Icon className="size-5" />
       </span>
       <div className="min-w-0">
         <p className="text-sm text-muted-foreground">{label}</p>
         <div className="flex flex-wrap items-baseline gap-x-2">
-          <p className="text-2xl font-bold tabular-nums text-foreground">{formatCurrency(value)}</p>
+          <p className="text-xl font-bold tabular-nums text-foreground">{formatCurrency(value)}</p>
           <ChangeIndicator change={comparison.change} direction={comparison.direction} invert={invert} />
         </div>
         <p className="text-xs text-muted-foreground">

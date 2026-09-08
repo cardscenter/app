@@ -119,9 +119,9 @@ export function ActionItemsWidget({
   const totalCount = visibleItems.reduce((s, i) => s + i.count, 0);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-      <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-5 py-4">
-        <h2 className="text-base font-semibold text-foreground">{t("title")}</h2>
+    <div className="overflow-hidden dash-card">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+        <h2 className="text-[15px] font-semibold text-foreground">{t("title")}</h2>
         {totalCount > 0 && (
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-primary">
             {totalCount}
@@ -129,10 +129,10 @@ export function ActionItemsWidget({
         )}
       </div>
 
-      <div className="p-5">
+      <div className="p-4">
         {allClear ? (
-          <div className="flex items-center gap-3 rounded-xl bg-emerald-500/5 p-4">
-            <div className="rounded-xl bg-emerald-500/10 p-2.5">
+          <div className="flex items-center gap-3 rounded-md bg-emerald-500/5 p-3">
+            <div className="rounded-md bg-emerald-500/10 p-2">
               <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
             <p className="text-sm text-muted-foreground">{t("allClear")}</p>
@@ -145,11 +145,11 @@ export function ActionItemsWidget({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`group flex items-center gap-3 rounded-xl border border-border transition-all hover:bg-muted/30 hover:shadow-card-hover ${
-                    isList ? "p-3" : "p-4"
+                  className={`group flex items-center gap-3 rounded-md border border-border transition-colors hover:bg-muted/40 ${
+                    isList ? "p-2.5" : "p-4"
                   }`}
                 >
-                  <div className={`shrink-0 rounded-xl ${item.bgColor} ${isList ? "p-2" : "p-2.5"}`}>
+                  <div className={`shrink-0 rounded-md ${item.bgColor} ${isList ? "p-2" : "p-2.5"}`}>
                     <Icon className={`${isList ? "h-4 w-4" : "h-5 w-5"} ${item.iconColor}`} />
                   </div>
                   {isList ? (
@@ -180,9 +180,9 @@ export function ActionItemsWidget({
         {!hasShippingAddress && (
           <Link
             href="/dashboard/verzending"
-            className="mt-4 flex items-center gap-3 rounded-xl border border-dashed border-amber-400/60 p-4 transition-colors hover:border-amber-500 hover:bg-amber-500/5 dark:border-amber-700/60"
+            className="mt-4 flex items-center gap-3 rounded-md border border-dashed border-amber-400/60 p-3 transition-colors hover:border-amber-500 hover:bg-amber-500/5 dark:border-amber-700/60"
           >
-            <div className="rounded-xl bg-amber-500/10 p-2.5">
+            <div className="rounded-md bg-amber-500/10 p-2">
               <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <span className="min-w-0 flex-1 text-sm text-muted-foreground">
@@ -200,13 +200,13 @@ export function ActionItemsWidget({
         {!totpEnabled && (
           <Link
             href="/dashboard/profiel"
-            className="relative mt-6 flex items-center gap-3 rounded-xl border border-dashed border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/30"
+            className="relative mt-5 flex items-center gap-3 rounded-md border border-dashed border-border p-3 transition-colors hover:border-primary/40 hover:bg-muted/30"
           >
             <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary backdrop-blur-sm">
               {t("recommended")}
             </span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/google_auth.webp" alt="" width={36} height={36} className="shrink-0 rounded-lg" />
+            <img src="/images/google_auth.webp" alt="" width={36} height={36} className="shrink-0 rounded-md" />
             <span className="min-w-0 flex-1 text-sm text-muted-foreground">
               <span className="block font-medium text-foreground">{t("setup2fa")}</span>
               {t("setup2faDesc")}

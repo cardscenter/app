@@ -25,24 +25,24 @@ export async function RecentOrdersTable({ rows }: Props) {
   const ts = await getTranslations("dashboard.home.status");
 
   return (
-    <section className="rounded-2xl border border-border bg-card shadow-card">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+    <section className="overflow-hidden dash-card">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <Activity className="size-4 text-muted-foreground" />
-          <h2 className="text-base font-semibold text-foreground">{t("recentActivity")}</h2>
+          <h2 className="text-[15px] font-semibold text-foreground">{t("recentActivity")}</h2>
         </div>
         <div className="flex items-center gap-2 text-xs font-medium">
-          <Link href="/dashboard/verkopen" className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground transition-colors hover:bg-muted">
+          <Link href="/dashboard/verkopen" className="rounded-md border border-border bg-card px-3 py-1.5 text-foreground transition-colors hover:bg-muted">
             {t("allSales")}
           </Link>
-          <Link href="/dashboard/aankopen" className="rounded-lg border border-border bg-card px-3 py-1.5 text-foreground transition-colors hover:bg-muted">
+          <Link href="/dashboard/aankopen" className="rounded-md border border-border bg-card px-3 py-1.5 text-foreground transition-colors hover:bg-muted">
             {t("allPurchases")}
           </Link>
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <div className="p-5">
+        <div className="p-4">
           <EmptyState icon={Package} title={t("noOrders")} description={t("noOrdersDesc")} compact />
         </div>
       ) : (
@@ -50,10 +50,10 @@ export async function RecentOrdersTable({ rows }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                <th className="px-5 py-3 font-semibold">{t("colType")}</th>
-                <th className="px-5 py-3 font-semibold">{t("colAmount")}</th>
-                <th className="px-5 py-3 font-semibold">{t("colStatus")}</th>
-                <th className="px-5 py-3 font-semibold">{t("colCounterparty")}</th>
+                <th className="px-4 py-2.5 font-semibold">{t("colType")}</th>
+                <th className="px-4 py-2.5 font-semibold">{t("colAmount")}</th>
+                <th className="px-4 py-2.5 font-semibold">{t("colStatus")}</th>
+                <th className="px-4 py-2.5 font-semibold">{t("colCounterparty")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -62,7 +62,7 @@ export async function RecentOrdersTable({ rows }: Props) {
                 const href = isSale ? "/dashboard/verkopen" : "/dashboard/aankopen";
                 return (
                   <tr key={r.id} className="transition-colors hover:bg-muted/40">
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3">
                       <Link href={href} className="flex items-center gap-3">
                         <span
                           className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
@@ -83,13 +83,13 @@ export async function RecentOrdersTable({ rows }: Props) {
                         </span>
                       </Link>
                     </td>
-                    <td className={`whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums ${isSale ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
+                    <td className={`whitespace-nowrap px-4 py-3 font-semibold tabular-nums ${isSale ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>
                       {isSale ? "+" : "−"}&nbsp;{formatCurrency(r.totalCost)}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3">
                       <StatusBadge tone={STATUS_TONE[r.status] ?? "neutral"}>{ts(r.status as never) || r.status}</StatusBadge>
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">{r.counterpartyName}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.counterpartyName}</td>
                   </tr>
                 );
               })}

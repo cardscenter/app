@@ -58,7 +58,12 @@ export function DashboardShell({ nav, children }: Props) {
   }
 
   return (
-    <div className="flex w-full md:flex-row">
+    // Buitenste wrapper: volle breedte met een navy vulling voor de linkerhelft,
+    // zodat op ultrawide-schermen de sidebar binnen de 1880px-frame kan staan
+    // maar de ruimte links ervan tóch in sidebar-kleur doorloopt.
+    <div className="relative w-full">
+      <div aria-hidden className="absolute inset-y-0 left-0 hidden w-1/2 bg-sidebar md:block" />
+      <div className="relative mx-auto flex w-full max-w-[1880px] md:flex-row">
       {/* Backdrop — alleen mobiel */}
       <button
         type="button"
@@ -91,7 +96,7 @@ export function DashboardShell({ nav, children }: Props) {
         {nav}
       </aside>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 bg-background">
         {/* Hamburger-balk — sticky onder de site-header, alleen mobiel */}
         <div className="sticky top-16 z-40 flex items-center gap-2 border-b border-border bg-background/95 px-4 py-2 backdrop-blur md:hidden">
           <button
@@ -106,7 +111,8 @@ export function DashboardShell({ nav, children }: Props) {
             {t("openMenu")}
           </button>
         </div>
-        <div className="mx-auto max-w-[1620px] px-4 py-5 sm:px-6 md:py-6 lg:px-6">{children}</div>
+        <div className="px-4 py-5 sm:px-6 md:py-6 lg:px-6">{children}</div>
+      </div>
       </div>
     </div>
   );

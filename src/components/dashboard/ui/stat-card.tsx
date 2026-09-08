@@ -15,8 +15,8 @@ type StatCardProps = {
 };
 
 /**
- * KPI-tegel voor het dashboard (Fase 44). Solide kaart, geen glass, geen
- * hover-scale — lift via shadow-card-hover wanneer klikbaar.
+ * KPI-tegel voor het dashboard (Fase 44). Vlakke dash-card, geen glass, geen
+ * hover-scale — subtiele hover-tint wanneer klikbaar.
  */
 export function StatCard({ label, value, icon: Icon, iconClassName, href, hint }: StatCardProps) {
   const inner = (
@@ -24,7 +24,7 @@ export function StatCard({ label, value, icon: Icon, iconClassName, href, hint }
       {Icon && (
         <div
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
             iconClassName ?? "bg-primary/10 text-primary"
           )}
         >
@@ -39,11 +39,11 @@ export function StatCard({ label, value, icon: Icon, iconClassName, href, hint }
     </div>
   );
 
-  const shell = "block rounded-2xl border border-border bg-card p-4 shadow-card";
+  const shell = "block dash-card p-4";
 
   if (href) {
     return (
-      <Link href={href} className={cn(shell, "transition-shadow hover:shadow-card-hover")}>
+      <Link href={href} className={cn(shell, "transition-colors hover:bg-muted/40")}>
         {inner}
       </Link>
     );
