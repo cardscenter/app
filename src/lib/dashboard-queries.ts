@@ -40,13 +40,10 @@ export async function fetchActionItems(userId: string): Promise<ActionItemsCount
       },
     }),
     prisma.notification.count({ where: { userId, read: false } }),
-    prisma.dispute.count({
+    prisma.disputeV2.count({
       where: {
-        status: { in: ["OPEN", "SELLER_RESPONDED", "ESCALATED"] },
-        OR: [
-          { openedById: userId },
-          { shippingBundle: { sellerId: userId } },
-        ],
+        status: { in: ["OPEN", "SELLER_RESPONDED", "MEDIATION", "ESCALATED"] },
+        OR: [{ buyerId: userId }, { sellerId: userId }],
       },
     }),
     prisma.auction.count({

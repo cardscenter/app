@@ -142,6 +142,9 @@ export default async function MyPurchasesPage({
         where: { status: "PENDING" },
         select: { id: true },
       },
+      // Geschil (lopend of afgerond) — voor de "Bekijk geschil"-link en om de
+      // "Geschil openen"-knop te verbergen als er al één is geweest.
+      disputeV2: { select: { id: true, status: true } },
       // Pickup-schedule: voor SCHEDULED bundles met ACCEPTED schedule tonen
       // we de code prominent in een aparte sectie bovenaan zodat de koper
       // hem niet uit de chat hoeft te zoeken.
@@ -244,6 +247,7 @@ export default async function MyPurchasesPage({
     sellerId: b.seller.id,
     status: b.status,
     hasActiveCancellation: b.cancellationRequests.length > 0,
+    disputeInfo: b.disputeV2 ? { id: b.disputeV2.id, status: b.disputeV2.status } : null,
     shippingCost: b.shippingCost,
     totalItemCost: b.totalItemCost,
     totalCost: b.totalCost,

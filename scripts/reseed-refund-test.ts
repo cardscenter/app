@@ -26,7 +26,7 @@ async function main() {
   });
   for (const b of oldBundles) {
     await prisma.claimsaleItem.updateMany({ where: { shippingBundleId: b.id }, data: { shippingBundleId: null, buyerId: null, status: "AVAILABLE", refundedAt: null } });
-    await prisma.dispute.deleteMany({ where: { shippingBundleId: b.id } });
+    await prisma.disputeV2.deleteMany({ where: { bundleId: b.id } });
   }
   await prisma.shippingBundle.deleteMany({
     where: { OR: [{ buyerId: me.id }, { sellerId: me.id }] },

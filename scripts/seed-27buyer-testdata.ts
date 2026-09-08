@@ -135,7 +135,7 @@ async function cleanupOldData() {
   await prisma.claimsaleItem.deleteMany({ where: { claimsaleId: { in: saleIds } } });
   if (bundleIds.length > 0) {
     await prisma.cancellationRequest.deleteMany({ where: { shippingBundleId: { in: bundleIds } } }).catch(() => {});
-    await prisma.dispute.deleteMany({ where: { shippingBundleId: { in: bundleIds } } }).catch(() => {});
+    await prisma.disputeV2.deleteMany({ where: { bundleId: { in: bundleIds } } }).catch(() => {});
     await prisma.shippingBundle.deleteMany({ where: { id: { in: bundleIds } } });
   }
   await prisma.claimsale.deleteMany({ where: { id: { in: saleIds } } });

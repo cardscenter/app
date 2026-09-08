@@ -24,9 +24,13 @@ const REASON_KEYS: Record<DisputeV2ReasonCategory, string> = {
 export function OpenDisputeV2Form({
   bundleId,
   onCancel,
+  postDelivery = false,
 }: {
   bundleId: string;
   onCancel: () => void;
+  /** Geschil ná ontvangst (bundle al COMPLETED): minimaal één foto verplicht,
+   *  terugbetaling komt uit het verkopers-saldo i.p.v. escrow. */
+  postDelivery?: boolean;
 }) {
   const t = useTranslations("disputes");
   const router = useRouter();
@@ -35,9 +39,10 @@ export function OpenDisputeV2Form({
   const [evidenceUrls, setEvidenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const photoMissing = postDelivery && evidenceUrls.length === 0;
 
   async function handleSubmit() {
-    if (!reasonCategory || statement.length < 20) return;
+    if (!reasonCategory || statement.length < 20 || photoMissing) return;
 
     setLoading(true);
     const result = await openDisputeV2({
@@ -55,7 +60,7 @@ export function OpenDisputeV2Form({
 
     toast.success(t("disputeOpened"));
     if (result.disputeId) {
-      router.push(`/dashboard/geschillen-v2/${result.disputeId}`);
+      router.push(`/dashboard/geschillen/${result.disputeId}`);
     } else {
       router.refresh();
     }
@@ -68,6 +73,11 @@ export function OpenDisputeV2Form({
         <p className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("openDispute")}</p>
       </div>
       <p className="text-xs text-muted-foreground">{t("openDisputeDescriptionV2")}</p>
+      {postDelivery && (
+        <p className="rounded-md border border-amber-300/60 bg-amber-100/60 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          Je hebt de ontvangst al bevestigd, dus het bedrag is al aan de verkoper uitbetaald. Een geschil na ontvangst is bedoeld voor problemen die pas bij nakijken opvallen (namaak, verborgen schade, verkeerd item). Minimaal één foto is verplicht. Bij een terugbetaling wordt het bedrag bij de verkoper teruggehaald.
+        </p>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">{t("selectReason")}</label>
@@ -111,7 +121,7 @@ export function OpenDisputeV2Form({
       <div className="flex gap-2">
         <button
           onClick={handleSubmit}
-          disabled={loading || uploading || !reasonCategory || statement.length < 20}
+          disabled={loading || uploading || !reasonCategory || statement.length < 20 || photoMissing}
           className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
         >
           {loading ? t("submitting") : t("submitDispute")}

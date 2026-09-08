@@ -56,7 +56,7 @@ export default async function PendingFeesPage({
                       <div>
                         <p className="text-sm font-medium text-foreground">{fee.description}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {fee.type === "BID_DEPOSIT_FORFEIT" ? "Borg" : "Veilingkosten"} ·{" "}
+                          {fee.type === "BID_DEPOSIT_FORFEIT" ? "Borg" : fee.type === "DISPUTE_REFUND_SHORTFALL" ? "Geschil-terugbetaling" : "Veilingkosten"} ·{" "}
                           {new Date(fee.createdAt).toLocaleDateString("nl-NL", {
                             day: "numeric",
                             month: "long",
@@ -95,7 +95,7 @@ export default async function PendingFeesPage({
                       <div>
                         <p className="text-sm font-medium text-foreground">{fee.description}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {fee.type === "BID_DEPOSIT_FORFEIT" ? "Borg" : "Veilingkosten"} · afgelost op{" "}
+                          {fee.type === "BID_DEPOSIT_FORFEIT" ? "Borg" : fee.type === "DISPUTE_REFUND_SHORTFALL" ? "Geschil-terugbetaling" : "Veilingkosten"} · afgelost op{" "}
                           {fee.settledAt &&
                             new Date(fee.settledAt).toLocaleDateString("nl-NL", {
                               day: "numeric",

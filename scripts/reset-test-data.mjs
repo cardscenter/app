@@ -58,11 +58,11 @@ const bundles = await prisma.shippingBundle.findMany({
 const bundleIds = bundles.map((b) => b.id);
 if (bundleIds.length > 0) {
   // Delete dispute events first, then disputes
-  const disputes = await prisma.dispute.findMany({ where: { shippingBundleId: { in: bundleIds } }, select: { id: true } });
+  const disputes = await prisma.disputeV2.findMany({ where: { bundleId: { in: bundleIds } }, select: { id: true } });
   const disputeIds = disputes.map((d) => d.id);
   if (disputeIds.length > 0) {
-    await prisma.disputeEvent.deleteMany({ where: { disputeId: { in: disputeIds } } });
-    await prisma.dispute.deleteMany({ where: { id: { in: disputeIds } } });
+    await prisma.disputeV2Event.deleteMany({ where: { disputeId: { in: disputeIds } } });
+    await prisma.disputeV2.deleteMany({ where: { id: { in: disputeIds } } });
   }
   await prisma.shippingBundle.deleteMany({ where: { id: { in: bundleIds } } });
 }

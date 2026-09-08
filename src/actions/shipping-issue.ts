@@ -51,7 +51,6 @@ export async function openShippingIssue(params: {
       status: true,
       shippedAt: true,
       disputeV2: { select: { id: true } },
-      dispute: { select: { id: true } },
       shippingIssues: { where: { status: { in: ["OPEN", "INVESTIGATING"] } }, select: { id: true } },
     },
   });
@@ -79,7 +78,7 @@ export async function openShippingIssue(params: {
     }
   }
 
-  if (bundle.dispute || bundle.disputeV2) {
+  if (bundle.disputeV2) {
     return { error: "Er loopt al een geschil voor deze bestelling — geen aparte ticket nodig." };
   }
   if (bundle.shippingIssues.length > 0) {

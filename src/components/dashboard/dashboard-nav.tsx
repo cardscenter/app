@@ -5,6 +5,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { signOut } from "next-auth/react";
 import { AdminNav } from "@/components/admin/admin-nav";
+import type { AdminQueueCounts } from "@/lib/admin-queue-counts";
 import { useRealtime } from "@/components/providers/realtime-provider";
 import { NAV_ROW, NAV_ROW_ACTIVE, NAV_ROW_IDLE, NAV_ICON_IDLE, NAV_GROUP_LABEL } from "./nav-styles";
 import {
@@ -82,15 +83,8 @@ type DashboardNavProps = {
   level?: LevelInfo;
   /** Voor de gebruikerskaart onderaan. */
   user?: { name: string; email: string | null; image: string | null };
-  adminPendingCounts?: {
-    disputes?: number;
-    verifications?: number;
-    withdrawals?: number;
-    buybacks?: number;
-    reports?: number;
-    sellerWarnings?: number;
-    enterpriseRequests?: number;
-  };
+  /** Badges van de admin-sidebar (zelfde bron als de KPI-tegels op /dashboard/admin). */
+  adminPendingCounts?: Partial<AdminQueueCounts>;
   /** Live counts voor het Aanbod-item — auctions = ACTIVE+SCHEDULED,
    *  claimsales = LIVE+SCHEDULED, listings = ACTIVE, events = niet-DELETED. */
   counts?: { auctions: number; listings: number; claimsales: number; events?: number };

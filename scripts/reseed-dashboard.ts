@@ -20,7 +20,7 @@ async function main() {
 
   // Delete disputes linked to these bundles first
   for (const b of oldBundles) {
-    await prisma.dispute.deleteMany({ where: { shippingBundleId: b.id } });
+    await prisma.disputeV2.deleteMany({ where: { bundleId: b.id } });
   }
 
   await prisma.shippingBundle.deleteMany({

@@ -6,6 +6,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getSellerStats } from "@/actions/review";
 import { fetchActiveActivity } from "@/lib/dashboard-queries";
 import { getUnreadConversationCountFor, getUnreadNotificationCountFor } from "@/lib/unread-counts";
+import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getLevel, getNextLevel, getLevelProgress } from "@/lib/seller-levels";
 import { isUserSuspended } from "@/lib/suspension";
 import { SuspensionBanner } from "@/components/dashboard/suspension-banner";
@@ -45,11 +46,13 @@ export async function DashboardChrome({
 
   const suspended = user ? isUserSuspended(user) : false;
 
-  const [stats, activity, unreadMessages, unreadNotifications] = await Promise.all([
+  const [stats, activity, unreadMessages, unreadNotifications, adminCounts] = await Promise.all([
     getSellerStats(session.user.id!),
     fetchActiveActivity(session.user.id!),
     getUnreadConversationCountFor(session.user.id!),
     getUnreadNotificationCountFor(session.user.id!),
+    // Sidebar-badges van het admin-panel (zelfde bron als de KPI-tegels).
+    user?.accountType === "ADMIN" ? getAdminQueueCounts() : Promise.resolve(undefined),
   ]);
   const xp = stats?.xp ?? 0;
   const currentLevel = getLevel(xp);
@@ -77,6 +80,7 @@ export async function DashboardChrome({
           }}
           counts={activity.counts}
           unread={{ messages: unreadMessages, notifications: unreadNotifications }}
+          adminPendingCounts={adminCounts}
         />
       }
     >

@@ -184,7 +184,6 @@ model User {
   reviewsReceived   Review[]       @relation("ReviewsReceived")
   autoBids          AutoBid[]
   cartItems         CartItem[]
-  disputesOpened    Dispute[]  @relation("DisputesOpened")
   subscriptions     Subscription[]
   claimedItems      ClaimsaleItem[]    @relation("ClaimedBy")
 
@@ -1079,10 +1078,8 @@ model ShippingBundle {
 
   items         ClaimsaleItem[]
   cardItems     ListingCardItem[] @relation("BundleCardItems")
-  dispute       Dispute?
-
-  // Dispute v2 (Fase 40) — greenfield. Bestaande v1-cases blijven op `dispute`,
-  // nieuwe cases gaan via `disputeV2`. Beide nullable, exclusive in praktijk.
+  // Geschil (één systeem sinds 2026-09-08; het oude v1-model is verwijderd,
+  // de tabel-/modelnaam DisputeV2 is historisch).
   disputeV2     DisputeV2?
 
   // Lightweight admin-tickets voor tracking-stuck / verloren pakket (Fase 40)
@@ -1094,72 +1091,6 @@ model ShippingBundle {
   @@index([paymentMode, status])
   @@index([pickupReservationExpiresAt])
   @@index([status, imagesPurgedAt])
-}
-
-// ============================================================
-// DISPUTES (Geschillen)
-// ============================================================
-
-model Dispute {
-  id                String   @id @default(cuid())
-
-  shippingBundleId  String   @unique
-  shippingBundle    ShippingBundle @relation(fields: [shippingBundleId], references: [id])
-
-  // Opened by buyer
-  openedById        String
-  openedBy          User     @relation("DisputesOpened", fields: [openedById], references: [id])
-
-  // Dispute details
-  reason            String   // NOT_RECEIVED | NOT_AS_DESCRIBED | DAMAGED_IN_TRANSIT
-  description       String
-  evidenceUrls      String   @default("[]") // JSON array of image URLs
-
-  // Seller response
-  sellerResponse       String?
-  sellerEvidenceUrls   String?  // JSON array of image URLs
-  sellerRespondedAt    DateTime?
-
-  // Proposal system
-  partialRefundAmount Float?
-  proposedById        String?   // userId of who proposed the partial refund
-
-  // Resolution
-  status            String   @default("OPEN") // OPEN | SELLER_RESPONDED | RESOLVED_BUYER | RESOLVED_SELLER | RESOLVED_MUTUAL | ESCALATED
-  resolution        String?  // REFUND_FULL | REFUND_PARTIAL | NO_REFUND | MUTUAL_AGREEMENT | ADMIN_DECISION
-  resolvedAt        DateTime?
-  resolvedById      String?  // Admin userId who resolved (for ESCALATED)
-
-  // Escalation: both parties must agree to admin review
-  buyerAcceptsEscalation  Boolean @default(false)
-  sellerAcceptsEscalation Boolean @default(false)
-  adminNotes              String? // Admin's reasoning for their decision
-
-  // Deadlines
-  responseDeadline     DateTime  // Seller has 7 days to respond
-  buyerReviewDeadline  DateTime? // Buyer has 7 days after seller responds
-
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  events DisputeEvent[]
-
-  @@index([openedById])
-  @@index([status])
-}
-
-model DisputeEvent {
-  id         String   @id @default(cuid())
-  disputeId  String
-  dispute    Dispute  @relation(fields: [disputeId], references: [id])
-
-  type       String   // OPENED | SELLER_RESPONDED | PROPOSAL_MADE | PROPOSAL_ACCEPTED | PROPOSAL_WITHDRAWN | ESCALATION_REQUESTED | ESCALATED | REJECTED_TO_ADMIN | RESOLVED
-  actorId    String   // userId who performed the action
-  detail     String?  // Extra info (e.g. amount, resolution text)
-
-  createdAt  DateTime @default(now())
-
-  @@index([disputeId])
 }
 
 // ============================================================
@@ -2318,14 +2249,15 @@ model ImageModerationLog {
 // DISPUTE V2 (Fase 40) — greenfield rewrite
 // ============================================================
 //
-// Naast de bestaande `Dispute`/`DisputeEvent`-modellen (Fase 12 / Fase 28).
-// Lopende v1-cases blijven daar tot ze resolved zijn; alle nieuwe disputes
-// gaan via dit model. Verschillen met v1:
+// Het enige geschil-model (v1 `Dispute`/`DisputeEvent` is op 2026-09-08
+// verwijderd; de naam DisputeV2 is historisch). Kenmerken:
 //   - structured `reasonCategory` (5 hoofd-redenen + sub-categorie) ipv free-text
 //   - explicit `MEDIATION`-fase voor proposal-loop (max 5 ronden in actions)
 //   - `adminSLADeadline` voor escalation → admin krijgt 5d-flag
 //   - `events` linken naar actor + actorType (BUYER/SELLER/ADMIN/SYSTEM)
-//   - werkt voor SHIPPED én EXTERNAL-pickup-COMPLETED-bundles
+//   - werkt voor SHIPPED-bundles (escrow) én PLATFORM-COMPLETED-bundles tot 14d
+//     na levering (refund uit seller-saldo, zie fundingSource); EXTERNAL-pickups
+//     zijn uitgesloten (geen escrow → geen geld om over te beslissen)
 //   - foto-upload-UI bestaat daadwerkelijk (v1 had dead `evidenceUrls`-param)
 //
 // Refund-correctheid:
@@ -2379,6 +2311,15 @@ model DisputeV2 {
   finalRefund       Float?   // wat uiteindelijk uitbetaald is
   resolution        String?  // FULL_REFUND | PARTIAL_REFUND | NO_REFUND | RETURN_AND_REFUND
   resolvedAt        DateTime?
+
+  // Waar een refund uit betaald wordt (2026-09-08):
+  //   ESCROW         → bundle was SHIPPED bij openen; bedrag zit in seller.heldBalance
+  //   SELLER_BALANCE → bundle was al COMPLETED (post-levering-geschil ≤14d na
+  //                    deliveredAt); escrow is al vrijgegeven, refund komt uit
+  //                    seller.balance; een tekort schiet het platform voor en
+  //                    wordt als PendingPlatformFee DISPUTE_REFUND_SHORTFALL op
+  //                    de verkoper geboekt.
+  fundingSource     String   @default("ESCROW")
 
   // Admin (alleen bij ESCALATED + RESOLVED_ADMIN)
   adminId           String?

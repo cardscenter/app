@@ -29,6 +29,10 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { OpenDisputeV2Form } from "./open-dispute-v2-form";
+import { DISPUTE_V2_OPEN_AFTER_DAYS, DISPUTE_V2_POST_DELIVERY_DAYS } from "@/lib/dispute-v2/config";
+
+// Buiten de component (purity-lint) — "nu" voor venster-berekeningen.
+const nowMs = () => Date.now();
 import { OpenShippingIssueForm } from "./open-shipping-issue-form";
 import { SourceTypeBadge } from "@/components/ui/source-type-badge";
 import { OrderDetailModal } from "./order-detail-modal";
@@ -72,6 +76,8 @@ type PurchaseBundle = {
   sellerId: string;
   status: string;
   hasActiveCancellation: boolean;
+  /** Lopend of afgerond geschil op deze bestelling (één per bundle). */
+  disputeInfo: { id: string; status: string } | null;
   shippingCost: number;
   totalItemCost: number;
   totalCost: number;
@@ -346,7 +352,8 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [showShippingIssueForm, setShowShippingIssueForm] = useState(false);
 
-  const DISPUTE_OPEN_AFTER_DAYS = 10;
+  const DISPUTE_OPEN_AFTER_DAYS = DISPUTE_V2_OPEN_AFTER_DAYS;
+  const POST_DELIVERY_DISPUTE_DAYS = DISPUTE_V2_POST_DELIVERY_DAYS;
 
   const date = new Date(bundle.createdAt);
   const formattedDate = date.toLocaleDateString(locale === "nl" ? "nl-NL" : "en-GB", {
@@ -794,7 +801,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                 {t("statusDisputed")}
               </p>
               <Link
-                href="/dashboard/geschillen"
+                href={bundle.disputeInfo ? `/dashboard/geschillen/${bundle.disputeInfo.id}` : "/dashboard/geschillen"}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:hover:bg-amber-900"
               >
                 <AlertTriangle className="h-4 w-4" />
@@ -802,6 +809,47 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
               </Link>
             </div>
           )}
+
+          {/* COMPLETED / CANCELLED: afgerond geschil → link; of geschil-na-ontvangst
+              (PLATFORM, ≤14d na levering, nog geen geschil geweest) */}
+          {(bundle.status === "COMPLETED" || bundle.status === "CANCELLED") && bundle.disputeInfo && (
+            <div className="border-t border-border/50 px-4 py-3">
+              <Link
+                href={`/dashboard/geschillen/${bundle.disputeInfo.id}`}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                {t("viewDispute")}
+              </Link>
+            </div>
+          )}
+          {bundle.status === "COMPLETED" && !bundle.disputeInfo && bundle.paymentMode === "PLATFORM" && bundle.deliveredAt && (() => {
+            const daysSinceDelivered = (nowMs() - new Date(bundle.deliveredAt).getTime()) / (1000 * 60 * 60 * 24);
+            if (daysSinceDelivered > POST_DELIVERY_DISPUTE_DAYS) return null;
+            const daysLeft = Math.max(1, Math.ceil(POST_DELIVERY_DISPUTE_DAYS - daysSinceDelivered));
+            return (
+              <div className="border-t border-border/50 px-4 py-3">
+                {!showDisputeForm ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => setShowDisputeForm(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Probleem na ontvangst? Geschil openen
+                    </button>
+                    <span className="text-xs text-muted-foreground">nog {daysLeft} dag{daysLeft === 1 ? "" : "en"} mogelijk</span>
+                  </div>
+                ) : (
+                  <OpenDisputeV2Form
+                    bundleId={bundle.id}
+                    postDelivery
+                    onCancel={() => setShowDisputeForm(false)}
+                  />
+                )}
+              </div>
+            );
+          })()}
 
           {/* PAID: annulering aanvragen via mutual-akkoord-flow (verkoper moet akkoord geven) */}
           {bundle.status === "PAID" && (

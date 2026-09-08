@@ -46,7 +46,6 @@ const JOBS = [
   "pickup-reservation-timeout",
   "pickup-reminder",
   "auto-confirm",
-  "auto-resolve-disputes",
   "auto-resolve-disputes-v2",
   "cleanup-notifications",
 ] as const;

@@ -113,8 +113,8 @@ export default async function MySalesPage({
         where: { status: "PENDING" },
         select: { id: true },
       },
-      dispute: {
-        select: { id: true, status: true, reason: true },
+      disputeV2: {
+        select: { id: true, status: true, reasonCategory: true },
       },
       pickupSchedule: {
         select: {
@@ -275,7 +275,7 @@ export default async function MySalesPage({
     buyerCountry: b.buyerCountry,
     buyerFirstName: b.buyer.firstName ?? null,
     buyerLastName: b.buyer.lastName ?? null,
-    disputeInfo: b.dispute ? { id: b.dispute.id, status: b.dispute.status, reason: b.dispute.reason } : null,
+    disputeInfo: b.disputeV2 ? { id: b.disputeV2.id, status: b.disputeV2.status, reason: b.disputeV2.reasonCategory } : null,
     // Items: claimsale-items (legacy) + ListingCardItem-rijen (stocked-buy
     // en partial-sale, Fase 27.13/27.23). Beide naar dezelfde shape, en
     // identieke rijen gegroepeerd per (cardName + conditie) met aantal +

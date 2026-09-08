@@ -98,8 +98,8 @@ async function main() {
   await prisma.claimsaleItem.deleteMany();
   await prisma.claimsale.deleteMany();
   await prisma.cartItem.deleteMany();
-  await prisma.disputeEvent.deleteMany();
-  await prisma.dispute.deleteMany();
+  await prisma.disputeV2Event.deleteMany();
+  await prisma.disputeV2.deleteMany();
   await prisma.shippingBundle.deleteMany();
   await prisma.proposal.deleteMany();
   await prisma.message.deleteMany();

@@ -3,7 +3,14 @@ import type { Prisma, PendingPlatformFee } from "@prisma/client";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export type PendingFeeType = "BID_DEPOSIT_FORFEIT" | "BID_PAYMENT_FAILURE_FEE";
+// DISPUTE_REFUND_SHORTFALL (2026-09-08): een geschil-refund op een al
+// afgeronde bestelling (escrow al vrijgegeven) die niet volledig uit het
+// verkopers-saldo betaald kon worden — het platform schoot het tekort voor
+// aan de koper en roomt het hier FIFO af bij de eerstvolgende credit.
+export type PendingFeeType =
+  | "BID_DEPOSIT_FORFEIT"
+  | "BID_PAYMENT_FAILURE_FEE"
+  | "DISPUTE_REFUND_SHORTFALL";
 
 export async function recordPendingFeeInTx(
   tx: Prisma.TransactionClient,

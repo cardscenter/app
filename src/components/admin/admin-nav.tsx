@@ -26,9 +26,10 @@ import {
 } from "lucide-react";
 
 // Admin-sidebar in dezelfde donkere aside als de gebruikers-nav (zie
-// dashboard-shell.tsx): gedeelde rij-stijlen uit nav-styles.ts, geen eigen
-// kaart-achtergrond en geen eigen mobiele toggle meer (de drawer regelt dat).
-// Volledige admin-restyle volgt later; dit is de compat-pass.
+// dashboard-shell.tsx): gedeelde rij-stijlen uit nav-styles.ts. Gegroepeerd
+// zoals het gebruikersdashboard (Algemeen / Verkopen / Kopen / …):
+//   Overzicht · Geschillen & meldingen · Financieel · Gebruikers ·
+//   Content & evenementen · Systeem
 
 type Section = {
   label: string;
@@ -40,7 +41,6 @@ export function AdminNav({
 }: {
   pendingCounts?: {
     disputes?: number;
-    disputesV2?: number;
     shippingIssues?: number;
     verifications?: number;
     withdrawals?: number;
@@ -58,32 +58,39 @@ export function AdminNav({
   const sections: Section[] = [
     {
       label: "sectionOverview",
-      items: [
-        { href: "/dashboard/admin", labelKey: "navOverview", icon: LayoutDashboard },
-      ],
+      items: [{ href: "/dashboard/admin", labelKey: "navOverview", icon: LayoutDashboard }],
     },
     {
-      label: "sectionQueues",
+      label: "sectionDisputes",
       items: [
         { href: "/dashboard/admin/disputes", labelKey: "navDisputes", icon: Scale, badge: pendingCounts?.disputes },
-        { href: "/dashboard/admin/disputes-v2", labelKey: "navDisputesV2", icon: Scale, badge: pendingCounts?.disputesV2 },
         { href: "/dashboard/admin/shipping-issues", labelKey: "navShippingIssues", icon: Truck, badge: pendingCounts?.shippingIssues },
-        { href: "/dashboard/admin/verifications", labelKey: "navVerifications", icon: ShieldCheck, badge: pendingCounts?.verifications },
-        { href: "/dashboard/admin/withdrawals", labelKey: "navWithdrawals", icon: Wallet, badge: pendingCounts?.withdrawals },
-        { href: "/dashboard/admin/buybacks", labelKey: "navBuybacks", icon: ArrowDownToLine, badge: pendingCounts?.buybacks },
         { href: "/dashboard/admin/reports", labelKey: "navReports", icon: Flag, badge: pendingCounts?.reports },
         { href: "/dashboard/admin/seller-warnings", labelKey: "navSellerWarnings", icon: AlertTriangle, badge: pendingCounts?.sellerWarnings },
-        { href: "/dashboard/admin/enterprise-requests", labelKey: "navEnterpriseRequests", icon: Building2, badge: pendingCounts?.enterpriseRequests },
-        { href: "/dashboard/admin/event-approvals", labelKey: "navEventApprovals", icon: CalendarDays, badge: pendingCounts?.eventApprovals },
-        { href: "/dashboard/admin/event-reports", labelKey: "navEventReports", icon: Flag, badge: pendingCounts?.eventReports },
-        { href: "/dashboard/admin/bank-transfers", labelKey: "navBankTransfers", icon: CreditCard },
       ],
     },
     {
-      label: "sectionUsersContent",
+      label: "sectionFinance",
+      items: [
+        { href: "/dashboard/admin/withdrawals", labelKey: "navWithdrawals", icon: Wallet, badge: pendingCounts?.withdrawals },
+        { href: "/dashboard/admin/bank-transfers", labelKey: "navBankTransfers", icon: CreditCard },
+        { href: "/dashboard/admin/buybacks", labelKey: "navBuybacks", icon: ArrowDownToLine, badge: pendingCounts?.buybacks },
+      ],
+    },
+    {
+      label: "sectionUsers",
       items: [
         { href: "/dashboard/admin/users", labelKey: "navUsers", icon: Users },
+        { href: "/dashboard/admin/verifications", labelKey: "navVerifications", icon: ShieldCheck, badge: pendingCounts?.verifications },
+        { href: "/dashboard/admin/enterprise-requests", labelKey: "navEnterpriseRequests", icon: Building2, badge: pendingCounts?.enterpriseRequests },
+      ],
+    },
+    {
+      label: "sectionContent",
+      items: [
         { href: "/dashboard/admin/moderation", labelKey: "navModeration", icon: Ban },
+        { href: "/dashboard/admin/event-approvals", labelKey: "navEventApprovals", icon: CalendarDays, badge: pendingCounts?.eventApprovals },
+        { href: "/dashboard/admin/event-reports", labelKey: "navEventReports", icon: Flag, badge: pendingCounts?.eventReports },
         { href: "/dashboard/admin/catalog", labelKey: "navCatalog", icon: Library },
       ],
     },

@@ -7,7 +7,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { autoConfirmDeliveries } from "@/actions/purchase";
-import { autoResolveDisputes } from "@/actions/dispute";
 import { checkAndDowngradeExpired } from "@/actions/subscription";
 import { expireClaimedItems } from "@/actions/claimsale";
 import { syncSetByPokewalletId } from "@/lib/pokewallet/sync";
@@ -283,7 +282,6 @@ export async function processRunnerUpDecision(
 
 export const CRON_JOB_NAMES = [
   "auto-confirm",
-  "auto-resolve-disputes",
   "auto-resolve-disputes-v2",
   "check-subscriptions",
   "expire-claims",
@@ -324,15 +322,9 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     schedule: "Dagelijks",
     allowManualRun: true,
   },
-  "auto-resolve-disputes": {
-    description:
-      "Sluit disputes die de wederpartij niet binnen de termijn beantwoord heeft, met de standaard-uitkomst (terugbetaling of vrijgave volgens de regels).",
-    schedule: "Dagelijks",
-    allowManualRun: true,
-  },
   "auto-resolve-disputes-v2": {
     description:
-      "Dispute v2 (Fase 40): OPEN-disputes waar verkoper >14d niet reageert → 100% refund + premium naar koper. SELLER_RESPONDED waar koper >14d niet reageert → escrow naar verkoper. Niet voor ESCALATED — die wachten op admin.",
+      "Geschillen: OPEN waar de verkoper >14d niet reageert → volledige terugbetaling koper (+ veilingkosten). SELLER_RESPONDED waar de koper >14d niets doet → vrijgave aan verkoper. MEDIATION waar een voorstel >14d onbeantwoord blijft → automatisch naar de beheerder. ESCALATED wacht op admin.",
     schedule: "Dagelijks",
     allowManualRun: true,
   },
@@ -479,14 +471,10 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     const r = await autoConfirmDeliveries();
     return { itemsProcessed: r.confirmed, result: r };
   },
-  "auto-resolve-disputes": async () => {
-    const r = await autoResolveDisputes();
-    return { itemsProcessed: r.resolved, result: r };
-  },
   "auto-resolve-disputes-v2": async () => {
     const { autoResolveDisputesV2 } = await import("@/actions/dispute-v2");
     const r = await autoResolveDisputesV2();
-    return { itemsProcessed: r.resolved, result: r };
+    return { itemsProcessed: r.resolved + r.escalated, result: r };
   },
   "check-subscriptions": async () => {
     const r = await checkAndDowngradeExpired();
@@ -1523,7 +1511,6 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
         status: "COMPLETED",
         deliveredAt: { lte: cutoff },
         imagesPurgedAt: null,
-        dispute: null,
         disputeV2: null,
         shippingIssues: { none: { status: { in: ["OPEN", "INVESTIGATING"] } } },
       },

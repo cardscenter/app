@@ -8,7 +8,7 @@ import { publish, userChannel } from "@/lib/realtime";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 import { createNotification } from "@/actions/notification";
 import { normalizeIban } from "@/lib/validations/iban";
-import { settlePendingFees } from "@/lib/pending-fees";
+import { settlePendingFees, recordPendingFeeInTx } from "@/lib/pending-fees";
 
 const PREMIUM_RATE_LABEL = `${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
@@ -258,6 +258,110 @@ export async function deductBidPayment(
 // NIET aangeroepen voor partial-refund-paden (PARTIAL dispute-decision,
 // seller-initiated issueSellerRefund) — premium is platform-fee voor de
 // auction-faciliteit en blijft bij gedeeltelijke refund staan.
+/**
+ * Terugbetaling aan de koper uit het VERKOPERS-SALDO i.p.v. escrow
+ * (geschil op een al afgeronde bestelling — escrow is dan al vrijgegeven).
+ *
+ * De koper krijgt ALTIJD het volledige bedrag (koperbescherming). Van de
+ * verkoper wordt afgeschreven wat er aan vrij saldo is (balance minus
+ * reservedBalance voor lopende biedingen, nooit onder 0). Het tekort schiet
+ * het platform voor en wordt als PendingPlatformFee DISPUTE_REFUND_SHORTFALL
+ * op de verkoper geboekt, zodat het bij de eerstvolgende credit (verkoop,
+ * storting, refund) automatisch wordt afgeroomd.
+ *
+ * Eén $transaction voor beide saldo-mutaties + audit-rijen.
+ */
+export async function refundFromSellerBalance(
+  sellerId: string,
+  buyerId: string,
+  amount: number,
+  description: string,
+  relatedShippingBundleId?: string,
+): Promise<{ sellerDebited: number; shortfall: number }> {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const refund = round2(amount);
+  if (refund <= 0) return { sellerDebited: 0, shortfall: 0 };
+
+  const [buyer, seller] = await Promise.all([
+    prisma.user.findUnique({ where: { id: buyerId } }),
+    prisma.user.findUnique({ where: { id: sellerId } }),
+  ]);
+  if (!buyer) throw new Error("Buyer not found");
+  if (!seller) throw new Error("Seller not found");
+
+  const sellerAvailable = Math.max(0, seller.balance - seller.reservedBalance);
+  const sellerDebited = round2(Math.min(refund, sellerAvailable));
+  const shortfall = round2(refund - sellerDebited);
+
+  // Koper: eerst eigen openstaande boetes afromen (zelfde regel als elke
+  // andere inkomende credit), rest naar saldo.
+  const { remaining: buyerCredit, settledTotal: buyerSettled } = await settlePendingFees(
+    buyerId,
+    refund,
+  );
+
+  const buyerBalanceBefore = buyer.balance;
+  const buyerBalanceAfter = round2(buyerBalanceBefore + buyerCredit);
+  const sellerBalanceBefore = seller.balance;
+  const sellerBalanceAfter = round2(sellerBalanceBefore - sellerDebited);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: buyerId }, data: { balance: buyerBalanceAfter } });
+    await tx.transaction.create({
+      data: {
+        userId: buyerId,
+        type: "PURCHASE",
+        amount: buyerCredit,
+        balanceBefore: buyerBalanceBefore,
+        balanceAfter: buyerBalanceAfter,
+        description: withSettlementSuffix(`Terugbetaling: ${description}`, buyerSettled),
+        relatedShippingBundleId,
+      },
+    });
+
+    if (sellerDebited > 0) {
+      await tx.user.update({ where: { id: sellerId }, data: { balance: sellerBalanceAfter } });
+      await tx.transaction.create({
+        data: {
+          userId: sellerId,
+          type: "DISPUTE_REFUND",
+          amount: -sellerDebited,
+          balanceBefore: sellerBalanceBefore,
+          balanceAfter: sellerBalanceAfter,
+          description: `Terugbetaling na geschil: ${description}`,
+          relatedShippingBundleId,
+        },
+      });
+    }
+
+    if (shortfall > 0) {
+      await recordPendingFeeInTx(tx, {
+        userId: sellerId,
+        type: "DISPUTE_REFUND_SHORTFALL",
+        shortfallAmount: shortfall,
+        originalAmount: refund,
+        description: `Voorgeschoten geschil-terugbetaling: ${description}`,
+      });
+      await tx.transaction.create({
+        data: {
+          userId: sellerId,
+          type: "DISPUTE_REFUND",
+          amount: 0,
+          balanceBefore: sellerBalanceAfter,
+          balanceAfter: sellerBalanceAfter,
+          description: `Openstaand na geschil (€${shortfall.toFixed(2)} voorgeschoten door platform): ${description}`,
+          relatedShippingBundleId,
+        },
+      });
+    }
+  });
+
+  publish(userChannel(buyerId), { type: "balance-changed", payload: {} });
+  publish(userChannel(sellerId), { type: "balance-changed", payload: {} });
+
+  return { sellerDebited, shortfall };
+}
+
 export async function refundAuctionPremium(buyerId: string, auctionId: string) {
   // Vind de originele AUCTION_PREMIUM Transaction (negatief bedrag = afgeschreven)
   const premiumTx = await prisma.transaction.findFirst({

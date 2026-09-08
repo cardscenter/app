@@ -335,28 +335,24 @@ async function PurchasesTab({ userId }: { userId: string }) {
 }
 
 async function DisputesTab({ userId }: { userId: string }) {
-  const disputes = await prisma.dispute.findMany({
-    where: {
-      OR: [
-        { openedById: userId },
-        { shippingBundle: { buyerId: userId } },
-        { shippingBundle: { sellerId: userId } },
-      ],
-    },
+  const disputes = await prisma.disputeV2.findMany({
+    where: { OR: [{ buyerId: userId }, { sellerId: userId }] },
     orderBy: { createdAt: "desc" },
     take: 50,
     include: {
-      shippingBundle: { select: { buyer: { select: { displayName: true } }, seller: { select: { displayName: true } } } },
+      buyer: { select: { displayName: true } },
+      seller: { select: { displayName: true } },
+      bundle: { select: { orderNumber: true, totalCost: true } },
     },
   });
 
   return (
     <SimpleList
-      title={`Disputes (${disputes.length})`}
+      title={`Geschillen (${disputes.length})`}
       items={disputes.map((d) => ({
         id: d.id,
-        primary: `${d.shippingBundle.buyer.displayName} ↔ ${d.shippingBundle.seller.displayName}`,
-        secondary: `${d.status} · ${d.reason}`,
+        primary: `${d.buyerId === userId ? "Als koper" : "Als verkoper"} · ${d.buyer.displayName} ↔ ${d.seller.displayName} · ${d.bundle.orderNumber}`,
+        secondary: `${d.status} · ${d.reasonCategory} · €${d.bundle.totalCost.toFixed(2)}${d.finalRefund ? ` · terugbetaald €${d.finalRefund.toFixed(2)}` : ""} · /dashboard/geschillen/${d.id}`,
         when: d.createdAt,
       }))}
     />
