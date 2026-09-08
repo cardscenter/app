@@ -68,6 +68,14 @@ export function MessageIcon() {
     });
   }, [subscribe, fetchRecent]);
 
+  // Eigen gesprek gelezen (open chat) → teller direct bijwerken.
+  useEffect(() => {
+    return subscribe("unread-changed", (event) => {
+      if (event.type !== "unread-changed") return;
+      setCount(event.payload.unreadConversationCount);
+    });
+  }, [subscribe]);
+
   // Cleanup timers
   useEffect(() => {
     return () => {

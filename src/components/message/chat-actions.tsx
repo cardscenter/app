@@ -30,8 +30,8 @@ export function ChatActions({ conversationId, status, compact }: ChatActionsProp
   }
 
   const buttonClass = compact
-    ? "rounded-lg p-1.5 transition-colors hover:bg-muted disabled:opacity-50"
-    : "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50 text-muted-foreground";
+    ? "rounded-md p-1.5 transition-colors hover:bg-muted disabled:opacity-50"
+    : "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50 text-muted-foreground";
 
   return (
     <div className="flex items-center gap-1">

@@ -174,6 +174,33 @@ export async function publishNewMessageForConversation(
 
 // De per-userId teller staat in src/lib/unread-counts.ts (gedeeld met de
 // dashboard-layout voor de sidebar-badge).
+/**
+ * Markeer een gesprek als gelezen (lastReadAt = nu). Aangeroepen door de
+ * open chat zodra er live (SSE/polling) een nieuw bericht van de ander
+ * binnenkomt, zodat de badges in sidebar en header niet blijven hangen tot
+ * de volgende server-render. Publisht `unread-changed` naar de eigen channel.
+ */
+export async function markConversationRead(conversationId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+  const userId = session.user.id;
+
+  const participant = await prisma.conversationParticipant.findFirst({
+    where: { conversationId, userId },
+    select: { id: true },
+  });
+  if (!participant) return { error: "Geen deelnemer" };
+
+  await prisma.conversationParticipant.update({
+    where: { id: participant.id },
+    data: { lastReadAt: new Date() },
+  });
+
+  const unreadConversationCount = await getUnreadConversationCountFor(userId);
+  publish(userChannel(userId), { type: "unread-changed", payload: { unreadConversationCount } });
+  return { success: true, unreadConversationCount };
+}
+
 export async function getUnreadConversationCount(): Promise<number> {
   const session = await auth();
   if (!session?.user?.id) return 0;

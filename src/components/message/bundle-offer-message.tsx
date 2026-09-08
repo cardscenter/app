@@ -107,7 +107,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
 
   return (
     <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-      <div className="max-w-[85%] rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div className="max-w-[85%] rounded-md border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
           <Package className="h-5 w-5 text-primary" />
           <span className="text-sm font-semibold text-foreground">
@@ -187,14 +187,14 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                   else run(() => respondToBundleOffer(bp.id, "ACCEPT"));
                 }}
                 disabled={loading}
-                className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
                 {t("accept")}
               </button>
               <button
                 onClick={() => run(() => respondToBundleOffer(bp.id, "REJECT"))}
                 disabled={loading}
-                className="flex-1 rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-md bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
               >
                 {t("reject")}
               </button>
@@ -212,7 +212,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
               setShowCounterModal(true);
             }}
             disabled={loading}
-            className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+            className="mt-2 w-full rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50 transition-colors"
           >
             {t("counter")}
           </button>
@@ -221,7 +221,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
         {/* Counter-modal */}
         {showCounterModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCounterModal(false)}>
-            <div className="w-full max-w-sm rounded-2xl bg-background p-5 shadow-xl border border-border" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-sm rounded-dash bg-background p-5 shadow-xl border border-border" onClick={(e) => e.stopPropagation()}>
               <h3 className="mb-3 text-base font-semibold text-foreground">{t("counterTitle")}</h3>
               <p className="mb-3 text-xs text-muted-foreground">
                 {t("counterHint", { current: bp.totalAmount.toFixed(2) })}
@@ -234,14 +234,14 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                   step={0.01}
                   value={counterAmount}
                   onChange={(e) => setCounterAmount(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
+                  className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
                   autoFocus
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowCounterModal(false)}
-                  className="flex-1 rounded-xl border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                  className="flex-1 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
                 >
                   {t("cancel")}
                 </button>
@@ -256,7 +256,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                     run(() => counterBundleOffer({ parentProposalId: bp.id, totalAmount: amount }));
                   }}
                   disabled={loading}
-                  className="flex-1 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+                  className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
                 >
                   {t("submitCounter")}
                 </button>
@@ -273,22 +273,22 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
           const visible = insuredRequired ? usable.filter((sm) => sm.service === "PARCEL_SIGNED") : usable;
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAcceptModal(false)}>
-              <div className="glass w-full max-w-md rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="rounded-dash border border-border bg-card shadow-lg w-full max-w-md rounded-dash p-6" onClick={(e) => e.stopPropagation()}>
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-foreground">{t("acceptShipping.title")}</h3>
-                  <button onClick={() => setShowAcceptModal(false)} className="rounded-lg p-1 text-muted-foreground hover:text-foreground">
+                  <button onClick={() => setShowAcceptModal(false)} className="rounded-md p-1 text-muted-foreground hover:text-foreground">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
                 <p className="mb-3 text-sm text-muted-foreground">{t("acceptShipping.hint")}</p>
                 {insuredRequired && (
-                  <div className="mb-3 flex items-center gap-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                  <div className="mb-3 flex items-center gap-2 rounded-md bg-emerald-50 p-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     {t("acceptShipping.insuredBadge")}
                   </div>
                 )}
                 {visible.length === 0 ? (
-                  <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                  <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
                     {t.rich("acceptShipping.noMethods", {
                       link: (chunks) => (
                         <Link href="/dashboard/verzending" className="font-medium underline-offset-2 hover:underline">
@@ -302,7 +302,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                     {visible.map((sm) => (
                       <label
                         key={sm.id}
-                        className={`flex items-center gap-2 rounded-lg border p-2 text-sm cursor-pointer transition-colors ${
+                        className={`flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer transition-colors ${
                           selectedShippingId === sm.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
                         }`}
                       >
@@ -328,7 +328,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                   <button
                     onClick={() => setShowAcceptModal(false)}
                     disabled={loading}
-                    className="flex-1 rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                    className="flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
                   >
                     {t("cancel")}
                   </button>
@@ -346,7 +346,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                       setLoading(false);
                     }}
                     disabled={loading || !selectedShippingId || visible.length === 0}
-                    className="flex-1 rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                   >
                     {t("acceptShipping.confirm")}
                   </button>
@@ -360,7 +360,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
           <button
             onClick={() => run(() => withdrawBundleOffer(bp.id))}
             disabled={loading}
-            className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            className="mt-3 w-full rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
           >
             {t("withdraw")}
           </button>
@@ -370,7 +370,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
           <button
             onClick={() => run(() => completeBundleOfferPayment(bp.id))}
             disabled={loading}
-            className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
+            className="mt-3 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors"
           >
             {t("completePayment")}
           </button>

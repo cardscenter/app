@@ -28,6 +28,8 @@ export type RealtimeEvent =
       payload: { achievementKey: string; tier: number; name: string; description: string };
     }
   | { type: "notification-created"; payload: { unreadCount: number } }
+  /** Eigen gesprek gelezen → badges (sidebar/header) direct bijwerken. */
+  | { type: "unread-changed"; payload: { unreadConversationCount: number } }
   | {
       type: "new-message";
       payload: { conversationId: string; senderName: string; preview: string; unreadConversationCount: number };

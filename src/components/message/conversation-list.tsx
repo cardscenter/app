@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useLocale } from "next-intl";
-import type { ConversationPreview, ChatTab } from "./chat-layout";
+import { Link } from "@/i18n/navigation";
+import { useFormatter, useTranslations } from "next-intl";
+import type { ConversationPreview } from "@/lib/conversation-types";
+import type { ChatTab } from "./chat-layout";
 import { ChatActions } from "./chat-actions";
+import { ChatAvatar } from "./chat-avatar";
 
 interface ConversationListProps {
   conversations: ConversationPreview[];
@@ -12,73 +14,78 @@ interface ConversationListProps {
   tab: ChatTab;
 }
 
-export function ConversationList({ conversations, activeId, showActions, tab }: ConversationListProps) {
-  const locale = useLocale();
+/** Vandaag → tijd, dit jaar → "8 sep", ouder → "8 sep 2025". */
+function useListTime() {
+  const format = useFormatter();
+  return (iso: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    if (sameDay) return format.dateTime(d, { hour: "2-digit", minute: "2-digit" });
+    if (d.getFullYear() === now.getFullYear()) return format.dateTime(d, { day: "numeric", month: "short" });
+    return format.dateTime(d, { day: "numeric", month: "short", year: "numeric" });
+  };
+}
+
+export function ConversationList({ conversations, activeId, showActions }: ConversationListProps) {
+  const t = useTranslations("chat");
+  const listTime = useListTime();
+  const ctxLabel = { auction: t("ctxAuction"), claimsale: t("ctxClaimsale"), listing: t("ctxListing") } as const;
 
   return (
-    <div className="divide-y divide-border">
+    <ul className="divide-y divide-border">
       {conversations.map((conv) => {
         const isActive = conv.id === activeId;
         return (
-          <div key={conv.id} className="relative group">
+          <li key={conv.id} className="group relative">
             <Link
-              href={`/${locale}/berichten/${conv.id}`}
-              className={`flex items-start gap-3 px-4 py-3 transition-colors ${
-                isActive
-                  ? "bg-primary/5 dark:bg-primary/10"
-                  : "hover:bg-muted/50"
+              href={`/berichten/${conv.id}`}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex items-start gap-3 border-l-2 py-2.5 pl-[10px] pr-3 transition-colors ${
+                isActive ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/40"
               }`}
             >
-              {/* Avatar */}
-              <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
-                conv.hasUnread ? "bg-primary" : "bg-muted-foreground/40"
-              }`}>
-                {conv.otherUserInitial}
-              </div>
+              <ChatAvatar src={conv.otherUserAvatar} initial={conv.otherUserInitial} emphasis={conv.hasUnread} />
 
-              {/* Content */}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm truncate ${
-                    conv.hasUnread ? "font-semibold text-foreground" : "font-medium text-foreground"
-                  }`}>
-                    {conv.otherUserName}
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className={`truncate text-sm ${conv.hasUnread ? "font-semibold" : "font-medium"} text-foreground`}>
+                    {conv.otherUserName || t("user")}
                   </span>
-                  <span className="ml-2 flex-shrink-0 text-[11px] text-muted-foreground">
-                    {conv.lastMessageDate}
+                  <span className={`shrink-0 text-[11px] tabular-nums ${conv.hasUnread ? "font-medium text-primary" : "text-muted-foreground"}`}>
+                    {listTime(conv.lastMessageAt)}
                   </span>
-                </div>
-
-                {conv.context && (
-                  <p className="text-[11px] text-muted-foreground truncate">
-                    {conv.contextType === "auction" ? "Veiling" : conv.contextType === "claimsale" ? "Claimsale" : "Marktplaats"}: {conv.context}
-                  </p>
+                </span>
+                {conv.context && conv.contextType && (
+                  <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                    <span className="font-medium">{ctxLabel[conv.contextType]}</span> · {conv.context}
+                  </span>
                 )}
-
-                {conv.lastMessage && (
-                  <p className={`mt-0.5 truncate text-xs ${
-                    conv.hasUnread ? "text-foreground" : "text-muted-foreground"
-                  }`}>
-                    {conv.lastMessage}
-                  </p>
-                )}
-              </div>
-
-              {/* Unread dot */}
-              {conv.hasUnread && (
-                <div className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-primary" />
-              )}
+                <span className="mt-0.5 flex items-center gap-2">
+                  <span className={`min-w-0 flex-1 truncate text-xs ${conv.hasUnread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+                    {conv.lastMessage ? (
+                      <>
+                        {conv.lastMessageFromMe && <span className="text-muted-foreground">{t("you")}: </span>}
+                        {conv.lastMessage}
+                      </>
+                    ) : (
+                      <span className="italic">{t("noMessages")}</span>
+                    )}
+                  </span>
+                  {conv.hasUnread && <span className="size-2 shrink-0 rounded-full bg-primary" aria-label={t("inbox")} />}
+                </span>
+              </span>
             </Link>
 
-            {/* Hover actions for archive/deleted tabs */}
             {showActions && (
-              <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                 <ChatActions conversationId={conv.id} status={conv.participantStatus} compact />
               </div>
             )}
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }

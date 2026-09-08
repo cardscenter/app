@@ -144,9 +144,15 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
       const notifications = event.payload.unreadCount;
       setUnreadState((s) => ({ ...s, notifications }));
     });
+    const offRead = subscribe("unread-changed", (event) => {
+      if (event.type !== "unread-changed") return;
+      const messages = event.payload.unreadConversationCount;
+      setUnreadState((s) => ({ ...s, messages }));
+    });
     return () => {
       offMessage();
       offNotification();
+      offRead();
     };
   }, [subscribe]);
 

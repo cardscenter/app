@@ -143,7 +143,7 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
-        className="glass max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6"
+        className="rounded-dash border border-border bg-card shadow-lg max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-dash p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -151,7 +151,7 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
             <ShoppingBasket className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold text-foreground">{t("title")}</h2>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -178,7 +178,7 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
                 return (
                   <div
                     key={g.key}
-                    className={`flex items-center gap-3 rounded-lg border p-2 transition-colors ${
+                    className={`flex items-center gap-3 rounded-md border p-2 transition-colors ${
                       isSelected ? "border-primary bg-primary/5" : "border-border"
                     }`}
                   >
@@ -231,7 +231,7 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
 
         {/* Insured-toggle */}
         <div className="mb-5">
-          <label className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 cursor-pointer">
+          <label className="flex items-start gap-3 rounded-md border border-border bg-card p-3 cursor-pointer">
             <input
               type="checkbox"
               checked={requestInsured}
@@ -260,14 +260,14 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
+              className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
             />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{t("amountHint")}</p>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
             {error}
           </div>
         )}
@@ -276,14 +276,14 @@ export function PartialSaleForm({ conversationId, listingId, listingTitle, onClo
           <button
             onClick={onClose}
             disabled={pending}
-            className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            className="flex-1 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
           >
             {t("cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={pending || totalSelected === 0}
-            className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
+            className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
             {pending ? "..." : t("submit")}
           </button>

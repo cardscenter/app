@@ -252,13 +252,13 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="glass max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="rounded-dash border border-border bg-card shadow-lg max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-dash p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold text-foreground">{t("createTitle")}</h2>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -277,7 +277,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t("searchListings")}
-                  className="w-full rounded-lg border border-border bg-background py-1.5 pl-7 pr-2 text-xs text-foreground placeholder:text-muted-foreground"
+                  className="w-full rounded-md border border-border bg-background py-1.5 pl-7 pr-2 text-xs text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             )}
@@ -287,7 +287,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
           ) : listings.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noListings")}</p>
           ) : (
-            <div className="max-h-[40vh] overflow-y-auto rounded-lg border border-border bg-muted/30 p-2">
+            <div className="max-h-[40vh] overflow-y-auto rounded-md border border-border bg-muted/30 p-2">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {filteredListings.map((l) => {
                   const checked = selectedIds.has(l.id);
@@ -299,7 +299,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
                   return (
                     <div
                       key={l.id}
-                      className={`rounded-lg border bg-card p-2 transition-colors ${
+                      className={`rounded-md border bg-card p-2 transition-colors ${
                         checked ? "border-primary bg-primary/5" : "border-border"
                       }`}
                     >
@@ -410,7 +410,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
                   type="button"
                   onClick={() => setDeliveryChoice(opt.choice)}
                   disabled={disabled}
-                  className={`flex flex-col overflow-hidden rounded-lg border transition-colors disabled:opacity-50 ${
+                  className={`flex flex-col overflow-hidden rounded-md border transition-colors disabled:opacity-50 ${
                     active ? "border-primary ring-2 ring-primary/30" : "border-border"
                   }`}
                 >
@@ -442,7 +442,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
             server-side een aangetekende methode af. */}
         {deliveryChoice === "SHIP" && (
           <div className="mb-5">
-            <label className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 cursor-pointer">
+            <label className="flex items-start gap-3 rounded-md border border-border bg-card p-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={requestInsured}
@@ -472,14 +472,14 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
+              className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
             />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{t("amountHint")}</p>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
             {error}
           </div>
         )}
@@ -488,14 +488,14 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
           <button
             onClick={onClose}
             disabled={pending}
-            className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            className="flex-1 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
           >
             {t("cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={pending || selectedIds.size < MIN_LISTINGS_PER_BUNDLE}
-            className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
+            className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
             {pending ? "..." : t("submit")}
           </button>
@@ -505,18 +505,18 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
       {/* Details mini-popup — Fase 27.65 */}
       {detailListing && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4"
           onClick={() => setDetailListing(null)}
         >
           <div
-            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl bg-background p-5 shadow-2xl border border-border"
+            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-dash bg-background p-5 shadow-2xl border border-border"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between gap-3">
               <h3 className="text-base font-semibold text-foreground">{detailListing.title}</h3>
               <button
                 onClick={() => setDetailListing(null)}
-                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -528,7 +528,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
                     key={i}
                     src={src}
                     alt=""
-                    className="h-24 w-24 flex-shrink-0 rounded-lg object-cover"
+                    className="h-24 w-24 flex-shrink-0 rounded-md object-cover"
                   />
                 ))}
               </div>
@@ -575,7 +575,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
             <button
               type="button"
               onClick={() => setDetailListing(null)}
-              className="mt-4 w-full rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="mt-4 w-full rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
               {t("details.close")}
             </button>
@@ -586,11 +586,11 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
       {/* MULTI_CARD partial-sale items-picker (Fase 27.66) */}
       {itemPickerListing && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4"
           onClick={() => setItemPickerListing(null)}
         >
           <div
-            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl bg-background p-5 shadow-2xl border border-border"
+            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-dash bg-background p-5 shadow-2xl border border-border"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -600,7 +600,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
               </div>
               <button
                 onClick={() => setItemPickerListing(null)}
-                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -639,14 +639,14 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
                     [itemPickerListing.id]: { quantity: 1, itemIds: [] },
                   }))
                 }
-                className="flex-1 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                className="flex-1 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
               >
                 {t("multiPartial.clearSelection")}
               </button>
               <button
                 type="button"
                 onClick={() => setItemPickerListing(null)}
-                className="flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-hover"
+                className="flex-1 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary-hover"
               >
                 {t("multiPartial.done")}
               </button>

@@ -142,7 +142,7 @@ export function PickupActions({
       {/* Schedule informatie — toont 'om X' voor exact moment, 'tussen X en Y'
           voor tijdspan. Backend slaat windowStart === windowEnd voor exact. */}
       {schedule && (schedule.status === "ACCEPTED" || schedule.status === "PROPOSED") && (
-        <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-2 text-xs text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+        <div className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-xs text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
           <CalendarClock className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
           <span>
             {schedule.windowStart === schedule.windowEnd
@@ -168,7 +168,7 @@ export function PickupActions({
             type="button"
             onClick={() => run(() => respondToPickup(schedule.id, "ACCEPT"))}
             disabled={pending}
-            className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            className="flex-1 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
             {t("accept")}
           </button>
@@ -176,7 +176,7 @@ export function PickupActions({
             type="button"
             onClick={() => run(() => respondToPickup(schedule.id, "REJECT"))}
             disabled={pending}
-            className="flex-1 rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+            className="flex-1 rounded-md bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
           >
             {t("reject")}
           </button>
@@ -194,7 +194,7 @@ export function PickupActions({
           type="button"
           onClick={() => setShowProposeForm(true)}
           disabled={pending}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
         >
           <CalendarClock className="h-4 w-4" />
           {schedule?.status === "ACCEPTED"
@@ -209,7 +209,7 @@ export function PickupActions({
 
       {/* Buyer-code-display (alleen PLATFORM) */}
       {showBuyerCode && schedule && (
-        <div className="rounded-lg border border-blue-300 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-950/40">
+        <div className="rounded-md border border-blue-300 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-950/40">
           <div className="flex items-center gap-2 text-xs font-medium text-blue-800 dark:text-blue-200">
             <Key className="h-3.5 w-3.5" />
             {t("codeForBuyer")}
@@ -233,7 +233,7 @@ export function PickupActions({
             }
           }}
           disabled={pending}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
         >
           <Check className="h-4 w-4" />
           {t("confirmExternalButton")}
@@ -244,7 +244,7 @@ export function PickupActions({
       {canConfirmCode && schedule && (
         <div className="space-y-2">
           {schedule.pickupLockedUntil && new Date(schedule.pickupLockedUntil) > new Date() ? (
-            <div className="flex items-center gap-2 rounded-lg bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
+            <div className="flex items-center gap-2 rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
               <AlertTriangle className="h-3.5 w-3.5" />
               {t("tooManyAttempts")}
             </div>
@@ -261,13 +261,13 @@ export function PickupActions({
                   value={code}
                   onChange={(e) => setCode(sanitizePickupInput(e.target.value))}
                   placeholder="N3L97"
-                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-widest uppercase text-foreground"
+                  className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-center font-mono text-lg tracking-widest uppercase text-foreground"
                 />
                 <button
                   type="button"
                   onClick={handleConfirmPickup}
                   disabled={pending || !PICKUP_CODE_REGEX.test(code)}
-                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                 >
                   <Check className="h-4 w-4" />
                 </button>
@@ -292,7 +292,7 @@ export function PickupActions({
             }
           }}
           disabled={pending}
-          className="w-full rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30 disabled:opacity-50"
+          className="w-full rounded-md border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30 disabled:opacity-50"
         >
           <X className="inline h-3.5 w-3.5 mr-1" />
           {t("cancelReservation")}
@@ -302,10 +302,10 @@ export function PickupActions({
       {/* Propose-form modal */}
       {showProposeForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowProposeForm(false)}>
-          <div className="glass w-full max-w-sm rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="rounded-dash border border-border bg-card shadow-lg w-full max-w-sm rounded-dash p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-foreground">{t("proposeTitle")}</h3>
-              <button onClick={() => setShowProposeForm(false)} className="rounded-lg p-1 text-muted-foreground hover:text-foreground">
+              <button onClick={() => setShowProposeForm(false)} className="rounded-md p-1 text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -317,7 +317,7 @@ export function PickupActions({
                   value={pickupDate}
                   onChange={(e) => setPickupDate(e.target.value)}
                   min={new Date().toISOString().slice(0, 10)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                 />
               </div>
               {/* Mode-toggle: tijdspan vs exact moment */}
@@ -327,9 +327,9 @@ export function PickupActions({
                   <button
                     type="button"
                     onClick={() => setTimeMode("window")}
-                    className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`flex-1 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                       timeMode === "window"
-                        ? "border-primary bg-primary text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-background text-foreground hover:bg-muted"
                     }`}
                   >
@@ -338,9 +338,9 @@ export function PickupActions({
                   <button
                     type="button"
                     onClick={() => setTimeMode("exact")}
-                    className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`flex-1 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                       timeMode === "exact"
-                        ? "border-primary bg-primary text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-background text-foreground hover:bg-muted"
                     }`}
                   >
@@ -357,7 +357,7 @@ export function PickupActions({
                       type="time"
                       value={windowStart}
                       onChange={(e) => setWindowStart(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                     />
                   </div>
                   <div>
@@ -366,7 +366,7 @@ export function PickupActions({
                       type="time"
                       value={windowEnd}
                       onChange={(e) => setWindowEnd(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                     />
                   </div>
                 </div>
@@ -377,7 +377,7 @@ export function PickupActions({
                     type="time"
                     value={exactTime}
                     onChange={(e) => setExactTime(e.target.value)}
-                    className="w-40 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                    className="w-40 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                   />
                 </div>
               )}
@@ -385,7 +385,7 @@ export function PickupActions({
                 <button
                   type="button"
                   onClick={() => setShowProposeForm(false)}
-                  className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  className="flex-1 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                 >
                   {t("cancel")}
                 </button>
@@ -393,7 +393,7 @@ export function PickupActions({
                   type="button"
                   onClick={handleProposeSubmit}
                   disabled={pending || !pickupDate}
-                  className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+                  className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
                 >
                   {t("submit")}
                 </button>

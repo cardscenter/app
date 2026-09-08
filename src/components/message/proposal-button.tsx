@@ -74,7 +74,7 @@ export function ProposalButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
         title={title}
       >
         <HandCoins className="h-5 w-5" />
@@ -83,7 +83,7 @@ export function ProposalButton({
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={close}>
           <div
-            className="glass max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl p-6"
+            className="rounded-dash border border-border bg-card shadow-lg max-h-[90vh] w-full max-w-md overflow-y-auto rounded-dash p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
@@ -94,7 +94,7 @@ export function ProposalButton({
               <button
                 type="button"
                 onClick={close}
-                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -120,7 +120,7 @@ export function ProposalButton({
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
+                  className="w-full rounded-md border border-border bg-background py-2 pl-8 pr-3 text-sm text-foreground"
                 />
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{t("amountExclShipping")}</p>
@@ -128,7 +128,7 @@ export function ProposalButton({
 
             {/* Totaal-overzicht zodra er een geldig bod is */}
             {listingShippingCost !== undefined && listingShippingCost !== null && parseFloat(amount) > 0 && (
-              <div className="mb-5 space-y-1.5 rounded-lg border border-border bg-card p-3 text-sm">
+              <div className="mb-5 space-y-1.5 rounded-md border border-border bg-card p-3 text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>{t("amount")}</span>
                   <span>€{parseFloat(amount).toFixed(2)}</span>
@@ -146,7 +146,7 @@ export function ProposalButton({
 
             {/* Balance info (buyer only) */}
             {!isSeller && availableBalance !== undefined && (
-              <div className="mb-5 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
+              <div className="mb-5 flex items-center gap-2 rounded-md border border-border bg-card p-3 text-sm">
                 <Wallet className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">{t("yourBalance")}:</span>
                 <span className="ml-auto font-medium text-foreground">
@@ -157,7 +157,7 @@ export function ProposalButton({
 
             {/* Over-budget warning */}
             {overBudget && (
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
                 <p className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                   {t("balanceInsufficient")}
@@ -166,7 +166,7 @@ export function ProposalButton({
             )}
 
             {error && (
-              <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
                 {error}
               </div>
             )}
@@ -176,7 +176,7 @@ export function ProposalButton({
                 type="button"
                 onClick={close}
                 disabled={loading}
-                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                className="flex-1 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
               >
                 {t("cancel")}
               </button>
@@ -184,7 +184,7 @@ export function ProposalButton({
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading || !amount}
-                className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
+                className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-colors hover:bg-primary-hover disabled:opacity-50"
               >
                 {loading ? "..." : t("submit")}
               </button>

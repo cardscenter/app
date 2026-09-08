@@ -109,7 +109,7 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
   return (
     <>
       <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-        <div className="max-w-[80%] rounded-xl border border-border bg-white/80 dark:bg-white/5 p-4 shadow-sm">
+        <div className="max-w-[80%] rounded-md border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <HandCoins className="h-5 w-5 text-primary" />
             <span className="text-sm font-semibold text-foreground">
@@ -157,14 +157,14 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
               <button
                 onClick={handleAcceptClick}
                 disabled={loading || loadingBalance}
-                className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
                 {loadingBalance ? "..." : t("accept")}
               </button>
               <button
                 onClick={handleReject}
                 disabled={loading}
-                className="flex-1 rounded-lg bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-md bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
               >
                 {t("reject")}
               </button>
@@ -176,7 +176,7 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
             <button
               onClick={handlePayment}
               disabled={loading}
-              className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
+              className="mt-3 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50 transition-colors"
             >
               {t("completePayment")}
             </button>
@@ -187,7 +187,7 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
       {/* Accept confirmation popup */}
       {showConfirm && balanceInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowConfirm(false)}>
-          <div className="glass w-full max-w-md rounded-2xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
+          <div className="rounded-dash border border-border bg-card shadow-lg w-full max-w-md rounded-dash p-6 mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">
                 {t("confirmAccept")}
@@ -195,7 +195,7 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
               <button
                 type="button"
                 onClick={() => setShowConfirm(false)}
-                className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -228,14 +228,14 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
 
             {/* Sufficient balance message */}
             {balanceInfo.hasSufficientBalance ? (
-              <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 mb-4">
+              <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 mb-4">
                 <p className="text-sm text-green-700 dark:text-green-400 flex items-start gap-2">
                   <Check className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   {t("balanceSufficient")}
                 </p>
               </div>
             ) : (
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 mb-4">
+              <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 mb-4">
                 <p className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   {t("balanceInsufficient")}
@@ -255,14 +255,14 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+                className="flex-1 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
               >
                 {t("cancel")}
               </button>
               <button
                 onClick={handleConfirmAccept}
                 disabled={loading}
-                className="flex-1 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-md bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
                 {loading ? "..." : t("confirmAcceptButton")}
               </button>

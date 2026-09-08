@@ -44,8 +44,8 @@ export function ContactSellerButton({
 
   const buttonClass =
     variant === "primary"
-      ? "w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-md hover:bg-primary-hover disabled:opacity-50 transition-all"
-      : "w-full rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground glass-subtle hover:bg-muted disabled:opacity-50 transition-all";
+      ? "w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-md hover:bg-primary-hover disabled:opacity-50 transition-all"
+      : "w-full rounded-md border border-border px-4 py-2.5 text-sm font-medium text-foreground border border-border bg-card hover:bg-muted disabled:opacity-50 transition-all";
 
   return (
     <div>

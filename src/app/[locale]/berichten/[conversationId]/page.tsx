@@ -2,12 +2,16 @@ import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSellerShippingMethods } from "@/actions/shipping-method";
-import { ChatLayout, type ConversationPreview } from "@/components/message/chat-layout";
+import { getTranslations } from "next-intl/server";
+import { getConversationPreviews } from "@/lib/conversations";
+import { ChatLayout } from "@/components/message/chat-layout";
+import { MessagesFrame } from "@/components/message/messages-frame";
 import { MessageThread } from "@/components/message/message-thread";
 import { ChatActions } from "@/components/message/chat-actions";
 import { PickupActions } from "@/components/message/pickup-actions";
+import { ChatAvatar } from "@/components/message/chat-avatar";
 import { MapPin, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 
 export default async function ConversationPage({
   params,
@@ -30,52 +34,8 @@ export default async function ConversationPage({
     data: { lastReadAt: new Date() },
   });
 
-  // Get all conversations for sidebar
-  const allConversations = await prisma.conversation.findMany({
-    where: {
-      participants: { some: { userId: session.user.id! } },
-    },
-    orderBy: { updatedAt: "desc" },
-    include: {
-      participants: {
-        include: { user: { select: { id: true, displayName: true } } },
-      },
-      messages: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-      auction: { select: { title: true } },
-      claimsale: { select: { title: true } },
-      listing: { select: { title: true } },
-    },
-  });
-
-  const previews: ConversationPreview[] = allConversations.map((conv) => {
-    const myP = conv.participants.find((p) => p.userId === session.user!.id);
-    const otherUser = conv.participants.find((p) => p.userId !== session.user!.id);
-    const lastMsg = conv.messages[0];
-    const lastRead = myP?.lastReadAt;
-    const hasUnread = conv.id === conversationId
-      ? false
-      : !!(lastMsg && (!lastRead || new Date(lastMsg.createdAt) > new Date(lastRead)));
-
-    const context = conv.auction?.title ?? conv.claimsale?.title ?? conv.listing?.title ?? null;
-    const contextType = conv.auction ? "auction" as const : conv.claimsale ? "claimsale" as const : conv.listing ? "listing" as const : null;
-
-    return {
-      id: conv.id,
-      otherUserName: otherUser?.user.displayName ?? "Gebruiker",
-      otherUserInitial: (otherUser?.user.displayName ?? "?").charAt(0).toUpperCase(),
-      lastMessage: lastMsg?.body ?? null,
-      lastMessageDate: lastMsg
-        ? new Date(lastMsg.createdAt).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })
-        : null,
-      context,
-      contextType,
-      hasUnread,
-      participantStatus: myP?.status ?? "ACTIVE",
-    };
-  });
+  const t = await getTranslations("chat");
+  const previews = await getConversationPreviews(session.user.id!, { activeConversationId: conversationId });
 
   // Get active conversation with messages, listing context, and proposals
   const conversation = await prisma.conversation.findUnique({
@@ -275,28 +235,33 @@ export default async function ConversationPage({
       }
     : null;
 
+  const ctxLabel = contextType === "auction" ? t("ctxAuction") : contextType === "claimsale" ? t("ctxClaimsale") : contextType === "listing" ? t("ctxListing") : null;
+  const otherName = otherUser?.user.displayName ?? t("conversation");
+  const otherAvatar = previews.find((c) => c.id === conversationId)?.otherUserAvatar ?? null;
+
   return (
+    <MessagesFrame>
     <ChatLayout conversations={previews} activeConversationId={conversationId}>
-      <div className="flex h-full flex-col">
-        {/* Chat header — terug-knop alleen op mobile, op desktop blijft de
-            sidebar zichtbaar dus geen navigatie nodig. */}
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3 bg-muted/20 md:px-6">
-          <div className="flex min-w-0 items-center gap-2">
-            <Link
-              href={`/${locale}/berichten`}
-              aria-label="Terug naar gesprekken"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div className="min-w-0">
-              <h2 className="truncate font-semibold text-foreground">
-                {otherUser?.user.displayName ?? "Gesprek"}
-              </h2>
-              {context && (
-                <p className="truncate text-xs text-muted-foreground">Re: {context}</p>
-              )}
-            </div>
+      <div className="flex h-full min-h-0 flex-col">
+        {/* Gespreks-kop: terugknop (mobiel), avatar, naam, context-pill, acties */}
+        <div className="flex items-center gap-3 border-b border-border px-3 py-2.5 md:px-4">
+          <Link
+            href="/berichten"
+            aria-label={t("backToConversations")}
+            className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
+          >
+            <ArrowLeft className="size-5" />
+          </Link>
+          <ChatAvatar src={otherAvatar} initial={otherName.charAt(0).toUpperCase()} size="sm" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-sm font-semibold text-foreground">{otherName}</h2>
+            {context && (
+              <p className="truncate text-xs text-muted-foreground">
+                {ctxLabel && <span className="font-medium">{ctxLabel}</span>}
+                {ctxLabel && " · "}
+                {context}
+              </p>
+            )}
           </div>
           <ChatActions
             conversationId={conversationId}
@@ -308,10 +273,10 @@ export default async function ConversationPage({
             pickup-bundles. Voor bundle-offer pickups blijft PickupActions in de
             BundleOfferMessage chat-bubble. */}
         {pickupWidgetData && (
-          <div className="border-b border-blue-200 bg-blue-50/50 px-6 py-3 dark:border-blue-900 dark:bg-blue-950/20">
-            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-900 dark:text-blue-200">
-              <MapPin className="h-4 w-4" />
-              Ophaal-afspraak voor deze advertentie
+          <div className="border-b border-border bg-primary/5 px-4 py-3">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+              <MapPin className="size-4 text-primary" />
+              {t("pickupWidgetTitle")}
             </div>
             <PickupActions
               shippingBundleId={pickupWidgetData.shippingBundleId}
@@ -326,7 +291,7 @@ export default async function ConversationPage({
         )}
 
         {/* Messages + input */}
-        <div className="flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1">
           <MessageThread
             conversationId={conversationId}
             messages={conversation.messages.map((m) => ({
@@ -351,5 +316,6 @@ export default async function ConversationPage({
         </div>
       </div>
     </ChatLayout>
+    </MessagesFrame>
   );
 }
