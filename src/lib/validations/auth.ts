@@ -1,13 +1,23 @@
 import { z } from "zod";
+import { USERNAME_MAX, USERNAME_MIN, USERNAME_REGEX } from "@/lib/username-policy";
+
+/**
+ * E-mailadres normaliseren (Fase 45): trim + lowercase. Registratie sloeg het
+ * adres letterlijk op terwijl de reset-lookup lowercased; SQLite vergelijkt
+ * binair, dus "Youri@X.com" kreeg nooit een reset-mail. Overal dezelfde vorm.
+ */
+export function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
 
 export const registerSchema = z.object({
   // Step 1: Account
-  email: z.string().email("Ongeldig e-mailadres"),
+  email: z.string().trim().toLowerCase().email("Ongeldig e-mailadres"),
   displayName: z
     .string()
-    .min(3, "Minimaal 3 tekens")
-    .max(30, "Maximaal 30 tekens")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Alleen letters, cijfers, - en _"),
+    .min(USERNAME_MIN, `Minimaal ${USERNAME_MIN} tekens`)
+    .max(USERNAME_MAX, `Maximaal ${USERNAME_MAX} tekens`)
+    .regex(USERNAME_REGEX, "Alleen letters, cijfers, - en _"),
   password: z.string().min(8, "Minimaal 8 tekens"),
   confirmPassword: z.string(),
 
@@ -67,7 +77,7 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email("Ongeldig e-mailadres"),
+  email: z.string().trim().toLowerCase().email("Ongeldig e-mailadres"),
   password: z.string().min(1, "Wachtwoord is verplicht"),
 });
 

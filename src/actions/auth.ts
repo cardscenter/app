@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { registerSchema } from "@/lib/validations/auth";
+import { registerSchema, normalizeEmail } from "@/lib/validations/auth";
 import { signIn, auth } from "@/lib/auth";
 import { AuthError } from "next-auth";
 import { requireTotpStepUp } from "@/lib/two-factor";
@@ -29,7 +29,7 @@ const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1u
 // Fase 43 — resend-throttle voor verificatiemails (niet-geëxporteerde consts
 // mogen in een use-server bestand; alleen exports moeten async zijn).
 const RESEND_COOLDOWN_MS = 60 * 1000; // 1 min tussen mails
-const RESEND_DAILY_MAX = 5; // max tokens per 24u
+const RESEND_DAILY_MAX = 5; // max tokens per 24u (verificatie én wachtwoord-reset)
 
 function getPostRegisterRedirect(selectedPlan: string | null): string | undefined {
   if (selectedPlan === "PRO" || selectedPlan === "UNLIMITED") return "/dashboard/abonnement";
@@ -180,7 +180,7 @@ export async function register(formData: FormData) {
 }
 
 export async function login(formData: FormData) {
-  const email = formData.get("email") as string;
+  const email = normalizeEmail((formData.get("email") as string | null) ?? "");
   const password = formData.get("password") as string;
   const totpCode = (formData.get("totpCode") as string | null)?.trim() || undefined;
   const trustDevice = formData.get("trustDevice") === "on";
@@ -354,7 +354,7 @@ export async function resendVerificationEmail(): Promise<
 export async function requestPasswordReset(
   formData: FormData,
 ): Promise<{ success: true } | { error: string }> {
-  const email = (formData.get("email") as string | null)?.trim().toLowerCase();
+  const email = normalizeEmail((formData.get("email") as string | null) ?? "");
   if (!email) return { error: "Vul je e-mailadres in." };
 
   const user = await prisma.user.findUnique({
@@ -364,6 +364,25 @@ export async function requestPasswordReset(
 
   if (user) {
     try {
+      // Throttle (Fase 45): max 1 reset-mail per minuut en 5 per 24u, geteld op
+      // PasswordResetToken.createdAt. Bij overschrijding stil overslaan — de
+      // generieke success-melding blijft (geen account-enumeratie).
+      const lastToken = await prisma.passwordResetToken.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      });
+      const recentCount = await prisma.passwordResetToken.count({
+        where: { userId: user.id, createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      });
+      if (
+        (lastToken && Date.now() - lastToken.createdAt.getTime() < RESEND_COOLDOWN_MS) ||
+        recentCount >= RESEND_DAILY_MAX
+      ) {
+        console.warn(`[requestPasswordReset] throttled for user ${user.id}`);
+        return { success: true };
+      }
+
       const token = crypto.randomBytes(32).toString("base64url");
       await prisma.passwordResetToken.create({
         data: {

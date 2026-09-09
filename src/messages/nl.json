@@ -195,7 +195,7 @@
     "usernameChecking": "Bezig met controleren…",
     "usernameAvailable": "Naam is beschikbaar",
     "usernameReasonTooShort": "Minimaal 3 tekens",
-    "usernameReasonTooLong": "Maximaal 30 tekens",
+    "usernameReasonTooLong": "Maximaal 16 tekens",
     "usernameReasonInvalidChars": "Geen spaties · alleen letters, cijfers, _ en -",
     "usernameReasonReserved": "Deze naam is gereserveerd",
     "usernameReasonNotAllowed": "Deze gebruikersnaam is niet toegestaan",
@@ -1244,6 +1244,7 @@
   },
   "profile": {
     "displayName": "Gebruikersnaam",
+    "displayNameHint": "{min}–{max} tekens · letters, cijfers, - en _",
     "bio": "Bio",
     "shippingCost": "Standaard verzendkosten",
     "saved": "Profiel opgeslagen",

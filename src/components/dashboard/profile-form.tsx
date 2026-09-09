@@ -1,5 +1,7 @@
 "use client";
 
+import { USERNAME_MAX, USERNAME_MIN } from "@/lib/username-policy";
+
 import { useTranslations } from "next-intl";
 import { updateProfile } from "@/actions/profile";
 import { signOut } from "next-auth/react";
@@ -150,8 +152,10 @@ export function ProfileForm({ user }: { user: User }) {
             type="text"
             defaultValue={user.displayName}
             required
+            maxLength={Math.max(USERNAME_MAX, user.displayName.length)}
             className="mt-1 block w-full rounded-lg glass-input px-3 py-2 text-foreground focus:border-border focus:outline-none focus:ring-1 focus:ring-border"
           />
+          <p className="mt-1 text-xs text-muted-foreground">{t("displayNameHint", { min: USERNAME_MIN, max: USERNAME_MAX })}</p>
         </div>
 
         <div>

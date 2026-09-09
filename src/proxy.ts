@@ -67,6 +67,8 @@ export default async function middleware(request: NextRequest) {
         const localeMatch = pathname.match(/^\/(nl|en)(?:\/|$)/);
         const locale = localeMatch ? localeMatch[1] : routing.defaultLocale;
         url.pathname = `/${locale}/beta`;
+        // TODO (beta-gate): dit gooit ook ?token= van reset-/verificatielinks weg —
+        // de gate verdwijnt bij launch, dus bewust niet opgelost.
         url.search = "";
         return NextResponse.redirect(url);
       }

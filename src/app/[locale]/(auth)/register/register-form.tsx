@@ -26,6 +26,7 @@ import { PasswordInput } from "@/components/auth/password-input";
 import { PasswordStrengthMeter } from "@/components/auth/password-strength-meter";
 import { UsernameAvailabilityIndicator } from "@/components/auth/username-availability-indicator";
 import { ACCOUNT_TIERS, type TierKey } from "@/lib/subscription-tiers";
+import { USERNAME_MAX, USERNAME_MIN, USERNAME_REGEX } from "@/lib/username-policy";
 
 const TOTAL_STEPS = 4;
 
@@ -136,9 +137,9 @@ function MultiStepRegisterForm() {
     const errors: Record<string, string> = {};
 
     if (step === 1) {
-      if (!formData.displayName || formData.displayName.length < 3) errors.displayName = "Minimaal 3 tekens";
-      else if (formData.displayName.length > 30) errors.displayName = "Maximaal 30 tekens";
-      else if (!/^[a-zA-Z0-9_-]+$/.test(formData.displayName)) errors.displayName = "Alleen letters, cijfers, - en _";
+      if (!formData.displayName || formData.displayName.length < USERNAME_MIN) errors.displayName = `Minimaal ${USERNAME_MIN} tekens`;
+      else if (formData.displayName.length > USERNAME_MAX) errors.displayName = `Maximaal ${USERNAME_MAX} tekens`;
+      else if (!USERNAME_REGEX.test(formData.displayName)) errors.displayName = "Alleen letters, cijfers, - en _";
       if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = "Ongeldig e-mailadres";
       if (!formData.password || formData.password.length < 8) errors.password = "Minimaal 8 tekens";
       if (formData.password !== formData.confirmPassword) errors.confirmPassword = "Wachtwoorden komen niet overeen";
@@ -387,6 +388,7 @@ function StepAccount({ formData, updateField, errors, t }: StepProps) {
         <input
           id="displayName"
           type="text"
+          maxLength={USERNAME_MAX}
           value={formData.displayName}
           onChange={(e) => updateField("displayName", e.target.value)}
           className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground placeholder-muted-foreground"

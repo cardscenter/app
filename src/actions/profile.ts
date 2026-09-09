@@ -11,7 +11,10 @@ import { findUserByNameInsensitive } from "@/lib/username-policy-server";
 import { z } from "zod";
 
 const profileSchema = z.object({
-  displayName: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_-]+$/),
+  // Bewust ruimer dan USERNAME_MAX: legacy-namen (>16 tekens) moeten bio/avatar
+  // kunnen blijven opslaan. De echte policy (max 16) dwingt validateUsername
+  // hieronder af bij een daadwerkelijke rename.
+  displayName: z.string().min(3).max(64).regex(/^[a-zA-Z0-9_-]+$/),
   bio: z.string().max(500).optional(),
   defaultShippingCost: z.coerce.number().min(0),
 });

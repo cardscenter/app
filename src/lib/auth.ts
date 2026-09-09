@@ -4,6 +4,7 @@ import "next-auth/jwt";
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { normalizeEmail } from "@/lib/validations/auth";
 import { verifyTotpOrBackupCode } from "@/lib/two-factor";
 import { isTrustedDevice } from "@/lib/trusted-device";
 
@@ -55,7 +56,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email: normalizeEmail(credentials.email as string) },
         });
 
         if (!user) return null;
