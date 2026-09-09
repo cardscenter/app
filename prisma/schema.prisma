@@ -559,7 +559,6 @@ model Auction {
   shippingMethods AuctionShippingMethod[]
   shippingBundle ShippingBundle?
   upsells       AuctionUpsell[]
-  labels        AuctionLabel[]
   runnerUpOffers AuctionRunnerUpOffer[]
 
   @@index([sellerId])
@@ -567,26 +566,6 @@ model Auction {
   @@index([cardSetId])
   @@index([tcgdexId])
   @@index([status, startTime]) // voor auction-activate cron-query
-}
-
-model AuctionLabel {
-  id        String   @id @default(cuid())
-
-  auctionId String
-  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-
-  // GEEN_RESERVE | DIRECT_KOPEN | MOET_NU_WEG | HOT_ITEM | TOPSTAAT | ZELDZAAM | VERZAMELAARSSTUK | NIEUW_UIT_COLLECTIE
-  type      String
-
-  // ruby | amber | emerald | sky | violet | rose | indigo | slate | orange | teal
-  colorKey  String
-
-  // Snapshot van prijs op creatiemoment (bundle-tarief: 1=€0,99 / 2=€1,69)
-  cost      Float
-
-  createdAt DateTime @default(now())
-
-  @@index([auctionId])
 }
 
 model AuctionUpsell {
@@ -678,7 +657,6 @@ model Claimsale {
   watchlistItems Watchlist[]
   shippingMethods ClaimsaleShippingMethod[]
   upsells       ClaimsaleUpsell[]
-  labels        ClaimsaleLabel[]
 
   @@index([sellerId])
   @@index([status])
@@ -701,26 +679,6 @@ model ClaimsaleUpsell {
 
   @@index([claimsaleId])
   @@index([type, expiresAt])
-}
-
-model ClaimsaleLabel {
-  id          String    @id @default(cuid())
-
-  claimsaleId String
-  claimsale   Claimsale @relation(fields: [claimsaleId], references: [id], onDelete: Cascade)
-
-  // MOET_NU_WEG | HOT_ITEM | TOPSTAAT | ZELDZAAM | HOLO_FOIL | SNEL_VERZONDEN | NIEUW | OPRUIMING
-  type        String
-
-  // ruby | amber | emerald | sky | violet | rose | indigo | slate | orange | teal
-  colorKey    String
-
-  // Snapshot van prijs op creatiemoment (bundle-tarief: 1=€0,99 / 2=€1,69)
-  cost        Float
-
-  createdAt   DateTime  @default(now())
-
-  @@index([claimsaleId])
 }
 
 model ClaimsaleShippingMethod {
@@ -904,7 +862,6 @@ model Listing {
   conversations  Conversation[]
   watchlistItems Watchlist[]
   upsells        ListingUpsell[]
-  labels         ListingLabel[]
   shippingMethods ListingShippingMethod[]
   shippingBundle ShippingBundle?
   proposals      Proposal[]
@@ -917,26 +874,6 @@ model Listing {
   @@index([cardSetId])
   @@index([listingType])
   @@index([tcgdexId])
-}
-
-model ListingLabel {
-  id        String   @id @default(cuid())
-
-  listingId String
-  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
-
-  // MOET_NU_WEG | HOT_ITEM | TOPSTAAT | ZELDZAAM | HOLO_FOIL | SNEL_VERZONDEN | COMPLETE_SET
-  type      String
-
-  // ruby | amber | emerald | sky | violet | rose | indigo | slate | orange | teal
-  colorKey  String
-
-  // Snapshot van prijs op creatiemoment (bundle-tarief: 1=€0,99 / 2=€1,69)
-  cost      Float
-
-  createdAt DateTime @default(now())
-
-  @@index([listingId])
 }
 
 model ListingShippingMethod {

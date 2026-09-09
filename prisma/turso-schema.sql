@@ -24,6 +24,7 @@ CREATE TABLE "User" (
     "isAddressVerified" BOOLEAN NOT NULL DEFAULT false,
     "verificationStatus" TEXT NOT NULL DEFAULT 'NONE',
     "addressVerificationStatus" TEXT NOT NULL DEFAULT 'NONE',
+    "isTrustedEventOrganizer" BOOLEAN NOT NULL DEFAULT false,
     "suspendedUntil" DATETIME,
     "suspensionType" TEXT,
     "suspensionReason" TEXT,
@@ -40,6 +41,7 @@ CREATE TABLE "User" (
     "freeUpsellsRemaining" INTEGER NOT NULL DEFAULT 0,
     "freeUpsellsResetAt" DATETIME,
     "skipBidConfirmation" BOOLEAN NOT NULL DEFAULT false,
+    "emailPreferences" TEXT,
     "mollieCustomerId" TEXT,
     "accountKind" TEXT NOT NULL DEFAULT 'INDIVIDUAL',
     "companyName" TEXT,
@@ -61,6 +63,9 @@ CREATE TABLE "User" (
     "accountHolderName" TEXT,
     "lastIbanChange" DATETIME,
     "emailVerifiedAt" DATETIME,
+    "totpSecret" TEXT,
+    "totpEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "totpBackupCodes" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
@@ -113,6 +118,7 @@ CREATE TABLE "CardSet" (
     "pokewalletSetId" TEXT,
     "pokewalletSetCode" TEXT,
     "logoUrl" TEXT,
+    "logoMirrorKey" TEXT,
     "symbolUrl" TEXT,
     "releaseDate" TEXT,
     "cardCount" INTEGER,
@@ -136,6 +142,7 @@ CREATE TABLE "Card" (
     "variants" TEXT,
     "imageUrl" TEXT,
     "imageUrlFull" TEXT,
+    "imageMirrorKey" TEXT,
     "priceAvg" REAL,
     "priceLow" REAL,
     "priceTrend" REAL,
@@ -233,17 +240,6 @@ CREATE TABLE "Auction" (
 );
 
 -- CreateTable
-CREATE TABLE "AuctionLabel" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "auctionId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "colorKey" TEXT NOT NULL,
-    "cost" REAL NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "AuctionLabel_auctionId_fkey" FOREIGN KEY ("auctionId") REFERENCES "Auction" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
 CREATE TABLE "AuctionUpsell" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "auctionId" TEXT NOT NULL,
@@ -307,17 +303,6 @@ CREATE TABLE "ClaimsaleUpsell" (
     "totalCost" REAL NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "ClaimsaleUpsell_claimsaleId_fkey" FOREIGN KEY ("claimsaleId") REFERENCES "Claimsale" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "ClaimsaleLabel" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "claimsaleId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "colorKey" TEXT NOT NULL,
-    "cost" REAL NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "ClaimsaleLabel_claimsaleId_fkey" FOREIGN KEY ("claimsaleId") REFERENCES "Claimsale" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -404,17 +389,6 @@ CREATE TABLE "Listing" (
 );
 
 -- CreateTable
-CREATE TABLE "ListingLabel" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "listingId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "colorKey" TEXT NOT NULL,
-    "cost" REAL NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "ListingLabel_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "Listing" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
 CREATE TABLE "ListingShippingMethod" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "listingId" TEXT NOT NULL,
@@ -476,45 +450,6 @@ CREATE TABLE "ShippingBundle" (
     CONSTRAINT "ShippingBundle_auctionId_fkey" FOREIGN KEY ("auctionId") REFERENCES "Auction" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "ShippingBundle_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "Listing" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "ShippingBundle_bundleProposalId_fkey" FOREIGN KEY ("bundleProposalId") REFERENCES "BundleProposal" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "Dispute" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "shippingBundleId" TEXT NOT NULL,
-    "openedById" TEXT NOT NULL,
-    "reason" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "evidenceUrls" TEXT NOT NULL DEFAULT '[]',
-    "sellerResponse" TEXT,
-    "sellerEvidenceUrls" TEXT,
-    "sellerRespondedAt" DATETIME,
-    "partialRefundAmount" REAL,
-    "proposedById" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'OPEN',
-    "resolution" TEXT,
-    "resolvedAt" DATETIME,
-    "resolvedById" TEXT,
-    "buyerAcceptsEscalation" BOOLEAN NOT NULL DEFAULT false,
-    "sellerAcceptsEscalation" BOOLEAN NOT NULL DEFAULT false,
-    "adminNotes" TEXT,
-    "responseDeadline" DATETIME NOT NULL,
-    "buyerReviewDeadline" DATETIME,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Dispute_shippingBundleId_fkey" FOREIGN KEY ("shippingBundleId") REFERENCES "ShippingBundle" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Dispute_openedById_fkey" FOREIGN KEY ("openedById") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "DisputeEvent" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "disputeId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "actorId" TEXT NOT NULL,
-    "detail" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "DisputeEvent_disputeId_fkey" FOREIGN KEY ("disputeId") REFERENCES "Dispute" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -623,6 +558,17 @@ CREATE TABLE "Notification" (
     "read" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "EmailLog" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "dedupeKey" TEXT,
+    "subject" TEXT NOT NULL,
+    "sentAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
@@ -1182,6 +1128,7 @@ CREATE TABLE "DisputeV2" (
     "finalRefund" REAL,
     "resolution" TEXT,
     "resolvedAt" DATETIME,
+    "fundingSource" TEXT NOT NULL DEFAULT 'ESCROW',
     "adminId" TEXT,
     "adminNotes" TEXT,
     "adminSLADeadline" DATETIME,
@@ -1229,6 +1176,128 @@ CREATE TABLE "ShippingIssue" (
     CONSTRAINT "ShippingIssue_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
+-- CreateTable
+CREATE TABLE "Event" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "eventType" TEXT NOT NULL,
+    "organizerId" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "reviewedById" TEXT,
+    "reviewedAt" DATETIME,
+    "rejectionReason" TEXT,
+    "publishedAt" DATETIME,
+    "venueName" TEXT NOT NULL,
+    "street" TEXT NOT NULL,
+    "houseNumber" TEXT NOT NULL,
+    "postalCode" TEXT NOT NULL,
+    "city" TEXT NOT NULL,
+    "country" TEXT NOT NULL,
+    "lat" REAL,
+    "lng" REAL,
+    "timezone" TEXT NOT NULL,
+    "startTime" DATETIME NOT NULL,
+    "endTime" DATETIME NOT NULL,
+    "earlyAccessTime" DATETIME,
+    "entryType" TEXT NOT NULL DEFAULT 'FREE',
+    "entryPriceMode" TEXT NOT NULL DEFAULT 'SINGLE',
+    "entryPrice" REAL,
+    "entryCurrency" TEXT,
+    "ticketTypes" TEXT,
+    "childrenFreeUntilAge" INTEGER,
+    "vendorOptions" TEXT,
+    "vendorInfo" TEXT,
+    "canPlay" BOOLEAN NOT NULL DEFAULT false,
+    "canTrade" BOOLEAN NOT NULL DEFAULT false,
+    "canSell" BOOLEAN NOT NULL DEFAULT false,
+    "hasParking" BOOLEAN NOT NULL DEFAULT false,
+    "hasFood" BOOLEAN NOT NULL DEFAULT false,
+    "hasToilets" BOOLEAN NOT NULL DEFAULT false,
+    "hasWifi" BOOLEAN NOT NULL DEFAULT false,
+    "cardPayment" BOOLEAN NOT NULL DEFAULT false,
+    "wheelchairAccessible" BOOLEAN NOT NULL DEFAULT false,
+    "hasCloakroom" BOOLEAN NOT NULL DEFAULT false,
+    "childFriendly" BOOLEAN NOT NULL DEFAULT false,
+    "maxVisitors" INTEGER,
+    "venueSizeM2" INTEGER,
+    "totalTables" INTEGER,
+    "registrationUrl" TEXT,
+    "coverImage" TEXT,
+    "flyerImage" TEXT,
+    "galleryImages" TEXT,
+    "videoUrl" TEXT,
+    "organizerName" TEXT,
+    "organizerWebsite" TEXT,
+    "socialLinks" TEXT,
+    "tournamentFormat" TEXT,
+    "isSanctioned" BOOLEAN NOT NULL DEFAULT false,
+    "prizePool" TEXT,
+    "isOfficial" BOOLEAN NOT NULL DEFAULT false,
+    "recurrence" TEXT NOT NULL DEFAULT 'NONE',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Event_organizerId_fkey" FOREIGN KEY ("organizerId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Event_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "EventUpsell" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "eventId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "startsAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" DATETIME NOT NULL,
+    "dailyCost" REAL NOT NULL,
+    "totalCost" REAL NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "EventUpsell_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "EventRsvp" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "eventId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "status" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "EventRsvp_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "EventRsvp_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "EventVendorRequest" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "eventId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "message" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "decidedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "EventVendorRequest_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "EventVendorRequest_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "EventReport" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "reporterId" TEXT NOT NULL,
+    "eventId" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "details" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'OPEN',
+    "reviewedById" TEXT,
+    "reviewedAt" DATETIME,
+    "adminNote" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "EventReport_reporterId_fkey" FOREIGN KEY ("reporterId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "EventReport_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "EventReport_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -1272,7 +1341,7 @@ CREATE INDEX "CardSet_seriesId_idx" ON "CardSet"("seriesId");
 CREATE UNIQUE INDEX "Card_pokewalletId_key" ON "Card"("pokewalletId");
 
 -- CreateIndex
-CREATE INDEX "Card_cardSetId_idx" ON "Card"("cardSetId");
+CREATE INDEX "Card_cardSetId_localId_idx" ON "Card"("cardSetId", "localId");
 
 -- CreateIndex
 CREATE INDEX "Card_name_idx" ON "Card"("name");
@@ -1320,9 +1389,6 @@ CREATE INDEX "Auction_tcgdexId_idx" ON "Auction"("tcgdexId");
 CREATE INDEX "Auction_status_startTime_idx" ON "Auction"("status", "startTime");
 
 -- CreateIndex
-CREATE INDEX "AuctionLabel_auctionId_idx" ON "AuctionLabel"("auctionId");
-
--- CreateIndex
 CREATE INDEX "AuctionUpsell_auctionId_idx" ON "AuctionUpsell"("auctionId");
 
 -- CreateIndex
@@ -1354,9 +1420,6 @@ CREATE INDEX "ClaimsaleUpsell_claimsaleId_idx" ON "ClaimsaleUpsell"("claimsaleId
 
 -- CreateIndex
 CREATE INDEX "ClaimsaleUpsell_type_expiresAt_idx" ON "ClaimsaleUpsell"("type", "expiresAt");
-
--- CreateIndex
-CREATE INDEX "ClaimsaleLabel_claimsaleId_idx" ON "ClaimsaleLabel"("claimsaleId");
 
 -- CreateIndex
 CREATE INDEX "ClaimsaleShippingMethod_claimsaleId_idx" ON "ClaimsaleShippingMethod"("claimsaleId");
@@ -1396,9 +1459,6 @@ CREATE INDEX "Listing_listingType_idx" ON "Listing"("listingType");
 
 -- CreateIndex
 CREATE INDEX "Listing_tcgdexId_idx" ON "Listing"("tcgdexId");
-
--- CreateIndex
-CREATE INDEX "ListingLabel_listingId_idx" ON "ListingLabel"("listingId");
 
 -- CreateIndex
 CREATE INDEX "ListingShippingMethod_listingId_idx" ON "ListingShippingMethod"("listingId");
@@ -1441,18 +1501,6 @@ CREATE INDEX "ShippingBundle_pickupReservationExpiresAt_idx" ON "ShippingBundle"
 
 -- CreateIndex
 CREATE INDEX "ShippingBundle_status_imagesPurgedAt_idx" ON "ShippingBundle"("status", "imagesPurgedAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Dispute_shippingBundleId_key" ON "Dispute"("shippingBundleId");
-
--- CreateIndex
-CREATE INDEX "Dispute_openedById_idx" ON "Dispute"("openedById");
-
--- CreateIndex
-CREATE INDEX "Dispute_status_idx" ON "Dispute"("status");
-
--- CreateIndex
-CREATE INDEX "DisputeEvent_disputeId_idx" ON "DisputeEvent"("disputeId");
 
 -- CreateIndex
 CREATE INDEX "Transaction_userId_idx" ON "Transaction"("userId");
@@ -1507,6 +1555,12 @@ CREATE INDEX "Notification_userId_read_idx" ON "Notification"("userId", "read");
 
 -- CreateIndex
 CREATE INDEX "Notification_userId_createdAt_idx" ON "Notification"("userId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "EmailLog_userId_type_sentAt_idx" ON "EmailLog"("userId", "type", "sentAt");
+
+-- CreateIndex
+CREATE INDEX "EmailLog_dedupeKey_sentAt_idx" ON "EmailLog"("dedupeKey", "sentAt");
 
 -- CreateIndex
 CREATE INDEX "Review_sellerId_idx" ON "Review"("sellerId");
@@ -1795,4 +1849,46 @@ CREATE INDEX "ShippingIssue_reporterId_idx" ON "ShippingIssue"("reporterId");
 
 -- CreateIndex
 CREATE INDEX "ShippingIssue_status_idx" ON "ShippingIssue"("status");
+
+-- CreateIndex
+CREATE INDEX "Event_status_startTime_idx" ON "Event"("status", "startTime");
+
+-- CreateIndex
+CREATE INDEX "Event_organizerId_idx" ON "Event"("organizerId");
+
+-- CreateIndex
+CREATE INDEX "Event_country_idx" ON "Event"("country");
+
+-- CreateIndex
+CREATE INDEX "EventUpsell_eventId_idx" ON "EventUpsell"("eventId");
+
+-- CreateIndex
+CREATE INDEX "EventUpsell_type_expiresAt_idx" ON "EventUpsell"("type", "expiresAt");
+
+-- CreateIndex
+CREATE INDEX "EventRsvp_userId_idx" ON "EventRsvp"("userId");
+
+-- CreateIndex
+CREATE INDEX "EventRsvp_eventId_status_idx" ON "EventRsvp"("eventId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EventRsvp_eventId_userId_key" ON "EventRsvp"("eventId", "userId");
+
+-- CreateIndex
+CREATE INDEX "EventVendorRequest_userId_idx" ON "EventVendorRequest"("userId");
+
+-- CreateIndex
+CREATE INDEX "EventVendorRequest_eventId_status_idx" ON "EventVendorRequest"("eventId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EventVendorRequest_eventId_userId_key" ON "EventVendorRequest"("eventId", "userId");
+
+-- CreateIndex
+CREATE INDEX "EventReport_reporterId_idx" ON "EventReport"("reporterId");
+
+-- CreateIndex
+CREATE INDEX "EventReport_eventId_idx" ON "EventReport"("eventId");
+
+-- CreateIndex
+CREATE INDEX "EventReport_status_idx" ON "EventReport"("status");
 

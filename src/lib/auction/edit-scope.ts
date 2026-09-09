@@ -6,7 +6,7 @@
  *
  *   FULL              — SCHEDULED + 0 biedingen: alles editable
  *   TIMING_LOCKED     — ACTIVE + 0 biedingen: alles behalve startDate/duration/endTimeOfDay
- *   DESCRIPTION_ONLY  — ACTIVE + ≥1 bod: alleen description + additive image-add + labels-add
+ *   DESCRIPTION_ONLY  — ACTIVE + ≥1 bod: alleen description + additive image-add
  *   NONE              — alle ended statussen + AWAITING_*: niets bewerkbaar
  *
  * Gedeeld tussen server-action (validatie) en edit-drawer client (lock-UI),

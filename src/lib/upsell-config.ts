@@ -10,30 +10,34 @@ export const UPSELL_PRICING: Record<
   URGENT_LABEL: { dailyCost: 0.15, minDays: 1, maxDays: 14 },
 } as const;
 
+// CTR-uplift per upsell-categorie als best-case multiplier ("tot N× meer
+// klikken"). Indicatief, hardcoded — we hebben nog geen eigen data. UI toont
+// disclaimer "branchegemiddelden".
+export const SPOTLIGHT_CTR_MULTIPLIER = 15;
+export const CATEGORY_HIGHLIGHT_CTR_MULTIPLIER = 8;
+
 export const AUCTION_UPSELL_PRICING: Record<
   UpsellType,
   { dailyCost: number; minDays: number; maxDays: number }
 > = {
   HOMEPAGE_SPOTLIGHT: { dailyCost: 0.75, minDays: 1, maxDays: 30 },
   CATEGORY_HIGHLIGHT: { dailyCost: 0.40, minDays: 1, maxDays: 30 },
-  // URGENT_LABEL wordt niet meer aangeboden voor auctions sinds het label-systeem
-  // (src/lib/auction/labels.ts). Pricing blijft staan voor bestaande records die
-  // nog actief zijn (expiresAt > now); die lopen vanzelf dood.
+  // URGENT_LABEL wordt niet meer aangeboden voor auctions. Pricing blijft staan
+  // voor bestaande records die nog actief zijn (expiresAt > now); die lopen
+  // vanzelf dood.
   URGENT_LABEL: { dailyCost: 0.25, minDays: 1, maxDays: 14 },
 } as const;
 
 // Welke upsell-types tonen we in de Promotie-sectie van /veilingen/nieuw?
-// URGENT_LABEL wordt niet meer aangeboden — sellers gebruiken in plaats daarvan
-// het label-systeem (Geen Reserve / Moet nu weg / etc.).
+// URGENT_LABEL wordt niet meer aangeboden (uitgefaseerd).
 export const AUCTION_UPSELL_TYPES_OFFERED: UpsellType[] = [
   "HOMEPAGE_SPOTLIGHT",
   "CATEGORY_HIGHLIGHT",
 ];
 
 // Listings (marktplaats) gebruiken hetzelfde patroon als auctions sinds de
-// Fase-36-uniformisatie: Spotlight + Category Highlight + label-systeem.
-// URGENT_LABEL is uitgefaseerd ten gunste van de configureerbare labels
-// (src/lib/listing/labels.ts).
+// Fase-36-uniformisatie: Spotlight + Category Highlight. URGENT_LABEL is
+// uitgefaseerd.
 export const LISTING_UPSELL_TYPES_OFFERED: UpsellType[] = [
   "HOMEPAGE_SPOTLIGHT",
   "CATEGORY_HIGHLIGHT",
