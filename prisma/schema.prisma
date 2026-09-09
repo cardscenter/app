@@ -80,10 +80,14 @@ model User {
   accountType       String   @default("FREE") // FREE | PRO | UNLIMITED | ENTERPRISE | ADMIN
   premiumExpiresAt  DateTime?
 
-  // Tier-based denormalisatie (Fase 31). Search-boost queries sorteren op
-  // dit veld: FREE=1, PRO=2, UNLIMITED=3, ENTERPRISE=4. Gevuld in
-  // upgradeToTier + downgrade-cron + grace-expiry-cron.
+  // Tier-denormalisatie (Fase 31/45). `tierRank` (FREE=1, PRO=2,
+  // UNLIMITED=3, ENTERPRISE/ADMIN=4) is sinds Fase 45 puur informatief;
+  // `searchBoost` = hasFeature(accountType, "searchBoost") en is wat de
+  // lijst-sorteringen lezen (src/lib/search-boost.ts). Beide via
+  // getTierDenormFields() in upgradeToTier / downgradeUserToFree / admin
+  // grant+revoke. Backfill: scripts/backfill-tier-denorm.ts.
   tierRank          Int      @default(1)
+  searchBoost       Boolean  @default(false)
 
   // Vanity shop URL (Fase 31) — Unlimited+ users kunnen /winkel/<slug>
   // claimen die naar /verkoper/<userId> redirect. Lowercase a-z 0-9 -, 3-32 chars.

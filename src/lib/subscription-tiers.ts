@@ -8,7 +8,7 @@ export interface TierFeatures {
   vanityShopSlug: boolean;
   searchBoost: boolean;
   accountManager: boolean;
-  /** Diepe prijshistorie (90d + 1j) op kaart-detailpagina. FREE ziet 14d/30d. */
+  /** Diepe prijshistorie (60d/120d/365d) op kaart-detailpagina. FREE ziet 7d/14d/30d. */
   extendedPriceHistory: boolean;
 }
 
@@ -172,6 +172,18 @@ export function getTierRank(accountType: string): number {
 
 export function getMonthlyFreeUpsells(accountType: string): number {
   return getTierConfig(accountType).limits.freeHomepageSpotlightsPerMonth;
+}
+
+/**
+ * Gedenormaliseerde User-velden die bij elke tier-wissel meegeschreven moeten
+ * worden (upgradeToTier / downgradeUserToFree / admin grant+revoke).
+ * `searchBoost` is wat de lijst-sorteringen lezen; `tierRank` is informatief.
+ */
+export function getTierDenormFields(accountType: string): { tierRank: number; searchBoost: boolean } {
+  return {
+    tierRank: getTierRank(accountType),
+    searchBoost: hasFeature(accountType, "searchBoost"),
+  };
 }
 
 export function hasFeature(

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   ACCOUNT_TIERS,
   getMonthlyFreeUpsells,
-  getTierRank,
+  getTierDenormFields,
   type TierKey,
   type BillingCycle,
 } from "@/lib/subscription-tiers";
@@ -89,8 +89,8 @@ export async function upgradeToTier(
       data: {
         accountType: tier,
         premiumExpiresAt: expiresAt,
-        // Tier-search-boost denormalisatie (stap 8)
-        tierRank: getTierRank(tier),
+        // Tier-denormalisatie (tierRank + searchBoost)
+        ...getTierDenormFields(tier),
         // Direct quota toekennen zodat user meteen kan profiteren — geen
         // wacht-tot-volgende-maand
         freeUpsellsRemaining: getMonthlyFreeUpsells(tier),
@@ -131,14 +131,48 @@ export async function cancelSubscription(userId: string) {
   return { success: true, expiresAt: subscription.expiresAt };
 }
 
-// Cron: downgrade expired subscriptions back to FREE
+/**
+ * Gedeelde downgrade naar FREE — gebruikt door de expiry-cron ("EXPIRED") en
+ * door de admin-actie revokeTier ("CANCELLED"). Reset alle tier-afgeleide
+ * velden; shopSlug/winkelpagina blijven bewaard (de /winkel-route geeft dan
+ * notFound tot een nieuwe upgrade).
+ */
+export async function downgradeUserToFree(
+  userIds: string[],
+  subscriptionStatus: "EXPIRED" | "CANCELLED"
+): Promise<void> {
+  if (userIds.length === 0) return;
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.user.updateMany({
+      where: { id: { in: userIds } },
+      data: {
+        accountType: "FREE",
+        premiumExpiresAt: null,
+        ...getTierDenormFields("FREE"),
+        freeUpsellsRemaining: 0,
+        freeUpsellsResetAt: null,
+      },
+    }),
+    prisma.subscription.updateMany({
+      where: { userId: { in: userIds }, status: "ACTIVE" },
+      data:
+        subscriptionStatus === "CANCELLED"
+          ? { status: "CANCELLED", cancelledAt: now }
+          : { status: "EXPIRED" },
+    }),
+  ]);
+}
+
+// Cron: downgrade expired subscriptions back to FREE.
+// ENTERPRISE telt mee (verloopt na de toegekende cyclus — admin moet dan
+// opnieuw toekennen); ADMIN is een rol, geen abonnement, en blijft buiten schot.
 export async function checkAndDowngradeExpired(): Promise<{ downgraded: number }> {
   const now = new Date();
 
-  // Find users with expired premium
   const expiredUsers = await prisma.user.findMany({
     where: {
-      accountType: { in: ["PRO", "UNLIMITED"] },
+      accountType: { in: ["PRO", "UNLIMITED", "ENTERPRISE"] },
       premiumExpiresAt: { lt: now },
     },
     select: { id: true },
@@ -146,24 +180,7 @@ export async function checkAndDowngradeExpired(): Promise<{ downgraded: number }
 
   if (expiredUsers.length === 0) return { downgraded: 0 };
 
-  const userIds = expiredUsers.map((u) => u.id);
-
-  await prisma.$transaction([
-    prisma.user.updateMany({
-      where: { id: { in: userIds } },
-      data: {
-        accountType: "FREE",
-        premiumExpiresAt: null,
-        tierRank: 1,
-        freeUpsellsRemaining: 0,
-        freeUpsellsResetAt: null,
-      },
-    }),
-    prisma.subscription.updateMany({
-      where: { userId: { in: userIds }, status: "ACTIVE" },
-      data: { status: "EXPIRED" },
-    }),
-  ]);
+  await downgradeUserToFree(expiredUsers.map((u) => u.id), "EXPIRED");
 
   return { downgraded: expiredUsers.length };
 }

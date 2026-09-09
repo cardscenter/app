@@ -18,6 +18,12 @@ import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 import { PageContainer } from "@/components/layout/page-container";
 import { parseAuctionFilters, buildAuctionFilterWhere } from "@/lib/auction-filters";
 import { distanceKm } from "@/lib/distance";
+import {
+  BOOST_CANDIDATE_CAP,
+  SEARCH_BOOST_TIEBREAK,
+  compareNewestBoosted,
+  pageWithinWindow,
+} from "@/lib/search-boost";
 
 const PAGE_SIZE = 40;
 
@@ -36,8 +42,9 @@ function seededShuffle<T>(arr: T[], seed: number): T[] {
 }
 
 function getOrderBy(sort: SortOption) {
-  // Tier-based search-boost: tier-key is altijd SECONDARY.
-  const tierBoost = { seller: { tierRank: "desc" as const } };
+  // Zoekboost (Fase 45): `seller.searchBoost` als tiebreak; bij "newest"
+  // gebeurt de dag-bucket-boost in JS op het kandidaat-venster.
+  const tierBoost = SEARCH_BOOST_TIEBREAK;
   // Status-asc als PRIMARY: 'ACTIVE' sorteert alfabetisch vóór 'SCHEDULED',
   // dus lopende veilingen komen altijd boven geplande in elke sort-modus.
   const statusFirst = { status: "asc" as const };
@@ -113,7 +120,7 @@ export default async function AuctionsPage({
       },
     },
     include: {
-      seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+      seller: { select: { displayName: true, city: true, postalCode: true, country: true, searchBoost: true } },
       _count: { select: { bids: true } },
     },
   });
@@ -133,13 +140,17 @@ export default async function AuctionsPage({
   };
 
   // Radius-filter: SQLite kan geen haversine, dus post-filter in JS.
+  // "newest" (dag-bucket-zoekboost) en "bids" (Prisma kan niet op _count
+  // sorteren) lopen ook via het kandidaat-venster zodat de sort over de hele
+  // set gaat en niet alleen binnen één pagina.
   const useRadiusPostFilter =
     filters.radius !== null && buyerLocation?.postalCode && buyerCountry;
+  const useCandidatePath = Boolean(useRadiusPostFilter) || sort === "newest" || sort === "bids";
 
   const orderBy = getOrderBy(sort);
 
   const AUCTION_INCLUDE = {
-    seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
+    seller: { select: { displayName: true, city: true, postalCode: true, country: true, searchBoost: true } },
     _count: { select: { bids: true } },
   } satisfies Prisma.AuctionInclude;
   type AuctionPayload = Prisma.AuctionGetPayload<{ include: typeof AUCTION_INCLUDE }>;
@@ -147,29 +158,57 @@ export default async function AuctionsPage({
   let totalCount: number;
   let auctions: AuctionPayload[];
 
-  if (useRadiusPostFilter) {
+  const dbTotalCount = useRadiusPostFilter ? null : await prisma.auction.count({ where: baseWhere });
+  const withinWindow =
+    !useCandidatePath ||
+    useRadiusPostFilter ||
+    pageWithinWindow(currentPage, PAGE_SIZE, BOOST_CANDIDATE_CAP, dbTotalCount ?? 0);
+
+  if (useCandidatePath && withinWindow) {
     const candidates = await prisma.auction.findMany({
       where: baseWhere,
-      orderBy: orderBy ?? { createdAt: "desc" as const },
-      take: 500,
+      orderBy: orderBy ?? [{ status: "asc" as const }, { createdAt: "desc" as const }],
+      take: BOOST_CANDIDATE_CAP,
       include: AUCTION_INCLUDE,
     });
-    const filtered = candidates.filter((a) => {
-      const km = distanceKm({
-        buyerCountry,
-        buyerPostalCode: buyerLocation!.postalCode,
-        sellerCountry: a.seller.country,
-        sellerPostalCode: a.seller.postalCode,
+    let filtered = candidates;
+    if (useRadiusPostFilter) {
+      filtered = filtered.filter((a) => {
+        const km = distanceKm({
+          buyerCountry,
+          buyerPostalCode: buyerLocation!.postalCode,
+          sellerCountry: a.seller.country,
+          sellerPostalCode: a.seller.postalCode,
+        });
+        if (km === null) return false;
+        return km <= filters.radius!;
       });
-      if (km === null) return false;
-      return km <= filters.radius!;
-    });
-    totalCount = filtered.length;
+    }
+    if (sort === "newest") {
+      // Status-asc (ACTIVE vóór SCHEDULED) blijft primair, daarbinnen de
+      // dag-bucket-boost.
+      filtered = [...filtered].sort((a, b) => {
+        if (a.status !== b.status) return a.status.localeCompare(b.status);
+        return compareNewestBoosted(
+          { date: a.createdAt, boosted: a.seller.searchBoost },
+          { date: b.createdAt, boosted: b.seller.searchBoost },
+        );
+      });
+    } else if (sort === "bids") {
+      filtered = [...filtered].sort((a, b) => {
+        if (a.status !== b.status) return a.status.localeCompare(b.status);
+        const diff = (b._count?.bids ?? 0) - (a._count?.bids ?? 0);
+        if (diff !== 0) return diff;
+        if (a.seller.searchBoost !== b.seller.searchBoost) return a.seller.searchBoost ? -1 : 1;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+    }
+    totalCount = useRadiusPostFilter ? filtered.length : (dbTotalCount ?? filtered.length);
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
     const safePage = Math.min(currentPage, totalPages);
     auctions = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   } else {
-    totalCount = await prisma.auction.count({ where: baseWhere });
+    totalCount = dbTotalCount ?? (await prisma.auction.count({ where: baseWhere }));
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
     const safePage = Math.min(currentPage, totalPages);
     auctions = await prisma.auction.findMany({
@@ -181,15 +220,7 @@ export default async function AuctionsPage({
     });
   }
 
-  // Sort by most bids in JS (Prisma kan niet by _count ordeneren).
-  // Primary: status (ACTIVE < SCHEDULED) zodat geplande veilingen achteraan
-  // komen. Secondary: bid-count desc.
-  if (sort === "bids") {
-    auctions = auctions.sort((a, b) => {
-      if (a.status !== b.status) return a.status.localeCompare(b.status);
-      return (b._count?.bids ?? 0) - (a._count?.bids ?? 0);
-    });
-  }
+  // "bids"-sort gebeurt in het kandidaat-venster hierboven (over de hele set).
   if (sort === "ending") {
     // DB-sort heeft status-asc als primary al gedaan. Hier alleen binnen
     // ACTIVE: verlopen pushen we naar achter (zonder SCHEDULED door elkaar

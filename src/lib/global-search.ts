@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { SEARCH_BOOST_TIEBREAK, compareNewestBoosted } from "@/lib/search-boost";
 import { auth } from "@/lib/auth";
 import { getBuyerLocation, getSellerCountryFilter } from "@/lib/shipping/filter";
 import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
@@ -57,6 +58,8 @@ export interface SearchResult {
   title: string;
   price: number | null;
   sellerName: string;
+  /** Zoekboost-tier (Unlimited+): dag-bucket-voorrang in de "newest"-sort, tiebreak elders. */
+  sellerBoosted?: boolean;
   createdAt: string;
   // auction-specific
   endTime?: string;
@@ -368,27 +371,34 @@ function buildSupplyWheres(q: string, filters: SupplyFilters, guards: SupplyGuar
 }
 
 export function sortSupplyResults(results: SearchResult[], sort: string): void {
+  // Zoekboost (Fase 45): bij "newest" dag-bucket-voorrang voor gebooste
+  // verkopers; bij de andere sorteringen alleen een tiebreak.
+  const boostTiebreak = (a: SearchResult, b: SearchResult) =>
+    (b.sellerBoosted ? 1 : 0) - (a.sellerBoosted ? 1 : 0);
   switch (sort) {
     case "price_asc":
-      results.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+      results.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity) || boostTiebreak(a, b));
       break;
     case "price_desc":
-      results.sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
+      results.sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity) || boostTiebreak(a, b));
       break;
     case "ending_soon":
       results.sort((a, b) => {
         const aEnd = a.endTime ? new Date(a.endTime).getTime() : Infinity;
         const bEnd = b.endTime ? new Date(b.endTime).getTime() : Infinity;
-        return aEnd - bEnd;
+        return aEnd - bEnd || boostTiebreak(a, b);
       });
       break;
     case "most_bids":
-      results.sort((a, b) => (b.bidCount ?? 0) - (a.bidCount ?? 0));
+      results.sort((a, b) => (b.bidCount ?? 0) - (a.bidCount ?? 0) || boostTiebreak(a, b));
       break;
     case "newest":
     default:
-      results.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      results.sort((a, b) =>
+        compareNewestBoosted(
+          { date: new Date(a.createdAt), boosted: Boolean(a.sellerBoosted) },
+          { date: new Date(b.createdAt), boosted: Boolean(b.sellerBoosted) },
+        ),
       );
       break;
   }
@@ -420,14 +430,11 @@ export async function searchSupply(
         ? prisma.auction.findMany({
             where: auctionWhere,
             include: {
-              seller: { select: { displayName: true } },
+              seller: { select: { displayName: true, searchBoost: true } },
               _count: { select: { bids: true } },
             },
-            // Fase 31 search-boost: tier-key SECONDARY achter createdAt.
-            orderBy: [
-              { createdAt: "desc" as const },
-              { seller: { tierRank: "desc" as const } },
-            ],
+            // Zoekboost (Fase 45): DB-tiebreak; de dag-bucket-boost zit in sortSupplyResults.
+            orderBy: [{ createdAt: "desc" as const }, SEARCH_BOOST_TIEBREAK],
             take,
           })
         : Promise.resolve([]),
@@ -435,28 +442,22 @@ export async function searchSupply(
         ? prisma.claimsale.findMany({
             where: claimsaleWhere,
             include: {
-              seller: { select: { displayName: true } },
+              seller: { select: { displayName: true, searchBoost: true } },
               _count: { select: { items: true } },
               items: {
                 where: { status: "AVAILABLE" },
                 select: { id: true, price: true },
               },
             },
-            orderBy: [
-              { publishedAt: "desc" as const },
-              { seller: { tierRank: "desc" as const } },
-            ],
+            orderBy: [{ publishedAt: "desc" as const }, SEARCH_BOOST_TIEBREAK],
             take,
           })
         : Promise.resolve([]),
       searchListings
         ? prisma.listing.findMany({
             where: listingWhere,
-            include: { seller: { select: { displayName: true } } },
-            orderBy: [
-              { createdAt: "desc" as const },
-              { seller: { tierRank: "desc" as const } },
-            ],
+            include: { seller: { select: { displayName: true, searchBoost: true } } },
+            orderBy: [{ createdAt: "desc" as const }, SEARCH_BOOST_TIEBREAK],
             take,
           })
         : Promise.resolve([]),
@@ -476,6 +477,7 @@ export async function searchSupply(
       title: a.title,
       price: a.currentBid ?? a.startingBid,
       sellerName: a.seller.displayName,
+      sellerBoosted: a.seller.searchBoost,
       createdAt: a.createdAt.toISOString(),
       endTime: a.endTime.toISOString(),
       bidCount: a._count.bids,
@@ -495,6 +497,7 @@ export async function searchSupply(
       title: c.title,
       price: prices.length > 0 ? Math.min(...prices) : null,
       sellerName: c.seller.displayName,
+      sellerBoosted: c.seller.searchBoost,
       createdAt: c.createdAt.toISOString(),
       itemCount: c.items.length,
       totalItems: c._count.items,
@@ -513,6 +516,7 @@ export async function searchSupply(
       title: l.title,
       price: l.price,
       sellerName: l.seller.displayName,
+      sellerBoosted: l.seller.searchBoost,
       createdAt: l.createdAt.toISOString(),
       cardName: l.cardName ?? undefined,
       condition: l.condition ?? undefined,

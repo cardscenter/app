@@ -6,6 +6,7 @@
 // `itemsProcessed` separately via the run handle.
 
 import { prisma } from "@/lib/prisma";
+import { getMonthlyFreeUpsells } from "@/lib/subscription-tiers";
 import { autoConfirmDeliveries } from "@/actions/purchase";
 import { checkAndDowngradeExpired } from "@/actions/subscription";
 import { expireClaimedItems } from "@/actions/claimsale";
@@ -1474,28 +1475,34 @@ export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: numb
     return { itemsProcessed: result.count, result: { pruned: result.count } };
   },
   "reset-free-upsells": async () => {
-    // Maandelijkse reset van gratis HOMEPAGE_SPOTLIGHT-quota per tier.
-    // Drie aparte updateMany ipv een loop omdat het aantal verschilt per tier
-    // en SQLite/Prisma geen CASE WHEN-update kent.
+    // Maandelijkse reset van gratis HOMEPAGE_SPOTLIGHT-quota per tier, uit de
+    // tier-config (getMonthlyFreeUpsells). Vier aparte updateMany omdat het
+    // aantal per tier verschilt en SQLite/Prisma geen CASE WHEN-update kent.
+    // FREE wordt expliciet op 0 gezet zodat stale quota na een handmatige
+    // downgrade nooit blijft hangen.
     const now = new Date();
-    const [pro, unlim, ent] = await prisma.$transaction([
+    const [free, pro, unlim, ent] = await prisma.$transaction([
+      prisma.user.updateMany({
+        where: { accountType: "FREE" },
+        data: { freeUpsellsRemaining: getMonthlyFreeUpsells("FREE"), freeUpsellsResetAt: now },
+      }),
       prisma.user.updateMany({
         where: { accountType: "PRO" },
-        data: { freeUpsellsRemaining: 1, freeUpsellsResetAt: now },
+        data: { freeUpsellsRemaining: getMonthlyFreeUpsells("PRO"), freeUpsellsResetAt: now },
       }),
       prisma.user.updateMany({
         where: { accountType: "UNLIMITED" },
-        data: { freeUpsellsRemaining: 5, freeUpsellsResetAt: now },
+        data: { freeUpsellsRemaining: getMonthlyFreeUpsells("UNLIMITED"), freeUpsellsResetAt: now },
       }),
       prisma.user.updateMany({
         where: { accountType: { in: ["ENTERPRISE", "ADMIN"] } },
-        data: { freeUpsellsRemaining: 999, freeUpsellsResetAt: now },
+        data: { freeUpsellsRemaining: getMonthlyFreeUpsells("ENTERPRISE"), freeUpsellsResetAt: now },
       }),
     ]);
-    const total = pro.count + unlim.count + ent.count;
+    const total = free.count + pro.count + unlim.count + ent.count;
     return {
       itemsProcessed: total,
-      result: { pro: pro.count, unlimited: unlim.count, enterprise: ent.count, total },
+      result: { free: free.count, pro: pro.count, unlimited: unlim.count, enterprise: ent.count, total },
     };
   },
   "cleanup-sold-images": async () => {

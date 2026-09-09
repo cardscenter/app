@@ -17,6 +17,12 @@ import { getBlockedUserIds, sellerNotInBlockedFilter } from "@/lib/blocking";
 import { PageContainer } from "@/components/layout/page-container";
 import { parseListingFilters, buildListingFilterWhere } from "@/lib/listing-filters";
 import { distanceKm } from "@/lib/distance";
+import {
+  BOOST_CANDIDATE_CAP,
+  SEARCH_BOOST_TIEBREAK,
+  compareNewestBoosted,
+  pageWithinWindow,
+} from "@/lib/search-boost";
 
 const PAGE_SIZE = 40;
 
@@ -39,19 +45,17 @@ export default async function MarktplaatsPage({
     ? sortRaw
     : "newest") as SortOption;
 
-  // Tier-based search-boost (Fase 31): tier-key is altijd SECONDARY zodat de
-  // gekozen sort dominant blijft. Tier-boost grijpt alleen bij ties op de
-  // primary sort (zeldzaam bij datum, vaker bij identieke prijs). Effect:
-  // FREE-users verliezen geen page-1-positie, maar Unlimited krijgt bij
-  // gelijke gevallen voorrang.
+  // Zoekboost (Fase 45, src/lib/search-boost.ts): bij prijs-sorteringen is
+  // `seller.searchBoost` alleen een tiebreak; bij "nieuwste" gebeurt de
+  // dag-bucket-boost in JS op een kandidaat-venster (zie hieronder).
   function getListingOrderBy(s: SortOption) {
     switch (s) {
       case "price_asc":
-        return [{ price: "asc" as const }, { seller: { tierRank: "desc" as const } }, { createdAt: "desc" as const }];
+        return [{ price: "asc" as const }, SEARCH_BOOST_TIEBREAK, { createdAt: "desc" as const }];
       case "price_desc":
-        return [{ price: "desc" as const }, { seller: { tierRank: "desc" as const } }, { createdAt: "desc" as const }];
+        return [{ price: "desc" as const }, SEARCH_BOOST_TIEBREAK, { createdAt: "desc" as const }];
       default:
-        return [{ createdAt: "desc" as const }, { seller: { tierRank: "desc" as const } }];
+        return [{ createdAt: "desc" as const }, SEARCH_BOOST_TIEBREAK];
     }
   }
   const orderBy = getListingOrderBy(sort);
@@ -93,6 +97,7 @@ export default async function MarktplaatsPage({
           city: true,
           postalCode: true,
           country: true,
+          searchBoost: true,
         },
       },
       upsells: {
@@ -116,13 +121,12 @@ export default async function MarktplaatsPage({
   };
 
   // Radius-filter: SQLite kan geen haversine, dus we doen post-filter in JS.
-  // Alleen mogelijk als buyer een postcode heeft. We fetchen een redelijke
-  // bovengrens en filteren dan; pageination werkt nog op het gefilterde resultaat.
-  // Voor nu: als radius gezet is, fetchen we tot 500 listings, filteren, en
-  // pagineren in JS. Voor productie met >500 listings binnen radius kan dit
-  // weer naar een spatial-index toe.
+  // Alleen mogelijk als buyer een postcode heeft. We fetchen een bovengrens
+  // (BOOST_CANDIDATE_CAP) en filteren/pagineren dan in JS. De "nieuwste"-sort
+  // gebruikt hetzelfde kandidaat-venster voor de dag-bucket-zoekboost.
   const useRadiusPostFilter =
     filters.radius !== null && buyerLocation?.postalCode && buyerCountry;
+  const useCandidatePath = Boolean(useRadiusPostFilter) || sort === "newest";
 
   const LISTING_INCLUDE = {
     seller: {
@@ -132,6 +136,7 @@ export default async function MarktplaatsPage({
         city: true,
         postalCode: true,
         country: true,
+        searchBoost: true,
       },
     },
     upsells: {
@@ -147,29 +152,48 @@ export default async function MarktplaatsPage({
   let totalCount: number;
   let listings: ListingPayload[];
 
-  if (useRadiusPostFilter) {
+  const dbTotalCount = useRadiusPostFilter ? null : await prisma.listing.count({ where: baseWhere });
+  const withinWindow =
+    !useCandidatePath ||
+    useRadiusPostFilter ||
+    pageWithinWindow(currentPage, PAGE_SIZE, BOOST_CANDIDATE_CAP, dbTotalCount ?? 0);
+
+  if (useCandidatePath && withinWindow) {
     const candidates = await prisma.listing.findMany({
       where: baseWhere,
       orderBy,
-      take: 500,
+      take: BOOST_CANDIDATE_CAP,
       include: LISTING_INCLUDE,
     });
-    const filtered = candidates.filter((l) => {
-      const km = distanceKm({
-        buyerCountry,
-        buyerPostalCode: buyerLocation!.postalCode,
-        sellerCountry: l.seller.country,
-        sellerPostalCode: l.seller.postalCode,
+    let filtered = candidates;
+    if (useRadiusPostFilter) {
+      filtered = filtered.filter((l) => {
+        const km = distanceKm({
+          buyerCountry,
+          buyerPostalCode: buyerLocation!.postalCode,
+          sellerCountry: l.seller.country,
+          sellerPostalCode: l.seller.postalCode,
+        });
+        if (km === null) return false;
+        return km <= filters.radius!;
       });
-      if (km === null) return false;
-      return km <= filters.radius!;
-    });
-    totalCount = filtered.length;
+    }
+    if (sort === "newest") {
+      filtered = [...filtered].sort((a, b) =>
+        compareNewestBoosted(
+          { date: a.createdAt, boosted: a.seller.searchBoost },
+          { date: b.createdAt, boosted: b.seller.searchBoost },
+        ),
+      );
+    }
+    totalCount = useRadiusPostFilter ? filtered.length : (dbTotalCount ?? filtered.length);
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
     const safePage = Math.min(currentPage, totalPages);
     listings = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   } else {
-    totalCount = await prisma.listing.count({ where: baseWhere });
+    // Buiten het kandidaat-venster (of niet-"nieuwste"): gewone DB-paginering,
+    // de boost is hier alleen nog een tiebreak.
+    totalCount = dbTotalCount ?? (await prisma.listing.count({ where: baseWhere }));
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
     const safePage = Math.min(currentPage, totalPages);
     listings = await prisma.listing.findMany({

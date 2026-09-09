@@ -18,6 +18,12 @@ import {
   countActiveClaimsaleFilters,
 } from "@/lib/claimsale-filters";
 import { distanceKm } from "@/lib/distance";
+import {
+  BOOST_CANDIDATE_CAP,
+  SEARCH_BOOST_TIEBREAK,
+  compareNewestBoosted,
+  pageWithinWindow,
+} from "@/lib/search-boost";
 
 const CLAIMSALE_INCLUDE = {
   seller: {
@@ -27,6 +33,7 @@ const CLAIMSALE_INCLUDE = {
       city: true,
       postalCode: true,
       country: true,
+      searchBoost: true,
     },
   },
   _count: { select: { items: true } },
@@ -93,24 +100,27 @@ export default async function ClaimsalesPage({
     filters.radius !== null && buyerLocation?.postalCode && buyerCountry;
   const useItemCountFilter = filters.itemCountMin !== null;
 
-  // Standaard orderBy: tier-boost als secondary achter publishedAt.
-  const orderBy = [
-    { publishedAt: "desc" as const },
-    { seller: { tierRank: "desc" as const } },
-  ];
+  // Standaard orderBy: publishedAt desc, zoekboost als tiebreak. De echte
+  // dag-bucket-boost gebeurt in JS op het kandidaat-venster (Fase 45).
+  const orderBy = [{ publishedAt: "desc" as const }, SEARCH_BOOST_TIEBREAK];
 
   let totalCount: number;
   let claimsales: Prisma.ClaimsaleGetPayload<{ include: typeof CLAIMSALE_INCLUDE }>[];
 
-  // Strategie:
-  //  - Als radius of itemCountMin actief: fetch tot 500, post-filter in JS,
-  //    paginate in JS.
-  //  - Anders: standard count + paginated query.
-  if (useRadiusPostFilter || useItemCountFilter) {
+  // Strategie: altijd een kandidaat-venster (BOOST_CANDIDATE_CAP) ophalen,
+  // post-filteren (radius/itemCountMin), in JS sorteren met de dag-bucket-
+  // zoekboost en in JS pagineren. Pagina's voorbij het venster (alleen
+  // mogelijk zonder post-filter) vallen terug op gewone DB-paginering.
+  const usePostFilter = Boolean(useRadiusPostFilter) || useItemCountFilter;
+  const dbTotalCount = usePostFilter ? null : await prisma.claimsale.count({ where: baseWhere });
+  const withinWindow =
+    usePostFilter || pageWithinWindow(currentPage, PAGE_SIZE, BOOST_CANDIDATE_CAP, dbTotalCount ?? 0);
+
+  if (withinWindow) {
     const candidates = await prisma.claimsale.findMany({
       where: baseWhere,
       orderBy,
-      take: 500,
+      take: BOOST_CANDIDATE_CAP,
       include: CLAIMSALE_INCLUDE,
     });
     let filtered = candidates;
@@ -131,7 +141,13 @@ export default async function ClaimsalesPage({
         return km <= filters.radius!;
       });
     }
-    totalCount = filtered.length;
+    filtered = [...filtered].sort((a, b) =>
+      compareNewestBoosted(
+        { date: a.publishedAt ?? a.createdAt, boosted: a.seller.searchBoost },
+        { date: b.publishedAt ?? b.createdAt, boosted: b.seller.searchBoost },
+      ),
+    );
+    totalCount = usePostFilter ? filtered.length : (dbTotalCount ?? filtered.length);
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
     const safePage = Math.min(currentPage, totalPages);
     claimsales = filtered.slice(
@@ -139,7 +155,7 @@ export default async function ClaimsalesPage({
       safePage * PAGE_SIZE,
     );
   } else {
-    totalCount = await prisma.claimsale.count({ where: baseWhere });
+    totalCount = dbTotalCount ?? (await prisma.claimsale.count({ where: baseWhere }));
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
     const safePage = Math.min(currentPage, totalPages);
     claimsales = await prisma.claimsale.findMany({
