@@ -25,7 +25,7 @@ const USER_DETAIL_SELECT = {
   balance: true, heldBalance: true, reservedBalance: true,
   emberBalance: true, bonusXP: true, loginStreak: true,
   bankTransferReference: true, iban: true, accountHolderName: true,
-  lastIbanChange: true, lastUsernameChange: true,
+  lastIbanChange: true, lastUsernameChange: true, fullNameLockedAt: true,
   suspendedUntil: true, suspensionType: true, suspensionReason: true, suspensionAdminId: true,
   street: true, houseNumber: true, postalCode: true, city: true, country: true,
   sellingCountries: true, maxRunnerUpAttempts: true,
@@ -92,6 +92,8 @@ export default async function AdminUserDetailPage({
             isSuspended={suspended}
             hasIban={!!user.iban}
             hasUsernameCooldown={!!user.lastUsernameChange}
+            firstName={user.firstName}
+            lastName={user.lastName}
           />
         }
       />
@@ -207,7 +209,8 @@ function ProfileTab({ user, subscription }: { user: UserDetailPayload; subscript
       />
       <Field label="Op naam van" value={user.accountHolderName} />
       <Field label="Laatste IBAN-wijziging" value={user.lastIbanChange?.toLocaleString("nl-NL")} />
-      <Field label="Laatste username-wijziging" value={user.lastUsernameChange?.toLocaleString("nl-NL")} />
+      <Field label="Naamswijziging verbruikt op" value={user.lastUsernameChange?.toLocaleString("nl-NL")} />
+      <Field label="Volledige naam vastgezet op" value={user.fullNameLockedAt?.toLocaleString("nl-NL")} />
       <Field label="Max runner-up attempts" value={user.maxRunnerUpAttempts} />
       <Field label="Aangemaakt" value={user.createdAt?.toLocaleString("nl-NL")} />
       <Field label="Laatst bijgewerkt" value={user.updatedAt?.toLocaleString("nl-NL")} />

@@ -151,8 +151,16 @@ model User {
   referralSource    String?   // How the user found the platform
   termsAcceptedAt   DateTime? // When the user accepted terms & conditions
 
-  // Username change tracking
+  // Username change tracking — de gebruiker mag zichzelf exact één keer
+  // hernoemen (betaald, zie username-change-config.ts). Zodra dit veld gevuld
+  // is zit de naam op slot en kan alleen een admin hem nog wijzigen (support
+  // na ID-controle). `forceUsernameReset` zet 'm terug op null.
   lastUsernameChange DateTime?
+
+  // Volledige naam op slot: gevuld zodra de gebruiker voor- of achternaam
+  // voor het eerst heeft opgeslagen. Daarna read-only — alleen support kan
+  // de naam nog wijzigen (met geldig ID-bewijs).
+  fullNameLockedAt   DateTime?
 
   // Address change tracking — 30-dagen cooldown na elke wijziging om
   // anti-fraude redenen. Null = nog nooit gewijzigd, eerste keer is gratis.

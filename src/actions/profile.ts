@@ -7,17 +7,25 @@ import { isValidIbanFormat, normalizeIban, IBAN_COOLDOWN_DAYS } from "@/lib/vali
 import { EMAIL_PREF_CATEGORIES, parseEmailPreferences } from "@/lib/email/preferences-config";
 import { requireTotpStepUp } from "@/lib/two-factor";
 import { validateUsername, validateSlugTerms, RESERVED_EXACT } from "@/lib/username-policy";
+import {
+  USERNAME_CHANGE_FEE,
+  USERNAME_CHANGE_TX_TYPE,
+  getUsernameChangeState,
+  isCaseOnlyRename,
+} from "@/lib/username-change-config";
+import { requireNotSuspended } from "@/lib/suspension";
+import { createNotification } from "@/actions/notification";
+import { publish, userChannel } from "@/lib/realtime";
 import { findUserByNameInsensitive } from "@/lib/username-policy-server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { convertToBusinessSchema } from "@/lib/validations/shop";
 import { MAX_SOCIAL_LINKS } from "@/lib/events/socials";
 
+// De gebruikersnaam zit bewust NIET in dit schema: hernoemen is een aparte,
+// betaalde en eenmalige handeling (zie `changeUsername`). Zo kan een bio-edit
+// nooit per ongeluk €2,99 kosten of de naam op slot zetten.
 const profileSchema = z.object({
-  // Bewust ruimer dan USERNAME_MAX: legacy-namen (>16 tekens) moeten bio/avatar
-  // kunnen blijven opslaan. De echte policy (max 16) dwingt validateUsername
-  // hieronder af bij een daadwerkelijke rename.
-  displayName: z.string().min(3).max(64).regex(/^[a-zA-Z0-9_-]+$/),
   bio: z.string().max(500).optional(),
   websiteUrl: z.string().max(200).optional(),
   // Volledige naam (profiel-redesign sept 2026) — primair op de site, de
@@ -52,7 +60,6 @@ export async function updateProfile(formData: FormData) {
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
   const result = profileSchema.safeParse({
-    displayName: formData.get("displayName"),
     bio: formData.get("bio") || undefined,
     websiteUrl: (formData.get("websiteUrl") as string | null) ?? undefined,
     firstName: (formData.get("firstName") as string | null) ?? undefined,
@@ -63,7 +70,7 @@ export async function updateProfile(formData: FormData) {
     return { error: result.error.issues[0].message };
   }
 
-  const { displayName, bio } = result.data;
+  const { bio } = result.data;
   const firstName = result.data.firstName?.trim() || null;
   const lastName = result.data.lastName?.trim() || null;
 
@@ -97,30 +104,23 @@ export async function updateProfile(formData: FormData) {
     else return { error: "Ongeldige omslagfoto" };
   }
 
-  // Fase 43 — username-policy alleen bij daadwerkelijke rename: users met een
-  // legacy-naam die inmiddels op de blocklist staat moeten bio/avatar kunnen
-  // blijven opslaan. Pure case-wissel van de eigen naam ("youri" → "Youri")
-  // blijft toegestaan.
+  // Volledige naam is eenmalig invulbaar. Zodra hij ooit is opgeslagen staat
+  // hij vast en kan alleen support hem nog wijzigen (na een geldig ID-bewijs).
   const currentUser = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { displayName: true },
+    select: { firstName: true, lastName: true, fullNameLockedAt: true },
   });
-  const isRename =
-    currentUser !== null &&
-    currentUser.displayName.toLowerCase() !== displayName.toLowerCase();
+  if (!currentUser) return { error: "Gebruiker niet gevonden" };
 
-  if (isRename) {
-    const usernamePolicy = validateUsername(displayName);
-    if (!usernamePolicy.ok) {
-      return { error: usernamePolicy.error };
-    }
-
-    // Case-insensitive uniqueness (Fase 43) — exclude eigen id.
-    const existing = await findUserByNameInsensitive(displayName);
-    if (existing && existing.id !== session.user.id) {
-      return { error: "Deze gebruikersnaam is al in gebruik" };
-    }
-  }
+  const fullNameLocked = currentUser.fullNameLockedAt !== null;
+  // Bij een slot negeren we wat de client stuurt en houden we de opgeslagen
+  // waarde aan — verdedigt tegen een handmatig samengestelde POST.
+  const nextFirstName = fullNameLocked ? currentUser.firstName : firstName;
+  const nextLastName = fullNameLocked ? currentUser.lastName : lastName;
+  // Pas op slot zodra er echt iets is ingevuld: een leeg veld opslaan mag de
+  // naam niet voorgoed vastzetten.
+  const lockFullNameNow =
+    !fullNameLocked && (nextFirstName !== null || nextLastName !== null);
 
   // Handle avatar upload
   let avatarUrl: string | undefined;
@@ -152,9 +152,9 @@ export async function updateProfile(formData: FormData) {
   const updated = await prisma.user.update({
     where: { id: session.user.id },
     data: {
-      displayName,
-      firstName,
-      lastName,
+      firstName: nextFirstName,
+      lastName: nextLastName,
+      ...(lockFullNameNow && { fullNameLockedAt: new Date() }),
       bio: bio ?? null,
       websiteUrl,
       socialLinks: socialLinks.length > 0 ? JSON.stringify(socialLinks) : null,
@@ -167,6 +167,152 @@ export async function updateProfile(formData: FormData) {
   revalidatePath(`/verkoper/${session.user.id}`);
 
   return { success: true, avatarUrl: updated.avatarUrl };
+}
+
+/**
+ * Gebruikersnaam wijzigen — eenmalig en betaald.
+ *
+ * Beleid (zie `username-change-config.ts`): elke gebruiker mag zichzelf
+ * precies één keer hernoemen voor {@link USERNAME_CHANGE_FEE} uit het saldo.
+ * Daarna staat de naam vast en kan alleen support hem nog wijzigen, na
+ * controle van een geldig identiteitsbewijs (`adminChangeUsername`).
+ *
+ * De oude naam wordt altijd in `UsernameHistory` vastgelegd en is publiek
+ * zichtbaar op het profiel — een handelsnaam kan dus nooit spoorloos
+ * verdwijnen.
+ *
+ * Bewust een aparte action i.p.v. onderdeel van `updateProfile`: zo kan een
+ * bio- of avatar-wijziging nooit per ongeluk geld kosten.
+ */
+export async function changeUsername(newNameRaw: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+  const userId = session.user.id;
+
+  try {
+    await requireNotSuspended(userId);
+  } catch {
+    return { error: "Je account is opgeschort" };
+  }
+
+  const newName = String(newNameRaw ?? "").trim();
+  if (!newName) return { error: "Vul een gebruikersnaam in" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      displayName: true,
+      lastUsernameChange: true,
+      balance: true,
+      reservedBalance: true,
+    },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  if (user.displayName === newName) {
+    return { error: "Dit is al je gebruikersnaam" };
+  }
+
+  // Alleen een andere schrijfwijze van dezelfde handle: gratis, verbruikt de
+  // eenmalige wijziging niet en komt niet in de historie. Bewust géén
+  // policy-check — legacy-namen die inmiddels op de blocklist staan moeten
+  // hun hoofdletters kunnen bijstellen.
+  if (isCaseOnlyRename(user.displayName, newName)) {
+    await prisma.user.update({ where: { id: userId }, data: { displayName: newName } });
+    revalidatePath("/dashboard/profiel");
+    revalidatePath(`/verkoper/${userId}`);
+    return { success: true, charged: 0 };
+  }
+
+  const state = getUsernameChangeState(user.lastUsernameChange);
+  if (!state.canChange) {
+    return {
+      error:
+        "Je hebt je gebruikersnaam al eens gewijzigd. Neem contact op met support als hij echt moet veranderen — dat kan alleen met een geldig identiteitsbewijs.",
+    };
+  }
+
+  const policy = validateUsername(newName);
+  if (!policy.ok) return { error: policy.error };
+
+  const existing = await findUserByNameInsensitive(newName);
+  if (existing && existing.id !== userId) {
+    return { error: "Deze gebruikersnaam is al in gebruik" };
+  }
+
+  const available = user.balance - user.reservedBalance;
+  if (available < USERNAME_CHANGE_FEE) {
+    return {
+      error: `Je hebt €${USERNAME_CHANGE_FEE.toFixed(2).replace(".", ",")} beschikbaar saldo nodig om je gebruikersnaam te wijzigen.`,
+    };
+  }
+
+  const oldName = user.displayName;
+  const now = new Date();
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const fresh = await tx.user.findUnique({
+        where: { id: userId },
+        select: { balance: true, reservedBalance: true },
+      });
+      if (!fresh) throw new Error("USERNAME_CHANGE_FAILED");
+
+      // Claim-first: de where-clause dekt zowel "nog niet verbruikt" als
+      // "saldo toereikend", dus twee gelijktijdige verzoeken kunnen nooit
+      // beide slagen of dubbel afschrijven.
+      const claimed = await tx.user.updateMany({
+        where: {
+          id: userId,
+          lastUsernameChange: null,
+          balance: { gte: USERNAME_CHANGE_FEE },
+        },
+        data: {
+          displayName: newName,
+          lastUsernameChange: now,
+          balance: { decrement: USERNAME_CHANGE_FEE },
+        },
+      });
+      if (claimed.count === 0) throw new Error("USERNAME_CHANGE_FAILED");
+
+      await tx.usernameHistory.create({
+        data: { userId, oldName, changedAt: now },
+      });
+
+      const balanceBefore = fresh.balance;
+      const balanceAfter = Math.round((balanceBefore - USERNAME_CHANGE_FEE) * 100) / 100;
+      await tx.transaction.create({
+        data: {
+          userId,
+          type: USERNAME_CHANGE_TX_TYPE,
+          amount: -USERNAME_CHANGE_FEE,
+          balanceBefore,
+          balanceAfter,
+          description: `Gebruikersnaam gewijzigd: @${oldName} → @${newName}`,
+        },
+      });
+    });
+  } catch (err) {
+    // Unieke index op displayName kan alsnog klappen bij een gelijktijdige
+    // registratie met dezelfde naam.
+    const code = (err as { code?: string } | null)?.code;
+    if (code === "P2002") return { error: "Deze gebruikersnaam is al in gebruik" };
+    return { error: "Wijzigen mislukt. Probeer het opnieuw." };
+  }
+
+  await createNotification(
+    userId,
+    "ACCOUNT_UPDATE",
+    "Gebruikersnaam gewijzigd",
+    `Je gebruikersnaam is gewijzigd van @${oldName} naar @${newName}. Er is €${USERNAME_CHANGE_FEE.toFixed(2).replace(".", ",")} van je saldo afgeschreven. Je vorige naam blijft zichtbaar op je profiel.`,
+    "/dashboard/profiel",
+  );
+  publish(userChannel(userId), { type: "balance-changed", payload: {} });
+
+  revalidatePath("/dashboard/profiel");
+  revalidatePath(`/verkoper/${userId}`);
+
+  return { success: true, charged: USERNAME_CHANGE_FEE };
 }
 
 export async function updateProfileBanner(bannerKey: string | null) {

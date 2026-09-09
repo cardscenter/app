@@ -8,6 +8,150 @@ import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
 import { upgradeToTier, downgradeUserToFree } from "@/actions/subscription";
 import { ACCOUNT_TIERS, type BillingCycle } from "@/lib/subscription-tiers";
+import { validateUsername } from "@/lib/username-policy";
+import { findUserByNameInsensitive } from "@/lib/username-policy-server";
+
+/**
+ * Support wijzigt een gebruikersnaam (sept 2026).
+ *
+ * De gebruiker mag zichzelf maar één keer hernoemen; daarna is dit de enige
+ * route. Bedoeld voor gevallen waarin de identiteit is gecontroleerd — vandaar
+ * de verplichte onderbouwing, die in het audit-log terechtkomt.
+ *
+ * De oude naam gaat altijd de publieke `UsernameHistory` in, ook bij een
+ * support-wijziging: kopers moeten kunnen zien onder welke namen iemand
+ * handelde. De eenmalige zelf-wijziging van de gebruiker wordt hier bewust
+ * NIET verbruikt of teruggegeven — gebruik `forceUsernameReset` als de
+ * gebruiker z'n eigen wijziging terug moet krijgen.
+ */
+export async function adminChangeUsername(userId: string, newNameRaw: string, reason: string) {
+  const { adminId } = await requireAdmin();
+
+  const trimmedReason = reason?.trim();
+  if (!trimmedReason || trimmedReason.length < 5) {
+    return { error: "Reden is verplicht (minimaal 5 tekens)" };
+  }
+
+  const newName = String(newNameRaw ?? "").trim();
+  const policy = validateUsername(newName);
+  if (!policy.ok) return { error: policy.error };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { displayName: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+  if (user.displayName === newName) return { error: "Dit is al de huidige gebruikersnaam" };
+
+  const existing = await findUserByNameInsensitive(newName);
+  if (existing && existing.id !== userId) {
+    return { error: "Deze gebruikersnaam is al in gebruik" };
+  }
+
+  const oldName = user.displayName;
+  try {
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { displayName: newName } }),
+      prisma.usernameHistory.create({ data: { userId, oldName } }),
+    ]);
+  } catch (err) {
+    if ((err as { code?: string } | null)?.code === "P2002") {
+      return { error: "Deze gebruikersnaam is al in gebruik" };
+    }
+    return { error: "Wijzigen mislukt" };
+  }
+
+  await logAdminAction({
+    adminId,
+    action: "ADMIN_CHANGE_USERNAME",
+    targetType: "USER",
+    targetId: userId,
+    metadata: { oldName, newName, reason: trimmedReason },
+  });
+
+  await createNotification(
+    userId,
+    "ACCOUNT_UPDATE",
+    "Gebruikersnaam gewijzigd door support",
+    `Je gebruikersnaam is gewijzigd van @${oldName} naar @${newName}. Je vorige naam blijft zichtbaar op je profiel.`,
+    "/dashboard/profiel",
+  );
+
+  revalidatePath(`/dashboard/admin/users/${userId}`);
+  revalidatePath(`/verkoper/${userId}`);
+  return { success: true };
+}
+
+/**
+ * Support wijzigt de volledige naam (voor-/achternaam).
+ *
+ * De gebruiker kan die zelf maar één keer invullen; daarna staat hij op slot.
+ * Deze route is bedoeld voor correcties na controle van een identiteitsbewijs.
+ * Beide velden leeg maken haalt het slot eraf, zodat de gebruiker de naam zelf
+ * opnieuw kan invullen.
+ */
+export async function adminChangeFullName(
+  userId: string,
+  firstNameRaw: string,
+  lastNameRaw: string,
+  reason: string,
+) {
+  const { adminId } = await requireAdmin();
+
+  const trimmedReason = reason?.trim();
+  if (!trimmedReason || trimmedReason.length < 5) {
+    return { error: "Reden is verplicht (minimaal 5 tekens)" };
+  }
+
+  const firstName = String(firstNameRaw ?? "").trim().slice(0, 50) || null;
+  const lastName = String(lastNameRaw ?? "").trim().slice(0, 50) || null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { displayName: true, firstName: true, lastName: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+
+  const hasName = firstName !== null || lastName !== null;
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      firstName,
+      lastName,
+      // Leeggemaakt = slot eraf, zodat de gebruiker het zelf opnieuw invult.
+      fullNameLockedAt: hasName ? new Date() : null,
+    },
+  });
+
+  await logAdminAction({
+    adminId,
+    action: "ADMIN_CHANGE_FULL_NAME",
+    targetType: "USER",
+    targetId: userId,
+    metadata: {
+      userName: user.displayName,
+      oldFirstName: user.firstName,
+      oldLastName: user.lastName,
+      newFirstName: firstName,
+      newLastName: lastName,
+      reason: trimmedReason,
+    },
+  });
+
+  await createNotification(
+    userId,
+    "ACCOUNT_UPDATE",
+    hasName ? "Naam gewijzigd door support" : "Naamveld weer vrijgegeven",
+    hasName
+      ? `Je naam is door support gewijzigd naar ${[firstName, lastName].filter(Boolean).join(" ")}.`
+      : "Support heeft je naamveld weer vrijgegeven. Je kunt je volledige naam opnieuw invullen op je profiel.",
+    "/dashboard/profiel",
+  );
+
+  revalidatePath(`/dashboard/admin/users/${userId}`);
+  revalidatePath(`/verkoper/${userId}`);
+  return { success: true };
+}
 
 export async function resetIbanCooldown(userId: string) {
   const { adminId } = await requireAdmin();
@@ -34,6 +178,13 @@ export async function resetIbanCooldown(userId: string) {
   return { success: true };
 }
 
+/**
+ * Geeft de gebruiker z'n eenmalige (betaalde) naamswijziging terug.
+ *
+ * `lastUsernameChange` is de "verbruikt"-vlag; op null zetten betekent dat de
+ * gebruiker zichzelf weer één keer mag hernoemen — tegen het normale tarief.
+ * Wil je de naam zelf corrigeren? Gebruik `adminChangeUsername`.
+ */
 export async function forceUsernameReset(userId: string) {
   const { adminId } = await requireAdmin();
 
@@ -59,8 +210,8 @@ export async function forceUsernameReset(userId: string) {
   await createNotification(
     userId,
     "ACCOUNT_UPDATE",
-    "Username-cooldown gereset",
-    "Een admin heeft je username-cooldown gereset. Je kunt nu opnieuw je gebruikersnaam wijzigen.",
+    "Naamswijziging teruggegeven",
+    "Support heeft je eenmalige naamswijziging teruggegeven. Je kunt je gebruikersnaam nu opnieuw wijzigen.",
     "/dashboard/profiel"
   );
 

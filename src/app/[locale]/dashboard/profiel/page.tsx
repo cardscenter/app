@@ -23,6 +23,7 @@ import { hasFeature } from "@/lib/subscription-tiers";
 import { parseSocialLinks } from "@/lib/events/socials";
 import { IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
 import { formatDateShort } from "@/lib/format";
+import { USERNAME_CHANGE_FEE, getUsernameChangeState } from "@/lib/username-change-config";
 
 /**
  * /dashboard/profiel (redesign sept 2026, naar Connext-referentie):
@@ -58,6 +59,8 @@ export default async function ProfilePage({
   const bannerLevel = user.profileBanner ? getLevelByKey(user.profileBanner) : undefined;
   const fallbackGradient =
     bannerLevel?.gradient ?? currentLevel?.gradient ?? "from-sky-200 via-violet-200 to-pink-200";
+
+  const usernameChange = getUsernameChangeState(user.lastUsernameChange);
 
   const isBusiness = user.accountKind === "BUSINESS";
   const canShop = hasFeature(user.accountType, "customProfile");
@@ -132,10 +135,14 @@ export default async function ProfilePage({
       {/* BLOK 1 — Openbaar profiel: omslag + naam + foto + bio + locatie + links */}
       <section className="overflow-hidden dash-card">
         <ProfileForm
+          usernameChangeFee={USERNAME_CHANGE_FEE}
           user={{
             displayName: user.displayName,
             firstName: user.firstName,
             lastName: user.lastName,
+            fullNameLocked: user.fullNameLockedAt !== null,
+            canChangeUsername: usernameChange.canChange,
+            usernameChangedAt: usernameChange.usedAt,
             bio: user.bio,
             avatarUrl: user.avatarUrl,
             coverImageUrl: user.coverImageUrl,

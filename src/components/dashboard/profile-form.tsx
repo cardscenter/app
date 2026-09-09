@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import {
   Camera,
-  Check,
   Globe,
   ImageIcon,
   Loader2,
+  Lock,
   MapPin,
   Plus,
   Trash2,
@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { updateProfile } from "@/actions/profile";
-import { USERNAME_MAX, USERNAME_MIN, validateUsername } from "@/lib/username-policy";
+import { UsernameChangeForm } from "@/components/dashboard/username-change-form";
 import { MAX_SOCIAL_LINKS, detectSocialPlatform } from "@/lib/events/socials";
 import { getCountryName } from "@/lib/shipping/countries";
 import { AvatarCropModal } from "@/components/ui/avatar-crop-modal";
@@ -38,6 +38,12 @@ type ProfileFormUser = {
   displayName: string;
   firstName: string | null;
   lastName: string | null;
+  /** Volledige naam is eenmalig invulbaar; daarna alleen via support. */
+  fullNameLocked: boolean;
+  /** Heeft de gebruiker z'n eenmalige, betaalde naamswijziging nog? */
+  canChangeUsername: boolean;
+  /** Wanneer die wijziging is verbruikt (null = nog beschikbaar). */
+  usernameChangedAt: Date | string | null;
   bio: string | null;
   avatarUrl: string | null;
   coverImageUrl: string | null;
@@ -48,6 +54,8 @@ type ProfileFormUser = {
 
 type Props = {
   user: ProfileFormUser;
+  /** Kosten van de eenmalige naamswijziging (uit username-change-config). */
+  usernameChangeFee: number;
   /** Reeds geparste socials (JSON → string[]). */
   socialLinks: string[];
   /** Tailwind `from-… to-…`-klassen voor de omslag-fallback (level-kleur). */
@@ -59,7 +67,7 @@ type Props = {
  * bovenaan, daaronder rijen label-links/veld-rechts. Alles wat hier staat is
  * publiek zichtbaar op /verkoper/[id]. Eén Opslaan-knop onderaan.
  */
-export function ProfileForm({ user, socialLinks: initialSocials, fallbackGradient }: Props) {
+export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocials, fallbackGradient }: Props) {
   const t = useTranslations("profile");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -81,7 +89,6 @@ export function ProfileForm({ user, socialLinks: initialSocials, fallbackGradien
   const [coverUploading, setCoverUploading] = useState(false);
 
   // Tekstvelden
-  const [displayName, setDisplayName] = useState(user.displayName);
   const [bio, setBio] = useState(user.bio ?? "");
   const [website, setWebsite] = useState(user.websiteUrl ?? "");
   const [socials, setSocials] = useState<string[]>(initialSocials);
@@ -155,13 +162,7 @@ export function ProfileForm({ user, socialLinks: initialSocials, fallbackGradien
     }
   }
 
-  // ---- gebruikersnaam-check (client-side spiegel van de server-policy) ----
-  const nameTrimmed = displayName.trim();
-  const isRename = nameTrimmed.toLowerCase() !== user.displayName.toLowerCase();
-  const nameCheck = isRename ? validateUsername(nameTrimmed) : { ok: true as const };
-  const nameValid = nameTrimmed.length > 0 && nameCheck.ok;
-
-  const initial = (displayName || user.displayName).charAt(0).toUpperCase();
+  const initial = user.displayName.charAt(0).toUpperCase();
   const hasLocation = !!(user.city || user.country);
 
   return (
@@ -212,64 +213,59 @@ export function ProfileForm({ user, socialLinks: initialSocials, fallbackGradien
 
         <div className="px-5 py-6 sm:px-6">
           {/* Volledige naam — primair op de site (profiel-redesign sept 2026) */}
-          <FieldRow label={t("fullName")} hint={t("fullNameHint")} htmlFor="firstName">
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                id="firstName"
-                name="firstName"
-                type="text"
-                defaultValue={user.firstName ?? ""}
-                maxLength={50}
-                placeholder={t("firstName")}
-                autoComplete="given-name"
-                className={PROFILE_INPUT_CLASS}
-              />
-              <input
-                id="lastName"
-                name="lastName"
-                type="text"
-                defaultValue={user.lastName ?? ""}
-                maxLength={50}
-                placeholder={t("lastName")}
-                autoComplete="family-name"
-                className={PROFILE_INPUT_CLASS}
-              />
-            </div>
+          <FieldRow
+            label={t("fullName")}
+            hint={user.fullNameLocked ? t("fullNameLockedHint") : t("fullNameOnceHint")}
+            htmlFor={user.fullNameLocked ? undefined : "firstName"}
+          >
+            {user.fullNameLocked ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
+                  {[user.firstName, user.lastName].filter(Boolean).join(" ") || "—"}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
+                  <Lock className="size-3.5" />
+                  {t("usernameLocked")}
+                </span>
+                <Link href="/support" className="text-xs font-medium text-primary hover:underline">
+                  {t("contactSupport")}
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  defaultValue={user.firstName ?? ""}
+                  maxLength={50}
+                  placeholder={t("firstName")}
+                  autoComplete="given-name"
+                  className={PROFILE_INPUT_CLASS}
+                />
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  defaultValue={user.lastName ?? ""}
+                  maxLength={50}
+                  placeholder={t("lastName")}
+                  autoComplete="family-name"
+                  className={PROFILE_INPUT_CLASS}
+                />
+              </div>
+            )}
           </FieldRow>
 
-          {/* Gebruikersnaam */}
-          <FieldRow
-            label={t("displayName")}
-            hint={t("displayNameHint", { min: USERNAME_MIN, max: USERNAME_MAX })}
-            htmlFor="displayName"
-          >
-            <div className="relative flex rounded-lg border border-border bg-card transition-colors focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/15">
-              <span className="flex select-none items-center border-r border-border bg-muted/60 px-3 text-sm text-muted-foreground">
-                @
-              </span>
-              <input
-                id="displayName"
-                name="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-                maxLength={Math.max(USERNAME_MAX, user.displayName.length)}
-                className="block w-full bg-transparent px-3 py-2.5 pr-10 text-sm text-foreground outline-none"
-                autoComplete="username"
-                spellCheck={false}
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                {nameValid ? (
-                  <span className="flex size-4 items-center justify-center rounded-full bg-emerald-500 text-white">
-                    <Check className="size-3" strokeWidth={3} />
-                  </span>
-                ) : null}
-              </span>
-            </div>
-            {!nameCheck.ok && nameTrimmed.length > 0 && (
-              <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{nameCheck.error}</p>
-            )}
+          {/* Gebruikersnaam — eenmalig zelf te wijzigen (betaald), daarna
+              alleen nog via support. Aparte action, dus niet in dit form. */}
+          <FieldRow label={t("displayName")} hint={t("displayNameLockHint")}>
+            <UsernameChangeForm
+              currentName={user.displayName}
+              canChange={user.canChangeUsername}
+              usedAt={user.usernameChangedAt}
+              fee={usernameChangeFee}
+            />
           </FieldRow>
 
           {/* Profielfoto */}
@@ -451,7 +447,7 @@ export function ProfileForm({ user, socialLinks: initialSocials, fallbackGradien
             </p>
             <button
               type="submit"
-              disabled={pending || !nameValid}
+              disabled={pending}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
             >
               {pending && <Loader2 className="size-4 animate-spin" />}

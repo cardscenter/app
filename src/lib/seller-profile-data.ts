@@ -117,6 +117,8 @@ export type SellerProfileData = {
   team: TeamMemberRow[];
   /** Bedrijven waar deze persoon teamlid van is. */
   worksAt: WorksAtRow[];
+  /** Eerdere gebruikersnamen, nieuwste eerst — publiek zichtbaar. */
+  usernameHistory: { oldName: string; changedAt: Date }[];
 };
 
 function parseImages(raw: string | null | undefined): string[] {
@@ -161,6 +163,13 @@ export const getSellerProfileData = cache(
           shopTagline: true,
           shopPublished: true,
           shopBlocks: true,
+          // Naamgeschiedenis is publiek: een oude handelsnaam mag niet
+          // stilletjes verdwijnen (zie username-change-config.ts).
+          usernameHistory: {
+            orderBy: { changedAt: "desc" },
+            select: { oldName: true, changedAt: true },
+            take: 10,
+          },
         },
       }),
       getSellerStats(userId),
@@ -437,6 +446,7 @@ export const getSellerProfileData = cache(
       viewerFollows: !!viewerFollowRow,
       team,
       worksAt,
+      usernameHistory: user.usernameHistory,
     };
   },
 );

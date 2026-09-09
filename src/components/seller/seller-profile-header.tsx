@@ -11,6 +11,7 @@ import { CountryFlag } from "@/components/ui/country-flag";
 import { SellerLevelBadge } from "@/components/ui/seller-level-badge";
 import { TrustBadges } from "@/components/ui/trust-badges";
 import { TierPill } from "@/components/ui/tier-pill";
+import { UsernameHistoryBadge } from "@/components/ui/username-history-tooltip";
 import { BlockReportButtons } from "@/components/ui/block-report-buttons";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
@@ -99,6 +100,7 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
               <span className="font-medium text-foreground/80">{handle}</span>
+              <UsernameHistoryBadge history={profile.usernameHistory} />
               {location && (
                 <>
                   <span aria-hidden>·</span>
