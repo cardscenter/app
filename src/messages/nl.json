@@ -1947,6 +1947,11 @@
     "hideFilters": "Verberg filters"
   },
   "sellerProfile": {
+    "shop": "Winkel",
+    "shopEmptyTitle": "Deze winkelpagina is nog leeg",
+    "shopEmptyOwner": "Voeg blokken toe via de editor om je winkel te presenteren.",
+    "shopEmptyVisitor": "De eigenaar heeft nog geen inhoud toegevoegd.",
+    "viewFullProfile": "Bekijk volledig profiel",
     "breadcrumbSellers": "Verkopers",
     "sellerNotFound": "Verkoper niet gevonden",
     "editProfile": "Profiel bewerken",

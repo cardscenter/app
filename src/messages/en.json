@@ -1947,6 +1947,11 @@
     "hideFilters": "Hide filters"
   },
   "sellerProfile": {
+    "shop": "Shop",
+    "shopEmptyTitle": "This shop page is still empty",
+    "shopEmptyOwner": "Add blocks in the editor to present your shop.",
+    "shopEmptyVisitor": "The owner hasn't added any content yet.",
+    "viewFullProfile": "View full profile",
     "breadcrumbSellers": "Sellers",
     "sellerNotFound": "Seller not found",
     "editProfile": "Edit profile",
