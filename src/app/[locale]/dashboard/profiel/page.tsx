@@ -70,6 +70,7 @@ export default async function ProfilePage({
     FREE: "Free",
     PRO: "Pro",
     UNLIMITED: "Unlimited",
+    ENTERPRISE: "Enterprise",
     ADMIN: "Admin",
   };
 

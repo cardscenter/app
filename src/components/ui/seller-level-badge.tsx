@@ -6,10 +6,9 @@ interface SellerLevelBadgeProps {
   xp: number;
   showProgress?: boolean;
   size?: "sm" | "md" | "lg";
-  isPro?: boolean;
 }
 
-export function SellerLevelBadge({ xp, showProgress = false, size = "md", isPro = false }: SellerLevelBadgeProps) {
+export function SellerLevelBadge({ xp, showProgress = false, size = "md" }: SellerLevelBadgeProps) {
   const level = getLevel(xp);
   const nextLevel = getNextLevel(xp);
   const progress = getLevelProgress(xp);
@@ -28,12 +27,6 @@ export function SellerLevelBadge({ xp, showProgress = false, size = "md", isPro 
         <span>{level.icon}</span>
         <span>{level.name}</span>
       </span>
-
-      {isPro && (
-        <span className="inline-flex items-center gap-1 rounded-full border border-indigo-400 bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-600 dark:border-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400">
-          PRO
-        </span>
-      )}
 
       {showProgress && nextLevel && (
         <div className="flex items-center gap-2">

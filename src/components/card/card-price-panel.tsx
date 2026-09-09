@@ -55,8 +55,8 @@ interface Props {
   history: HistoryPoint[];   // sorted ascending by date
   updated: string | null;
   extraVariants?: ExtraVariant[];
-  /** PRO+ mag 90d + 1j kiezen. FREE krijgt die data niet eens binnen (server
-   *  begrenst het venster op 35 dagen) — de 90d/1j-tabs tonen een slotje. */
+  /** PRO+ mag 60d/120d/365d kiezen. FREE krijgt die data niet eens binnen
+   *  (server begrenst het venster op 35 dagen) — die tabs tonen een slotje. */
   canExtendedHistory?: boolean;
 }
 

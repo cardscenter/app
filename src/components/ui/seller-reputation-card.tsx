@@ -4,7 +4,8 @@ import { useTranslations } from "next-intl";
 import { StarRatingDisplay } from "@/components/ui/star-rating";
 import { SellerLevelBadge } from "@/components/ui/seller-level-badge";
 import { TrustBadges } from "@/components/ui/trust-badges";
-import { ShoppingBag, TrendingUp, Calendar, ThumbsUp, Crown, Zap } from "lucide-react";
+import { ShoppingBag, TrendingUp, Calendar, ThumbsUp } from "lucide-react";
+import { TierPill } from "@/components/ui/tier-pill";
 
 export type SellerStats = {
   displayName: string;
@@ -43,7 +44,8 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-foreground">{stats.displayName}</span>
-            <SellerLevelBadge xp={stats.xp} size="sm" isPro={stats.accountType !== "FREE"} />
+            <SellerLevelBadge xp={stats.xp} size="sm" />
+            <TierPill accountType={stats.accountType} />
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             {stats.totalReviews > 0 && (
@@ -75,19 +77,10 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
               isAddressVerified={stats.isAddressVerified}
               size="md"
             />
-            {stats.accountType === "PRO" && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                <Zap className="h-3 w-3" /> PRO
-              </span>
-            )}
-            {(stats.accountType === "UNLIMITED" || stats.accountType === "ADMIN") && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-yellow-500/10 px-1.5 py-0.5 text-xs font-bold text-yellow-600 dark:text-yellow-400">
-                <Crown className="h-3 w-3" /> UNLIMITED
-              </span>
-            )}
+            <TierPill accountType={stats.accountType} size="md" />
           </div>
           <div className="mt-1">
-            <SellerLevelBadge xp={stats.xp} showProgress isPro={stats.accountType !== "FREE"} />
+            <SellerLevelBadge xp={stats.xp} showProgress />
           </div>
           {stats.totalReviews > 0 && (
             <div className="mt-2">

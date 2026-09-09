@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sparkles, Zap, Crown, Building2, Check, Info } from "lucide-react";
+import { Sparkles, Zap, Crown, Building2, Check, Minus, Info } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import {
   ACCOUNT_TIERS,
@@ -10,6 +10,7 @@ import {
   type TierKey,
   type BillingCycle,
 } from "@/lib/subscription-tiers";
+import { buildTierFeatureRows } from "@/lib/tier-feature-rows";
 
 const TIER_ICONS: Record<TierKey, typeof Sparkles> = {
   FREE: Sparkles,
@@ -100,56 +101,8 @@ function TierCard({ tierKey, cycle, isCurrent, hasPendingEnterpriseRequest }: Ti
   const accent = TIER_ACCENT[tierKey];
   const breakEven = TIER_BREAK_EVENS_MONTHLY[tierKey];
 
-  const limits = tier.limits;
-  const limitLine =
-    limits.maxActiveListings === Infinity
-      ? t("featureLimitsUnlimited")
-      : t("featureLimits", {
-          auctions: String(limits.maxActiveAuctions),
-          listings: String(limits.maxActiveListings),
-          claimsales: String(limits.maxActiveClaimsales),
-        });
-  const itemsLine = t("featureItemsPerClaimsale", {
-    count:
-      limits.maxItemsPerClaimsale === Infinity
-        ? "∞"
-        : String(limits.maxItemsPerClaimsale),
-  });
-
-  const features: { label: string; on: boolean; tooltip?: string }[] = [
-    {
-      label: t("featureCommission", { rate: (tier.commissionRate * 100).toFixed(tier.commissionRate === 0 ? 0 : 1) }),
-      on: true,
-      tooltip: t("commissionBaseTooltip"),
-    },
-    { label: limitLine, on: true },
-    { label: itemsLine, on: true },
-  ];
-
-  if (tier.upsellDiscount > 0) {
-    features.push({
-      label: t("featureUpsellDiscount", { percent: String(Math.round(tier.upsellDiscount * 100)) }),
-      on: true,
-    });
-  }
-  if (limits.freeHomepageSpotlightsPerMonth > 0) {
-    const isPlural = limits.freeHomepageSpotlightsPerMonth > 1;
-    // {count} moet als i18n-variabele mee — de oude string-replace op de
-    // rauwe key gaf een FORMATTING_ERROR in next-intl (browser-console).
-    features.push({
-      label: isPlural
-        ? t("featureFreeHomepageSpotlightPlural", { count: limits.freeHomepageSpotlightsPerMonth })
-        : t("featureFreeHomepageSpotlight", { count: limits.freeHomepageSpotlightsPerMonth }),
-      on: true,
-    });
-  }
-  if (tier.features.statistics) features.push({ label: t("featureStatistics"), on: true });
-  if (tier.features.bulkUpload) features.push({ label: t("featureBulkUpload"), on: true });
-  if (tier.features.customProfile) features.push({ label: t("featureCustomProfile"), on: true });
-  if (tier.features.vanityShopSlug) features.push({ label: t("featureVanityShopSlug"), on: true });
-  if (tier.features.searchBoost) features.push({ label: t("featureSearchBoost"), on: true });
-  if (tier.features.prioritySupport) features.push({ label: t("featurePrioritySupport"), on: true });
-  if (tier.features.accountManager) features.push({ label: t("featureAccountManager"), on: true });
+  // Eén bron van waarheid met de homepage-vergelijking (Fase 45).
+  const features = buildTierFeatureRows(tier, t);
 
   const isEnterprise = tierKey === "ENTERPRISE";
   const isFree = tierKey === "FREE";
@@ -211,12 +164,21 @@ function TierCard({ tierKey, cycle, isCurrent, hasPendingEnterpriseRequest }: Ti
       {breakEven === 0 && <div className="mb-5 h-4" />}
 
       <ul className="mb-6 space-y-2.5 text-sm">
-        {features.map((f, idx) => (
-          <li key={idx} className="flex items-start gap-2 text-foreground">
-            <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
+        {features.map((f) => (
+          <li
+            key={f.key}
+            className={`flex items-start gap-2 ${
+              f.on ? "text-foreground" : "text-muted-foreground/50 line-through"
+            }`}
+          >
+            {f.on ? (
+              <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
+            ) : (
+              <Minus className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground/40" />
+            )}
             <span className="inline-flex items-center gap-1">
               {f.label}
-              {f.tooltip && (
+              {f.on && f.tooltip && (
                 <span title={f.tooltip} aria-label={f.tooltip} className="inline-flex cursor-help">
                   <Info className="h-3.5 w-3.5 text-muted-foreground/60" />
                 </span>
@@ -279,14 +241,16 @@ function TierCta({ tierKey, cycle, isCurrent, hasPendingEnterpriseRequest }: Cta
     );
   }
 
+  // Mollie-recurring-billing is nog niet gebouwd (Fase 17): zelf-upgraden kan
+  // nog niet, dus de knop zegt dat ook letterlijk i.p.v. een hover-tooltip.
   return (
     <button
       type="button"
       disabled
-      className="w-full cursor-not-allowed rounded-xl bg-primary py-2.5 text-center text-sm font-medium text-white opacity-50"
-      title={t("upgradeSoon")}
+      aria-label={t("upgradeTo", { tier: t(tier.nameKey) })}
+      className="w-full cursor-not-allowed rounded-xl bg-muted py-2.5 text-center text-sm font-medium text-muted-foreground"
     >
-      {t("upgradeTo", { tier: t(tier.nameKey) })}
+      {t("upgradeSoon")}
     </button>
   );
 }

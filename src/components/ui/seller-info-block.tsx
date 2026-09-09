@@ -6,11 +6,10 @@ import { SellerLevelBadge } from "@/components/ui/seller-level-badge";
 import { StarRatingDisplay } from "@/components/ui/star-rating";
 import { TrustBadges } from "@/components/ui/trust-badges";
 import { CountryFlag } from "@/components/ui/country-flag";
+import { TierPill } from "@/components/ui/tier-pill";
 import {
   MapPin,
   ShoppingBag,
-  Crown,
-  Zap,
   ChevronRight,
   ExternalLink,
 } from "lucide-react";
@@ -30,24 +29,6 @@ export type SellerInfo = {
   totalReviews: number;
   totalSales: number;
 };
-
-function TierBadge({ accountType }: { accountType: string }) {
-  if (accountType === "PRO") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
-        <Zap className="h-2.5 w-2.5" /> PRO
-      </span>
-    );
-  }
-  if (accountType === "UNLIMITED" || accountType === "ADMIN") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-yellow-500/10 px-1.5 py-0.5 text-[10px] font-bold text-yellow-600 dark:text-yellow-400">
-        <Crown className="h-2.5 w-2.5" /> UNLIMITED
-      </span>
-    );
-  }
-  return null;
-}
 
 interface SellerInfoBlockProps {
   seller: SellerInfo;
@@ -91,7 +72,7 @@ export function SellerInfoBlock({ seller, showMapsLink = false }: SellerInfoBloc
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-foreground truncate">{seller.displayName}</span>
-            <TierBadge accountType={seller.accountType} />
+            <TierPill accountType={seller.accountType} />
             <TrustBadges
               isVerified={seller.isVerified}
               isIbanVerified={seller.isIbanVerified}

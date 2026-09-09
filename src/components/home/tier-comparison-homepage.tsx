@@ -8,6 +8,7 @@ import {
   Crown,
   Building2,
   Check,
+  Minus,
   ArrowRight,
 } from "lucide-react";
 import {
@@ -18,6 +19,7 @@ import {
 } from "@/lib/subscription-tiers";
 import { Link } from "@/i18n/navigation";
 import { AnimatedSection } from "@/components/home/animated-section";
+import { buildTierFeatureRows } from "@/lib/tier-feature-rows";
 
 const TIER_ORDER: TierKey[] = ["FREE", "PRO", "UNLIMITED", "ENTERPRISE"];
 
@@ -143,6 +145,7 @@ function TierCard({
   formatCurrency: (n: number) => string;
 }) {
   const tier = ACCOUNT_TIERS[tierKey];
+  const tSub = useTranslations("subscription");
   const Icon = TIER_ICON[tierKey];
   const isPopular = tierKey === "PRO";
 
@@ -156,85 +159,8 @@ function TierCard({
         ? t("subscription.perYear")
         : t("subscription.perMonth");
 
-  // Build feature list — IDENTIEKE rijen voor elke card, alleen waarde + on/off verschilt.
-  // Greyed-out + line-through betekent: deze tier heeft 'm niet.
-  const features: { label: string; on: boolean; tooltip?: string }[] = [];
-
-  // 1. Commissie
-  features.push({
-    label: t("subscription.featureCommission", {
-      rate: (tier.commissionRate * 100).toFixed(1).replace(/\.0$/, ""),
-    }),
-    on: true,
-    tooltip: t("subscription.commissionBaseTooltip"),
-  });
-
-  // 2-4. Limits — 3 aparte rijen, met "Onbeperkt"-variant bij Infinity
-  features.push({
-    label:
-      tier.limits.maxActiveAuctions === Infinity
-        ? t("subscription.featureActiveAuctionsUnlimited")
-        : t("subscription.featureActiveAuctions", { count: tier.limits.maxActiveAuctions }),
-    on: true,
-  });
-  features.push({
-    label:
-      tier.limits.maxActiveClaimsales === Infinity
-        ? t("subscription.featureActiveClaimsalesUnlimited")
-        : t("subscription.featureActiveClaimsales", { count: tier.limits.maxActiveClaimsales }),
-    on: true,
-  });
-  features.push({
-    label:
-      tier.limits.maxActiveListings === Infinity
-        ? t("subscription.featureActiveListingsUnlimited")
-        : t("subscription.featureActiveListings", { count: tier.limits.maxActiveListings }),
-    on: true,
-  });
-
-  // 5. Items per claimsale
-  features.push({
-    label:
-      tier.limits.maxItemsPerClaimsale === Infinity
-        ? t("subscription.featureItemsPerClaimsaleUnlimited")
-        : t("subscription.featureItemsPerClaimsale", { count: tier.limits.maxItemsPerClaimsale }),
-    on: true,
-  });
-
-  // 6. Korting op upsells (always shown; greyed-out bij 0%)
-  features.push({
-    label:
-      tier.upsellDiscount > 0
-        ? t("subscription.featureUpsellDiscount", {
-            percent: Math.round(tier.upsellDiscount * 100),
-          })
-        : t("subscription.featureUpsellDiscountNone"),
-    on: tier.upsellDiscount > 0,
-  });
-
-  // 7. Gratis homepage-spotlights (always shown; greyed-out bij 0)
-  // 999+ = onbeperkt (Enterprise)
-  const spotlightCount = tier.limits.freeHomepageSpotlightsPerMonth;
-  features.push({
-    label:
-      spotlightCount === 0
-        ? t("subscription.featureFreeHomepageSpotlightNone")
-        : spotlightCount >= 999
-          ? t("subscription.featureFreeHomepageSpotlightUnlimited")
-          : spotlightCount === 1
-            ? t("subscription.featureFreeHomepageSpotlight", { count: spotlightCount })
-            : t("subscription.featureFreeHomepageSpotlightPlural", { count: spotlightCount }),
-    on: spotlightCount > 0,
-  });
-
-  // 8-14. Boolean features — altijd zichtbaar, on/off bepaalt styling
-  features.push({ label: t("subscription.featureBulkUpload"), on: tier.features.bulkUpload });
-  features.push({ label: t("subscription.featureCustomProfile"), on: tier.features.customProfile });
-  features.push({ label: t("subscription.featureVanityShopSlug"), on: tier.features.vanityShopSlug });
-  features.push({ label: t("subscription.featureSearchBoost"), on: tier.features.searchBoost });
-  features.push({ label: t("subscription.featureStatistics"), on: tier.features.statistics });
-  features.push({ label: t("subscription.featurePrioritySupport"), on: tier.features.prioritySupport });
-  features.push({ label: t("subscription.featureAccountManager"), on: tier.features.accountManager });
+  // Eén bron van waarheid met /dashboard/abonnement (Fase 45).
+  const features = buildTierFeatureRows(tier, tSub);
 
   // CTA destination — twee contexten:
   // 1. logged-out → /register(?plan=X), Enterprise via /register?plan=ENTERPRISE
@@ -316,19 +242,19 @@ function TierCard({
 
       {/* Features */}
       <ul className="mt-6 flex-1 space-y-2.5">
-        {features.map((f, i) => (
+        {features.map((f) => (
           <li
-            key={i}
+            key={f.key}
             className={`flex items-start gap-2 text-sm ${
               f.on ? "text-foreground" : "text-muted-foreground/50 line-through"
             }`}
           >
-            <Check
-              className={`mt-0.5 size-4 shrink-0 ${
-                f.on ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground/40"
-              }`}
-            />
-            <span className="leading-snug">{f.label}</span>
+            {f.on ? (
+              <Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <Minus className="mt-0.5 size-4 shrink-0 text-muted-foreground/40" />
+            )}
+            <span className="leading-snug" title={f.on && f.tooltip ? f.tooltip : undefined}>{f.label}</span>
           </li>
         ))}
       </ul>
