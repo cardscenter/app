@@ -114,6 +114,10 @@ export async function register(formData: FormData) {
       bankTransferReference,
       firstName: data.firstName,
       lastName: data.lastName,
+      // Voor-/achternaam zijn verplicht bij registratie, dus de naam is hier
+      // al "opgegeven" en gaat meteen op slot: alleen support kan hem nog
+      // wijzigen (met geldig ID-bewijs). Zie username-change-config.ts.
+      fullNameLockedAt: new Date(),
       accountKind: data.accountKind,
       city: data.city,
       country: data.country,
