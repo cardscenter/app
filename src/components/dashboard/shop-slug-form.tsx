@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Globe, Check, Loader2 } from "lucide-react";
 import { updateShopSlug } from "@/actions/profile";
 import { getSiteHost } from "@/lib/site-url";
+import { Link } from "@/i18n/navigation";
 
 interface Props {
   currentSlug: string | null;
@@ -98,14 +99,14 @@ export function ShopSlugForm({ currentSlug }: Props) {
             <Globe className="h-4 w-4" />
             <span>Je shop-URL is actief op</span>
           </div>
-          <a
+          <Link
             href={`/winkel/${savedSlug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-1 block font-medium text-primary hover:underline"
           >
             {SHOP_URL_PREFIX}{savedSlug}
-          </a>
+          </Link>
         </div>
       )}
 

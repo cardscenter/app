@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "@/i18n/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -265,9 +265,9 @@ export function ShopPageEditor({ initial, isBusiness, hasSlug, shopSlug }: Props
           </p>
           <div className="flex items-center gap-2">
             {hasSlug && shopSlug && (
-              <a href={`/winkel/${shopSlug}`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted">
+              <Link href={`/winkel/${shopSlug}`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted">
                 Bekijk
-              </a>
+              </Link>
             )}
             <button
               type="button"
