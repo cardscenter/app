@@ -238,6 +238,7 @@ export default async function ConversationPage({
 
   const ctxLabel = contextType === "auction" ? t("ctxAuction") : contextType === "claimsale" ? t("ctxClaimsale") : contextType === "listing" ? t("ctxListing") : null;
   const otherName = otherUser ? getProfileTitle(otherUser.user) : t("conversation");
+  const otherHandle = otherUser ? `@${otherUser.user.displayName}` : null;
   const otherAvatar = previews.find((c) => c.id === conversationId)?.otherUserAvatar ?? null;
 
   return (
@@ -255,7 +256,10 @@ export default async function ConversationPage({
           </Link>
           <ChatAvatar src={otherAvatar} initial={otherName.charAt(0).toUpperCase()} size="sm" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-sm font-semibold text-foreground">{otherName}</h2>
+            <h2 className="flex min-w-0 items-baseline gap-1.5 text-sm font-semibold text-foreground">
+              <span className="truncate">{otherName}</span>
+              {otherHandle && <span className="shrink-0 text-xs font-normal text-muted-foreground">{otherHandle}</span>}
+            </h2>
             {context && (
               <p className="truncate text-xs text-muted-foreground">
                 {ctxLabel && <span className="font-medium">{ctxLabel}</span>}

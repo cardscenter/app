@@ -68,6 +68,7 @@ export async function getConversationPreviews(
       id: conv.id,
       otherUserId: other?.userId ?? null,
       otherUserName: name,
+      otherUserHandle: other ? `@${other.user.displayName}` : null,
       otherUserInitial: (name || "?").charAt(0).toUpperCase(),
       otherUserAvatar: other?.user.avatarUrl ?? null,
       lastMessage: last ? last.body || (last.imageUrl ? "📷" : null) : null,

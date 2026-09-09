@@ -125,6 +125,7 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
     ? filtered.filter(
         (c) =>
           c.otherUserName.toLowerCase().includes(q) ||
+          (c.otherUserHandle ?? "").toLowerCase().includes(q) ||
           c.context?.toLowerCase().includes(q) ||
           c.lastMessage?.toLowerCase().includes(q),
       )

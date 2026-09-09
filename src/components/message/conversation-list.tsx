@@ -50,8 +50,13 @@ export function ConversationList({ conversations, activeId, showActions }: Conve
 
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2">
-                  <span className={`truncate text-sm ${conv.hasUnread ? "font-semibold" : "font-medium"} text-foreground`}>
-                    {conv.otherUserName || t("user")}
+                  <span className="flex min-w-0 items-baseline gap-1.5">
+                    <span className={`truncate text-sm ${conv.hasUnread ? "font-semibold" : "font-medium"} text-foreground`}>
+                      {conv.otherUserName || t("user")}
+                    </span>
+                    {conv.otherUserHandle && (
+                      <span className="shrink-0 truncate text-[11px] text-muted-foreground">{conv.otherUserHandle}</span>
+                    )}
                   </span>
                   <span className={`shrink-0 text-[11px] tabular-nums ${conv.hasUnread ? "font-medium text-primary" : "text-muted-foreground"}`}>
                     {listTime(conv.lastMessageAt)}

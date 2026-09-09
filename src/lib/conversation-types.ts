@@ -6,6 +6,8 @@ export type ConversationPreview = {
   id: string;
   otherUserId: string | null;
   otherUserName: string;
+  /** "@gebruikersnaam" — secundair onder de volledige naam (sept 2026). */
+  otherUserHandle: string | null;
   otherUserInitial: string;
   otherUserAvatar: string | null;
   lastMessage: string | null;
