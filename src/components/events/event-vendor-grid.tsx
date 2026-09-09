@@ -44,9 +44,9 @@ export function EventVendorGrid({ vendors }: { vendors: VendorCardData[] }) {
               {/* Avatar met overlap op de banner */}
               {v.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={v.avatarUrl} alt="" className="-mt-5 h-10 w-10 rounded-full object-cover ring-4 ring-card" />
+                <img src={v.avatarUrl} alt="" className="-mt-5 h-10 w-10 rounded-[22%] object-cover ring-4 ring-card" />
               ) : (
-                <span className="-mt-5 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary ring-4 ring-card">
+                <span className="-mt-5 flex h-10 w-10 items-center justify-center rounded-[22%] bg-primary/10 text-sm font-bold text-primary ring-4 ring-card">
                   {(v.displayName ?? "?").charAt(0).toUpperCase()}
                 </span>
               )}

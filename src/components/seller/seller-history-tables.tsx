@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight, Star } from "lucide-react";
 import { formatDateShort, formatCurrency } from "@/lib/format";
+import { getFullName } from "@/lib/user-name";
 import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
 import type { SellerReviewRow, SellerOfferRow, SellerSaleRow } from "@/lib/seller-profile-data";
 
@@ -70,7 +71,10 @@ export async function ReviewsTable({ reviews }: { reviews: SellerReviewRow[] }) 
       {reviews.map((r) => (
         <tr key={r.id} className="align-top transition-colors hover:bg-muted/40">
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{formatDateShort(r.createdAt)}</td>
-          <td className="whitespace-nowrap px-4 py-3 font-medium text-foreground">{r.reviewer.displayName}</td>
+          <td className="whitespace-nowrap px-4 py-3">
+            <span className="block font-medium text-foreground">{getFullName(r.reviewer)}</span>
+            <span className="block text-xs text-muted-foreground">@{r.reviewer.displayName}</span>
+          </td>
           <td className="whitespace-nowrap px-4 py-3">
             <StatusBadge tone={ratingTone(r.rating)} icon={Star}>
               {r.rating}/5

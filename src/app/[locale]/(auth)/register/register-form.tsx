@@ -681,7 +681,7 @@ function StepPhoto({ formData, updateField, t }: Omit<StepProps, "errors">) {
       />
 
       <div className="flex flex-col items-center gap-4">
-        <div className="relative size-32 overflow-hidden rounded-full bg-muted ring-4 ring-background">
+        <div className="relative size-32 overflow-hidden rounded-[22%] bg-muted ring-4 ring-background">
           {formData.avatarUrl ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}

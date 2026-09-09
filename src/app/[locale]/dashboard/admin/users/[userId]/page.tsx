@@ -99,9 +99,9 @@ export default async function AdminUserDetailPage({
       {/* Identiteits-kaart: avatar + status-pills */}
       <div className="flex items-center gap-4 dash-card p-4">
         {user.avatarUrl ? (
-          <img src={user.avatarUrl} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" />
+          <img src={user.avatarUrl} alt="" className="h-14 w-14 shrink-0 rounded-[22%] object-cover" />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22%] bg-primary text-xl font-bold text-primary-foreground">
             {user.displayName.charAt(0).toUpperCase()}
           </div>
         )}

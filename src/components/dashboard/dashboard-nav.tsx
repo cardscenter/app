@@ -83,7 +83,7 @@ type DashboardNavProps = {
   accountType?: string;
   level?: LevelInfo;
   /** Voor de gebruikerskaart onderaan. */
-  user?: { name: string; email: string | null; image: string | null };
+  user?: { name: string; handle?: string; email: string | null; image: string | null };
   /** Badges van de admin-sidebar (zelfde bron als de KPI-tegels op /dashboard/admin). */
   adminPendingCounts?: Partial<AdminQueueCounts>;
   /** Live counts voor het Aanbod-item — auctions = ACTIVE+SCHEDULED,
@@ -391,9 +391,9 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
       >
         {user.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.image} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+          <img src={user.image} alt="" className="size-8 shrink-0 rounded-[22%] object-cover" />
         ) : (
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-xs font-bold text-white">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-[22%] bg-sidebar-primary text-xs font-bold text-white">
             {user.name.charAt(0).toUpperCase()}
           </span>
         )}

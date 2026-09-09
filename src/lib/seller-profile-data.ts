@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSellerStats } from "@/actions/review";
 import { parseShopBlocks } from "@/lib/validations/shop";
 import type { ShopBlock } from "@/lib/shop-config";
+import { getFullName, getProfileTitle } from "@/lib/user-name";
 
 /**
  * Eén data-bron voor het publieke verkopersprofiel (/verkoper/[id]) en de
@@ -14,6 +15,8 @@ import type { ShopBlock } from "@/lib/shop-config";
 export type SellerProfileUser = {
   id: string;
   displayName: string;
+  firstName: string | null;
+  lastName: string | null;
   avatarUrl: string | null;
   bio: string | null;
   accountType: string;
@@ -44,7 +47,7 @@ export type SellerReviewRow = {
   comment: string | null;
   sellerResponse: string | null;
   createdAt: Date;
-  reviewer: { displayName: string; avatarUrl: string | null };
+  reviewer: { displayName: string; firstName: string | null; lastName: string | null; avatarUrl: string | null };
   itemTitle: string | null;
   itemHref: string | null;
 };
@@ -57,6 +60,34 @@ export type SellerOfferRow = {
   status: string;
   createdAt: Date;
   href: string;
+  /** Eerste foto (of claimsale-cover) voor de kaart in het Aanbod-raster. */
+  imageUrl: string | null;
+  /** Item-type (SINGLE_CARD/…/CARDS/ITEMS) + conditie voor de subregel. */
+  itemType: string | null;
+  condition: string | null;
+  /** Aantal beschikbare items (claimsale) — anders null. */
+  itemCount: number | null;
+  /** Aantal volglijst-hartjes op dit item. */
+  likes: number;
+};
+
+/** Teamlid van een bedrijfspagina (geaccepteerde uitnodiging). */
+export type TeamMemberRow = {
+  id: string;
+  userId: string;
+  displayName: string;
+  fullName: string;
+  avatarUrl: string | null;
+  title: string | null;
+  isVerified: boolean;
+};
+
+/** Bedrijf waar deze (persoonlijke) gebruiker teamlid van is. */
+export type WorksAtRow = {
+  businessId: string;
+  companyName: string;
+  avatarUrl: string | null;
+  title: string | null;
 };
 
 export type SellerSaleRow = {
@@ -78,7 +109,25 @@ export type SellerProfileData = {
   activeCounts: { auctions: number; listings: number; claimsales: number };
   /** Alleen gevuld voor de eigenaar. */
   recentSales: SellerSaleRow[] | null;
+  /** Volgen (profiel-redesign sept 2026). */
+  followers: number;
+  following: number;
+  viewerFollows: boolean;
+  /** Bedrijfsteam: leden van déze bedrijfspagina (leeg voor particulieren). */
+  team: TeamMemberRow[];
+  /** Bedrijven waar deze persoon teamlid van is. */
+  worksAt: WorksAtRow[];
 };
+
+function parseImages(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw) as unknown;
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 export const getSellerProfileData = cache(
   async (userId: string, viewerId: string | null): Promise<SellerProfileData | null> => {
@@ -88,6 +137,8 @@ export const getSellerProfileData = cache(
         select: {
           id: true,
           displayName: true,
+          firstName: true,
+          lastName: true,
           avatarUrl: true,
           bio: true,
           accountType: true,
@@ -117,25 +168,60 @@ export const getSellerProfileData = cache(
     if (!user || !stats) return null;
     const isOwner = viewerId === userId;
 
-    const [reviewsRaw, auctions, listings, claimsales, auctionCount, listingCount, claimsaleCount, salesRaw] =
+    const [
+      reviewsRaw,
+      auctions,
+      listings,
+      claimsales,
+      auctionCount,
+      listingCount,
+      claimsaleCount,
+      salesRaw,
+      followers,
+      following,
+      viewerFollowRow,
+      teamRaw,
+      worksAtRaw,
+    ] =
       await Promise.all([
         prisma.review.findMany({
           where: { sellerId: userId },
-          include: { reviewer: { select: { displayName: true, avatarUrl: true } } },
+          include: { reviewer: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } } },
           orderBy: { createdAt: "desc" },
           take: 100,
         }),
         prisma.auction.findMany({
           where: { sellerId: userId, status: { in: ["ACTIVE", "SCHEDULED"] } },
-          select: { id: true, title: true, currentBid: true, startingBid: true, status: true, createdAt: true },
+          select: {
+            id: true,
+            title: true,
+            currentBid: true,
+            startingBid: true,
+            status: true,
+            createdAt: true,
+            imageUrls: true,
+            auctionType: true,
+            condition: true,
+            _count: { select: { watchlistItems: true } },
+          },
           orderBy: { createdAt: "desc" },
-          take: 20,
+          take: 24,
         }),
         prisma.listing.findMany({
           where: { sellerId: userId, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
-          select: { id: true, title: true, price: true, status: true, createdAt: true },
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            status: true,
+            createdAt: true,
+            imageUrls: true,
+            listingType: true,
+            condition: true,
+            _count: { select: { watchlistItems: true } },
+          },
           orderBy: { createdAt: "desc" },
-          take: 20,
+          take: 24,
         }),
         prisma.claimsale.findMany({
           where: { sellerId: userId, status: { in: ["LIVE", "SCHEDULED"] } },
@@ -144,10 +230,13 @@ export const getSellerProfileData = cache(
             title: true,
             status: true,
             createdAt: true,
+            coverImage: true,
+            type: true,
             items: { where: { status: "AVAILABLE" }, select: { price: true } },
+            _count: { select: { watchlistItems: true } },
           },
           orderBy: { createdAt: "desc" },
-          take: 20,
+          take: 24,
         }),
         prisma.auction.count({ where: { sellerId: userId, status: { in: ["ACTIVE", "SCHEDULED"] } } }),
         prisma.listing.count({ where: { sellerId: userId, status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } } }),
@@ -170,7 +259,49 @@ export const getSellerProfileData = cache(
               take: 10,
             })
           : Promise.resolve(null),
+        prisma.userFollow.count({ where: { followingId: userId } }),
+        prisma.userFollow.count({ where: { followerId: userId } }),
+        viewerId && viewerId !== userId
+          ? prisma.userFollow.findUnique({
+              where: { followerId_followingId: { followerId: viewerId, followingId: userId } },
+              select: { id: true },
+            })
+          : Promise.resolve(null),
+        prisma.businessMember.findMany({
+          where: { businessId: userId, status: "ACCEPTED" },
+          select: {
+            id: true,
+            title: true,
+            respondedAt: true,
+            user: { select: { id: true, displayName: true, firstName: true, lastName: true, avatarUrl: true, isVerified: true } },
+          },
+          orderBy: { respondedAt: "asc" },
+        }),
+        prisma.businessMember.findMany({
+          where: { userId, status: "ACCEPTED" },
+          select: {
+            title: true,
+            business: { select: { id: true, companyName: true, displayName: true, firstName: true, lastName: true, accountKind: true, avatarUrl: true } },
+          },
+          orderBy: { respondedAt: "asc" },
+        }),
       ]);
+
+    const team: TeamMemberRow[] = teamRaw.map((m) => ({
+      id: m.id,
+      userId: m.user.id,
+      displayName: m.user.displayName,
+      fullName: getFullName(m.user),
+      avatarUrl: m.user.avatarUrl,
+      title: m.title,
+      isVerified: m.user.isVerified,
+    }));
+    const worksAt: WorksAtRow[] = worksAtRaw.map((m) => ({
+      businessId: m.business.id,
+      companyName: getProfileTitle(m.business),
+      avatarUrl: m.business.avatarUrl,
+      title: m.title,
+    }));
 
     // Item-titels bij reviews: Review heeft alleen losse id-kolommen, dus
     // gebatcht opzoeken per type.
@@ -223,6 +354,11 @@ export const getSellerProfileData = cache(
         status: a.status,
         createdAt: a.createdAt,
         href: `/veilingen/${a.id}`,
+        imageUrl: parseImages(a.imageUrls)[0] ?? null,
+        itemType: a.auctionType,
+        condition: a.condition,
+        itemCount: null,
+        likes: a._count.watchlistItems,
       })),
       ...listings.map((l) => ({
         type: "listing" as const,
@@ -232,6 +368,11 @@ export const getSellerProfileData = cache(
         status: l.status,
         createdAt: l.createdAt,
         href: `/marktplaats/${l.id}`,
+        imageUrl: parseImages(l.imageUrls)[0] ?? null,
+        itemType: l.listingType,
+        condition: l.condition,
+        itemCount: null,
+        likes: l._count.watchlistItems,
       })),
       ...claimsales.map((c) => ({
         type: "claimsale" as const,
@@ -241,10 +382,15 @@ export const getSellerProfileData = cache(
         status: c.status,
         createdAt: c.createdAt,
         href: `/claimsales/${c.id}`,
+        imageUrl: c.coverImage,
+        itemType: c.type,
+        condition: null,
+        itemCount: c.items.length,
+        likes: c._count.watchlistItems,
       })),
     ]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, 20);
+      .slice(0, 48);
 
     const recentSales: SellerSaleRow[] | null = salesRaw
       ? salesRaw.map((b) => {
@@ -286,6 +432,11 @@ export const getSellerProfileData = cache(
       activeOffers,
       activeCounts: { auctions: auctionCount, listings: listingCount, claimsales: claimsaleCount },
       recentSales,
+      followers,
+      following,
+      viewerFollows: !!viewerFollowRow,
+      team,
+      worksAt,
     };
   },
 );

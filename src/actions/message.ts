@@ -17,16 +17,25 @@ export async function startConversation(recipientId: string, auctionId?: string,
   const verified = await requireEmailVerified(session.user.id);
   if ("error" in verified) return { error: verified.error };
 
-  // Check for existing conversation between these users for this context
+  // Check for existing conversation between these users for this context.
+  // Fix sept 2026: alleen `every` matchte ook gesprekken met maar één van de
+  // twee deelnemers (bv. een verweesd gesprek van jezelf), waardoor findFirst
+  // dát teruggaf, de length===2-check faalde en er een dubbel gesprek ontstond.
+  // Eis expliciet dat béide deelnemers aanwezig zijn.
   const existing = await prisma.conversation.findFirst({
     where: {
       auctionId: auctionId ?? null,
       claimsaleId: claimsaleId ?? null,
       listingId: listingId ?? null,
+      AND: [
+        { participants: { some: { userId: session.user.id } } },
+        { participants: { some: { userId: recipientId } } },
+      ],
       participants: {
         every: { userId: { in: [session.user.id, recipientId] } },
       },
     },
+    orderBy: { createdAt: "asc" },
     include: { participants: true },
   });
 

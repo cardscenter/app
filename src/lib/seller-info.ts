@@ -8,6 +8,10 @@ export async function getSellerInfo(sellerId: string): Promise<SellerInfo | null
     select: {
       id: true,
       displayName: true,
+      firstName: true,
+      lastName: true,
+      accountKind: true,
+      companyName: true,
       avatarUrl: true,
       city: true,
       country: true,

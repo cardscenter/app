@@ -339,7 +339,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
               }}
               className={rowClass(usersStart + i)}
             >
-              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-800">
+              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[22%] bg-slate-800">
                 {u.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

@@ -70,9 +70,9 @@ export function EventVendorRequestsPanel({ requests }: { requests: VendorRequest
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
                 {r.user.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.user.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                  <img src={r.user.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-[22%] object-cover" />
                 ) : (
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[22%] bg-primary/10 text-sm font-bold text-primary">
                     {(r.user.displayName ?? "?").charAt(0).toUpperCase()}
                   </span>
                 )}

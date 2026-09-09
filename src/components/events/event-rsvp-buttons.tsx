@@ -17,12 +17,12 @@ function AvatarBubble({ user }: { user: RsvpUserLite }) {
       src={user.avatarUrl}
       alt={user.displayName ?? ""}
       title={user.displayName ?? undefined}
-      className="h-7 w-7 rounded-full bg-card object-cover ring-2 ring-card"
+      className="h-7 w-7 rounded-[22%] bg-card object-cover ring-2 ring-card"
     />
   ) : (
     <span
       title={user.displayName ?? undefined}
-      className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 ring-2 ring-card dark:bg-indigo-900 dark:text-indigo-300"
+      className="flex h-7 w-7 items-center justify-center rounded-[22%] bg-indigo-100 text-xs font-bold text-indigo-700 ring-2 ring-card dark:bg-indigo-900 dark:text-indigo-300"
     >
       {(user.displayName ?? "?").charAt(0).toUpperCase()}
     </span>
@@ -85,7 +85,7 @@ export function EventRsvpButtons({
             <AvatarBubble key={u.id} user={u} />
           ))}
           {shownInterested + shownGoing > 6 && (
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground ring-2 ring-card">
+            <span className="flex h-7 w-7 items-center justify-center rounded-[22%] bg-muted text-[10px] font-bold text-muted-foreground ring-2 ring-card">
               +{shownInterested + shownGoing - 6}
             </span>
           )}

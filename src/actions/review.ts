@@ -1,5 +1,7 @@
 "use server";
 
+import { getProfileTitle } from "@/lib/user-name";
+
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -86,6 +88,10 @@ export async function getSellerStats(userId: string) {
     select: {
       id: true,
       displayName: true,
+      firstName: true,
+      lastName: true,
+      accountKind: true,
+      companyName: true,
       avatarUrl: true,
       accountType: true,
       isVerified: true,
@@ -174,6 +180,7 @@ export async function getSellerStats(userId: string) {
 
   return {
     displayName: user.displayName,
+    fullName: getProfileTitle(user),
     avatarUrl: user.avatarUrl,
     accountType: user.accountType,
     isVerified: user.isVerified,
@@ -197,7 +204,7 @@ export async function getSellerReviews(userId: string) {
   return prisma.review.findMany({
     where: { sellerId: userId },
     include: {
-      reviewer: { select: { displayName: true, avatarUrl: true } },
+      reviewer: { select: { displayName: true, firstName: true, lastName: true, avatarUrl: true } },
     },
     orderBy: { createdAt: "desc" },
   });

@@ -100,6 +100,7 @@ export default async function ShopPage({
           viewerLoggedIn={isLoggedIn}
           initiallyBlocked={initiallyBlocked}
           variant="shop"
+          locale={locale}
         />
 
         <SellerStatRow profile={profile} />

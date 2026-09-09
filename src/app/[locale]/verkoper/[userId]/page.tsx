@@ -1,25 +1,40 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { isUserBlocked } from "@/actions/block-report";
 import { getSellerProfileData } from "@/lib/seller-profile-data";
+import { getProfileTitle } from "@/lib/user-name";
 import { PageContainer } from "@/components/layout/page-container";
 import { SellerProfileHeader } from "@/components/seller/seller-profile-header";
-import { SellerStatRow } from "@/components/seller/seller-stat-row";
 import { SellerHistoryTabs } from "@/components/seller/seller-history-tabs";
-import { ReviewsTable, ActiveOffersTable, RecentSalesTable } from "@/components/seller/seller-history-tables";
+import { ProfileOfferGrid } from "@/components/seller/profile-offer-grid";
+import { SellerAboutPanel } from "@/components/seller/seller-about-panel";
+import { SellerTeamBlock } from "@/components/seller/seller-team-block";
+import { ReviewsTable, RecentSalesTable } from "@/components/seller/seller-history-tables";
+
+type Params = Promise<{ locale: string; userId: string }>;
+
+export async function generateMetadata({ params }: { params: Promise<{ userId: string }> }): Promise<Metadata> {
+  const { userId } = await params;
+  const profile = await getSellerProfileData(userId, null);
+  if (!profile) return {};
+  const title = getProfileTitle(profile.user);
+  return {
+    title: `${title} (@${profile.user.displayName}) — Cards Center`,
+    description: profile.user.bio ?? undefined,
+  };
+}
 
 /**
- * Publiek verkopersprofiel (Fase 45-redesign): breadcrumb → header-kaart
- * (identiteit + feiten-grid) → stat-rij → "Geschiedenis" met tabs
- * Reviews · Actief aanbod · Recente verkopen (alleen eigenaar).
+ * Publiek profiel (redesign sept 2026, naar de Portfolia-referentie):
+ * omslag + grote avatar met afgeronde hoeken, volledige naam (@handle
+ * eronder), Volgen + Bericht sturen, zegels + tellers rechts; daaronder
+ * onderstreepte tabs Aanbod · Reviews · Over (· Verkopen voor de eigenaar)
+ * en, voor bedrijfspagina's, een apart Team-blok.
  */
-export default async function SellerProfilePage({
-  params,
-}: {
-  params: Promise<{ userId: string }>;
-}) {
-  const { userId } = await params;
+export default async function SellerProfilePage({ params }: { params: Params }) {
+  const { locale, userId } = await params;
   const t = await getTranslations("sellerProfile");
   const session = await auth();
   const viewerId = session?.user?.id ?? null;
@@ -36,41 +51,48 @@ export default async function SellerProfilePage({
   const isOwner = viewerId === userId;
   const isLoggedIn = !!viewerId;
   const initiallyBlocked = !isOwner && isLoggedIn ? await isUserBlocked(userId) : false;
+  const title = getProfileTitle(profile.user);
 
   const tabs = [
-    { key: "reviews", label: t("tabReviews"), count: profile.reviews.length, content: <ReviewsTable reviews={profile.reviews} /> },
-    { key: "offers", label: t("tabOffers"), count: profile.activeOffers.length, content: <ActiveOffersTable offers={profile.activeOffers} /> },
+    {
+      key: "offers",
+      label: t("tabOffers"),
+      count: profile.activeCounts.auctions + profile.activeCounts.listings + profile.activeCounts.claimsales,
+      content: <ProfileOfferGrid offers={profile.activeOffers} isOwner={isOwner} />,
+    },
+    {
+      key: "reviews",
+      label: t("tabReviews"),
+      count: profile.reviews.length,
+      content: <ReviewsTable reviews={profile.reviews} />,
+    },
+    { key: "about", label: t("tabAbout"), content: <SellerAboutPanel profile={profile} locale={locale} /> },
     ...(profile.recentSales
       ? [{ key: "sales", label: t("tabSales"), count: profile.recentSales.length, content: <RecentSalesTable sales={profile.recentSales} /> }]
       : []),
   ];
 
   return (
-    <PageContainer width="default" className="py-8">
+    <PageContainer width="default" className="py-6 sm:py-8">
       <nav className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground" aria-label="Breadcrumb">
         <span>{t("breadcrumbSellers")}</span>
         <ChevronRight className="size-3.5" />
-        <span className="font-medium text-foreground">{profile.user.displayName}</span>
+        <span className="font-medium text-foreground">{title}</span>
       </nav>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         <SellerProfileHeader
           profile={profile}
           isOwner={isOwner}
           viewerLoggedIn={isLoggedIn}
           initiallyBlocked={initiallyBlocked}
           variant="profile"
+          locale={locale}
         />
 
-        <div>
-          <h2 className="mb-3 text-base font-semibold text-foreground">{t("currentStats")}</h2>
-          <SellerStatRow profile={profile} />
-        </div>
+        <SellerHistoryTabs tabs={tabs} />
 
-        <div>
-          <h2 className="mb-3 text-base font-semibold text-foreground">{t("history")}</h2>
-          <SellerHistoryTabs tabs={tabs} />
-        </div>
+        <SellerTeamBlock profile={profile} isOwner={isOwner} />
       </div>
     </PageContainer>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { getFullName } from "@/lib/user-name";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useTranslations } from "next-intl";
 import { StarRating } from "@/components/ui/star-rating";
 import { useState } from "react";
@@ -13,6 +15,8 @@ type ReviewItem = {
   createdAt: Date;
   reviewer: {
     displayName: string;
+    firstName?: string | null;
+    lastName?: string | null;
     avatarUrl: string | null;
   };
 };
@@ -69,11 +73,10 @@ function ReviewItem({ review, isOwner }: { review: ReviewItem; isOwner: boolean 
     <div className="glass-subtle rounded-xl p-4">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-            {review.reviewer.displayName.charAt(0).toUpperCase()}
-          </div>
+          <UserAvatar src={review.reviewer.avatarUrl} name={getFullName(review.reviewer)} size="sm" />
           <div>
-            <span className="font-semibold text-foreground">{review.reviewer.displayName}</span>
+            <span className="font-semibold text-foreground">{getFullName(review.reviewer)}</span>
+            <span className="ml-1.5 text-xs text-muted-foreground">@{review.reviewer.displayName}</span>
             <span className="ml-2 text-xs text-muted-foreground">{dateStr}</span>
           </div>
         </div>

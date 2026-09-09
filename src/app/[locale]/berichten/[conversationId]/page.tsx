@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getProfileTitle } from "@/lib/user-name";
 import { getSellerShippingMethods } from "@/actions/shipping-method";
 import { getTranslations } from "next-intl/server";
 import { getConversationPreviews } from "@/lib/conversations";
@@ -42,11 +43,11 @@ export default async function ConversationPage({
     where: { id: conversationId },
     include: {
       participants: {
-        include: { user: { select: { id: true, displayName: true } } },
+        include: { user: { select: { id: true, displayName: true, firstName: true, lastName: true, accountKind: true, companyName: true } } },
       },
       messages: {
         orderBy: { createdAt: "asc" },
-        include: { sender: { select: { displayName: true } } },
+        include: { sender: { select: { displayName: true, firstName: true, lastName: true, accountKind: true, companyName: true } } },
       },
       auction: { select: { title: true } },
       claimsale: { select: { title: true } },
@@ -236,7 +237,7 @@ export default async function ConversationPage({
     : null;
 
   const ctxLabel = contextType === "auction" ? t("ctxAuction") : contextType === "claimsale" ? t("ctxClaimsale") : contextType === "listing" ? t("ctxListing") : null;
-  const otherName = otherUser?.user.displayName ?? t("conversation");
+  const otherName = otherUser ? getProfileTitle(otherUser.user) : t("conversation");
   const otherAvatar = previews.find((c) => c.id === conversationId)?.otherUserAvatar ?? null;
 
   return (
@@ -298,7 +299,7 @@ export default async function ConversationPage({
               id: m.id,
               body: m.body,
               imageUrl: m.imageUrl,
-              senderName: m.sender.displayName,
+              senderName: getProfileTitle(m.sender),
               senderId: m.senderId,
               createdAt: m.createdAt.toISOString(),
               proposalId: m.proposalId,

@@ -182,7 +182,7 @@ export function SellerAuctionCard({ auction }: SellerAuctionCardProps) {
             {/* Hoogste-bieder block */}
             {auction.topBidder && (
               <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
-                <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-muted">
+                <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-[22%] bg-muted">
                   {auction.topBidder.avatarUrl ? (
                     <Image src={auction.topBidder.avatarUrl} alt={auction.topBidder.displayName} fill sizes="24px" className="object-cover" />
                   ) : (

@@ -91,10 +91,17 @@ export function notificationTypeToCategory(type: string): EmailCategory | null {
     type === "ACCOUNT_UPDATE" ||
     type === "VERIFICATION_APPROVED" ||
     type === "VERIFICATION_REJECTED" ||
-    type === "TRUSTED_ORGANIZER"
+    type === "TRUSTED_ORGANIZER" ||
+    // Bedrijfsteam (profiel-redesign sept 2026): uitnodiging/acceptatie is
+    // account-service, dus altijd mailen.
+    type === "BUSINESS_INVITE" ||
+    type === "BUSINESS_INVITE_ACCEPTED"
   ) {
     return "account";
   }
+
+  // Nieuwe volger: alleen in de bel, geen mail (zou spam worden).
+  if (type === "NEW_FOLLOWER") return null;
 
   if (type === "OUTBID") return "bids";
   if (type.startsWith("DISPUTE_")) return "disputes";

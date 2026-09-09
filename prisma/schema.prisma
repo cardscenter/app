@@ -226,6 +226,13 @@ model User {
   // Blokkeren + rapporteren (Fase 7)
   blocks            UserBlock[]  @relation("Blocker")
   blockedBy         UserBlock[]  @relation("Blocked")
+  // Volgen (profiel-redesign sept 2026, dekt open Fase 19 "favoriete verkopers")
+  following         UserFollow[] @relation("FollowFollower")
+  followers         UserFollow[] @relation("FollowFollowing")
+  // Bedrijfsteam: als BUSINESS-account = de bedrijfspagina (eigenaar), als
+  // persoon = lidmaatschappen bij bedrijven.
+  businessMembers   BusinessMember[] @relation("BusinessMemberBusiness")
+  businessMemberships BusinessMember[] @relation("BusinessMemberUser")
   reportsFiled      UserReport[] @relation("Reporter")
   reportsReceived   UserReport[] @relation("Reported")
   reportsReviewed   UserReport[] @relation("ReportReviewer")
@@ -1766,6 +1773,48 @@ model UserBlock {
   @@unique([blockerId, blockedId])
   @@index([blockerId])
   @@index([blockedId])
+}
+
+// Volg-relatie tussen gebruikers (profiel-redesign sept 2026). Puur een
+// trust-/interesse-signaal: tellers op het profiel + melding naar de gevolgde.
+model UserFollow {
+  id          String   @id @default(cuid())
+
+  followerId  String
+  follower    User     @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+
+  followingId String
+  following   User     @relation("FollowFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+// Team van een bedrijfspagina (profiel-redesign sept 2026). Het BUSINESS-
+// account zélf is de eigenaar (het is zijn login); medewerkers zijn andere
+// accounts die de eigenaar uitnodigt op gebruikersnaam en die accepteren.
+// Geen inlogrechten op het bedrijfsaccount — puur de publieke koppeling
+// ("Team"-blok op de bedrijfspagina, "Werkt bij" op het persoonlijke profiel).
+model BusinessMember {
+  id          String    @id @default(cuid())
+
+  businessId  String
+  business    User      @relation("BusinessMemberBusiness", fields: [businessId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User      @relation("BusinessMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String?   // functie, bv. "Inkoper" — door de eigenaar gezet
+  status      String    @default("PENDING") // PENDING | ACCEPTED
+  invitedAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  @@unique([businessId, userId])
+  @@index([userId, status])
+  @@index([businessId, status])
 }
 
 model UserReport {

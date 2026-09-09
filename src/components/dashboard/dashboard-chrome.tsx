@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getProfileTitle } from "@/lib/user-name";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getSellerStats } from "@/actions/review";
@@ -39,6 +40,10 @@ export async function DashboardChrome({
       suspensionReason: true,
       emailVerifiedAt: true,
       displayName: true,
+      firstName: true,
+      lastName: true,
+      accountKind: true,
+      companyName: true,
       email: true,
       avatarUrl: true,
     },
@@ -66,7 +71,7 @@ export async function DashboardChrome({
           accountType={user?.accountType}
           user={
             user
-              ? { name: user.displayName, email: user.email, image: user.avatarUrl }
+              ? { name: getProfileTitle(user), handle: user.displayName, email: user.email, image: user.avatarUrl }
               : undefined
           }
           level={{

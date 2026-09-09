@@ -9,6 +9,9 @@ import { PasswordChangeForm } from "@/components/dashboard/password-change-form"
 import { TwoFactorSettings } from "@/components/dashboard/two-factor-settings";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
+import { BusinessTeamManager } from "@/components/dashboard/business-team-manager";
+import { BusinessInvites } from "@/components/dashboard/business-invites";
+import { getFullName, getProfileTitle } from "@/lib/user-name";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { FieldRow } from "@/components/dashboard/ui/field-row";
@@ -59,6 +62,50 @@ export default async function ProfilePage({
   const isBusiness = user.accountKind === "BUSINESS";
   const canShop = hasFeature(user.accountType, "customProfile");
 
+  // Bedrijfsteam (profiel-redesign sept 2026): als bedrijf beheer je je team,
+  // als persoon zie je uitnodigingen + de bedrijven waar je bij hoort.
+  const [teamRaw, membershipsRaw] = await Promise.all([
+    isBusiness
+      ? prisma.businessMember.findMany({
+          where: { businessId: user.id },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            user: { select: { id: true, displayName: true, firstName: true, lastName: true, avatarUrl: true } },
+          },
+          orderBy: [{ status: "asc" }, { invitedAt: "asc" }],
+        })
+      : Promise.resolve([]),
+    prisma.businessMember.findMany({
+      where: { userId: user.id },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        business: { select: { id: true, displayName: true, firstName: true, lastName: true, accountKind: true, companyName: true, avatarUrl: true } },
+      },
+      orderBy: [{ status: "desc" }, { invitedAt: "asc" }],
+    }),
+  ]);
+  const teamMembers = teamRaw.map((m) => ({
+    id: m.id,
+    userId: m.user.id,
+    displayName: m.user.displayName,
+    fullName: getFullName(m.user),
+    avatarUrl: m.user.avatarUrl,
+    title: m.title,
+    status: m.status,
+  }));
+  const memberships = membershipsRaw.map((m) => ({
+    id: m.id,
+    businessId: m.business.id,
+    companyName: getProfileTitle(m.business),
+    avatarUrl: m.business.avatarUrl,
+    title: m.title,
+    status: m.status,
+  }));
+
   const readOnlyValue = "text-sm text-foreground md:pt-2";
 
   return (
@@ -87,6 +134,8 @@ export default async function ProfilePage({
         <ProfileForm
           user={{
             displayName: user.displayName,
+            firstName: user.firstName,
+            lastName: user.lastName,
             bio: user.bio,
             avatarUrl: user.avatarUrl,
             coverImageUrl: user.coverImageUrl,
@@ -128,6 +177,12 @@ export default async function ProfilePage({
             </Link>
           </div>
         </FieldRow>
+
+        {!isBusiness && memberships.length > 0 && (
+          <FieldRow id="team" label={tp("membershipsLabel")} hint={tp("membershipsHint")}>
+            <BusinessInvites rows={memberships} />
+          </FieldRow>
+        )}
 
         {user.usernameHistory.length > 0 && (
           <FieldRow label={tp("usernameHistory")} hint={tp("usernameHistoryHint")}>
@@ -173,6 +228,9 @@ export default async function ProfilePage({
           </FieldRow>
           <FieldRow label={tp("vatNumber")}>
             <p className={readOnlyValue}>{user.vatNumber ?? "—"}</p>
+          </FieldRow>
+          <FieldRow id="team" label={tp("teamLabel")} hint={tp("teamHint")}>
+            <BusinessTeamManager members={teamMembers} />
           </FieldRow>
         </DashboardSection>
       )}

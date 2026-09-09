@@ -17,9 +17,9 @@ function AttendeeRow({ user }: { user: AttendeeItem }) {
       >
         {user.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+          <img src={user.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-[22%] object-cover" />
         ) : (
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[22%] bg-primary/10 text-sm font-bold text-primary">
             {(user.displayName ?? "?").charAt(0).toUpperCase()}
           </span>
         )}

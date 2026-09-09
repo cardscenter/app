@@ -9,6 +9,8 @@ type FieldRowProps = {
   htmlFor?: string;
   /** Extra klassen op de control-kolom (bv. `max-w-md`). */
   contentClassName?: string;
+  /** Anker-id (bv. "team" voor /dashboard/profiel#team). */
+  id?: string;
   children: ReactNode;
 };
 
@@ -18,9 +20,9 @@ type FieldRowProps = {
  * verticale ruimte, niet door lijnen — alleen een nieuw blok krijgt een
  * eigen kaart. Gebruik `divide-y` op de parent als je tóch lijnen wilt.
  */
-export function FieldRow({ label, hint, htmlFor, contentClassName, children }: FieldRowProps) {
+export function FieldRow({ label, hint, htmlFor, contentClassName, id, children }: FieldRowProps) {
   return (
-    <div className="grid gap-2 py-5 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.75fr)] md:gap-8">
+    <div id={id} className="grid scroll-mt-24 gap-2 py-5 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.75fr)] md:gap-8">
       <div className="min-w-0 md:pt-2">
         <label htmlFor={htmlFor} className="text-sm font-semibold text-foreground">
           {label}

@@ -186,6 +186,11 @@ export function resolveNotificationMeta(n: NotificationLike): NotificationMeta {
       return { tone: "slate", icon: Bell, category: "Beheer" };
     case "TRUSTED_ORGANIZER":
       return { tone: "emerald", icon: CalendarDays, category: "Evenementen" };
+    case "NEW_FOLLOWER":
+      return { tone: "sky", icon: Heart, category: "Volgers" };
+    case "BUSINESS_INVITE":
+    case "BUSINESS_INVITE_ACCEPTED":
+      return { tone: "violet", icon: Store, category: "Team" };
     default:
       if (n.type.startsWith("BUYBACK_")) {
         return { tone: "violet", icon: HandCoins, category: "Collectie inkoop" };

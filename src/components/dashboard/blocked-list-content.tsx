@@ -48,7 +48,7 @@ export function BlockedListContent({ rows }: { rows: Row[] }) {
           className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white/40 p-3 dark:bg-white/5"
         >
           <div className="flex items-center gap-3">
-            <div className="relative size-10 overflow-hidden rounded-full bg-muted">
+            <div className="relative size-10 overflow-hidden rounded-[22%] bg-muted">
               {r.avatarUrl && (
                 <Image src={r.avatarUrl} alt={r.displayName} fill className="object-cover" sizes="40px" />
               )}

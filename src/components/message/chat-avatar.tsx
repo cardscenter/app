@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Ronde avatar met initiaal-fallback; valt óók terug op de initiaal als de
+// Avatar met afgeronde hoeken (site-breed sinds sept 2026) en initiaal-fallback; valt óók terug op de initiaal als de
 // afbeelding niet laadt (verwijderde upload, seed-URL), zodat er nooit een
 // kapot plaatje in de gesprekslijst of gesprekskop staat. Omdat een SSR-<img>
 // al vóór hydratie kan falen (onError wordt dan niet afgevuurd), checken we
@@ -34,13 +34,13 @@ export function ChatAvatar({
         src={src}
         alt=""
         onError={() => setFailed(true)}
-        className={`${sizeClass} shrink-0 rounded-full object-cover`}
+        className={`${sizeClass} shrink-0 rounded-[22%] object-cover`}
       />
     );
   }
   return (
     <span
-      className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-full font-bold ${
+      className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-[22%] font-bold ${
         emphasis ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
       }`}
     >

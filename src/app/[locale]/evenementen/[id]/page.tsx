@@ -616,9 +616,9 @@ export default async function EventDetailPage({
             <div className="flex items-center gap-3">
               {event.organizer.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={event.organizer.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                <img src={event.organizer.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-[22%] object-cover" />
               ) : (
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[22%] bg-primary/10 text-lg font-bold text-primary">
                   {organizerDisplay.charAt(0).toUpperCase()}
                 </span>
               )}

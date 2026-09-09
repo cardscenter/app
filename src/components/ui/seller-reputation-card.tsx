@@ -9,6 +9,8 @@ import { TierPill } from "@/components/ui/tier-pill";
 
 export type SellerStats = {
   displayName: string;
+  /** Volledige naam / bedrijfsnaam (profiel-redesign sept 2026); displayName = @handle. */
+  fullName?: string;
   avatarUrl: string | null;
   accountType: string;
   isVerified?: boolean;
@@ -35,15 +37,16 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
     return (
       <div className="glass-subtle flex items-center gap-3 rounded-xl p-3">
         {stats.avatarUrl ? (
-          <img src={stats.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+          <img src={stats.avatarUrl} alt="" className="h-10 w-10 rounded-[22%] object-cover shrink-0" />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary shrink-0">
-            {stats.displayName.charAt(0).toUpperCase()}
+          <div className="flex h-10 w-10 items-center justify-center rounded-[22%] bg-primary/10 text-lg font-bold text-primary shrink-0">
+            {(stats.fullName ?? stats.displayName).charAt(0).toUpperCase()}
           </div>
         )}
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-foreground">{stats.displayName}</span>
+            <span className="font-semibold text-foreground">{stats.fullName ?? stats.displayName}</span>
+            <span className="text-xs text-muted-foreground">@{stats.displayName}</span>
             <SellerLevelBadge xp={stats.xp} size="sm" />
             <TierPill accountType={stats.accountType} />
           </div>
@@ -62,15 +65,16 @@ export function SellerReputationCard({ stats, compact = false }: SellerReputatio
     <div className="glass rounded-2xl p-6">
       <div className="flex items-start gap-4">
         {stats.avatarUrl ? (
-          <img src={stats.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover shrink-0" />
+          <img src={stats.avatarUrl} alt="" className="h-16 w-16 rounded-[22%] object-cover shrink-0" />
         ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary shrink-0">
-            {stats.displayName.charAt(0).toUpperCase()}
+          <div className="flex h-16 w-16 items-center justify-center rounded-[22%] bg-primary/10 text-2xl font-bold text-primary shrink-0">
+            {(stats.fullName ?? stats.displayName).charAt(0).toUpperCase()}
           </div>
         )}
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl font-bold text-foreground">{stats.displayName}</h2>
+            <h2 className="text-xl font-bold text-foreground">{stats.fullName ?? stats.displayName}</h2>
+            <span className="text-sm text-muted-foreground">@{stats.displayName}</span>
             <TrustBadges
               isVerified={stats.isVerified}
               isIbanVerified={stats.isIbanVerified}

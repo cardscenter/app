@@ -40,7 +40,7 @@ export function TopSellersSection({ sellers }: TopSellersSectionProps) {
               >
                 {/* Avatar */}
                 <div className="relative">
-                  <div className="h-16 w-16 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-border group-hover:border-primary transition-colors">
+                  <div className="h-16 w-16 rounded-[22%] overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-border group-hover:border-primary transition-colors">
                     {seller.avatarUrl ? (
                       <img
                         src={seller.avatarUrl}

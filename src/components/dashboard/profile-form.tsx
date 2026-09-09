@@ -36,6 +36,8 @@ const PILL_BUTTON =
 
 type ProfileFormUser = {
   displayName: string;
+  firstName: string | null;
+  lastName: string | null;
   bio: string | null;
   avatarUrl: string | null;
   coverImageUrl: string | null;
@@ -209,6 +211,32 @@ export function ProfileForm({ user, socialLinks: initialSocials, fallbackGradien
         </div>
 
         <div className="px-5 py-6 sm:px-6">
+          {/* Volledige naam — primair op de site (profiel-redesign sept 2026) */}
+          <FieldRow label={t("fullName")} hint={t("fullNameHint")} htmlFor="firstName">
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                id="firstName"
+                name="firstName"
+                type="text"
+                defaultValue={user.firstName ?? ""}
+                maxLength={50}
+                placeholder={t("firstName")}
+                autoComplete="given-name"
+                className={PROFILE_INPUT_CLASS}
+              />
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                defaultValue={user.lastName ?? ""}
+                maxLength={50}
+                placeholder={t("lastName")}
+                autoComplete="family-name"
+                className={PROFILE_INPUT_CLASS}
+              />
+            </div>
+          </FieldRow>
+
           {/* Gebruikersnaam */}
           <FieldRow
             label={t("displayName")}
@@ -250,7 +278,7 @@ export function ProfileForm({ user, socialLinks: initialSocials, fallbackGradien
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
-                className="group relative size-20 shrink-0 overflow-hidden rounded-xl border border-border bg-muted"
+                className="group relative size-20 shrink-0 overflow-hidden rounded-[22%] border border-border bg-muted"
                 aria-label={t("changePhoto")}
               >
                 {avatarPreview && !avatarBroken ? (

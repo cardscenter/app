@@ -128,10 +128,10 @@ function HeaderContent() {
     const src = avatarOverride || session?.user?.image;
     return src ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt="" className={`${cls} shrink-0 rounded-full object-cover ring-2 ring-white/20`} />
+      <img src={src} alt="" className={`${cls} shrink-0 rounded-[22%] object-cover ring-2 ring-white/20`} />
     ) : (
       <span
-        className={`${cls} flex shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white`}
+        className={`${cls} flex shrink-0 items-center justify-center rounded-[22%] bg-primary text-xs font-bold text-white`}
       >
         {session?.user?.name?.charAt(0).toUpperCase()}
       </span>

@@ -187,12 +187,12 @@ export function HomeAuctionCard({ auction }: HomeAuctionCardProps) {
                 alt=""
                 width={20}
                 height={20}
-                className="size-5 shrink-0 rounded-full object-cover ring-1 ring-black/5 dark:ring-white/10"
+                className="size-5 shrink-0 rounded-[22%] object-cover ring-1 ring-black/5 dark:ring-white/10"
               />
             ) : (
               <span
                 aria-hidden
-                className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground ring-1 ring-black/5 dark:bg-slate-700 dark:text-white dark:ring-white/10"
+                className="flex size-5 shrink-0 items-center justify-center rounded-[22%] bg-muted text-[10px] font-bold text-muted-foreground ring-1 ring-black/5 dark:bg-slate-700 dark:text-white dark:ring-white/10"
               >
                 {auction.seller.displayName.charAt(0).toUpperCase()}
               </span>

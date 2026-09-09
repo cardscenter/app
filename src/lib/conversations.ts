@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getProfileTitle } from "@/lib/user-name";
 import { getBlockedUserIds } from "@/lib/blocking";
 import type { ConversationPreview } from "@/lib/conversation-types";
 
@@ -30,7 +31,7 @@ export async function getConversationPreviews(
     take,
     include: {
       participants: {
-        include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
+        include: { user: { select: { id: true, displayName: true, firstName: true, lastName: true, accountKind: true, companyName: true, avatarUrl: true } } },
       },
       messages: {
         orderBy: { createdAt: "desc" },
@@ -62,7 +63,7 @@ export async function getConversationPreviews(
           ? ("listing" as const)
           : null;
 
-    const name = other?.user.displayName ?? "";
+    const name = other ? getProfileTitle(other.user) : "";
     return {
       id: conv.id,
       otherUserId: other?.userId ?? null,

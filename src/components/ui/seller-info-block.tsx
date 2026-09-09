@@ -7,6 +7,7 @@ import { StarRatingDisplay } from "@/components/ui/star-rating";
 import { TrustBadges } from "@/components/ui/trust-badges";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { TierPill } from "@/components/ui/tier-pill";
+import { getProfileTitle } from "@/lib/user-name";
 import {
   MapPin,
   ShoppingBag,
@@ -17,6 +18,10 @@ import {
 export type SellerInfo = {
   id: string;
   displayName: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  accountKind?: string | null;
+  companyName?: string | null;
   avatarUrl: string | null;
   city: string | null;
   country: string | null;
@@ -60,18 +65,19 @@ export function SellerInfoBlock({ seller, showMapsLink = false }: SellerInfoBloc
           <img
             src={seller.avatarUrl}
             alt=""
-            className="h-12 w-12 rounded-full object-cover shrink-0"
+            className="h-12 w-12 rounded-[22%] object-cover shrink-0"
           />
         ) : (
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary shrink-0">
-            {seller.displayName.charAt(0).toUpperCase()}
+          <div className="flex h-12 w-12 items-center justify-center rounded-[22%] bg-primary/10 text-lg font-bold text-primary shrink-0">
+            {getProfileTitle(seller).charAt(0).toUpperCase()}
           </div>
         )}
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-foreground truncate">{seller.displayName}</span>
+            <span className="font-semibold text-foreground truncate">{getProfileTitle(seller)}</span>
+            <span className="text-xs text-muted-foreground truncate">@{seller.displayName}</span>
             <TierPill accountType={seller.accountType} />
             <TrustBadges
               isVerified={seller.isVerified}

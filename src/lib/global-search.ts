@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getProfileTitle } from "@/lib/user-name";
 import { SEARCH_BOOST_TIEBREAK, compareNewestBoosted } from "@/lib/search-boost";
 import { auth } from "@/lib/auth";
 import { getBuyerLocation, getSellerCountryFilter } from "@/lib/shipping/filter";
@@ -83,6 +84,8 @@ export interface SearchResult {
 export interface UserHit {
   id: string;
   displayName: string;
+  /** Volledige naam of bedrijfsnaam (profiel-redesign sept 2026); displayName = @handle. */
+  fullName: string;
   avatarUrl: string | null;
   city: string | null;
   country: string | null;
@@ -581,6 +584,9 @@ function buildUserWhere(q: string, guards: SupplyGuards) {
 const USER_PUBLIC_SELECT = {
   id: true,
   displayName: true,
+  firstName: true,
+  lastName: true,
+  companyName: true,
   avatarUrl: true,
   city: true,
   country: true,
@@ -592,6 +598,9 @@ const USER_PUBLIC_SELECT = {
 function toUserHit(u: {
   id: string;
   displayName: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  companyName?: string | null;
   avatarUrl: string | null;
   city: string | null;
   country: string | null;
@@ -602,6 +611,7 @@ function toUserHit(u: {
   return {
     id: u.id,
     displayName: u.displayName,
+    fullName: getProfileTitle(u),
     avatarUrl: u.avatarUrl,
     city: u.city,
     country: u.country,

@@ -20,6 +20,10 @@ const profileSchema = z.object({
   displayName: z.string().min(3).max(64).regex(/^[a-zA-Z0-9_-]+$/),
   bio: z.string().max(500).optional(),
   websiteUrl: z.string().max(200).optional(),
+  // Volledige naam (profiel-redesign sept 2026) — primair op de site, de
+  // gebruikersnaam wordt de @handle. Leeg toegestaan voor legacy-accounts.
+  firstName: z.string().trim().max(50).optional(),
+  lastName: z.string().trim().max(50).optional(),
 });
 
 /** Alleen eigen upload-paden (via /api/upload) of leeg — geen externe URL's. */
@@ -51,6 +55,8 @@ export async function updateProfile(formData: FormData) {
     displayName: formData.get("displayName"),
     bio: formData.get("bio") || undefined,
     websiteUrl: (formData.get("websiteUrl") as string | null) ?? undefined,
+    firstName: (formData.get("firstName") as string | null) ?? undefined,
+    lastName: (formData.get("lastName") as string | null) ?? undefined,
   });
 
   if (!result.success) {
@@ -58,6 +64,8 @@ export async function updateProfile(formData: FormData) {
   }
 
   const { displayName, bio } = result.data;
+  const firstName = result.data.firstName?.trim() || null;
+  const lastName = result.data.lastName?.trim() || null;
 
   // Website + socials (profiel-redesign sept 2026). Socials komen als
   // herhaalde FormData-key "socialLinks" binnen; lege regels overslaan.
@@ -145,6 +153,8 @@ export async function updateProfile(formData: FormData) {
     where: { id: session.user.id },
     data: {
       displayName,
+      firstName,
+      lastName,
       bio: bio ?? null,
       websiteUrl,
       socialLinks: socialLinks.length > 0 ? JSON.stringify(socialLinks) : null,

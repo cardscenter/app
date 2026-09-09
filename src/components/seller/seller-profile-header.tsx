@@ -1,19 +1,20 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Pencil, Store, LayoutTemplate, Globe } from "lucide-react";
-import { parseSocialLinks, detectSocialPlatform } from "@/lib/events/socials";
-import { SocialIcon } from "@/components/events/social-icon";
-import { getLevelByKey } from "@/lib/seller-levels";
+import { Pencil, Store, LayoutTemplate, MessageCircle, Badge as SealIcon, Gavel, Tag } from "lucide-react";
+import { getLevelByKey, getLevel } from "@/lib/seller-levels";
 import { hasFeature } from "@/lib/subscription-tiers";
-import { formatDate } from "@/lib/format";
-import { buttonVariants } from "@/components/ui/button-variants";
+import { getProfileTitle, getHandle } from "@/lib/user-name";
+import { getCountryName } from "@/lib/shipping/countries";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { SellerLevelBadge } from "@/components/ui/seller-level-badge";
 import { TrustBadges } from "@/components/ui/trust-badges";
 import { TierPill } from "@/components/ui/tier-pill";
 import { BlockReportButtons } from "@/components/ui/block-report-buttons";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { ContactSellerButton } from "@/components/message/contact-seller-button";
+import { FollowButton } from "@/components/seller/follow-button";
 import type { SellerProfileData } from "@/lib/seller-profile-data";
 
 type Props = {
@@ -21,167 +22,167 @@ type Props = {
   isOwner: boolean;
   viewerLoggedIn: boolean;
   initiallyBlocked: boolean;
-  /** "profile" = /verkoper/[id]; "shop" = /winkel/[slug] (slogan onder de naam, Concept-badge). */
+  /** "profile" = /verkoper/[id] (eigen omslag); "shop" = /winkel/[slug] (banner staat al boven de kaart). */
   variant: "profile" | "shop";
+  locale: string;
 };
 
+const PILL_OUTLINE =
+  "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-5 text-sm font-semibold text-foreground transition-colors hover:bg-muted";
+
 /**
- * Header-kaart van het verkopersprofiel én de winkelpagina (Fase 45):
- * avatar · naam · secundaire regel · acties | feiten-grid 2×3.
+ * Profielkop (redesign sept 2026, naar de Portfolia-referentie): omslag →
+ * grote avatar met afgeronde hoeken die over de omslag valt → volledige naam
+ * + tier · @gebruikersnaam · plaats → Volgen + Bericht sturen; rechts drie
+ * "zegels" met het aantal veilingen/advertenties/claimsales en de tellers
+ * Volgers · Volgend · Verkopen. Geen kaart-rand: de kop ligt op de pagina.
  */
-export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, initiallyBlocked, variant }: Props) {
+export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, initiallyBlocked, variant, locale }: Props) {
   const t = await getTranslations("sellerProfile");
   const { user, stats, activeCounts } = profile;
   const isBusiness = user.accountKind === "BUSINESS";
-  const displayTitle = isBusiness && user.companyName ? user.companyName : user.displayName;
+  const title = getProfileTitle(user);
+  const handle = getHandle(user);
   const canShop = hasFeature(user.accountType, "customProfile") && !!user.shopSlug;
   const showShopLink = canShop && (user.shopPublished || isOwner);
-  const levelBanner = user.profileBanner ? getLevelByKey(user.profileBanner) : undefined;
-  // Profiel-redesign (sept 2026): eigen omslagfoto + website + socials uit
-  // /dashboard/profiel. Zonder omslag valt de kaart terug op de level-strip.
-  const coverUrl = variant === "shop" && user.shopBannerUrl ? null : user.coverImageUrl;
-  const socialLinks = parseSocialLinks(user.socialLinks);
-  const websiteHost = user.websiteUrl
-    ? (() => {
-        try {
-          return new URL(user.websiteUrl).hostname.replace(/^www\./, "");
-        } catch {
-          return user.websiteUrl;
-        }
-      })()
-    : null;
-  const activeTotal = activeCounts.auctions + activeCounts.listings + activeCounts.claimsales;
+  const level = getLevel(stats.xp);
+  const bannerLevel = user.profileBanner ? getLevelByKey(user.profileBanner) : undefined;
+  const gradient = bannerLevel?.gradient ?? level.gradient;
+  const showCover = variant === "profile";
+  const location = [user.city, user.country ? getCountryName(user.country, locale) : null].filter(Boolean).join(", ");
 
-  const facts: { label: string; value: React.ReactNode }[] = [
-    { label: t("memberSince"), value: formatDate(user.createdAt) },
-    {
-      label: t("location"),
-      value: user.city || user.country ? (
-        <span className="inline-flex items-center gap-1.5">
-          <CountryFlag code={user.country} size="sm" />
-          {user.city ?? user.country}
-        </span>
-      ) : (
-        "—"
-      ),
-    },
-    { label: t("level"), value: <SellerLevelBadge xp={stats.xp} size="sm" /> },
-    {
-      label: t("account"),
-      value: (
-        <span className="inline-flex flex-wrap items-center gap-1.5">
-          <span>{isBusiness ? t("business") : t("private")}</span>
-          <TierPill accountType={user.accountType} />
-        </span>
-      ),
-    },
-    {
-      label: t("verifications"),
-      value:
-        user.isVerified || user.isIbanVerified || user.isAddressVerified ? (
-          <TrustBadges
-            isVerified={user.isVerified}
-            isIbanVerified={user.isIbanVerified}
-            isAddressVerified={user.isAddressVerified}
-            size="sm"
-          />
-        ) : (
-          <span className="text-muted-foreground">{t("noVerifications")}</span>
-        ),
-    },
-    { label: t("activeOffers"), value: String(activeTotal) },
+  const seals: { count: number; tone: string; label: string; icon: React.ReactNode }[] = [
+    { count: activeCounts.auctions, tone: "text-blue-600", label: t("sealAuctions", { count: activeCounts.auctions }), icon: <Gavel className="size-3" /> },
+    { count: activeCounts.listings, tone: "text-emerald-600", label: t("sealListings", { count: activeCounts.listings }), icon: <Store className="size-3" /> },
+    { count: activeCounts.claimsales, tone: "text-amber-500", label: t("sealClaimsales", { count: activeCounts.claimsales }), icon: <Tag className="size-3" /> },
+  ];
+
+  const counters: { label: string; value: number }[] = [
+    { label: t("followers"), value: profile.followers },
+    { label: t("followingCount"), value: profile.following },
+    { label: t("sales"), value: stats.totalSales },
   ];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-      {coverUrl ? (
-        <div className="relative aspect-[5/1] max-h-56 min-h-28 w-full overflow-hidden">
-          <Image src={coverUrl} alt="" fill className="object-cover" sizes="(max-width: 1440px) 100vw, 1440px" unoptimized />
+    <section>
+      {/* Omslag */}
+      {showCover && (
+        <div className="relative h-40 overflow-hidden rounded-2xl bg-card sm:h-52">
+          {user.coverImageUrl ? (
+            <Image src={user.coverImageUrl} alt="" fill className="object-cover" sizes="(max-width: 1440px) 100vw, 1440px" priority unoptimized />
+          ) : (
+            <>
+              <div className={`absolute -right-10 -top-24 h-72 w-[70%] rounded-full bg-gradient-to-r ${gradient} opacity-30 blur-3xl`} aria-hidden />
+              <div className={`absolute -bottom-32 left-[20%] h-64 w-[55%] rounded-full bg-gradient-to-r ${gradient} opacity-15 blur-3xl`} aria-hidden />
+            </>
+          )}
         </div>
-      ) : (
-        levelBanner && (
-          <div className={`h-3 w-full bg-gradient-to-r ${levelBanner.gradient}`} aria-hidden />
-        )
       )}
-      <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1.3fr)] lg:gap-8">
-        {/* Links: identiteit + acties */}
-        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="relative size-24 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-4 ring-background">
-            {user.avatarUrl ? (
-              <Image src={user.avatarUrl} alt="" fill className="object-cover" sizes="96px" unoptimized />
-            ) : (
-              <div className="flex size-full items-center justify-center text-3xl font-bold text-primary">
-                {displayTitle.charAt(0).toUpperCase()}
-              </div>
-            )}
-          </div>
+
+      {/* Identiteit + tellers */}
+      <div className="flex flex-col gap-6 px-2 pt-3 sm:px-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+          <UserAvatar
+            src={user.avatarUrl}
+            name={title}
+            size="4xl"
+            className={`relative z-10 ring-4 ring-background shadow-card ${showCover ? "size-32 -mt-16 sm:size-44 sm:-mt-24" : "size-28 sm:size-32"}`}
+            alt={title}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold leading-tight text-foreground">{displayTitle}</h1>
+              <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">{title}</h1>
+              <TierPill accountType={user.accountType} />
               {variant === "shop" && isOwner && !user.shopPublished && (
                 <StatusBadge tone="warning">{t("draft")}</StatusBadge>
               )}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {variant === "shop" && user.shopTagline ? user.shopTagline : `@${user.displayName}`}
-            </p>
-            {isBusiness && (user.cocNumber || user.vatNumber) && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {[user.cocNumber ? `${t("coc")} ${user.cocNumber}` : null, user.vatNumber ? `${t("vat")} ${user.vatNumber}` : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            )}
-            {variant === "profile" && user.bio && (
-              <p className="mt-2 line-clamp-3 whitespace-pre-line text-sm text-foreground/80">{user.bio}</p>
-            )}
-            {(websiteHost || socialLinks.length > 0) && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                {websiteHost && user.websiteUrl && (
-                  <a
-                    href={user.websiteUrl}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    <Globe className="size-3.5 text-muted-foreground" />
-                    {websiteHost}
-                  </a>
-                )}
-                {socialLinks.map((url) => {
-                  const { platform, label } = detectSocialPlatform(url);
-                  return (
-                    <a
-                      key={url}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      title={label}
-                      aria-label={label}
-                      className="inline-flex size-7 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      <SocialIcon platform={platform} className="size-3.5" />
-                    </a>
-                  );
-                })}
-              </div>
-            )}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {isOwner && variant === "profile" && (
-                <Link href="/dashboard/profiel" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                  <Pencil data-icon="inline-start" />
-                  {t("editProfile")}
-                </Link>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground/80">{handle}</span>
+              {location && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <CountryFlag code={user.country} size="xs" />
+                    {location}
+                  </span>
+                </>
               )}
-              {isOwner && variant === "shop" && (
-                <Link href="/dashboard/winkel" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                  <LayoutTemplate data-icon="inline-start" />
-                  {t("editShop")}
-                </Link>
+              {isBusiness && (user.cocNumber || user.vatNumber) && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>
+                    {[user.cocNumber ? `${t("coc")} ${user.cocNumber}` : null, user.vatNumber ? `${t("vat")} ${user.vatNumber}` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </>
+              )}
+              {profile.worksAt.length > 0 && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>
+                    {t("worksAt")}{" "}
+                    {profile.worksAt.map((w, i) => (
+                      <span key={w.businessId}>
+                        {i > 0 && ", "}
+                        <Link href={`/verkoper/${w.businessId}`} className="font-medium text-foreground hover:underline">
+                          {w.companyName}
+                        </Link>
+                      </span>
+                    ))}
+                  </span>
+                </>
+              )}
+            </p>
+            {variant === "shop" && user.shopTagline ? (
+              <p className="mt-2 max-w-xl text-sm text-foreground/80">{user.shopTagline}</p>
+            ) : user.bio ? (
+              <p className="mt-2 line-clamp-2 max-w-xl whitespace-pre-line text-sm text-foreground/80">{user.bio}</p>
+            ) : null}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <SellerLevelBadge xp={stats.xp} size="sm" />
+              {(user.isVerified || user.isIbanVerified || user.isAddressVerified) && (
+                <TrustBadges
+                  isVerified={user.isVerified}
+                  isIbanVerified={user.isIbanVerified}
+                  isAddressVerified={user.isAddressVerified}
+                  size="sm"
+                />
+              )}
+            </div>
+
+            {/* Acties */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {isOwner ? (
+                <>
+                  <Link href="/dashboard/profiel" className={PILL_OUTLINE}>
+                    <Pencil className="size-4" />
+                    {t("editProfile")}
+                  </Link>
+                  {canShop && (
+                    <Link href="/dashboard/winkel" className={PILL_OUTLINE}>
+                      <LayoutTemplate className="size-4" />
+                      {t("editShop")}
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <>
+                  <FollowButton targetUserId={user.id} initiallyFollowing={profile.viewerFollows} loggedIn={viewerLoggedIn} />
+                  {viewerLoggedIn ? (
+                    <ContactSellerButton sellerId={user.id} label={t("message")} className={PILL_OUTLINE} />
+                  ) : (
+                    <Link href={`/login?callbackUrl=${encodeURIComponent(`/verkoper/${user.id}`)}`} className={PILL_OUTLINE}>
+                      <MessageCircle className="size-4" />
+                      {t("message")}
+                    </Link>
+                  )}
+                </>
               )}
               {showShopLink && variant === "profile" && (
-                <Link href={`/winkel/${user.shopSlug}`} className={buttonVariants({ variant: "default", size: "sm" })}>
-                  <Store data-icon="inline-start" />
+                <Link href={`/winkel/${user.shopSlug}`} className={PILL_OUTLINE}>
+                  <Store className="size-4" />
                   {t("visitShop")}
                 </Link>
               )}
@@ -196,18 +197,29 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
           </div>
         </div>
 
-        <div className="hidden bg-border lg:block" aria-hidden />
-
-        {/* Rechts: feiten-grid */}
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-          {facts.map((f) => (
-            <div key={f.label} className="min-w-0">
-              <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{f.label}</dt>
-              <dd className="mt-1 text-sm font-medium text-foreground">{f.value}</dd>
-            </div>
-          ))}
-        </dl>
+        {/* Rechts: zegels + tellers */}
+        <div className="flex shrink-0 flex-col items-start gap-5 lg:items-end lg:pt-1">
+          <div className="flex items-center gap-1.5" aria-label={t("activeOffers")}>
+            {seals.map((s) => (
+              <span key={s.label} title={s.label} className={`relative inline-flex size-10 items-center justify-center ${s.tone}`}>
+                <SealIcon className="absolute inset-0 size-10 fill-current" strokeWidth={0} aria-hidden />
+                <span className="relative text-xs font-bold text-white">{s.count}</span>
+              </span>
+            ))}
+          </div>
+          <dl className="flex gap-8 sm:gap-10">
+            {counters.map((c) => (
+              <div key={c.label} className="min-w-[4.5rem]">
+                <dt className="text-xs font-medium text-muted-foreground">{c.label}</dt>
+                <dd className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight text-foreground sm:text-3xl">
+                  {c.value.toLocaleString(locale === "en" ? "en-GB" : "nl-NL")}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
+
     </section>
   );
 }

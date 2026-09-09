@@ -16,7 +16,7 @@ export function UserResultCard({ user }: { user: UserHit }) {
       href={user.href}
       className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card transition-all hover:shadow-card-hover"
     >
-      <div className="relative size-12 shrink-0 overflow-hidden rounded-full bg-muted">
+      <div className="relative size-12 shrink-0 overflow-hidden rounded-[22%] bg-muted">
         {user.avatarUrl ? (
           <Image
             src={user.avatarUrl}
