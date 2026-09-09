@@ -18,15 +18,6 @@ import {
   CLAIMSALE_UPSELL_DURATION_DAYS,
   type ClaimsaleUpsellType,
 } from "@/lib/upsell-config";
-import {
-  availableClaimsaleLabelsFor,
-  calculateClaimsaleLabelCost,
-  isValidClaimsaleLabelType,
-  isValidLabelColor,
-  MAX_LABELS_PER_CLAIMSALE,
-  type ClaimsaleLabelType,
-  type LabelColor,
-} from "@/lib/claimsale/labels";
 
 async function publishCartCount(userId: string) {
   const count = await prisma.cartItem.count({ where: { userId } });
@@ -85,7 +76,6 @@ export async function createClaimsale(formData: FormData) {
   const startTimeOfDay = (formData.get("startTimeOfDay") as string | null) ?? undefined;
   const itemsJson = formData.get("items") as string;
   const upsellsRaw = formData.get("upsells");
-  const labelsRaw = formData.get("labels");
 
   if (!title || title.length < 3) return { error: "Titel is te kort" };
   if (description && description.length > CLAIMSALE_DESCRIPTION_MAX) {
@@ -210,46 +200,8 @@ export async function createClaimsale(formData: FormData) {
     }
   }
 
-  // ── Labels (max 2, anti-tamper availability-hercheck) ────────────────
-  let parsedLabels: { type: ClaimsaleLabelType; colorKey: LabelColor }[] = [];
-  let labelsCost = 0;
-  if (typeof labelsRaw === "string" && labelsRaw.length > 0) {
-    try {
-      const raw = JSON.parse(labelsRaw) as Array<{ type: string; colorKey: string }>;
-      const cleaned = raw
-        .filter(
-          (l) =>
-            typeof l?.type === "string" &&
-            typeof l?.colorKey === "string" &&
-            isValidClaimsaleLabelType(l.type) &&
-            isValidLabelColor(l.colorKey)
-        )
-        .slice(0, MAX_LABELS_PER_CLAIMSALE) as { type: ClaimsaleLabelType; colorKey: LabelColor }[];
-
-      const hasMintItem =
-        type === "CARDS" &&
-        cardItems.some((i) => i.condition === "Near Mint" || i.condition === "Mint");
-      const availability = availableClaimsaleLabelsFor({ claimsaleType: type, hasMintItem });
-      const availSet = new Set(availability.filter((a) => a.available).map((a) => a.type));
-      for (const l of cleaned) {
-        if (!availSet.has(l.type)) {
-          return { error: `Label "${l.type}" is niet beschikbaar voor deze claimsale` };
-        }
-      }
-      const seen = new Set<ClaimsaleLabelType>();
-      parsedLabels = cleaned.filter((l) => {
-        if (seen.has(l.type)) return false;
-        seen.add(l.type);
-        return true;
-      });
-      labelsCost = calculateClaimsaleLabelCost(parsedLabels.length);
-    } catch {
-      parsedLabels = [];
-    }
-  }
-
-  // Balance-check op upsells + labels samen.
-  const totalPromotionCost = totalUpsellCost + labelsCost;
+  // Balance-check op de promotie-opties.
+  const totalPromotionCost = totalUpsellCost;
   if (totalPromotionCost > 0) {
     const availableBalance = (seller.balance ?? 0) - (seller.reservedBalance ?? 0);
     if (totalPromotionCost > availableBalance) {
@@ -298,10 +250,7 @@ export async function createClaimsale(formData: FormData) {
           imageUrls: JSON.stringify(item.imageUrls),
         }));
 
-  const perLabelCost =
-    parsedLabels.length > 0 ? labelsCost / parsedLabels.length : 0;
-
-  // ── Atomic create: claimsale + items + shipping + upsells + labels ───
+  // ── Atomic create: claimsale + items + shipping + upsells ────────────
   // Puur writes — alle reads zijn hierboven al gedaan. createMany i.p.v.
   // loops scheelt DB-roundtrips. Ruimere timeout als safety-margin voor
   // grote claimsales (tot ~50 items) op SQLite.
@@ -348,23 +297,12 @@ export async function createClaimsale(formData: FormData) {
         });
       }
 
-      if (parsedLabels.length > 0) {
-        await tx.claimsaleLabel.createMany({
-          data: parsedLabels.map((l) => ({
-            claimsaleId: cs.id,
-            type: l.type,
-            colorKey: l.colorKey,
-            cost: Math.round(perLabelCost * 100) / 100,
-          })),
-        });
-      }
-
       return cs;
     },
     { timeout: 20000 }
   );
 
-  // Balance-deduct voor upsells + labels samen (na de create, mirror createAuction).
+  // Balance-deduct voor de promotie-opties (na de create, mirror createAuction).
   if (totalPromotionCost > 0) {
     await deductBalance(
       userId,

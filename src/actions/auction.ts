@@ -13,15 +13,6 @@ import { resolveAutoBids } from "@/lib/auction/autobid";
 import { createNotification } from "@/actions/notification";
 import { getAvailableBalance, calculateReserveAmount, syncReservedBalance } from "@/lib/balance-check";
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
-import {
-  availableLabelsFor,
-  calculateLabelCost,
-  isValidLabelColor,
-  isValidLabelType,
-  MAX_LABELS_PER_AUCTION,
-  type LabelColor,
-  type LabelType,
-} from "@/lib/auction/labels";
 import { generateOrderNumber } from "@/lib/order-number";
 import { createPendingBundle } from "@/lib/shipping-bundle";
 import { enrichMethod, deriveListingShippingMethodIds } from "@/lib/shipping/static-methods";
@@ -75,10 +66,6 @@ export async function createAuction(formData: FormData) {
     upsells: formData.get("upsells") || undefined,
     allowMailbox: formData.get("allowMailbox") === "true",
   };
-
-  // Labels gaan buiten het zod-schema om (niet alle bestaande callers sturen
-  // dit veld); we parsen + valideren ze los hieronder.
-  const labelsRaw = formData.get("labels");
 
   const result = createAuctionSchema.safeParse(raw);
   if (!result.success) {
@@ -166,70 +153,6 @@ export async function createAuction(formData: FormData) {
       }
     } catch {
       upsellWindows = [];
-    }
-  }
-
-  // Parse + valideer labels (max 2 per veiling, conditional availability,
-  // bundle-prijs 1=€0,99 / 2=€1,69). Server-hercheck van availability is
-  // anti-tamper (UI kan claim "Geen Reserve" terwijl reservePrice gezet is).
-  let parsedLabels: { type: LabelType; colorKey: LabelColor }[] = [];
-  let labelsCost = 0;
-  if (typeof labelsRaw === "string" && labelsRaw.length > 0) {
-    try {
-      const raw = JSON.parse(labelsRaw) as Array<{ type: string; colorKey: string }>;
-      const cleaned = raw
-        .filter(
-          (l) =>
-            typeof l?.type === "string" &&
-            typeof l?.colorKey === "string" &&
-            isValidLabelType(l.type) &&
-            isValidLabelColor(l.colorKey),
-        )
-        .slice(0, MAX_LABELS_PER_AUCTION) as {
-        type: LabelType;
-        colorKey: LabelColor;
-      }[];
-
-      // Anti-tamper: hercheck availability tegen de feitelijke form-state.
-      const availability = availableLabelsFor({
-        reservePrice: data.reservePrice ?? null,
-        buyNowPrice: data.buyNowPrice ?? null,
-        condition: data.condition ?? null,
-        auctionType: data.auctionType ?? null,
-      });
-      const availSet = new Set(
-        availability.filter((a) => a.available).map((a) => a.type),
-      );
-      for (const l of cleaned) {
-        if (!availSet.has(l.type)) {
-          return { error: `Label "${l.type}" is niet beschikbaar voor deze veiling` };
-        }
-      }
-
-      // Geen duplicates op type — als seller per ongeluk twee dezelfde stuurt,
-      // pakken we de eerste.
-      const seen = new Set<LabelType>();
-      parsedLabels = cleaned.filter((l) => {
-        if (seen.has(l.type)) return false;
-        seen.add(l.type);
-        return true;
-      });
-
-      labelsCost = calculateLabelCost(parsedLabels.length);
-
-      if (labelsCost > 0) {
-        const seller = await prisma.user.findUnique({
-          where: { id: session.user.id },
-          select: { balance: true, reservedBalance: true },
-        });
-        const availableBalance =
-          (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
-        if (totalUpsellCost + labelsCost > availableBalance) {
-          return { error: "Onvoldoende saldo voor promotie-opties" };
-        }
-      }
-    } catch {
-      parsedLabels = [];
     }
   }
 
@@ -375,26 +298,11 @@ export async function createAuction(formData: FormData) {
     }
   }
 
-  // Create label-records (max 2, bundle-cost al berekend).
-  if (parsedLabels.length > 0) {
-    const perLabelCost = labelsCost / parsedLabels.length;
-    await prisma.auctionLabel.createMany({
-      data: parsedLabels.map((l) => ({
-        auctionId: auction.id,
-        type: l.type,
-        colorKey: l.colorKey,
-        cost: Math.round(perLabelCost * 100) / 100,
-      })),
-    });
-  }
-
-  // Eén balance-deduct voor upsells + labels samen (was twee aparte voor labels
-  // alleen — minder Transaction-rijen, simpeler trail).
-  const totalPromotionCost = totalUpsellCost + labelsCost;
-  if (totalPromotionCost > 0) {
+  // Eén balance-deduct voor alle promotie-opties samen.
+  if (totalUpsellCost > 0) {
     await deductBalance(
       session.user.id,
-      totalPromotionCost,
+      totalUpsellCost,
       "UPSELL",
       `Promotie-opties veiling: ${data.title}`,
       auction.id
@@ -1506,7 +1414,7 @@ export async function cancelAuction(auctionId: string) {
   if ("error" in result) return result;
 
   // Refund promotie-kosten naar seller balance. Spotlights pro-rata op basis
-  // van ongebruikte tijd, labels 100% terug. Free-quota wordt NIET teruggezet
+  // van ongebruikte tijd. Free-quota wordt NIET teruggezet
   // (anti-recycle van de gratis-slot via spam-create-and-cancel). Failure hier
   // breekt de cancel niet — alleen loggen, status is al CANCELLED.
   let refundedAmount = 0;
@@ -1519,7 +1427,7 @@ export async function cancelAuction(auctionId: string) {
   return { success: true, refundedAmount } as const;
 }
 
-// Pro-rata spotlight-refund + 100% label-refund bij auction-cancel.
+// Pro-rata spotlight-refund bij auction-cancel.
 // Apart genoemd zodat we 'm hergebruiken als andere paden ook upsells moeten
 // teruggeven (bv. admin-cancel via moderation in de toekomst).
 async function refundAuctionPromotion(
@@ -1570,13 +1478,6 @@ async function refundAuctionPromotion(
     }
   }
 
-  // Labels: 100% van cost terug. Snapshot per-label cost staat al op de rij.
-  const labels = await prisma.auctionLabel.findMany({
-    where: { auctionId },
-  });
-  const labelRefundTotal = labels.reduce((sum, l) => sum + (l.cost ?? 0), 0);
-  totalRefund += labelRefundTotal;
-
   const totalRounded = Math.round(totalRefund * 100) / 100;
   if (totalRounded <= 0) return 0;
 
@@ -1587,9 +1488,6 @@ async function refundAuctionPromotion(
         .map((u) => `${u.type} €${u.amount.toFixed(2)}`)
         .join(", "),
     );
-  }
-  if (labelRefundTotal > 0) {
-    parts.push(`Labels €${labelRefundTotal.toFixed(2)}`);
   }
   const description = `Refund promotie-kosten geannuleerde veiling "${auctionTitle}"${
     parts.length > 0 ? ` (${parts.join(" + ")})` : ""
@@ -1897,7 +1795,7 @@ export async function declineRunnerUpOffer(offerId: string) {
  * Welke velden mogen worden gewijzigd hangt af van `computeEditScope`:
  *   FULL              — SCHEDULED + 0 bids: alles
  *   TIMING_LOCKED     — ACTIVE + 0 bids: alles behalve startTime/endTime
- *   DESCRIPTION_ONLY  — ACTIVE + ≥1 bid: alleen description + image-append + labels-add
+ *   DESCRIPTION_ONLY  — ACTIVE + ≥1 bid: alleen description + image-append
  *   NONE              — ended/awaiting statussen: niets
  *
  * Race-safe: scope wordt zowel buiten als binnen de $transaction opnieuw
@@ -2040,83 +1938,7 @@ export async function updateAuction(
     }
   }
 
-  // 6. Labels-add validatie + cost
-  let parsedNewLabels: Array<{ type: LabelType; colorKey: LabelColor }> = [];
-  let labelsCost = 0;
-  if (data.addLabels) {
-    try {
-      const raw = JSON.parse(data.addLabels);
-      if (!Array.isArray(raw)) {
-        return { error: "Ongeldige labels-payload", field: "addLabels" };
-      }
-      const cleaned = raw.filter(
-        (l: unknown): l is { type: string; colorKey: string } =>
-          typeof l === "object" &&
-          l !== null &&
-          "type" in l &&
-          "colorKey" in l &&
-          typeof (l as { type: unknown }).type === "string" &&
-          typeof (l as { colorKey: unknown }).colorKey === "string",
-      );
-
-      const validated: Array<{ type: LabelType; colorKey: LabelColor }> = [];
-      const seen = new Set<string>();
-      for (const l of cleaned) {
-        if (!isValidLabelType(l.type) || !isValidLabelColor(l.colorKey)) continue;
-        if (seen.has(l.type)) continue;
-        seen.add(l.type);
-        validated.push({ type: l.type, colorKey: l.colorKey });
-      }
-
-      // Anti-tamper: alleen labels die in availableLabelsFor() zitten voor deze
-      // veiling. Refresh's `condition`/`auctionType` zijn DB-waarden, geen input.
-      const avail = availableLabelsFor({
-        reservePrice: effectiveReserve > 0 ? effectiveReserve : null,
-        buyNowPrice: effectiveBuyNow > 0 ? effectiveBuyNow : null,
-        condition: auction.condition,
-        auctionType: auction.auctionType,
-      });
-      const availSet = new Set(avail.filter((a) => a.available).map((a) => a.type));
-      for (const l of validated) {
-        if (!availSet.has(l.type)) {
-          return { error: `Label "${l.type}" is niet beschikbaar voor deze veiling`, field: "addLabels" };
-        }
-      }
-
-      const existingCount = await prisma.auctionLabel.count({ where: { auctionId } });
-      if (existingCount + validated.length > MAX_LABELS_PER_AUCTION) {
-        return {
-          error: `Maximaal ${MAX_LABELS_PER_AUCTION} labels per veiling`,
-          field: "addLabels",
-        };
-      }
-
-      parsedNewLabels = validated;
-      // Bundle-tarief: cost van DE TOTALE labels-stand na deze toevoeging,
-      // minus wat seller eerder al heeft betaald (eerste label €0,99, twee €1,69).
-      const newTotalCount = existingCount + validated.length;
-      const newTotalCost = calculateLabelCost(newTotalCount);
-      const existingCost = await prisma.auctionLabel
-        .findMany({ where: { auctionId }, select: { cost: true } })
-        .then((rows) => rows.reduce((s, r) => s + (r.cost ?? 0), 0));
-      labelsCost = Math.max(0, Math.round((newTotalCost - existingCost) * 100) / 100);
-
-      if (labelsCost > 0) {
-        const seller = await prisma.user.findUnique({
-          where: { id: session.user.id },
-          select: { balance: true, reservedBalance: true },
-        });
-        const availableBalance = (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
-        if (labelsCost > availableBalance) {
-          return { error: "Onvoldoende saldo voor extra labels" };
-        }
-      }
-    } catch {
-      return { error: "Kon labels-payload niet parsen", field: "addLabels" };
-    }
-  }
-
-  // 7. Atomic update binnen $transaction met race-check op scope
+  // 6. Atomic update binnen $transaction met race-check op scope
   const result = await prisma.$transaction(async (tx) => {
     const fresh = await tx.auction.findUnique({
       where: { id: auctionId },
@@ -2181,11 +2003,7 @@ export async function updateAuction(
       if (timingPatch.status) dataPatch.status = timingPatch.status;
     }
 
-    // Niets te updaten? Dan is alleen labels-add van toepassing (of niets) —
-    // schip het atomic-update-call.
-    let updateAttempted = false;
     if (Object.keys(dataPatch).length > 0) {
-      updateAttempted = true;
       // Race-gated: status van fresh moet binnen allowed-set blijven
       const allowedStatuses =
         freshScope === "FULL" ? ["SCHEDULED"] : ["ACTIVE"];
@@ -2198,49 +2016,12 @@ export async function updateAuction(
       }
     }
 
-    // Labels-add binnen tx (na auction-update zodat we niet inserten bij race-fail)
-    if (parsedNewLabels.length > 0) {
-      const totalAfter = await tx.auctionLabel.count({ where: { auctionId } });
-      if (totalAfter + parsedNewLabels.length > MAX_LABELS_PER_AUCTION) {
-        return { error: `Maximaal ${MAX_LABELS_PER_AUCTION} labels per veiling` } as const;
-      }
-      const perLabelCost =
-        parsedNewLabels.length > 0 ? Math.round((labelsCost / parsedNewLabels.length) * 100) / 100 : 0;
-      await tx.auctionLabel.createMany({
-        data: parsedNewLabels.map((l) => ({
-          auctionId,
-          type: l.type,
-          colorKey: l.colorKey,
-          cost: perLabelCost,
-        })),
-      });
-    }
-
-    return { success: true, updateAttempted } as const;
+    return { success: true } as const;
   });
 
   if ("error" in result) return result;
 
-  // 8. Labels-cost buiten tx deducten. deductBalance opent eigen tx en throws
-  //    bij insufficient balance — we hebben dat al boven gecheckt maar fang
-  //    de error toch op zodat een ultra-rare race tussen check en deduct geen
-  //    crash geeft (labels staan dan al in DB, seller krijgt ze gratis — niet
-  //    erg, beter dan rollback met label-delete).
-  if (labelsCost > 0) {
-    try {
-      await deductBalance(
-        session.user.id,
-        labelsCost,
-        "UPSELL",
-        `Extra labels veiling: ${auction.title}`,
-        auctionId,
-      );
-    } catch (err) {
-      console.error(`[updateAuction] Labels deduct failed na succesvolle insert voor auction ${auctionId}:`, err);
-    }
-  }
-
-  // 9. Real-time publish
+  // 7. Real-time publish
   publishMany(
     [auctionChannel(auctionId), userChannel(session.user.id)],
     { type: "auction-updated", payload: { auctionId } },

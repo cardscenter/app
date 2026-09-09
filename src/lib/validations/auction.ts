@@ -133,7 +133,6 @@ export const updateAuctionSchema = z
     description: z.string().max(2000).optional(),
     appendImageUrls: z.string().optional(),
     imageUrls: z.string().optional(),
-    addLabels: z.string().optional(),
     title: z.string().min(3).max(100).optional(),
     cardItems: z.string().optional(),
     estimatedCardCount: z.coerce.number().int().min(0).optional(),
