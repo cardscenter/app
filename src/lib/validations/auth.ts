@@ -59,19 +59,21 @@ export const registerSchema = z.object({
         path: ["companyName"],
       });
     }
-    if (data.country === "NL" && (!data.cocNumber || data.cocNumber.trim().length === 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "KVK-nummer is verplicht voor Nederlandse bedrijven",
-        path: ["cocNumber"],
-      });
+    const coc = (data.cocNumber ?? "").trim();
+    if (data.country === "NL") {
+      if (!coc) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "KVK-nummer is verplicht voor Nederlandse bedrijven", path: ["cocNumber"] });
+      } else if (!/^\d{8}$/.test(coc)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Een KvK-nummer bestaat uit 8 cijfers", path: ["cocNumber"] });
+      }
+    } else if (!coc) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Bedrijfsregistratie-ID is verplicht", path: ["cocNumber"] });
+    } else if (!/^[0-9A-Za-z.-]{6,14}$/.test(coc)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ongeldig registratienummer (6–14 tekens)", path: ["cocNumber"] });
     }
-    if (data.country !== "NL" && (!data.cocNumber || data.cocNumber.trim().length === 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Bedrijfsregistratie-ID is verplicht",
-        path: ["cocNumber"],
-      });
+    const vat = (data.vatNumber ?? "").trim().toUpperCase();
+    if (vat && !/^[A-Z]{2}[A-Z0-9]{2,12}$/.test(vat)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ongeldig btw-id (bv. NL123456789B01)", path: ["vatNumber"] });
     }
   }
 });
