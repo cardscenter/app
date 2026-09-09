@@ -7,6 +7,7 @@ import { createEventSchema, updateEventSchema } from "@/lib/validations/event";
 import { createNotification } from "@/actions/notification";
 import { requireNotSuspended } from "@/lib/suspension";
 import { requireEmailVerified } from "@/lib/email-verification";
+import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
 import { timezoneForCountry, zonedWallClockToUtc } from "@/lib/events/timezones";
 import { toLocalDate, toLocalTime } from "@/lib/events/event-to-form";
 import { geocodeAddress } from "@/lib/events/geocoding";
@@ -18,7 +19,6 @@ import {
   EVENT_SPOTLIGHT_STORED_TYPE,
   EVENT_SPOTLIGHT_MIN_DAYS,
   EVENT_SPOTLIGHT_MAX_DAYS,
-  calculateEventSpotlightCost,
 } from "@/lib/events/upsell-config";
 import { FACILITY_KEYS, ACTIVITY_KEYS, type TicketType } from "@/lib/events/types";
 import { parseSocialLinks } from "@/lib/events/socials";
@@ -199,7 +199,13 @@ export async function createEvent(formData: FormData) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { balance: true, reservedBalance: true, accountType: true, isTrustedEventOrganizer: true },
+    select: {
+      balance: true,
+      reservedBalance: true,
+      accountType: true,
+      isTrustedEventOrganizer: true,
+      freeUpsellsRemaining: true,
+    },
   });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
@@ -216,11 +222,24 @@ export async function createEvent(formData: FormData) {
   const spotlightDays = wantsSpotlight
     ? Math.max(EVENT_SPOTLIGHT_MIN_DAYS, Math.min(data.spotlightDays ?? 0, EVENT_SPOTLIGHT_MAX_DAYS))
     : 0;
-  const spotlightCost = wantsSpotlight ? calculateEventSpotlightCost(spotlightDays, user.accountType) : 0;
+  // Gratis homepage-spotlight-quota (tier) geldt ook voor events — zelfde
+  // product als de listing/auction/claimsale-spotlight (Fase 45).
+  const spotlightAllocation = wantsSpotlight
+    ? applyFreeUpsellsToCost(
+        [{ type: EVENT_SPOTLIGHT_STORED_TYPE, days: spotlightDays }],
+        user.accountType,
+        user.freeUpsellsRemaining,
+        "event",
+      )
+    : null;
+  const spotlightCost = spotlightAllocation?.total ?? 0;
+  const freeUsed = spotlightAllocation?.freeUsed ?? 0;
 
   const promoItems: Array<{ type: string; days: number; cost: number; label: string }> = [];
   if (promoCost > 0) promoItems.push({ type: EVENT_BANNER_STORED_TYPE, days: promoDays, cost: promoCost, label: "Uitgelichte banner evenement" });
-  if (spotlightCost > 0) promoItems.push({ type: EVENT_SPOTLIGHT_STORED_TYPE, days: spotlightDays, cost: spotlightCost, label: "Homepage-spotlight evenement" });
+  // Een gratis (quota) spotlight krijgt wél een EventUpsell-rij (cost 0), maar
+  // geen Transaction-rij.
+  if (wantsSpotlight) promoItems.push({ type: EVENT_SPOTLIGHT_STORED_TYPE, days: spotlightDays, cost: spotlightCost, label: "Homepage-spotlight evenement" });
 
   const totalPromoCost = Math.round((promoCost + spotlightCost) * 100) / 100;
   if (totalPromoCost > 0) {
@@ -247,7 +266,9 @@ export async function createEvent(formData: FormData) {
     facilityData[key] = Boolean((data as Record<string, unknown>)[key]);
   }
 
-  const event = await prisma.$transaction(async (tx) => {
+  let event;
+  try {
+  event = await prisma.$transaction(async (tx) => {
     const newEvent = await tx.event.create({
       data: {
         title: data.title,
@@ -310,6 +331,7 @@ export async function createEvent(formData: FormData) {
           },
         });
 
+        if (item.cost <= 0) continue;
         const balanceBefore = running;
         const balanceAfter = Math.round((balanceBefore - item.cost) * 100) / 100;
         running = balanceAfter;
@@ -324,11 +346,27 @@ export async function createEvent(formData: FormData) {
           },
         });
       }
-      await tx.user.update({ where: { id: userId }, data: { balance: running } });
+      if (running !== user.balance) {
+        await tx.user.update({ where: { id: userId }, data: { balance: running } });
+      }
+      // Race-safe quota-decrement (zelfde patroon als createListing).
+      if (freeUsed > 0) {
+        const updated = await tx.user.updateMany({
+          where: { id: userId, freeUpsellsRemaining: { gte: freeUsed } },
+          data: { freeUpsellsRemaining: { decrement: freeUsed } },
+        });
+        if (updated.count === 0) throw new Error("FREE_UPSELL_QUOTA_RACE");
+      }
     }
 
     return newEvent;
   });
+  } catch (e) {
+    if (e instanceof Error && e.message === "FREE_UPSELL_QUOTA_RACE") {
+      return { error: "Je gratis homepage-spotlight is intussen gebruikt door een andere actie. Probeer opnieuw, de spotlight wordt dan in rekening gebracht." };
+    }
+    throw e;
+  }
 
   if (autoPublish) {
     await createNotification(

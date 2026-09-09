@@ -1,5 +1,6 @@
 import type { UpsellType } from "@/types";
 import { getUpsellDiscount } from "@/lib/subscription-tiers";
+import { calculateEventUpsellCost, type EventUpsellType } from "@/lib/events/upsell-config";
 
 export const UPSELL_PRICING: Record<
   UpsellType,
@@ -117,17 +118,19 @@ export function calculateAuctionUpsellCost(
 // Pure functie: geen DB-mutaties. Caller moet `freeUsed` zelf decrementen
 // op `User.freeUpsellsRemaining` na een succesvolle creatie.
 export function applyFreeUpsellsToCost(
-  entries: { type: UpsellType | ClaimsaleUpsellType; days?: number }[],
+  entries: { type: UpsellType | ClaimsaleUpsellType | EventUpsellType; days?: number }[],
   accountType: string,
   freeUpsellsRemaining: number,
-  context: "listing" | "auction" | "claimsale"
+  context: "listing" | "auction" | "claimsale" | "event"
 ): { perEntry: number[]; total: number; freeUsed: number } {
   const calc =
     context === "auction"
       ? calculateAuctionUpsellCost
       : context === "claimsale"
         ? calculateClaimsaleUpsellCost
-        : calculateUpsellCost;
+        : context === "event"
+          ? calculateEventUpsellCost
+          : calculateUpsellCost;
   let freeUsed = 0;
 
   const perEntry = entries.map((entry) => {
@@ -137,9 +140,9 @@ export function applyFreeUpsellsToCost(
       freeUsed++;
       return 0;
     }
-    // calc is een van drie functies met overlappende-maar-niet-identieke
+    // calc is een van vier functies met overlappende-maar-niet-identieke
     // type-unions; de runtime-keys zijn altijd geldig voor de gekozen context.
-    return calc(entry.type as UpsellType & ClaimsaleUpsellType, entry.days ?? 0, accountType);
+    return calc(entry.type as UpsellType & ClaimsaleUpsellType & EventUpsellType, entry.days ?? 0, accountType);
   });
 
   const total = Math.round(perEntry.reduce((s, c) => s + c, 0) * 100) / 100;

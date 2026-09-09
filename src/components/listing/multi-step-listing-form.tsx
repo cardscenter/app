@@ -293,6 +293,7 @@ export function MultiStepListingForm({
       <ListingPreview
         form={form}
         accountType={userAccountType}
+        freeUpsellsRemaining={freeUpsellsRemaining}
         selectedShippingMethods={effectiveShippingMethodIds}
         shippingMethods={shippingMethods}
         missingRequirements={requirements.map((r) => ({ key: r.key, messageKey: r.messageKey }))}

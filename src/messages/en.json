@@ -1823,6 +1823,7 @@
     "selectShippingMethodsHint": "Which methods can the buyer choose for this listing?",
     "promotionTitle": "Promotion",
     "promotionDescription": "Boost your listing with homepage spotlight or category highlight.",
+    "upsellFreeQuota": "Free (quota)",
     "labelCtrUplift": "up to {n}× more clicks"
   },
   "watchlist": {

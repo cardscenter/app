@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap, AlertCircle } from "lucide-react";
-import { calculateUpsellCost } from "@/lib/upsell-config";
+import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
 import { CarrierLogo } from "@/components/ui/carrier-logo";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
 import type { EnrichedShippingMethod } from "@/components/ui/shipping-method-selector";
@@ -39,6 +39,8 @@ interface FormData {
 interface ListingPreviewProps {
   form: FormData;
   accountType: string;
+  /** Resterend gratis homepage-spotlight-quota (tier) — zelfde allocator als de server. */
+  freeUpsellsRemaining?: number;
   selectedShippingMethods: string[];
   shippingMethods: EnrichedShippingMethod[];
   /** Openstaande verplichte velden — als niet leeg, wordt publish geblokkeerd. */
@@ -61,17 +63,20 @@ const UPSELL_KEYS: Record<UpsellType, string> = {
   URGENT_LABEL: "upsellUrgent",
 };
 
-export function ListingPreview({ form, accountType, selectedShippingMethods, shippingMethods, missingRequirements = [], onBack, onPublish, pending, error }: ListingPreviewProps) {
+export function ListingPreview({ form, accountType, freeUpsellsRemaining = 0, selectedShippingMethods, shippingMethods, missingRequirements = [], onBack, onPublish, pending, error }: ListingPreviewProps) {
   const t = useTranslations("listing");
   const [current, setCurrent] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const hasMissing = missingRequirements.length > 0;
 
-  const totalUpsellCost = form.upsells.reduce(
-    (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, accountType),
-    0
+  // Zelfde allocator als createListing: gratis quota-spotlights tellen als €0.
+  const upsellAllocation = applyFreeUpsellsToCost(
+    form.upsells.map((entry) => ({ type: entry.type, days: entry.days })),
+    accountType,
+    freeUpsellsRemaining,
+    "listing"
   );
-  const totalPromotionCost = totalUpsellCost;
+  const totalPromotionCost = upsellAllocation.total;
 
   const hasUrgent = form.upsells.some((u) => u.type === "URGENT_LABEL");
   const hasSpotlight = form.upsells.some((u) => u.type === "HOMEPAGE_SPOTLIGHT");
@@ -352,15 +357,19 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
           <h3 className="text-sm font-semibold text-foreground">{t("reviewUpsells")}</h3>
           {form.upsells.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {form.upsells.map((entry) => {
+              {form.upsells.map((entry, i) => {
                 const Icon = UPSELL_ICONS[entry.type];
-                const cost = calculateUpsellCost(entry.type, entry.days, accountType);
+                const cost = upsellAllocation.perEntry[i] ?? 0;
                 return (
                   <div key={entry.type} className="flex items-center gap-2 glass-subtle rounded-lg px-3 py-2 text-sm">
                     <Icon className="h-4 w-4 text-primary" />
                     <span className="text-foreground">{t(UPSELL_KEYS[entry.type])}</span>
                     <span className="text-muted-foreground">({entry.days}d)</span>
-                    <span className="font-semibold text-foreground">€{cost.toFixed(2)}</span>
+                    {cost === 0 ? (
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">{t("upsellFreeQuota")}</span>
+                    ) : (
+                      <span className="font-semibold text-foreground">€{cost.toFixed(2)}</span>
+                    )}
                   </div>
                 );
               })}

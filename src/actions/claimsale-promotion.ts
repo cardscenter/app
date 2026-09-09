@@ -6,6 +6,7 @@ import { creditBalance, deductBalance } from "@/actions/wallet";
 import { requireNotSuspended } from "@/lib/suspension";
 import { revalidatePath } from "next/cache";
 import {
+  applyFreeUpsellsToCost,
   calculateClaimsaleUpsellCost,
   CLAIMSALE_UPSELL_TYPES_OFFERED,
   CLAIMSALE_UPSELL_DURATION_DAYS,
@@ -35,7 +36,8 @@ async function loadOwnedClaimsale(claimsaleId: string, userId: string) {
 
 /**
  * Een bestaande upsell verlengen met een nieuwe 14-daagse termijn tegen het
- * vaste tarief. Volledig betaald — free-quota geldt alleen bij aanmaken.
+ * vaste tarief. Volledig betaald — free-quota geldt alleen bij een eerste
+ * (nieuwe) homepage-spotlight, zie addClaimsaleUpsell.
  */
 export async function extendClaimsaleUpsell(upsellId: string) {
   const session = await auth();
@@ -88,7 +90,8 @@ export async function extendClaimsaleUpsell(upsellId: string) {
 
 /**
  * Een upsell-type toevoegen dat nog niet actief is op de claimsale. Vaste prijs,
- * loopt 14 dagen.
+ * loopt 14 dagen. Een HOMEPAGE_SPOTLIGHT consumeert het gratis tier-quota
+ * (net als bij aanmaken); race-safe decrement in één transactie.
  */
 export async function addClaimsaleUpsell(claimsaleId: string, type: string) {
   const session = await auth();
@@ -116,10 +119,17 @@ export async function addClaimsaleUpsell(claimsaleId: string, type: string) {
 
   const seller = await prisma.user.findUnique({
     where: { id: userId },
-    select: { accountType: true, balance: true, reservedBalance: true },
+    select: { accountType: true, balance: true, reservedBalance: true, freeUpsellsRemaining: true },
   });
   const accountType = seller?.accountType ?? "FREE";
-  const cost = calculateClaimsaleUpsellCost(upsellType, 0, accountType);
+  const allocation = applyFreeUpsellsToCost(
+    [{ type: upsellType }],
+    accountType,
+    seller?.freeUpsellsRemaining ?? 0,
+    "claimsale",
+  );
+  const cost = allocation.total;
+  const freeUsed = allocation.freeUsed;
   const available = (seller?.balance ?? 0) - (seller?.reservedBalance ?? 0);
   if (cost > available) return { error: "Onvoldoende saldo voor deze promotie" };
 
@@ -129,16 +139,32 @@ export async function addClaimsaleUpsell(claimsaleId: string, type: string) {
       ? owned.claimsale.startTime
       : now;
 
-  await prisma.claimsaleUpsell.create({
-    data: {
-      claimsaleId,
-      type: upsellType,
-      startsAt,
-      expiresAt: new Date(startsAt.getTime() + TERM_MS),
-      dailyCost: Math.round((cost / CLAIMSALE_UPSELL_DURATION_DAYS) * 100) / 100,
-      totalCost: cost,
-    },
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.claimsaleUpsell.create({
+        data: {
+          claimsaleId,
+          type: upsellType,
+          startsAt,
+          expiresAt: new Date(startsAt.getTime() + TERM_MS),
+          dailyCost: Math.round((cost / CLAIMSALE_UPSELL_DURATION_DAYS) * 100) / 100,
+          totalCost: cost,
+        },
+      });
+      if (freeUsed > 0) {
+        const updated = await tx.user.updateMany({
+          where: { id: userId, freeUpsellsRemaining: { gte: freeUsed } },
+          data: { freeUpsellsRemaining: { decrement: freeUsed } },
+        });
+        if (updated.count === 0) throw new Error("FREE_UPSELL_QUOTA_RACE");
+      }
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "FREE_UPSELL_QUOTA_RACE") {
+      return { error: "Je gratis homepage-spotlight is intussen gebruikt. Probeer opnieuw — de promotie wordt dan in rekening gebracht." };
+    }
+    throw e;
+  }
 
   if (cost > 0) {
     await deductBalance(userId, cost, "UPSELL", `Promotie claimsale: ${owned.claimsale.title}`);

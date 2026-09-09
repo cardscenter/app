@@ -1823,6 +1823,7 @@
     "selectShippingMethodsHint": "Welke methoden mag de koper kiezen voor deze advertentie?",
     "promotionTitle": "Promotie",
     "promotionDescription": "Geef je advertentie een boost met homepage-spotlight of categorie-uitlichting.",
+    "upsellFreeQuota": "Gratis (quota)",
     "labelCtrUplift": "tot {n}× meer klikken"
   },
   "watchlist": {
