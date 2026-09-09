@@ -89,9 +89,19 @@ model User {
   tierRank          Int      @default(1)
   searchBoost       Boolean  @default(false)
 
-  // Vanity shop URL (Fase 31) — Unlimited+ users kunnen /winkel/<slug>
-  // claimen die naar /verkoper/<userId> redirect. Lowercase a-z 0-9 -, 3-32 chars.
+  // Vanity shop URL (Fase 31/45) — Unlimited+ users kunnen /winkel/<slug>
+  // claimen: de eigen winkelpagina. Lowercase a-z 0-9 -, 3-32 chars.
   shopSlug          String?  @unique
+
+  // Winkelpagina (Fase 45, customProfile-feature: Unlimited+/Enterprise/Admin).
+  // /winkel/<slug> is een echte pagina met banner, slogan en eigen blokken
+  // (JSON ShopBlock[] — schema in src/lib/validations/shop.ts). Blijft bewaard
+  // bij downgrade; de route geeft dan notFound tot een nieuwe upgrade.
+  shopBannerUrl     String?
+  shopTagline       String?
+  shopBlocks        String?
+  shopPublished     Boolean  @default(true)
+  shopUpdatedAt     DateTime?
 
   // Featured-listing quota (Fase 31). Per-tier maandelijks aantal gratis
   // HOMEPAGE_SPOTLIGHTs. Reset door reset-free-upsells cron op de 1e.

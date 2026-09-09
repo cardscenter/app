@@ -10,9 +10,9 @@ interface ImageUploaderProps {
   onChange: (images: string[]) => void;
   maxImages?: number;
   /**
-   * Upload-context voor content-moderation. Alleen "listing", "auction", "avatar"
-   * en "chat" worden door Claude gecheckt; andere contexten slaan de check over.
-   * Laat undefined als deze upload geen moderation hoort te krijgen.
+   * Upload-context voor content-moderation (zie MODERATED_CONTEXTS in
+   * src/lib/upload.ts). Laat undefined als deze upload geen moderation hoort
+   * te krijgen.
    */
   context?: UploadContext;
 }

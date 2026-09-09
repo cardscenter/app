@@ -9,6 +9,8 @@ import { requireTotpStepUp } from "@/lib/two-factor";
 import { validateUsername, validateSlugTerms, RESERVED_EXACT } from "@/lib/username-policy";
 import { findUserByNameInsensitive } from "@/lib/username-policy-server";
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { convertToBusinessSchema } from "@/lib/validations/shop";
 
 const profileSchema = z.object({
   // Bewust ruimer dan USERNAME_MAX: legacy-namen (>16 tekens) moeten bio/avatar
@@ -224,10 +226,9 @@ export async function updateMaxRunnerUpAttempts(value: number) {
   return { success: true };
 }
 
-// Vanity shop-slug (Fase 31). Alleen Unlimited+/Enterprise/Admin mogen
-// een slug claimen. Slug verschijnt als /winkel/<slug> en redirect server-side
-// naar /verkoper/<userId>. Bij downgrade blijft de slug bewaard maar de
-// /winkel/-route stopt (notFound).
+// Vanity shop-slug (Fase 31/45). Alleen Unlimited+/Enterprise/Admin mogen
+// een slug claimen. /winkel/<slug> is sinds Fase 45 een echte winkelpagina.
+// Bij downgrade blijft de slug bewaard maar de /winkel/-route stopt (notFound).
 // Fase 43: route-specifieke lijst blijft, ge-unioned met de gedeelde
 // RESERVED_EXACT uit username-policy; rol-termen/scheldwoorden via
 // validateSlugTerms in updateShopSlug.
@@ -339,4 +340,42 @@ export async function updateShopSlug(rawSlug: string | null) {
   });
 
   return { success: true, slug };
+}
+
+/**
+ * Particulier → bedrijf (Fase 45). Eerste schrijfpad voor bedrijfsgegevens;
+ * one-way en zonder admin-review. Ontgrendelt de bedrijfspagina-modus van de
+ * winkelpagina (galerij, standplaats, openingstijden, KvK/btw-regel).
+ */
+export async function convertToBusinessAccount(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { accountKind: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+  if (user.accountKind === "BUSINESS") return { success: true, unchanged: true };
+
+  const parsed = convertToBusinessSchema.safeParse({
+    companyName: formData.get("companyName") ?? "",
+    cocNumber: formData.get("cocNumber") ?? "",
+    vatNumber: formData.get("vatNumber") ?? "",
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Ongeldige gegevens" };
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: {
+      accountKind: "BUSINESS",
+      companyName: parsed.data.companyName,
+      cocNumber: parsed.data.cocNumber,
+      vatNumber: parsed.data.vatNumber || null,
+    },
+  });
+
+  revalidatePath("/dashboard/winkel");
+  revalidatePath("/dashboard/profiel");
+  return { success: true };
 }

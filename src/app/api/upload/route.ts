@@ -15,6 +15,10 @@ const VALID_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
   "verification",
   "dispute",
   "shipping",
+  // "event" ontbrak hier (Fase 45-fix): event-foto's werden zonder context
+  // — en dus zonder moderatie — opgeslagen.
+  "event",
+  "shop",
 ]);
 
 export async function POST(request: NextRequest) {
