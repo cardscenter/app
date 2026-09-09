@@ -7,7 +7,6 @@ import { PasswordChangeForm } from "@/components/dashboard/password-change-form"
 import { TwoFactorSettings } from "@/components/dashboard/two-factor-settings";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
-import { ShopSlugForm } from "@/components/dashboard/shop-slug-form";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { SessionProvider } from "next-auth/react";
@@ -223,16 +222,17 @@ export default async function ProfilePage({
         </div>
       </DashboardSection>
 
-      {/* SECTIE 6b — Eigen winkel-URL (Unlimited+/Enterprise/Admin) */}
+      {/* SECTIE 6b — Winkelpagina (Fase 45): beheer verhuisd naar /dashboard/winkel */}
       {(user.accountType === "UNLIMITED" || user.accountType === "ENTERPRISE" || user.accountType === "ADMIN") && (
         <DashboardSection
           icon={<Sparkles className="size-5" />}
-          title="Eigen winkel-URL"
-          description="Een persoonlijke link naar je winkel-pagina. Inbegrepen bij Unlimited en Enterprise."
+          title="Winkelpagina"
+          description="Je winkel-URL, banner, slogan en blokken beheer je op de pagina Winkelpagina."
         >
-          <div className="max-w-lg">
-            <ShopSlugForm currentSlug={user.shopSlug} />
-          </div>
+          <Link href="/dashboard/winkel" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            Naar Winkelpagina
+            <ExternalLink data-icon="inline-end" />
+          </Link>
         </DashboardSection>
       )}
 
