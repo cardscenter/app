@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/page-container";
-import { LifeBuoy, Mail, MessageCircle, BookOpen } from "lucide-react";
+import { LifeBuoy, Mail, MessageCircle, BookOpen, Zap } from "lucide-react";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { hasFeature } from "@/lib/subscription-tiers";
 import { Link } from "@/i18n/navigation";
 import type { ReactNode } from "react";
 import { PLATFORM } from "@/lib/platform-config";
@@ -16,7 +19,23 @@ export const metadata: Metadata = {
  * notificatie-mails wordt niet gelezen). Komt er later een ticketsysteem, dan
  * vervangt dat deze pagina op dezelfde URL zodat oude mails blijven kloppen.
  */
-export default function SupportPage() {
+export default async function SupportPage() {
+  // Voorrang bij support (tier-feature prioritySupport, Fase 45): Unlimited+/
+  // Enterprise/Admin krijgen bovenaan een prioriteitskaart met een herkenbaar
+  // onderwerp-voorvoegsel zodat de mail in de inbox vooraan gesorteerd kan
+  // worden. Voor anderen verandert er niets.
+  const session = await auth();
+  const me = session?.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { accountType: true, displayName: true },
+      })
+    : null;
+  const priority = me ? hasFeature(me.accountType, "prioritySupport") : false;
+  const priorityMailto = me
+    ? `mailto:${PLATFORM.supportEmail}?subject=${encodeURIComponent(`[Voorrang] Vraag van ${me.displayName}`)}`
+    : null;
+
   return (
     <PageContainer width="narrow" className="py-12">
       <div className="mb-8 text-center">
@@ -30,6 +49,29 @@ export default function SupportPage() {
       </div>
 
       <div className="space-y-4">
+        {priority && priorityMailto && (
+          <section className="rounded-2xl border border-primary/40 bg-primary/5 p-5 shadow-card">
+            <div className="mb-2 flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <Zap className="size-5" />
+              </span>
+              <h2 className="text-base font-semibold text-foreground">Voorrang-support</h2>
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Als Unlimited- of Enterprise-verkoper wordt je vraag met voorrang behandeld, ook bij
+              geschillen. Mail ons via{" "}
+              <a
+                href={priorityMailto}
+                className="font-medium text-primary underline underline-offset-2 hover:text-primary-hover"
+              >
+                {PLATFORM.supportEmail}
+              </a>{" "}
+              met het onderwerp <span className="font-medium text-foreground">[Voorrang] …</span> — die
+              link vult het voor je in.
+            </p>
+          </section>
+        )}
+
         <SupportCard icon={<Mail className="size-5" />} title="Neem contact op">
           Mail ons op{" "}
           <a

@@ -4,6 +4,8 @@ import { Link } from "@/i18n/navigation";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
 import { getOpenPendingFeesTotal } from "@/lib/pending-fees";
+import { hasFeature } from "@/lib/subscription-tiers";
+import { TierPill } from "@/components/ui/tier-pill";
 import { isUserSuspended } from "@/lib/suspension";
 import {
   Package,
@@ -13,6 +15,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   ExternalLink,
+  Zap,
 } from "lucide-react";
 
 // Admin-dossier bij een geschil: ALLES wat de beheerder nodig heeft om te
@@ -232,6 +235,8 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
             {(u.firstName || u.lastName) && <p className="text-xs text-muted-foreground">{[u.firstName, u.lastName].filter(Boolean).join(" ")}</p>}
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-1">
+            <TierPill accountType={u.accountType} />
+            {hasFeature(u.accountType, "prioritySupport") && <StatusBadge tone="primary" icon={Zap}>Voorrang</StatusBadge>}
             {u.isVerified && <StatusBadge tone="info" icon={ShieldCheck}>ID</StatusBadge>}
             {u.isIbanVerified && <StatusBadge tone="success">IBAN</StatusBadge>}
             {u.isAddressVerified && <StatusBadge tone="primary">Adres</StatusBadge>}

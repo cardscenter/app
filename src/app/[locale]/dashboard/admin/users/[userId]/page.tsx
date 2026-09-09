@@ -13,10 +13,13 @@ import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatCard } from "@/components/dashboard/ui/stat-card";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { TierPill } from "@/components/ui/tier-pill";
 
 const USER_DETAIL_SELECT = {
   id: true, displayName: true, email: true, firstName: true, lastName: true,
   bio: true, avatarUrl: true, accountType: true, accountKind: true,
+  premiumExpiresAt: true, tierRank: true, searchBoost: true,
+  freeUpsellsRemaining: true, freeUpsellsResetAt: true, shopSlug: true,
   companyName: true, vatNumber: true, cocNumber: true,
   isVerified: true, verificationStatus: true,
   balance: true, heldBalance: true, reservedBalance: true,
@@ -66,6 +69,12 @@ export default async function AdminUserDetailPage({
 
   if (!user) notFound();
 
+  const activeSubscription = await prisma.subscription.findFirst({
+    where: { userId, status: "ACTIVE" },
+    orderBy: { createdAt: "desc" },
+    select: { tier: true, billingCycle: true, monthlyPrice: true, yearlyPrice: true, startsAt: true, expiresAt: true, paymentStatus: true },
+  });
+
   const suspended = isUserSuspended(user);
 
   return (
@@ -79,6 +88,7 @@ export default async function AdminUserDetailPage({
           <UserActionBar
             userId={user.id}
             userName={user.displayName}
+            accountType={user.accountType}
             isSuspended={suspended}
             hasIban={!!user.iban}
             hasUsernameCooldown={!!user.lastUsernameChange}
@@ -99,6 +109,7 @@ export default async function AdminUserDetailPage({
           <code className="rounded bg-muted px-2 py-0.5 text-[11px]">
             {user.accountType}
           </code>
+          <TierPill accountType={user.accountType} size="md" />
           {user.isVerified ? (
             <StatusBadge tone="success" icon={ShieldCheck}>Geverifieerd</StatusBadge>
           ) : (
@@ -137,7 +148,7 @@ export default async function AdminUserDetailPage({
 
       {/* Tab content */}
       <section className="dash-card p-5">
-        {tab === "profile" && <ProfileTab user={user} />}
+        {tab === "profile" && <ProfileTab user={user} subscription={activeSubscription} />}
         {tab === "wallet" && <WalletTab userId={user.id} userName={user.displayName} balance={user.balance} held={user.heldBalance} reserved={user.reservedBalance} />}
         {tab === "sales" && <SalesTab userId={user.id} />}
         {tab === "purchases" && <PurchasesTab userId={user.id} />}
@@ -164,7 +175,18 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function ProfileTab({ user }: { user: UserDetailPayload }) {
+type ActiveSubscription = {
+  tier: string;
+  billingCycle: string;
+  monthlyPrice: number;
+  yearlyPrice: number | null;
+  startsAt: Date;
+  expiresAt: Date;
+  paymentStatus: string;
+} | null;
+
+function ProfileTab({ user, subscription }: { user: UserDetailPayload; subscription: ActiveSubscription }) {
+  const fmtDate = (d: Date | null | undefined) => d?.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" });
   return (
     <dl className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
       <Field label="ID" value={<code className="text-xs">{user.id}</code>} />
@@ -190,6 +212,49 @@ function ProfileTab({ user }: { user: UserDetailPayload }) {
       <Field label="Aangemaakt" value={user.createdAt?.toLocaleString("nl-NL")} />
       <Field label="Laatst bijgewerkt" value={user.updatedAt?.toLocaleString("nl-NL")} />
       {user.suspensionReason && <Field label="Suspension reden" value={user.suspensionReason} />}
+
+      {/* Fase 45: abonnement / tier-status */}
+      <div className="md:col-span-3 mt-2 rounded-md border border-border bg-muted/30 p-4">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Abonnement
+        </h3>
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-3">
+          <Field
+            label="Tier"
+            value={
+              <span className="inline-flex items-center gap-2">
+                <code className="text-xs">{user.accountType}</code>
+                <TierPill accountType={user.accountType} />
+              </span>
+            }
+          />
+          <Field label="Verloopt op" value={fmtDate(user.premiumExpiresAt)} />
+          <Field
+            label="Zoekboost"
+            value={
+              user.searchBoost ? (
+                <StatusBadge tone="success">Actief</StatusBadge>
+              ) : (
+                <span className="text-muted-foreground">Niet actief</span>
+              )
+            }
+          />
+          <Field
+            label="Gratis spotlights resterend"
+            value={`${user.freeUpsellsRemaining}${user.freeUpsellsResetAt ? ` · reset ${fmtDate(user.freeUpsellsResetAt)}` : ""}`}
+          />
+          <Field label="Winkel-URL" value={user.shopSlug ? <code className="text-xs">/winkel/{user.shopSlug}</code> : null} />
+          <Field label="tierRank (informatief)" value={user.tierRank} />
+          <Field
+            label="Actieve Subscription"
+            value={
+              subscription
+                ? `${subscription.tier} · ${subscription.billingCycle === "YEARLY" ? "jaarlijks" : "maandelijks"} · €${subscription.monthlyPrice.toFixed(2)}/m · ${fmtDate(subscription.startsAt)} → ${fmtDate(subscription.expiresAt)} · ${subscription.paymentStatus}`
+                : null
+            }
+          />
+        </dl>
+      </div>
 
       {/* Fase 29: veiling-status — strikes, borg-vrijstelling, IP-tracking */}
       <div className="md:col-span-3 mt-2 rounded-md border border-border bg-muted/30 p-4">

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
-import { Scale, Clock, Hourglass, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Scale, Clock, Hourglass, CheckCircle2, AlertTriangle, Zap } from "lucide-react";
+import { hasFeature } from "@/lib/subscription-tiers";
+import { TierPill } from "@/components/ui/tier-pill";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatCard } from "@/components/dashboard/ui/stat-card";
@@ -89,13 +91,24 @@ export default async function AdminDisputesPage({
             : [{ createdAt: "desc" }],
       take: 200,
       include: {
-        buyer: { select: { id: true, displayName: true } },
-        seller: { select: { id: true, displayName: true } },
+        buyer: { select: { id: true, displayName: true, accountType: true } },
+        seller: { select: { id: true, displayName: true, accountType: true } },
         bundle: { select: { id: true, orderNumber: true, totalCost: true, refundedAmount: true } },
       },
     }),
     prisma.disputeV2.groupBy({ by: ["status"], _count: { _all: true } }),
   ]);
+
+  // Voorrang bij support en geschillen (tier-feature prioritySupport, Fase 45):
+  // in "Te beoordelen" komen geschillen met een Unlimited+/Enterprise-partij
+  // bovenaan. Array.sort is stabiel, dus de SLA-volgorde blijft binnen de groep.
+  const isPriorityParty = (accountType: string) => hasFeature(accountType, "prioritySupport");
+  const isPriority = (d: (typeof disputes)[number]) =>
+    isPriorityParty(d.buyer.accountType) || isPriorityParty(d.seller.accountType);
+  if (tab === "escalated") {
+    disputes.sort((a, b) => Number(isPriority(b)) - Number(isPriority(a)));
+  }
+  const nPriority = tab === "escalated" ? disputes.filter(isPriority).length : 0;
 
   const countOf = (statuses: readonly string[]) =>
     counts.filter((c) => statuses.includes(c.status)).reduce((s, c) => s + c._count._all, 0);
@@ -115,7 +128,7 @@ export default async function AdminDisputesPage({
       />
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Te beoordelen" value={nEscalated} icon={Scale} iconClassName="bg-rose-500/10 text-rose-600 dark:text-rose-400" href="/dashboard/admin/disputes?tab=escalated" hint={nOverdue > 0 ? `${nOverdue} over SLA` : undefined} />
+        <StatCard label="Te beoordelen" value={nEscalated} icon={Scale} iconClassName="bg-rose-500/10 text-rose-600 dark:text-rose-400" href="/dashboard/admin/disputes?tab=escalated" hint={[nOverdue > 0 ? `${nOverdue} over SLA` : null, nPriority > 0 ? `${nPriority} met voorrang` : null].filter(Boolean).join(" · ") || undefined} />
         <StatCard label="Lopend tussen partijen" value={nActive} icon={Hourglass} iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-400" href="/dashboard/admin/disputes?tab=active" />
         <StatCard label="Afgerond" value={nResolved} icon={CheckCircle2} iconClassName="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" href="/dashboard/admin/disputes?tab=resolved" />
         <StatCard label="Totaal" value={nEscalated + nActive + nResolved} icon={AlertTriangle} iconClassName="bg-muted text-muted-foreground" href="/dashboard/admin/disputes?tab=all" />
@@ -189,7 +202,18 @@ export default async function AdminDisputesPage({
                       <p className="font-mono text-[11px] text-muted-foreground">{d.id.slice(0, 8)} · {fmt(d.createdAt)}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-foreground">{d.buyer.displayName} <span className="text-muted-foreground">vs</span> {d.seller.displayName}</p>
+                      <p className="flex flex-wrap items-center gap-1.5 text-foreground">
+                        <span>{d.buyer.displayName}</span>
+                        {isPriorityParty(d.buyer.accountType) && <TierPill accountType={d.buyer.accountType} />}
+                        <span className="text-muted-foreground">vs</span>
+                        <span>{d.seller.displayName}</span>
+                        {isPriorityParty(d.seller.accountType) && <TierPill accountType={d.seller.accountType} />}
+                      </p>
+                      {isPriority(d) && (
+                        <div className="mt-1">
+                          <StatusBadge tone="primary" icon={Zap}>Voorrang</StatusBadge>
+                        </div>
+                      )}
                       {d.fundingSource === "SELLER_BALANCE" && (
                         <p className="text-[11px] text-muted-foreground">na ontvangst · uit verkoperssaldo</p>
                       )}

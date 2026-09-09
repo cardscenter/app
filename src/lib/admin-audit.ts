@@ -41,7 +41,10 @@ export type AdminAction =
   | "SET_EVENT_OFFICIAL"
   | "GRANT_TRUSTED_ORGANIZER"
   | "REVOKE_TRUSTED_ORGANIZER"
-  | "REVIEW_EVENT_REPORT";
+  | "REVIEW_EVENT_REPORT"
+  // Fase 45 — tier-beheer door admin
+  | "GRANT_TIER"
+  | "REVOKE_TIER";
 
 export type AdminTargetType =
   | "USER"

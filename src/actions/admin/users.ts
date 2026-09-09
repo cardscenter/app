@@ -6,6 +6,8 @@ import { requireAdmin } from "@/lib/admin";
 import { logAdminAction } from "@/lib/admin-audit";
 import { createNotification } from "@/actions/notification";
 import { syncReservedBalance } from "@/lib/balance-check";
+import { upgradeToTier, downgradeUserToFree } from "@/actions/subscription";
+import { ACCOUNT_TIERS, type BillingCycle } from "@/lib/subscription-tiers";
 
 export async function resetIbanCooldown(userId: string) {
   const { adminId } = await requireAdmin();
@@ -175,4 +177,121 @@ export async function syncUserReservedBalance(userId: string) {
   revalidatePath(`/dashboard/admin/users/${userId}`);
 
   return { success: true, previousReserved, newReserved, delta };
+}
+
+/**
+ * Tier handmatig toekennen (Fase 45). Zolang Mollie-recurring-billing (Fase 17)
+ * niet bestaat is dit — naast de Enterprise-aanvraag — de enige manier om een
+ * account op PRO/UNLIMITED/ENTERPRISE te zetten. Loopt via `upgradeToTier`
+ * (zet accountType, premiumExpiresAt, tierRank/searchBoost, quota + Subscription).
+ * De tier verloopt na de gekozen cyclus via de check-subscriptions-cron.
+ */
+export async function grantTier(params: {
+  userId: string;
+  tier: "PRO" | "UNLIMITED" | "ENTERPRISE";
+  billingCycle: BillingCycle;
+  customMonthlyPrice?: number;
+  reason: string;
+}) {
+  const { adminId } = await requireAdmin();
+  const { userId, tier, billingCycle } = params;
+
+  const trimmedReason = params.reason?.trim();
+  if (!trimmedReason || trimmedReason.length < 5) return { error: "Reden is verplicht (min. 5 tekens)" };
+  if (!(tier in ACCOUNT_TIERS) || tier === ("FREE" as string)) return { error: "Ongeldige tier" };
+  if (billingCycle !== "MONTHLY" && billingCycle !== "YEARLY") return { error: "Ongeldige cyclus" };
+
+  let customMonthlyPrice: number | undefined;
+  if (params.customMonthlyPrice !== undefined) {
+    if (tier !== "ENTERPRISE") return { error: "Een custom prijs kan alleen bij Enterprise" };
+    if (!Number.isFinite(params.customMonthlyPrice) || params.customMonthlyPrice <= 0) {
+      return { error: "Ongeldige maandprijs" };
+    }
+    customMonthlyPrice = Math.round(params.customMonthlyPrice * 100) / 100;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { displayName: true, accountType: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+  // ADMIN is een rol, geen abonnement — upgradeToTier zou die rol overschrijven.
+  if (user.accountType === "ADMIN") return { error: "Een admin-account kan geen tier krijgen" };
+
+  const upgrade = await upgradeToTier(userId, tier, billingCycle, customMonthlyPrice);
+  if ("error" in upgrade) return { error: upgrade.error };
+
+  await logAdminAction({
+    adminId,
+    action: "GRANT_TIER",
+    targetType: "USER",
+    targetId: userId,
+    metadata: {
+      userName: user.displayName,
+      previousAccountType: user.accountType,
+      tier,
+      billingCycle,
+      monthlyPrice: customMonthlyPrice ?? ACCOUNT_TIERS[tier].monthlyPrice,
+      expiresAt: upgrade.expiresAt?.toISOString() ?? null,
+      reason: trimmedReason,
+    },
+  });
+
+  const tierName = tier === "PRO" ? "Pro" : tier === "UNLIMITED" ? "Unlimited" : "Enterprise";
+  const until = upgrade.expiresAt?.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+  await createNotification(
+    userId,
+    "ACCOUNT_UPDATE",
+    `Abonnement ${tierName} toegekend`,
+    `Je account staat nu op ${tierName}${until ? ` tot ${until}` : ""}. Alle bijbehorende voordelen zijn direct actief.`,
+    "/dashboard/abonnement",
+  );
+
+  revalidatePath(`/dashboard/admin/users/${userId}`);
+  revalidatePath("/dashboard/abonnement");
+
+  return { success: true, expiresAt: upgrade.expiresAt };
+}
+
+/**
+ * Tier direct intrekken → FREE (Fase 45). Zelfde reset als de expiry-cron,
+ * maar de Subscription krijgt status CANCELLED + cancelledAt. Winkel-URL en
+ * winkelpagina blijven bewaard (route geeft notFound tot een nieuwe upgrade).
+ */
+export async function revokeTier(userId: string, reason: string) {
+  const { adminId } = await requireAdmin();
+
+  const trimmedReason = reason?.trim();
+  if (!trimmedReason || trimmedReason.length < 5) return { error: "Reden is verplicht (min. 5 tekens)" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { displayName: true, accountType: true },
+  });
+  if (!user) return { error: "Gebruiker niet gevonden" };
+  if (user.accountType === "ADMIN") return { error: "Een admin-account heeft geen tier om in te trekken" };
+  if (user.accountType === "FREE") return { error: "Account staat al op FREE" };
+
+  await downgradeUserToFree([userId], "CANCELLED");
+
+  await logAdminAction({
+    adminId,
+    action: "REVOKE_TIER",
+    targetType: "USER",
+    targetId: userId,
+    metadata: { userName: user.displayName, previousAccountType: user.accountType, reason: trimmedReason },
+  });
+
+  await createNotification(
+    userId,
+    "ACCOUNT_UPDATE",
+    "Abonnement beëindigd",
+    `Je account is door een admin teruggezet naar Gratis. Neem contact op met support als je hier vragen over hebt.`,
+    "/dashboard/abonnement",
+  );
+
+  revalidatePath(`/dashboard/admin/users/${userId}`);
+  revalidatePath("/dashboard/abonnement");
+
+  return { success: true };
 }
