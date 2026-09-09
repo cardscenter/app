@@ -28,6 +28,9 @@ export type SellerProfileUser = {
   isIbanVerified: boolean;
   isAddressVerified: boolean;
   profileBanner: string | null;
+  coverImageUrl: string | null;
+  websiteUrl: string | null;
+  socialLinks: string | null;
   shopSlug: string | null;
   shopBannerUrl: string | null;
   shopTagline: string | null;
@@ -99,6 +102,9 @@ export const getSellerProfileData = cache(
           isIbanVerified: true,
           isAddressVerified: true,
           profileBanner: true,
+          coverImageUrl: true,
+          websiteUrl: true,
+          socialLinks: true,
           shopSlug: true,
           shopBannerUrl: true,
           shopTagline: true,

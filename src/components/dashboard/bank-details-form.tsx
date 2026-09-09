@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Landmark } from "lucide-react";
 import { toast } from "sonner";
 import { updateBankDetails } from "@/actions/profile";
 import { formatIbanForDisplay } from "@/lib/validations/iban";
@@ -60,12 +59,7 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
 
   if (!editing && iban) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Landmark className="size-4" />
-          <span className="text-sm font-medium">{t("bankDetailsTitle")}</span>
-        </div>
-
+      <div className="space-y-3 rounded-lg border border-border bg-muted/40 px-3 py-3">
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">{t("ibanLabel")}</p>
           <p className="font-mono text-sm text-foreground">{formatIbanForDisplay(iban)}</p>
@@ -96,11 +90,6 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Landmark className="size-4" />
-        <span className="text-sm font-medium">{t("bankDetailsTitle")}</span>
-      </div>
-
       <p className="text-xs text-muted-foreground">{t("bankDetailsHelp")}</p>
 
       <div>

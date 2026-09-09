@@ -82,23 +82,18 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
     "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 
   return (
-    <div className="rounded-lg border border-border bg-muted/20">
-      {/* Kop-rij */}
-      <div className="flex items-center justify-between gap-4 px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-3">
+    <div>
+      {/* Kop-rij: status + actie (label/uitleg komen van de FieldRow) */}
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2 text-sm">
           <span className={enabled ? "text-emerald-500" : "text-muted-foreground"}>
             {enabled ? <ShieldCheck className="size-4" /> : <Shield className="size-4" />}
           </span>
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Twee-factor-authenticatie (2FA)</p>
-            <p className="truncate text-sm font-medium text-foreground">
-              {enabled ? (
-                <span className="text-emerald-600 dark:text-emerald-400">Ingeschakeld</span>
-              ) : (
-                "Uitgeschakeld"
-              )}
-            </p>
-          </div>
+          {enabled ? (
+            <span className="font-medium text-emerald-600 dark:text-emerald-400">Ingeschakeld</span>
+          ) : (
+            <span className="text-foreground">Uitgeschakeld</span>
+          )}
         </div>
         <div className="shrink-0">
           {enabled ? (
@@ -138,14 +133,14 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
       </div>
 
       {error && (
-        <p className="mx-3 mb-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+        <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
           {error}
         </p>
       )}
 
       {/* Stap 1 — QR scannen + code bevestigen */}
       {step === "scan" && qrDataUrl && (
-        <div className="space-y-3 border-t border-border px-3 py-3">
+        <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
           <p className="flex items-center gap-2 text-sm text-foreground">
             <strong>1.</strong>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -201,7 +196,7 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
 
       {/* Stap 2 — backup-codes (eenmalig zichtbaar) */}
       {step === "backup" && backupCodes && (
-        <div className="space-y-3 border-t border-border px-3 py-3">
+        <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
           <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
             ✅ 2FA staat aan!
           </p>
@@ -241,7 +236,7 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
 
       {/* Uitzetten — wachtwoord + code */}
       {step === "disable" && (
-        <form onSubmit={handleDisable} className="space-y-3 border-t border-border px-3 py-3">
+        <form onSubmit={handleDisable} className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
           <p className="text-sm text-muted-foreground">
             Bevestig met je wachtwoord en een geldige 2FA- of backup-code.
           </p>

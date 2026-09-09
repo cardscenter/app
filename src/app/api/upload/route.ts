@@ -19,6 +19,7 @@ const VALID_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
   // — en dus zonder moderatie — opgeslagen.
   "event",
   "shop",
+  "cover",
 ]);
 
 export async function POST(request: NextRequest) {

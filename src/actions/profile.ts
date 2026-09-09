@@ -11,6 +11,7 @@ import { findUserByNameInsensitive } from "@/lib/username-policy-server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { convertToBusinessSchema } from "@/lib/validations/shop";
+import { MAX_SOCIAL_LINKS } from "@/lib/events/socials";
 
 const profileSchema = z.object({
   // Bewust ruimer dan USERNAME_MAX: legacy-namen (>16 tekens) moeten bio/avatar
@@ -18,8 +19,29 @@ const profileSchema = z.object({
   // hieronder af bij een daadwerkelijke rename.
   displayName: z.string().min(3).max(64).regex(/^[a-zA-Z0-9_-]+$/),
   bio: z.string().max(500).optional(),
-  defaultShippingCost: z.coerce.number().min(0),
+  websiteUrl: z.string().max(200).optional(),
 });
+
+/** Alleen eigen upload-paden (via /api/upload) of leeg — geen externe URL's. */
+const UPLOAD_URL_RE = /^\/api\/uploads\/[A-Za-z0-9._-]+$/;
+
+/**
+ * Website/social-URL normaliseren: "cardscenter.nl" → "https://cardscenter.nl".
+ * Retourneert null bij een lege string, undefined bij een ongeldige URL.
+ */
+function normalizeHttpUrl(raw: string): string | null | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const u = new URL(withScheme);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return undefined;
+    if (!u.hostname.includes(".")) return undefined;
+    return u.toString();
+  } catch {
+    return undefined;
+  }
+}
 
 export async function updateProfile(formData: FormData) {
   const session = await auth();
@@ -28,7 +50,7 @@ export async function updateProfile(formData: FormData) {
   const result = profileSchema.safeParse({
     displayName: formData.get("displayName"),
     bio: formData.get("bio") || undefined,
-    defaultShippingCost: formData.get("defaultShippingCost"),
+    websiteUrl: (formData.get("websiteUrl") as string | null) ?? undefined,
   });
 
   if (!result.success) {
@@ -36,6 +58,36 @@ export async function updateProfile(formData: FormData) {
   }
 
   const { displayName, bio } = result.data;
+
+  // Website + socials (profiel-redesign sept 2026). Socials komen als
+  // herhaalde FormData-key "socialLinks" binnen; lege regels overslaan.
+  const websiteUrl = normalizeHttpUrl(result.data.websiteUrl ?? "");
+  if (websiteUrl === undefined) {
+    return { error: "Ongeldige website-URL" };
+  }
+  const socialLinks: string[] = [];
+  for (const raw of formData.getAll("socialLinks")) {
+    if (typeof raw !== "string" || !raw.trim()) continue;
+    const normalized = normalizeHttpUrl(raw);
+    if (normalized === undefined) {
+      return { error: `Ongeldige social-link: ${raw.trim()}` };
+    }
+    if (normalized && !socialLinks.includes(normalized)) socialLinks.push(normalized);
+  }
+  if (socialLinks.length > MAX_SOCIAL_LINKS) {
+    return { error: `Maximaal ${MAX_SOCIAL_LINKS} social-links` };
+  }
+
+  // Omslagfoto: de client uploadt 'm al via /api/upload (context "cover",
+  // gemodereerd) en stuurt alleen het pad mee. Leeg = verwijderen.
+  const coverRaw = formData.get("coverImageUrl");
+  let coverImageUrl: string | null | undefined;
+  if (typeof coverRaw === "string") {
+    const trimmed = coverRaw.trim();
+    if (trimmed === "") coverImageUrl = null;
+    else if (UPLOAD_URL_RE.test(trimmed)) coverImageUrl = trimmed;
+    else return { error: "Ongeldige omslagfoto" };
+  }
 
   // Fase 43 — username-policy alleen bij daadwerkelijke rename: users met een
   // legacy-naam die inmiddels op de blocklist staat moeten bio/avatar kunnen
@@ -94,10 +146,15 @@ export async function updateProfile(formData: FormData) {
     data: {
       displayName,
       bio: bio ?? null,
+      websiteUrl,
+      socialLinks: socialLinks.length > 0 ? JSON.stringify(socialLinks) : null,
+      ...(coverImageUrl !== undefined && { coverImageUrl }),
       ...(avatarUrl !== undefined && { avatarUrl: avatarUrl || null }),
     },
     select: { avatarUrl: true },
   });
+
+  revalidatePath(`/verkoper/${session.user.id}`);
 
   return { success: true, avatarUrl: updated.avatarUrl };
 }

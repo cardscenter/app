@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
+import { ExternalLink, Store } from "lucide-react";
 import { ProfileForm } from "@/components/dashboard/profile-form";
 import { PasswordChangeForm } from "@/components/dashboard/password-change-form";
 import { TwoFactorSettings } from "@/components/dashboard/two-factor-settings";
@@ -9,31 +11,23 @@ import { AddressForm } from "@/components/dashboard/address-form";
 import { BankDetailsForm } from "@/components/dashboard/bank-details-form";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
-import { SessionProvider } from "next-auth/react";
-import { Link } from "@/i18n/navigation";
+import { FieldRow } from "@/components/dashboard/ui/field-row";
+import { TierPill } from "@/components/ui/tier-pill";
 import { buttonVariants } from "@/components/ui/button-variants";
-import {
-  ExternalLink,
-  Shield,
-  ShieldCheck,
-  Calendar,
-  Mail,
-  CreditCard,
-  Award,
-  Building2,
-  History,
-  Sparkles,
-  Landmark,
-  MapPin,
-  User as UserIcon,
-  KeyRound,
-} from "lucide-react";
-import { getLevel } from "@/lib/seller-levels";
+import { getLevel, getLevelByKey } from "@/lib/seller-levels";
 import { getSellerStats } from "@/actions/review";
-import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { hasFeature } from "@/lib/subscription-tiers";
+import { parseSocialLinks } from "@/lib/events/socials";
 import { IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
-import type { ReactNode } from "react";
+import { formatDateShort } from "@/lib/format";
 
+/**
+ * /dashboard/profiel (redesign sept 2026, naar Connext-referentie):
+ * één publiek "profiel"-blok met omslagfoto + rijen label-links/veld-rechts,
+ * daarna alleen nog een nieuwe kaart als het écht een ander onderwerp is:
+ * Account & beveiliging · Adres · Bedrijfsgegevens (zakelijk) · Bankgegevens.
+ * Geen KPI-tegels meer — die informatie leeft op het openbare profiel.
+ */
 export default async function ProfilePage({
   params,
 }: {
@@ -57,259 +51,147 @@ export default async function ProfilePage({
   if (!user) return null;
 
   const stats = await getSellerStats(user.id);
-  const sellerLevel = stats ? getLevel(stats.xp) : null;
-
-  const memberSince = user.createdAt.toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
-  const tierLabels: Record<string, string> = {
-    FREE: "Free",
-    PRO: "Pro",
-    UNLIMITED: "Unlimited",
-    ENTERPRISE: "Enterprise",
-    ADMIN: "Admin",
-  };
+  const currentLevel = stats ? getLevel(stats.xp) : null;
+  const bannerLevel = user.profileBanner ? getLevelByKey(user.profileBanner) : undefined;
+  const fallbackGradient =
+    bannerLevel?.gradient ?? currentLevel?.gradient ?? "from-sky-200 via-violet-200 to-pink-200";
 
   const isBusiness = user.accountKind === "BUSINESS";
+  const canShop = hasFeature(user.accountType, "customProfile");
+
+  const readOnlyValue = "text-sm text-foreground md:pt-2";
 
   return (
     <div className="space-y-6">
       <DashboardPageHeader
         title={t("profile")}
-        subtitle="Je identiteit, adres, beveiliging en bankgegevens."
+        subtitle={tp("subtitle")}
         action={
-          <Link href={`/verkoper/${user.id}`} className={buttonVariants({ variant: "outline" })}>
-            <ExternalLink className="size-3.5" />
-            {tp("viewPublicProfile")}
-          </Link>
+          <>
+            {canShop && (
+              <Link href="/dashboard/winkel" className={buttonVariants({ variant: "outline" })}>
+                <Store className="size-3.5" />
+                {tp("shopPage")}
+              </Link>
+            )}
+            <Link href={`/verkoper/${user.id}`} className={buttonVariants({ variant: "outline" })}>
+              <ExternalLink className="size-3.5" />
+              {tp("viewPublicProfile")}
+            </Link>
+          </>
         }
       />
 
-      {/* Account overview — 4 KPI-cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <OverviewCard icon={<Calendar className="size-4" />} label={tp("memberSince")}>
-          <span className="text-sm font-semibold text-foreground">{memberSince}</span>
-        </OverviewCard>
-        <OverviewCard icon={<CreditCard className="size-4" />} label={tp("accountTier")}>
-          <span className="text-sm font-semibold text-foreground">
-            {tierLabels[user.accountType] ?? user.accountType}
-          </span>
-        </OverviewCard>
-        <OverviewCard
-          icon={
-            user.isVerified ? (
-              <ShieldCheck className="size-4 text-green-500" />
-            ) : (
-              <Shield className="size-4" />
-            )
-          }
-          label={tp("verification")}
-        >
-          {user.isVerified ? (
-            <span className="inline-flex items-center gap-1 text-sm font-semibold text-green-600 dark:text-green-400">
-              {tp("verified")} <VerifiedBadge size="sm" />
-            </span>
-          ) : (
+      {/* BLOK 1 — Openbaar profiel: omslag + naam + foto + bio + locatie + links */}
+      <section className="overflow-hidden dash-card">
+        <ProfileForm
+          user={{
+            displayName: user.displayName,
+            bio: user.bio,
+            avatarUrl: user.avatarUrl,
+            coverImageUrl: user.coverImageUrl,
+            websiteUrl: user.websiteUrl,
+            city: user.city,
+            country: user.country,
+          }}
+          socialLinks={parseSocialLinks(user.socialLinks)}
+          fallbackGradient={fallbackGradient}
+        />
+      </section>
+
+      {/* BLOK 2 — Account & beveiliging (privé) */}
+      <DashboardSection
+        title={tp("accountSection")}
+        description={tp("accountSectionHint")}
+        contentClassName="px-5 py-6 sm:px-6"
+      >
+        <FieldRow label={tp("email")} hint={tp("emailHint")}>
+          <p className={readOnlyValue}>{user.email}</p>
+        </FieldRow>
+
+        <FieldRow label={tp("password")} hint={tp("passwordHint")}>
+          <PasswordChangeForm />
+        </FieldRow>
+
+        <FieldRow label={tp("twoFactor")} hint={tp("twoFactorHint")}>
+          <TwoFactorSettings enabled={user.totpEnabled} />
+        </FieldRow>
+
+        <FieldRow label={tp("accountTier")} hint={tp("accountTierHint")}>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+            <TierPill accountType={user.accountType} />
             <Link
-              href="/dashboard/verificatie"
-              className="text-sm font-semibold text-primary hover:text-primary-hover transition-colors"
+              href="/dashboard/abonnement"
+              className="text-xs font-medium text-primary transition-colors hover:text-primary-hover"
             >
-              {tp("verifyNow")}
+              {tp("manage")} →
             </Link>
-          )}
-        </OverviewCard>
-        <OverviewCard icon={<Award className="size-4" />} label={tp("sellerLevel")}>
-          <span className="text-sm font-semibold text-foreground">
-            {sellerLevel?.name ?? "Tin"}{" "}
-            <span className="font-normal text-muted-foreground">
-              ({stats?.xp ?? 0} XP)
-            </span>
-          </span>
-        </OverviewCard>
+          </div>
+        </FieldRow>
+
+        {user.usernameHistory.length > 0 && (
+          <FieldRow label={tp("usernameHistory")} hint={tp("usernameHistoryHint")}>
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {user.usernameHistory.map((h) => (
+                <li key={h.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground line-through">@{h.oldName}</span>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {formatDateShort(h.changedAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </FieldRow>
+        )}
+      </DashboardSection>
+
+      {/* BLOK 3 — Adres (gedeeld met /verzending via dezelfde AddressForm) */}
+      <div id="adres" className="scroll-mt-24">
+        <DashboardSection
+          title={tp("addressSection")}
+          description={tp("addressSectionHint")}
+          contentClassName="px-5 py-6 sm:px-6"
+        >
+          <FieldRow label={tp("addressLabel")} hint={tp("addressLabelHint")}>
+            <AddressForm user={user} />
+          </FieldRow>
+        </DashboardSection>
       </div>
 
-      {/* SECTIE 1 — Profielinformatie: avatar + displayName + bio */}
-      <DashboardSection
-        icon={<UserIcon className="size-5" />}
-        title={tp("editProfile")}
-        description="Hoe andere gebruikers jou zien op het platform."
-      >
-        <div className="max-w-lg">
-          <SessionProvider>
-            <ProfileForm user={user} />
-          </SessionProvider>
-        </div>
-      </DashboardSection>
-
-      {/* SECTIE 2 — Account & Login */}
-      <DashboardSection
-        icon={<KeyRound className="size-5" />}
-        title="Account & Login"
-        description="Inloggegevens en abonnement."
-      >
-        <div className="space-y-4">
-          <ReadOnlyRow icon={<Mail className="size-4" />} label={tp("email")} value={user.email} />
-          <ReadOnlyRow
-            icon={<CreditCard className="size-4" />}
-            label={tp("accountTier")}
-            value={tierLabels[user.accountType] ?? user.accountType}
-            action={
-              <Link
-                href="/dashboard/abonnement"
-                className="text-sm font-medium text-primary hover:text-primary-hover transition-colors"
-              >
-                Beheren →
-              </Link>
-            }
-          />
-          <PasswordChangeForm />
-          <TwoFactorSettings enabled={user.totpEnabled} />
-        </div>
-      </DashboardSection>
-
-      {/* SECTIE 3 — Adresgegevens (synced met /verzending) */}
-      <DashboardSection
-        icon={<MapPin className="size-5" />}
-        title="Adresgegevens"
-        description="Je adres wordt gedeeld met verkopers na aankoop. Maximaal eens per 30 dagen wijzigbaar."
-      >
-        <AddressForm user={user} />
-      </DashboardSection>
-
-      {/* SECTIE 4 — Bedrijfsgegevens (alleen voor BUSINESS-accounts) */}
+      {/* BLOK 4 — Bedrijfsgegevens (alleen zakelijke accounts, read-only) */}
       {isBusiness && (
         <DashboardSection
-          icon={<Building2 className="size-5" />}
-          title="Bedrijfsgegevens"
-          description="Officiële gegevens van je onderneming. Wijzigen via support."
+          title={tp("businessSection")}
+          description={tp("businessSectionHint")}
+          contentClassName="px-5 py-6 sm:px-6"
         >
-          <div className="space-y-4">
-            <ReadOnlyRow
-              icon={<Building2 className="size-4" />}
-              label="Bedrijfsnaam"
-              value={user.companyName ?? "—"}
-            />
-            <ReadOnlyRow
-              icon={<Building2 className="size-4" />}
-              label="BTW-nummer"
-              value={user.vatNumber ?? "—"}
-            />
-            <ReadOnlyRow
-              icon={<Building2 className="size-4" />}
-              label="KVK-nummer"
-              value={user.cocNumber ?? "—"}
-            />
-          </div>
+          <FieldRow label={tp("companyName")}>
+            <p className={readOnlyValue}>{user.companyName ?? "—"}</p>
+          </FieldRow>
+          <FieldRow label={tp("cocNumber")}>
+            <p className={readOnlyValue}>{user.cocNumber ?? "—"}</p>
+          </FieldRow>
+          <FieldRow label={tp("vatNumber")}>
+            <p className={readOnlyValue}>{user.vatNumber ?? "—"}</p>
+          </FieldRow>
         </DashboardSection>
       )}
 
-      {/* SECTIE 6 — Bankgegevens */}
+      {/* BLOK 5 — Bankgegevens */}
       <DashboardSection
-        icon={<Landmark className="size-5" />}
-        title="Bankgegevens"
-        description="Voor uitbetalingen van je verkopen. Eerste keer gratis, daarna 30 dagen cooldown bij wijziging."
+        title={tp("bankSection")}
+        description={tp("bankSectionHint", { days: IBAN_COOLDOWN_DAYS })}
+        contentClassName="px-5 py-6 sm:px-6"
       >
-        <div className="max-w-lg">
+        <FieldRow label={tp("bankAccountLabel")} hint={tp("bankAccountHint")}>
           <BankDetailsForm
             iban={user.iban}
             accountHolderName={user.accountHolderName}
             lastIbanChange={user.lastIbanChange?.toISOString() ?? null}
             cooldownDays={IBAN_COOLDOWN_DAYS}
           />
-        </div>
+        </FieldRow>
       </DashboardSection>
-
-      {/* SECTIE 6b — Winkelpagina (Fase 45): beheer verhuisd naar /dashboard/winkel */}
-      {(user.accountType === "UNLIMITED" || user.accountType === "ENTERPRISE" || user.accountType === "ADMIN") && (
-        <DashboardSection
-          icon={<Sparkles className="size-5" />}
-          title="Winkelpagina"
-          description="Je winkel-URL, banner, slogan en blokken beheer je op de pagina Winkelpagina."
-        >
-          <Link href="/dashboard/winkel" className={buttonVariants({ variant: "outline", size: "sm" })}>
-            Naar Winkelpagina
-            <ExternalLink data-icon="inline-end" />
-          </Link>
-        </DashboardSection>
-      )}
-
-      {/* Voorkeuren (runner-up, bied-bevestiging, e-mail) leven sinds Fase 44
-          op /dashboard/instellingen; personalisatie is tijdelijk op slot. */}
-
-      {/* SECTIE 9 — Geschiedenis */}
-      {user.usernameHistory.length > 0 && (
-        <DashboardSection
-          icon={<History className="size-5" />}
-          title={tp("usernameHistory")}
-          description="Vorige usernames blijven 90 dagen zichtbaar in zoekresultaten en op je publieke profiel."
-        >
-          <div className="space-y-2">
-            {user.usernameHistory.map((h) => (
-              <div
-                key={h.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm"
-              >
-                <span className="text-muted-foreground line-through">{h.oldName}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {new Date(h.changedAt).toLocaleDateString("nl-NL", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-              </div>
-            ))}
-          </div>
-        </DashboardSection>
-      )}
-    </div>
-  );
-}
-
-function OverviewCard({
-  icon,
-  label,
-  children,
-}: {
-  icon: ReactNode;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="dash-card p-4 shadow-card">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span className="text-xs font-medium">{label}</span>
-      </div>
-      <div className="mt-2">{children}</div>
-    </div>
-  );
-}
-
-function ReadOnlyRow({
-  icon,
-  label,
-  value,
-  action,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="text-muted-foreground">{icon}</span>
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="truncate text-sm font-medium text-foreground">{value}</p>
-        </div>
-      </div>
-      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

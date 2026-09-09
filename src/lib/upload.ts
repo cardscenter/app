@@ -29,7 +29,9 @@ export type UploadContext =
   // → modereren.
   | "event"
   // Winkelpagina (Fase 45): banner + galerij-foto's. Publiek zichtbaar → modereren.
-  | "shop";
+  | "shop"
+  // Profiel-omslagfoto (sept 2026). Publiek zichtbaar → modereren.
+  | "cover";
 
 const MODERATED_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
   "listing",
@@ -40,6 +42,7 @@ const MODERATED_CONTEXTS: ReadonlySet<UploadContext> = new Set<UploadContext>([
   "shipping",
   "event",
   "shop",
+  "cover",
 ]);
 
 export const MODERATION_BLOCKED_PREFIX = "MODERATION_BLOCKED:";

@@ -20,6 +20,12 @@ model User {
   bio           String?
   avatarUrl     String?
   profileBanner     String?   // e.g. "beginner" — references tier banner image
+  // Profiel-redesign (sept 2026): omslagfoto + website + socials, publiek
+  // zichtbaar op /verkoper/[id]. socialLinks = JSON string[] (max 4 URL's,
+  // zelfde parser als events: src/lib/events/socials.ts).
+  coverImageUrl     String?
+  websiteUrl        String?
+  socialLinks       String?
   profileEmblem     String?   // Cosmetic emblem key (frame around avatar)
   profileBackground String?   // Cosmetic animated background key
 

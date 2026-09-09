@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Pencil, Store, LayoutTemplate } from "lucide-react";
+import { Pencil, Store, LayoutTemplate, Globe } from "lucide-react";
+import { parseSocialLinks, detectSocialPlatform } from "@/lib/events/socials";
+import { SocialIcon } from "@/components/events/social-icon";
 import { getLevelByKey } from "@/lib/seller-levels";
 import { hasFeature } from "@/lib/subscription-tiers";
 import { formatDate } from "@/lib/format";
@@ -35,6 +37,19 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
   const canShop = hasFeature(user.accountType, "customProfile") && !!user.shopSlug;
   const showShopLink = canShop && (user.shopPublished || isOwner);
   const levelBanner = user.profileBanner ? getLevelByKey(user.profileBanner) : undefined;
+  // Profiel-redesign (sept 2026): eigen omslagfoto + website + socials uit
+  // /dashboard/profiel. Zonder omslag valt de kaart terug op de level-strip.
+  const coverUrl = variant === "shop" && user.shopBannerUrl ? null : user.coverImageUrl;
+  const socialLinks = parseSocialLinks(user.socialLinks);
+  const websiteHost = user.websiteUrl
+    ? (() => {
+        try {
+          return new URL(user.websiteUrl).hostname.replace(/^www\./, "");
+        } catch {
+          return user.websiteUrl;
+        }
+      })()
+    : null;
   const activeTotal = activeCounts.auctions + activeCounts.listings + activeCounts.claimsales;
 
   const facts: { label: string; value: React.ReactNode }[] = [
@@ -79,8 +94,14 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
 
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-      {levelBanner && (
-        <div className={`h-3 w-full bg-gradient-to-r ${levelBanner.gradient}`} aria-hidden />
+      {coverUrl ? (
+        <div className="relative aspect-[5/1] max-h-56 min-h-28 w-full overflow-hidden">
+          <Image src={coverUrl} alt="" fill className="object-cover" sizes="(max-width: 1440px) 100vw, 1440px" unoptimized />
+        </div>
+      ) : (
+        levelBanner && (
+          <div className={`h-3 w-full bg-gradient-to-r ${levelBanner.gradient}`} aria-hidden />
+        )
       )}
       <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1.3fr)] lg:gap-8">
         {/* Links: identiteit + acties */}
@@ -112,7 +133,38 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
               </p>
             )}
             {variant === "profile" && user.bio && (
-              <p className="mt-2 line-clamp-3 text-sm text-foreground/80">{user.bio}</p>
+              <p className="mt-2 line-clamp-3 whitespace-pre-line text-sm text-foreground/80">{user.bio}</p>
+            )}
+            {(websiteHost || socialLinks.length > 0) && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {websiteHost && user.websiteUrl && (
+                  <a
+                    href={user.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    <Globe className="size-3.5 text-muted-foreground" />
+                    {websiteHost}
+                  </a>
+                )}
+                {socialLinks.map((url) => {
+                  const { platform, label } = detectSocialPlatform(url);
+                  return (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      title={label}
+                      aria-label={label}
+                      className="inline-flex size-7 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <SocialIcon platform={platform} className="size-3.5" />
+                    </a>
+                  );
+                })}
+              </div>
             )}
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {isOwner && variant === "profile" && (

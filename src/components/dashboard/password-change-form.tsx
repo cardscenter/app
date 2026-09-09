@@ -9,7 +9,8 @@ import { TotpStepUpField } from "@/components/dashboard/totp-step-up-field";
 /**
  * Wachtwoord-wijzigen rij + uitklap-formulier op /dashboard/profiel
  * (Fase 16-followup — vervangt de "Wijzigen via support"-placeholder).
- * Zelfde rij-styling als ReadOnlyRow in de profiel-page.
+ * Sept 2026: rendert in de control-kolom van een <FieldRow>; label en
+ * uitleg komen van de rij, hier alleen waarde + actie + uitklap-form.
  */
 export function PasswordChangeForm() {
   const [open, setOpen] = useState(false);
@@ -45,16 +46,11 @@ export function PasswordChangeForm() {
     "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 
   return (
-    <div className="rounded-lg border border-border bg-muted/20">
-      <div className="flex items-center justify-between gap-4 px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="text-muted-foreground">
-            <Lock className="size-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Wachtwoord</p>
-            <p className="truncate text-sm font-medium text-foreground">••••••••</p>
-          </div>
+    <div>
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2 text-sm text-foreground">
+          <Lock className="size-4 text-muted-foreground" />
+          <span className="tracking-[0.2em]">••••••••</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {saved && (
@@ -76,7 +72,7 @@ export function PasswordChangeForm() {
       </div>
 
       {open && (
-        <form onSubmit={handleSubmit} className="space-y-3 border-t border-border px-3 py-3">
+        <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
               Huidig wachtwoord
