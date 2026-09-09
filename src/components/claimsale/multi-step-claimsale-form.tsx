@@ -51,7 +51,6 @@ function initialState(): ClaimsaleFormState {
     startDate: d,
     startTimeOfDay: "09:00",
     upsells: [],
-    labels: [],
   };
 }
 
@@ -105,17 +104,12 @@ export function MultiStepClaimsaleForm({
       items: [next === "CARDS" ? makeEmptyCardItem() : makeEmptyProductItem()],
       // Brievenbuspakket is alleen voor CARDS — bij ITEMS uit, bij CARDS default aan.
       allowMailbox: next === "CARDS",
-      labels: [],
-    }));
+      }));
   };
 
   const prices = form.items
     .map((i) => parseFloat(i.price))
     .filter((p) => !Number.isNaN(p) && p > 0);
-  const hasMintItem =
-    form.type === "CARDS" &&
-    form.items.some((i) => i.condition === "Near Mint" || i.condition === "Mint");
-
   const handleSubmit = () => {
     const itemsWithPrice = form.items.filter((i) => parseFloat(i.price) > 0);
     if (itemsWithPrice.length === 0) {
@@ -163,7 +157,6 @@ export function MultiStepClaimsaleForm({
     formData.set("items", JSON.stringify(itemsPayload));
 
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
-    if (form.labels.length > 0) formData.set("labels", JSON.stringify(form.labels));
 
     startTransition(() => {
       formAction(formData);
@@ -252,14 +245,10 @@ export function MultiStepClaimsaleForm({
           <section data-section="promotie" className="glass rounded-2xl p-6 scroll-mt-32">
             <StepPromotie
               upsells={form.upsells}
-              labels={form.labels}
               userBalance={userBalance}
               accountType={accountType}
               freeUpsellsRemaining={freeUpsellsRemaining}
-              claimsaleType={form.type}
-              hasMintItem={hasMintItem}
               onUpsellsChange={(v) => updateField("upsells", v)}
-              onLabelsChange={(v) => updateField("labels", v)}
             />
           </section>
         </div>

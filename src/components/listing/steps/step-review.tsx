@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap, AlertCircle, Tag } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ZoomIn, Star, TrendingUp, Zap, AlertCircle } from "lucide-react";
 import { calculateUpsellCost } from "@/lib/upsell-config";
-import { calculateLabelCost, type LabelColor, type LabelType } from "@/lib/listing/labels";
-import { ListingLabels } from "@/components/listing/listing-labels";
 import { CarrierLogo } from "@/components/ui/carrier-logo";
 import { KNOWN_CARRIERS } from "@/lib/shipping/carriers";
 import type { EnrichedShippingMethod } from "@/components/ui/shipping-method-selector";
@@ -14,11 +12,6 @@ import type { ListingType, DeliveryMethod, PackageSize, Carrier, UpsellType } fr
 interface UpsellEntry {
   type: UpsellType;
   days: number;
-}
-
-interface SelectedLabel {
-  type: LabelType;
-  colorKey: LabelColor;
 }
 
 interface FormData {
@@ -41,7 +34,6 @@ interface FormData {
   packageSize: PackageSize | "";
   packageCount: number;
   upsells: UpsellEntry[];
-  labels?: SelectedLabel[];
 }
 
 interface ListingPreviewProps {
@@ -79,8 +71,7 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
     (sum, entry) => sum + calculateUpsellCost(entry.type, entry.days, accountType),
     0
   );
-  const labelsCost = calculateLabelCost(form.labels?.length ?? 0);
-  const totalPromotionCost = totalUpsellCost + labelsCost;
+  const totalPromotionCost = totalUpsellCost;
 
   const hasUrgent = form.upsells.some((u) => u.type === "URGENT_LABEL");
   const hasSpotlight = form.upsells.some((u) => u.type === "HOMEPAGE_SPOTLIGHT");
@@ -247,11 +238,6 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
               <span className="mt-1 inline-block text-sm text-primary">
                 {t("previewYou")}
               </span>
-              {form.labels && form.labels.length > 0 && (
-                <div className="mt-2">
-                  <ListingLabels labels={form.labels} size="md" />
-                </div>
-              )}
             </div>
           </div>
 
@@ -360,8 +346,8 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
         </div>
       </div>
 
-      {/* Promotie-kosten overzicht — upsells + labels gecombineerd */}
-      {(form.upsells.length > 0 || (form.labels && form.labels.length > 0)) && (
+      {/* Promotie-kosten overzicht */}
+      {form.upsells.length > 0 && (
         <div className="mt-8 glass rounded-2xl p-4 space-y-3">
           <h3 className="text-sm font-semibold text-foreground">{t("reviewUpsells")}</h3>
           {form.upsells.length > 0 && (
@@ -378,15 +364,6 @@ export function ListingPreview({ form, accountType, selectedShippingMethods, shi
                   </div>
                 );
               })}
-            </div>
-          )}
-          {form.labels && form.labels.length > 0 && (
-            <div className="flex items-center gap-2 glass-subtle rounded-lg px-3 py-2 text-sm">
-              <Tag className="h-4 w-4 text-primary" />
-              <span className="text-foreground">
-                {form.labels.length} {form.labels.length === 1 ? "label" : "labels"}
-              </span>
-              <span className="font-semibold text-foreground">€{labelsCost.toFixed(2)}</span>
             </div>
           )}
           <div className="border-t border-border/50 pt-2 flex justify-between text-sm">

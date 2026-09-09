@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { Trophy, Zap, AlertCircle, Clock, Eye, Pencil } from "lucide-react";
-import { AuctionLabels, type AuctionLabelData } from "@/components/auction/auction-labels";
 import { AuctionOwnerActions } from "@/components/auction/auction-owner-actions";
 import { MiniCountdown } from "@/components/dashboard/mini-countdown";
 import { EditAuctionDrawer, type EditAuctionInitialData } from "@/components/dashboard/edit-auction-drawer";
@@ -52,7 +51,6 @@ export interface SellerAuctionCardData {
     amount: number;
   } | null;
   hasReserveMet: boolean;
-  labels: AuctionLabelData[];
   /** Volledige initial-data voor de edit-drawer. Komt uit page-query. */
   editData: EditAuctionInitialData;
 }
@@ -137,12 +135,6 @@ export function SellerAuctionCard({ auction }: SellerAuctionCardProps) {
               </div>
             </div>
 
-            {/* Labels-rij */}
-            {auction.labels.length > 0 && (
-              <div className="mt-2">
-                <AuctionLabels labels={auction.labels} buyNowPrice={auction.buyNowPrice} size="sm" />
-              </div>
-            )}
 
             {/* Bid-block */}
             <div className="mt-3">

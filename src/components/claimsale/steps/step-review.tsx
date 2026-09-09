@@ -24,9 +24,6 @@ import {
   formatNLDateTime,
 } from "@/lib/claimsale/timing";
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
-import { calculateClaimsaleLabelCost } from "@/lib/claimsale/labels";
-import { CLAIMSALE_LABEL_TEXT_NL } from "../claimsale-labels";
-import { ClaimsaleLabels } from "../claimsale-labels";
 import type { ClaimsaleFormState, ClaimsaleItemDraft } from "../wizard-types";
 
 interface ClaimsalePreviewProps {
@@ -256,13 +253,6 @@ export function ClaimsalePreview({
                   <span className="italic text-muted-foreground">{t("titlePlaceholder")}</span>
                 )}
               </h1>
-              {form.labels.length > 0 && (
-                <ClaimsaleLabels
-                  labels={form.labels}
-                  size="md"
-                  className="mt-2"
-                />
-              )}
             </div>
 
             <SectionCard icon={Banknote} title={t("reviewPriceRange")}>
@@ -374,17 +364,12 @@ export function ClaimsalePreview({
         </SectionCard>
 
         {/* Promotie — alleen tonen als er iets gekozen is */}
-        {(form.upsells.length > 0 || form.labels.length > 0) && (
+        {form.upsells.length > 0 && (
           <SectionCard icon={Megaphone} title={t("stepPromotie")}>
             <dl className="space-y-2">
               {form.upsells.length > 0 && (
                 <InfoRow label={t("reviewPromotionUpsells")}>
                   {form.upsells.map((u) => UPSELL_LABEL[u.type] ?? u.type).join(" · ")}
-                </InfoRow>
-              )}
-              {form.labels.length > 0 && (
-                <InfoRow label={t("reviewPromotionLabels")}>
-                  <ClaimsaleLabels labels={form.labels} size="sm" />
                 </InfoRow>
               )}
             </dl>
@@ -394,7 +379,6 @@ export function ClaimsalePreview({
         {/* Te betalen kosten */}
         <PromotionCostBlock
           upsells={form.upsells}
-          labels={form.labels}
           accountType={accountType}
           freeUpsellsRemaining={freeUpsellsRemaining}
         />
@@ -470,17 +454,15 @@ export function ClaimsalePreview({
 
 function PromotionCostBlock({
   upsells,
-  labels,
   accountType,
   freeUpsellsRemaining,
 }: {
   upsells: ClaimsaleFormState["upsells"];
-  labels: ClaimsaleFormState["labels"];
   accountType: string;
   freeUpsellsRemaining: number;
 }) {
   const t = useTranslations("claimsale");
-  if (upsells.length === 0 && labels.length === 0) return null;
+  if (upsells.length === 0) return null;
 
   const allocation = applyFreeUpsellsToCost(
     upsells.map((u) => ({ type: u.type })),
@@ -488,8 +470,7 @@ function PromotionCostBlock({
     freeUpsellsRemaining,
     "claimsale"
   );
-  const labelCost = calculateClaimsaleLabelCost(labels.length);
-  const totalCost = Math.round((allocation.total + labelCost) * 100) / 100;
+  const totalCost = Math.round(allocation.total * 100) / 100;
 
   const formatPrice = (n: number) => (n === 0 ? "Gratis" : `€${n.toFixed(2).replace(".", ",")}`);
 
@@ -518,20 +499,6 @@ function PromotionCostBlock({
             </li>
           );
         })}
-        {labels.length > 0 && (
-          <li className="flex items-baseline justify-between gap-3 py-2 first:pt-0">
-            <div className="min-w-0 flex-1">
-              <div className="font-medium text-foreground">
-                {labels.length} {labels.length === 1 ? "Label" : "Labels"}
-                <span className="ml-1 text-xs font-normal text-muted-foreground">
-                  ({labels.map((l) => CLAIMSALE_LABEL_TEXT_NL[l.type]).join(", ")})
-                </span>
-              </div>
-              <div className="text-xs text-muted-foreground">Eenmalig per claimsale</div>
-            </div>
-            <span className="font-medium text-foreground">{formatPrice(labelCost)}</span>
-          </li>
-        )}
       </ul>
       <div className="mt-3 flex items-baseline justify-between rounded-lg bg-muted px-3 py-2.5">
         <span className="text-sm font-semibold text-foreground">Totaal direct van saldo</span>

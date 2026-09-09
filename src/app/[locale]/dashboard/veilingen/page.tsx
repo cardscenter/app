@@ -52,7 +52,6 @@ export default async function MyAuctionsPage({
           bidder: { select: { id: true, displayName: true, avatarUrl: true } },
         },
       },
-      labels: { select: { type: true, colorKey: true } },
     },
   });
 
@@ -88,7 +87,6 @@ export default async function MyAuctionsPage({
             }
           : null,
         hasReserveMet,
-        labels: a.labels.map((l) => ({ type: l.type, colorKey: l.colorKey })),
         editData: {
           title: a.title,
           description: a.description,

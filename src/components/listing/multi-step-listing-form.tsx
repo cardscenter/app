@@ -20,18 +20,12 @@ import { ListingFormProgress, type ListingStepKey } from "./listing-form-progres
 import { ListingFormSummary } from "./listing-form-summary";
 import { mailboxEligibleType } from "@/lib/listing-types";
 import type { CardSearchSelectValue } from "@/components/ui/card-search-select";
-import type { LabelColor, LabelType as ListingLabelType } from "@/lib/listing/labels";
 
 type SeriesWithSets = Series & { cardSets: CardSet[] };
 
 interface UpsellEntry {
   type: UpsellType;
   days: number;
-}
-
-export interface SelectedListingLabel {
-  type: ListingLabelType;
-  colorKey: LabelColor;
 }
 
 interface FormState {
@@ -64,7 +58,6 @@ interface FormState {
   stockQuantity: number;
   allowMailbox: boolean;
   upsells: UpsellEntry[];
-  labels: SelectedListingLabel[];
 }
 
 const INITIAL_STATE: FormState = {
@@ -100,7 +93,6 @@ const INITIAL_STATE: FormState = {
   stockQuantity: 1,
   allowMailbox: false,
   upsells: [],
-  labels: [],
 };
 
 type SectionId = "type" | "photos" | "details" | "pricing" | "delivery" | "promotion";
@@ -284,7 +276,6 @@ export function MultiStepListingForm({
       formData.set("stockQuantity", String(Math.max(1, form.stockQuantity)));
     }
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
-    if (form.labels.length > 0) formData.set("labels", JSON.stringify(form.labels));
     if (form.suggestedPrice !== null && form.pricingType === "NEGOTIABLE") {
       formData.set("suggestedPrice", String(form.suggestedPrice));
     }
@@ -517,18 +508,14 @@ export function MultiStepListingForm({
             )}
           </section>
 
-          {/* Section 6: Promotie (Spotlight + Category Highlight + Labels) */}
+          {/* Section 6: Promotie (Spotlight + Category Highlight) */}
           <section data-section="promotion" className="glass rounded-2xl p-6 scroll-mt-32">
             <StepUpsells
               upsells={form.upsells}
-              labels={form.labels}
               userBalance={userBalance}
               accountType={userAccountType}
               freeUpsellsRemaining={freeUpsellsRemaining}
-              listingType={form.listingType}
-              condition={form.condition || null}
               onUpsellsChange={(v) => updateField("upsells", v)}
-              onLabelsChange={(v) => updateField("labels", v)}
             />
           </section>
         </div>
@@ -551,7 +538,6 @@ export function MultiStepListingForm({
             deliveryMethod={form.deliveryMethod}
             pickupCity={userCity}
             upsellsCount={form.upsells.length}
-            labelsCount={form.labels.length}
           />
         </div>
       </div>

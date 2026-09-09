@@ -42,7 +42,6 @@ const CLAIMSALE_INCLUDE = {
     },
     orderBy: { price: "desc" },
   },
-  labels: { select: { type: true, colorKey: true } },
   upsells: {
     where: { expiresAt: { gt: new Date() } },
     select: { type: true, startsAt: true, expiresAt: true },

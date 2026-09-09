@@ -3,7 +3,6 @@ import { useTranslations } from "next-intl";
 import { Clock } from "lucide-react";
 import Image from "next/image";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
-import { ClaimsaleLabels, type ClaimsaleLabelData } from "./claimsale-labels";
 
 export interface ClaimsaleCardData {
   id: string;
@@ -12,7 +11,6 @@ export interface ClaimsaleCardData {
   shippingCost: number;
   status?: string;
   startTime?: Date | null;
-  labels?: ClaimsaleLabelData[];
   seller: {
     displayName: string;
     city?: string | null;
@@ -134,9 +132,6 @@ export function ClaimsaleCard({ claimsale, buyer, sponsored = false }: Claimsale
           <h3 className="font-semibold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors line-clamp-2">
             {claimsale.title}
           </h3>
-          {claimsale.labels && claimsale.labels.length > 0 && (
-            <ClaimsaleLabels labels={claimsale.labels} className="mt-1.5" />
-          )}
           {/* Mobile status-pills blijven dicht onder de titel — op mobiel staan
               de cards niet in een grid van gelijke hoogte, dus visuele
               uitlijning is daar minder relevant. */}

@@ -15,7 +15,7 @@ import { StepDetails } from "./steps/step-details";
 import { StepPricing } from "./steps/step-pricing";
 import { MIN_STARTING_BID } from "@/lib/validations/auction";
 import { StepTiming } from "./steps/step-timing";
-import { StepUpsells, type UpsellWindowEntry, type SelectedLabel } from "./steps/step-upsells";
+import { StepUpsells, type UpsellWindowEntry } from "./steps/step-upsells";
 import { AuctionPreview } from "./steps/step-review";
 import { AuctionFormProgress, type AuctionStepKey } from "./auction-form-progress";
 import { AuctionFormSummary } from "./auction-form-summary";
@@ -46,7 +46,6 @@ interface FormState {
   // Brievenbuspakket opt-in (Fase 33 v2)
   allowMailbox: boolean;
   upsells: UpsellWindowEntry[];
-  labels: SelectedLabel[];
 }
 
 const INITIAL_STATE: FormState = {
@@ -78,7 +77,6 @@ const INITIAL_STATE: FormState = {
   deliveryMethod: "SHIP",
   allowMailbox: false,
   upsells: [],
-  labels: [],
 };
 
 interface MultiStepAuctionFormProps {
@@ -176,7 +174,6 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
       return;
     }
     if (form.upsells.length > 0) formData.set("upsells", JSON.stringify(form.upsells));
-    if (form.labels.length > 0) formData.set("labels", JSON.stringify(form.labels));
 
     startTransition(() => {
       formAction(formData);
@@ -352,21 +349,15 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
 
           </section>
 
-          {/* Section 7: Promotie (eigen sectie — Spotlight-windows + Labels) */}
+          {/* Section 7: Promotie (eigen sectie — Spotlight-windows) */}
           <section data-section="promotion" className="glass rounded-2xl p-6 scroll-mt-32">
             <StepUpsells
               upsells={form.upsells}
-              labels={form.labels}
               userBalance={userBalance}
               accountType={accountType}
               freeUpsellsRemaining={freeUpsellsRemaining}
               auctionDuration={Math.max(1, Math.round((form.endTime.getTime() - form.startTime.getTime()) / 86400000))}
-              reservePrice={form.hasReserve ? form.reservePrice : null}
-              buyNowPrice={form.hasBuyNow ? form.buyNowPrice : null}
-              condition={form.condition || null}
-              auctionType={form.auctionType}
               onUpsellsChange={(v) => updateField("upsells", v)}
-              onLabelsChange={(v) => updateField("labels", v)}
             />
           </section>
         </div>

@@ -4,7 +4,6 @@ import { Truck, Clock } from "lucide-react";
 import { parseImageUrls } from "@/lib/upload";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
-import { ClaimsaleLabels, type ClaimsaleLabelData } from "./claimsale-labels";
 import { ClaimsalePreviewCarousel } from "./claimsale-preview-carousel";
 
 // Standaard (gratis) preview-strip: 5 kaart-thumbnails — voor iedereen.
@@ -38,7 +37,6 @@ interface ClaimsaleListRowProps {
     publishedAt: Date | null;
     status?: string;
     startTime?: Date | null;
-    labels?: ClaimsaleLabelData[];
     upsells?: ClaimsaleUpsellPreview[];
     seller: {
       id?: string;
@@ -209,10 +207,6 @@ export function ClaimsaleListRow({
           </div>
         )}
 
-        {claimsale.labels && claimsale.labels.length > 0 && (
-          <ClaimsaleLabels labels={claimsale.labels} size="md" className="mt-2" />
-        )}
-
         {/* Voortgang-bar — visueel duidelijk maken hoe vol/leeg de pot is.
             Amber = "claimsale" kleur, dezelfde tint als de create-knop. */}
         <div className="mt-2 flex items-center gap-2">
@@ -381,7 +375,7 @@ export function ClaimsaleListRow({
 
       {/* MOBILE-ONLY: seller-footer over volledige card-breedte. Watchlist
           links, seller-info rechts — beide visueel uit elkaar zodat het
-          hartje niet meer over titel of labels heen valt. */}
+          hartje niet meer over de titel heen valt. */}
       <div className="sm:hidden pt-3 border-t border-border/60">
         <div className="flex items-center justify-between gap-2">
           {showWatchlist ? (

@@ -5,7 +5,6 @@ import Image from "next/image";
 import { parseImageUrls } from "@/lib/upload";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
-import { AuctionLabels, type AuctionLabelData } from "@/components/auction/auction-labels";
 
 // Drempel waarboven een veiling als "hot" gemarkeerd wordt met een 🔥-emoji
 // in de bid-counter. Empirisch bepaald op de seed-data — mediaan ligt op 1-3,
@@ -40,7 +39,6 @@ export interface AuctionCardData {
     country?: string | null;
   };
   _count?: { bids: number };
-  labels?: AuctionLabelData[];
 }
 
 interface AuctionCardProps {
@@ -133,14 +131,6 @@ export function AuctionCard({ auction, sponsored, buyer, initialWatched = false,
             seller={auction.seller}
             buyer={buyer}
           />
-          {auction.labels && auction.labels.length > 0 && (
-            <AuctionLabels
-              labels={auction.labels}
-              buyNowPrice={auction.buyNowPrice}
-              size="sm"
-              className="mt-1.5"
-            />
-          )}
         </div>
 
         {/* Price + bids */}
@@ -159,9 +149,11 @@ export function AuctionCard({ auction, sponsored, buyer, initialWatched = false,
                 {bidCount === 1 ? "bod" : "biedingen"}
               </p>
             )}
-            {/* "Direct Kopen €X" tonen we niet meer gratis op de card —
-                sellers kopen dit nu via het betaalde DIRECT_KOPEN-label
-                (auction.labels). */}
+            {auction.buyNowPrice != null && auction.buyNowPrice > 0 && (
+              <span className="mt-1 inline-block rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                {t("buyNow")} &euro;{auction.buyNowPrice.toFixed(2)}
+              </span>
+            )}
           </div>
         </div>
       </div>

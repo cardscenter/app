@@ -1,6 +1,5 @@
 import type { CardSearchSelectValue } from "@/components/ui/card-search-select";
 import type { ClaimsaleUpsellType } from "@/lib/upsell-config";
-import type { ClaimsaleLabelType, LabelColor } from "@/lib/claimsale/labels";
 
 export type ClaimsaleType = "CARDS" | "ITEMS";
 
@@ -36,11 +35,6 @@ export interface ClaimsaleUpsellEntry {
   type: ClaimsaleUpsellType;
 }
 
-export interface ClaimsaleSelectedLabel {
-  type: ClaimsaleLabelType;
-  colorKey: LabelColor;
-}
-
 export interface ClaimsaleFormState {
   type: ClaimsaleType;
   coverImage: string | null;
@@ -51,7 +45,6 @@ export interface ClaimsaleFormState {
   startDate: Date;
   startTimeOfDay: string; // "HH:MM" NL-tijd
   upsells: ClaimsaleUpsellEntry[];
-  labels: ClaimsaleSelectedLabel[];
 }
 
 export function makeEmptyCardItem(): ClaimsaleItemDraft {

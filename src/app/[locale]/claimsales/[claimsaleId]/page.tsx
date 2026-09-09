@@ -13,7 +13,6 @@ import { getSellerOtherItems } from "@/lib/recommendations";
 import { SellerInfoBlock } from "@/components/ui/seller-info-block";
 import { getSellerInfo } from "@/lib/seller-info";
 import { PageContainer } from "@/components/layout/page-container";
-import { ClaimsaleLabels } from "@/components/claimsale/claimsale-labels";
 import { ClaimsalePromotionManager } from "@/components/claimsale/claimsale-promotion-manager";
 import { Clock } from "lucide-react";
 import { formatNLDateTime } from "@/lib/claimsale/timing";
@@ -31,7 +30,6 @@ export default async function ClaimsaleDetailPage({
     where: { id: claimsaleId },
     include: {
       seller: { select: { displayName: true } },
-      labels: { select: { type: true, colorKey: true } },
       upsells: {
         where: { expiresAt: { gt: new Date() } },
         select: { id: true, type: true, startsAt: true, expiresAt: true, totalCost: true },
@@ -71,9 +69,6 @@ export default async function ClaimsaleDetailPage({
           <h1 className="text-2xl font-bold text-foreground">
             {claimsale.title}
           </h1>
-          {claimsale.labels.length > 0 && (
-            <ClaimsaleLabels labels={claimsale.labels} size="md" className="mt-2" />
-          )}
           <p className="mt-1 text-sm text-muted-foreground">
             {claimsale.seller.displayName} · {availableCount}/{claimsale.items.length} {t("available").toLowerCase()} · {t("shippingCost")}: €{claimsale.shippingCost.toFixed(2)}
           </p>

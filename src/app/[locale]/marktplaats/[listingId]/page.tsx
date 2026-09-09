@@ -25,7 +25,6 @@ import { PricingInfoBlock } from "@/components/ui/pricing-info-block";
 import { getCardPricing } from "@/lib/card-helpers";
 import { PageContainer } from "@/components/layout/page-container";
 import { ListingRealtimeWatcher } from "@/components/listing/listing-realtime-watcher";
-import { ListingLabels } from "@/components/listing/listing-labels";
 
 export default async function ListingDetailPage({
   params,
@@ -48,7 +47,6 @@ export default async function ListingDetailPage({
       shippingMethods: {
         include: { shippingMethod: true },
       },
-      labels: { select: { type: true, colorKey: true } },
     },
   });
 
@@ -124,11 +122,6 @@ export default async function ListingDetailPage({
               <Link href={`/verkoper/${listing.sellerId}`} className="mt-1 inline-block text-sm text-primary hover:underline">
                 {listing.seller.displayName}
               </Link>
-              {listing.labels.length > 0 && (
-                <div className="mt-2">
-                  <ListingLabels labels={listing.labels} size="md" />
-                </div>
-              )}
             </div>
             {session?.user && !isOwner && (
               <WatchlistButton listingId={listing.id} initialWatched={watched} />

@@ -21,7 +21,6 @@ interface ListingFormSummaryProps {
   deliveryMethod: "SHIP" | "PICKUP" | "BOTH";
   pickupCity?: string | null;
   upsellsCount: number;
-  labelsCount: number;
 }
 
 const TYPE_KEYS: Record<ListingType, string> = {
@@ -79,7 +78,6 @@ export function ListingFormSummary({
   deliveryMethod,
   pickupCity,
   upsellsCount,
-  labelsCount,
 }: ListingFormSummaryProps) {
   const t = useTranslations("listing");
   const firstImage = images[0];
@@ -172,16 +170,11 @@ export function ListingFormSummary({
             )}
           </div>
 
-          {(upsellsCount > 0 || labelsCount > 0) && (
+          {upsellsCount > 0 && (
             <div className="border-t border-border pt-2.5 space-y-2.5">
               {upsellsCount > 0 && (
                 <Row label={t("summaryPromotions")}>
                   {t("summaryPromotionsActive", { count: upsellsCount })}
-                </Row>
-              )}
-              {labelsCount > 0 && (
-                <Row label={t("summaryLabels")}>
-                  {t("summaryLabelsActive", { count: labelsCount })}
                 </Row>
               )}
             </div>

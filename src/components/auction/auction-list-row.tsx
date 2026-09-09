@@ -4,7 +4,6 @@ import { Truck, Package, Clock, Gavel } from "lucide-react";
 import { parseImageUrls } from "@/lib/upload";
 import { SellerLocationLine } from "@/components/ui/seller-location-line";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
-import { AuctionLabels, type AuctionLabelData } from "@/components/auction/auction-labels";
 
 const TYPE_LABELS_NL: Record<string, string> = {
   SINGLE_CARD: "Enkele kaart",
@@ -45,7 +44,6 @@ interface AuctionListRowProps {
       country?: string | null;
     };
     _count?: { bids: number };
-    labels?: AuctionLabelData[];
   };
   locale: string;
   buyer?: { country: string | null; postalCode: string | null } | null;
@@ -219,14 +217,6 @@ export function AuctionListRow({
             )}
           </div>
 
-          {auction.labels && auction.labels.length > 0 && (
-            <AuctionLabels
-              labels={auction.labels}
-              buyNowPrice={auction.buyNowPrice}
-              size="md"
-              className="mt-2"
-            />
-          )}
 
           {description && (
             <p className="mt-2 hidden sm:block text-sm text-muted-foreground line-clamp-2">
@@ -292,10 +282,7 @@ export function AuctionListRow({
         </div>
       </div>
 
-      {/* DESKTOP RIGHT — pricing + bid + watchlist.
-          "Direct kopen €X" pill is hier weggehaald: sellers kopen dit nu via
-          het betaalde DIRECT_KOPEN-label, dus een gratis-vermelding zou de
-          waarde van die promotie ondergraven. */}
+      {/* DESKTOP RIGHT — pricing + bid + watchlist. */}
       <div className="hidden sm:flex w-48 shrink-0 flex-col items-end justify-between border-l border-border pl-5">
         <div className="flex w-full flex-col items-end gap-2">
           <div className="flex flex-col items-end gap-1">

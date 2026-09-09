@@ -29,8 +29,7 @@ export function AuctionOwnerActions({ auctionId, bidCount, status, variant = "pa
       !confirm(
         "Weet je zeker dat je deze veiling wilt annuleren?\n\n" +
           "Dit kan niet ongedaan worden gemaakt. Eventueel betaalde promotie-" +
-          "kosten worden naar rato teruggestort op je saldo " +
-          "(spotlights pro-rata, labels volledig).",
+          "kosten (spotlights) worden naar rato teruggestort op je saldo.",
       )
     ) {
       return;

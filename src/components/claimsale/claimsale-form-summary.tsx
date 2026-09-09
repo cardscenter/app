@@ -96,15 +96,10 @@ export function ClaimsaleFormSummary({ form }: Props) {
               {scheduled ? formatNLDateTime(startTime) : t("summaryInstant")}
             </Row>
           </div>
-          {(form.upsells.length > 0 || form.labels.length > 0) && (
+          {form.upsells.length > 0 && (
             <div className="border-t border-border pt-2.5">
               <Row label={t("summaryPromotions")}>
-                {[
-                  form.upsells.length > 0 ? `${form.upsells.length}× promotie` : null,
-                  form.labels.length > 0 ? `${form.labels.length}× label` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {`${form.upsells.length}× promotie`}
               </Row>
             </div>
           )}

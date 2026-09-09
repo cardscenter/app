@@ -25,18 +25,12 @@ import type { AuctionType, UpsellType } from "@/types";
 import { deriveDurationDays, formatNLDateTime, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
-import { calculateLabelCost, type LabelColor, type LabelType } from "@/lib/auction/labels";
 
 interface UpsellEntry {
   type: string;
   // Nieuwe vorm (Fase 33+): dual-handle window in dagen vanaf veiling-start.
   startDay: number;
   endDay: number;
-}
-
-interface SelectedLabel {
-  type: LabelType;
-  colorKey: LabelColor;
 }
 
 interface AuctionFormData {
@@ -60,7 +54,6 @@ interface AuctionFormData {
   deliveryMethod?: "SHIP" | "PICKUP" | "BOTH";
   allowMailbox?: boolean;
   upsells?: UpsellEntry[];
-  labels?: SelectedLabel[];
 }
 
 interface AuctionPreviewProps {
@@ -485,10 +478,9 @@ export function AuctionPreview({
           </div>
         )}
 
-        {/* Te betalen kosten — alleen tonen als er promotie/labels zijn gekozen */}
+        {/* Te betalen kosten — alleen tonen als er promotie is gekozen */}
         <PromotionCostBlock
           upsells={form.upsells ?? []}
-          labels={form.labels ?? []}
           accountType={accountType}
           freeUpsellsRemaining={freeUpsellsRemaining}
         />
@@ -559,20 +551,18 @@ export function AuctionPreview({
   );
 }
 
-// Te betalen kosten-overzicht. Toont alleen iets als er upsells of labels zijn.
+// Te betalen kosten-overzicht. Toont alleen iets als er upsells zijn.
 // Free-quota wordt visueel gemarkeerd als "Gratis (PRO/Unlimited)".
 function PromotionCostBlock({
   upsells,
-  labels,
   accountType,
   freeUpsellsRemaining,
 }: {
   upsells: UpsellEntry[];
-  labels: SelectedLabel[];
   accountType: string;
   freeUpsellsRemaining: number;
 }) {
-  if (upsells.length === 0 && labels.length === 0) return null;
+  if (upsells.length === 0) return null;
 
   // Hergebruikt de exacte server-side allocator voor exacte parity.
   const allocation = applyFreeUpsellsToCost(
@@ -585,8 +575,7 @@ function PromotionCostBlock({
     "auction",
   );
 
-  const labelCost = calculateLabelCost(labels.length);
-  const totalCost = Math.round((allocation.total + labelCost) * 100) / 100;
+  const totalCost = Math.round(allocation.total * 100) / 100;
 
   const formatPrice = (n: number) =>
     n === 0
@@ -634,19 +623,6 @@ function PromotionCostBlock({
             </li>
           );
         })}
-        {labels.length > 0 && (
-          <li className="flex items-baseline justify-between gap-3 py-2 first:pt-0">
-            <div className="min-w-0 flex-1">
-              <div className="font-medium text-foreground">
-                {labels.length} {labels.length === 1 ? "Label" : "Labels"}
-              </div>
-              <div className="text-xs text-muted-foreground">Eenmalig per veiling</div>
-            </div>
-            <span className="font-medium text-foreground">
-              {formatPrice(labelCost)}
-            </span>
-          </li>
-        )}
       </ul>
       <div className="mt-3 flex items-baseline justify-between rounded-lg bg-muted px-3 py-2.5">
         <span className="text-sm font-semibold text-foreground">
@@ -658,8 +634,7 @@ function PromotionCostBlock({
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">
         Bedrag wordt direct van je saldo afgeschreven bij publiceren. Bij
-        annuleren zonder biedingen wordt het naar rato teruggestort (spotlights
-        pro-rata, labels volledig).
+        annuleren zonder biedingen worden spotlights naar rato teruggestort.
       </p>
     </SectionCard>
   );

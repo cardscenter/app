@@ -115,7 +115,6 @@ export default async function AuctionsPage({
     include: {
       seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
       _count: { select: { bids: true } },
-      labels: { select: { type: true, colorKey: true } },
     },
   });
   const sponsoredAuctions = seededShuffle(sponsoredRaw, seed);
@@ -142,7 +141,6 @@ export default async function AuctionsPage({
   const AUCTION_INCLUDE = {
     seller: { select: { displayName: true, city: true, postalCode: true, country: true } },
     _count: { select: { bids: true } },
-    labels: { select: { type: true, colorKey: true } },
   } satisfies Prisma.AuctionInclude;
   type AuctionPayload = Prisma.AuctionGetPayload<{ include: typeof AUCTION_INCLUDE }>;
 

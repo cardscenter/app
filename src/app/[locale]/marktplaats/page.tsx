@@ -99,7 +99,6 @@ export default async function MarktplaatsPage({
         where: { expiresAt: { gt: now } },
         select: { type: true, expiresAt: true },
       },
-      labels: { select: { type: true, colorKey: true } },
       _count: {
         select: { cardItemRows: { where: { status: "AVAILABLE" } } },
       },
@@ -139,7 +138,6 @@ export default async function MarktplaatsPage({
       where: { expiresAt: { gt: now } },
       select: { type: true, expiresAt: true },
     },
-    labels: { select: { type: true, colorKey: true } },
     _count: {
       select: { cardItemRows: { where: { status: "AVAILABLE" } } },
     },
