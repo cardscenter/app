@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useFormScrollSpy, useChipStripAutoScroll } from "@/hooks/use-form-scroll-spy";
 import { FileText, LayoutGrid, Truck, Megaphone, Clock, Check } from "lucide-react";
 
 export type ClaimsaleStepKey = "basis" | "inhoud" | "verzending" | "promotie" | "timing";
@@ -23,44 +24,23 @@ const STEPS: Array<{
   { key: "promotie", labelKey: "progressPromotie", icon: Megaphone },
 ];
 
+// Module-level zodat de scroll-spy-hook een stabiele referentie krijgt.
+const STEP_KEYS = STEPS.map((s) => s.key);
+
 export function ClaimsaleFormProgress({ completed }: ClaimsaleFormProgressProps) {
   const t = useTranslations("claimsale");
-  const [active, setActive] = useState<ClaimsaleStepKey>("basis");
   const listRef = useRef<HTMLOListElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (visible.length === 0) return;
-        const first = visible.sort(
-          (a, b) => (a.target as HTMLElement).offsetTop - (b.target as HTMLElement).offsetTop
-        )[0];
-        const key = first.target.getAttribute("data-section") as ClaimsaleStepKey | null;
-        if (key) setActive(key);
-      },
-      { rootMargin: "-30% 0px -55% 0px", threshold: 0 }
-    );
-
-    const sections = document.querySelectorAll<HTMLElement>("[data-section]");
-    sections.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!listRef.current) return;
-    const btn = listRef.current.querySelector<HTMLButtonElement>(`[data-step="${active}"]`);
-    if (!btn) return;
-    btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-  }, [active]);
-
-  const scrollTo = (key: ClaimsaleStepKey) => {
-    const el = document.querySelector<HTMLElement>(`[data-section="${key}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  // Monotone anker-lijn-spy + strip-only auto-scroll. Zie de hook voor
+  // waarom de oude IntersectionObserver + scrollIntoView de pagina liet haken.
+  const { active, scrollToSection } = useFormScrollSpy<ClaimsaleStepKey>(STEP_KEYS);
+  useChipStripAutoScroll(listRef, active);
 
   return (
-    <div className="sticky top-16 z-20 -mx-4 mb-6 border-b border-border bg-background/85 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border lg:bg-card/95 lg:px-4 lg:shadow-sm">
+    <div className="sticky top-16 z-20 -mx-4 mb-6 border-b border-border bg-background px-4 py-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border lg:bg-card lg:px-4 lg:shadow-sm">
+      {/* Geen backdrop-blur: een geblurde sticky achtergrond hertekent elke
+          scroll-frame (merkbaar schokkerig), en op iOS Safari maakt sticky +
+          backdrop-filter een "atomic" stacking context waar dropdowns niet
+          overheen kunnen. Solide bg lost beide op zonder visueel verlies. */}
       <ol
         ref={listRef}
         className="flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -74,7 +54,7 @@ export function ClaimsaleFormProgress({ completed }: ClaimsaleFormProgressProps)
               <button
                 type="button"
                 data-step={step.key}
-                onClick={() => scrollTo(step.key)}
+                onClick={() => scrollToSection(step.key)}
                 aria-current={isActive ? "step" : undefined}
                 className={`flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
                   isActive
