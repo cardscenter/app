@@ -14,9 +14,17 @@ export const HEADER_ICON_BTN_ADMIN =
 export const HEADER_PILL_LIGHT =
   "inline-flex h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-white px-5 text-sm font-semibold text-slate-950 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40";
 
-/** Doorzichtige pil (saldo, avatar). */
-export const HEADER_PILL_GHOST =
-  "inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-white/10 text-sm font-medium text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40";
+const HEADER_PILL_GHOST_BASE =
+  "inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap bg-white/10 text-sm font-medium text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40";
+
+/** Doorzichtige pil (saldo). */
+export const HEADER_PILL_GHOST = `${HEADER_PILL_GHOST_BASE} rounded-full`;
+
+/** Avatar-pil: zelfde ghost-stijl, maar licht-afgeronde hoeken die
+ *  concentrisch lopen met de `rounded-[22%]`-avatar (32px → ~7px) plus de
+ *  4px padding van de pil. Zo is de linkerkant niet rond terwijl de foto
+ *  hoekig is. */
+export const HEADER_AVATAR_PILL = `${HEADER_PILL_GHOST_BASE} rounded-[11px]`;
 
 /** Badge-teller rechtsboven op een icoonknop. */
 export const HEADER_BADGE =

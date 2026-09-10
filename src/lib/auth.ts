@@ -123,11 +123,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.picture = user.image;
         token.accountType = user.accountType;
+      }
+      // De JWT is een snapshot van het inlogmoment. Na een profielfoto- of
+      // gebruikersnaamwijziging roept de header `update()` aan (trigger
+      // "update") — dan lezen we naam + avatar opnieuw uit de DB, anders
+      // blijft de header tot de volgende login de oude foto tonen.
+      if (trigger === "update" && token.id) {
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { displayName: true, avatarUrl: true, accountType: true },
+        });
+        if (fresh) {
+          token.name = fresh.displayName;
+          token.picture = fresh.avatarUrl;
+          token.accountType = fresh.accountType;
+        }
       }
       return token;
     },

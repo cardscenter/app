@@ -59,6 +59,8 @@ export function UsernameChangeForm({ currentName, canChange, usedAt, fee }: Prop
       }
       setOpen(false);
       toast.success(t("usernameChanged"));
+      // Header leest de naam uit de sessie-JWT → laat 'm de sessie verversen.
+      window.dispatchEvent(new Event("session-refresh"));
       router.refresh();
     });
   }

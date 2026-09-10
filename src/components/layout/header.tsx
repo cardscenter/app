@@ -12,12 +12,13 @@ import { MessageIcon } from "@/components/ui/message-icon";
 import { CartIcon } from "@/components/ui/cart-icon";
 import { AdminShield } from "@/components/layout/admin-shield";
 import { ThemeIconButton } from "@/components/layout/theme-icon-button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { getUnreadCount } from "@/actions/notification";
 import { getUnreadConversationCount } from "@/actions/message";
 import { useRealtime } from "@/components/providers/realtime-provider";
 import {
   HEADER_ICON_BTN,
-  HEADER_PILL_GHOST,
+  HEADER_AVATAR_PILL,
   HEADER_PILL_LIGHT,
 } from "./header-styles";
 
@@ -49,21 +50,46 @@ function HeaderContent() {
   const t = useTranslations("common");
   const tn = useTranslations("notifications");
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
+  // undefined = geen override (sessie is de bron), null = foto verwijderd.
+  const [avatarOverride, setAvatarOverride] = useState<string | null | undefined>(undefined);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const { subscribe } = useRealtime();
 
+  // De sessie-JWT bevat naam + avatar van het inlogmoment. Profielformulier
+  // en gebruikersnaam-wijziging sturen een DOM-event; wij tonen de nieuwe foto
+  // direct en laten daarna `update()` de JWT verversen (jwt-callback leest de
+  // DB opnieuw bij trigger "update"), zodat ook een volgende paginalading en
+  // andere tabbladen de juiste foto/naam tonen.
   useEffect(() => {
+    let cancelled = false;
+    async function refreshSession() {
+      try {
+        await updateSession();
+      } catch {
+        // Niet kritiek — de override blijft dan staan tot de volgende login.
+        return;
+      }
+      if (!cancelled) setAvatarOverride(undefined);
+    }
     function handleAvatarUpdate(e: Event) {
       const detail = (e as CustomEvent).detail;
       setAvatarOverride(detail?.avatarUrl ?? null);
+      void refreshSession();
+    }
+    function handleSessionRefresh() {
+      void refreshSession();
     }
     window.addEventListener("avatar-updated", handleAvatarUpdate);
-    return () => window.removeEventListener("avatar-updated", handleAvatarUpdate);
-  }, []);
+    window.addEventListener("session-refresh", handleSessionRefresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("avatar-updated", handleAvatarUpdate);
+      window.removeEventListener("session-refresh", handleSessionRefresh);
+    };
+  }, [updateSession]);
 
   // Unread badges voor mobile-menu — 60s polling fallback + SSE realtime
   useEffect(() => {
@@ -123,18 +149,18 @@ function HeaderContent() {
 
   const isActivePath = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
+  // Zelfde <UserAvatar> als de rest van de site: rounded-[22%] + initiaal-
+  // fallback wanneer de foto niet laadt (verwijderde upload, stale JWT-URL).
   const avatar = (size: "sm" | "md") => {
-    const cls = size === "sm" ? "size-7" : "size-8";
-    const src = avatarOverride || session?.user?.image;
-    return src ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt="" className={`${cls} shrink-0 rounded-[22%] object-cover ring-2 ring-white/20`} />
-    ) : (
-      <span
-        className={`${cls} flex shrink-0 items-center justify-center rounded-[22%] bg-primary text-xs font-bold text-white`}
-      >
-        {session?.user?.name?.charAt(0).toUpperCase()}
-      </span>
+    const src = avatarOverride === undefined ? session?.user?.image : avatarOverride;
+    return (
+      <UserAvatar
+        src={src}
+        name={session?.user?.name ?? ""}
+        size="sm"
+        emphasis
+        className={size === "md" ? "size-8 ring-2 ring-white/20" : "ring-2 ring-white/20"}
+      />
     );
   };
 
@@ -199,12 +225,14 @@ function HeaderContent() {
               <CartIcon />
 
               {/* Avatar → dashboard. Altijd zichtbaar; op mobiel/tablet alleen
-                  het plaatje (ronde pil), de naam pas vanaf 2xl. Let op: geen
-                  `hidden` combineren met de `inline-flex` uit HEADER_PILL_GHOST —
-                  die twee display-utilities botsen (pil bleef op mobiel zichtbaar). */}
+                  het plaatje, de naam pas vanaf 2xl. De pil heeft dezelfde
+                  licht-afgeronde hoeken als de avatar (concentrisch: 7px + 4px
+                  padding). Let op: geen `hidden` combineren met de `inline-flex`
+                  uit de pil-klassen — die twee display-utilities botsen (pil
+                  bleef op mobiel zichtbaar). */}
               <Link
                 href="/dashboard"
-                className={`${HEADER_PILL_GHOST} px-1 2xl:pr-3.5`}
+                className={`${HEADER_AVATAR_PILL} px-1 2xl:pr-3.5`}
                 title={t("dashboard")}
                 aria-label={t("dashboard")}
               >
