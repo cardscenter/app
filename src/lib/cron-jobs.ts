@@ -6,6 +6,7 @@
 // `itemsProcessed` separately via the run handle.
 
 import { prisma } from "@/lib/prisma";
+import { CRON_JOB_NAMES as _CRON_JOB_NAMES, cronJobDisabledBy, type CronJobName } from "@/lib/cron-job-flags";
 import { getMonthlyFreeUpsells } from "@/lib/subscription-tiers";
 import { autoConfirmDeliveries } from "@/actions/purchase";
 import { checkAndDowngradeExpired } from "@/actions/subscription";
@@ -281,33 +282,10 @@ export async function processRunnerUpDecision(
   return { outcome: "OFFERED", newOfferId: offer.id, newBidderId: chosen.bidderId };
 }
 
-export const CRON_JOB_NAMES = [
-  "auto-confirm",
-  "auto-resolve-disputes-v2",
-  "check-subscriptions",
-  "expire-claims",
-  "sync-pokewallet",
-  "auction-finalize",
-  "auction-activate",
-  "claimsale-activate",
-  "auction-payment-deadline",
-  "auction-runner-up-decision-deadline",
-  "proposal-payment-deadline",
-  "cancellation-expiry",
-  "cleanup-archived-chats",
-  "bundle-offer-expiry",
-  "bundle-offer-payment-deadline",
-  "pickup-reservation-timeout",
-  "pickup-reminder",
-  "auto-cancel-stale-paid",
-  "payment-failure-decay",
-  "prune-bid-ips",
-  "reset-free-upsells",
-  "cleanup-sold-images",
-  "email-unread-messages",
-  "cleanup-notifications",
-] as const;
-export type CronJobName = (typeof CRON_JOB_NAMES)[number];
+// Jobnamen + feature-flag-mapping leven in cron-job-flags.ts (Prisma-vrij,
+// zodat schedulers/admin/tests ze kunnen importeren). Hier re-export voor
+// bestaande importers.
+export { CRON_JOB_NAMES, type CronJobName } from "@/lib/cron-job-flags";
 
 export type CronJobMeta = {
   description: string;
@@ -467,7 +445,10 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
   },
 };
 
-export const CRON_JOBS: Record<CronJobName, () => Promise<{ itemsProcessed: number; result: object }>> = {
+export type CronRunner = () => Promise<{ itemsProcessed: number; result: object }>;
+
+// Ongewrapte runners — alleen via CRON_JOBS aanroepen (feature-flag-guard).
+const RAW_CRON_JOBS: Record<CronJobName, CronRunner> = {
   "auto-confirm": async () => {
     const r = await autoConfirmDeliveries();
     return { itemsProcessed: r.confirmed, result: r };
@@ -1844,3 +1825,22 @@ export async function executeStalePaidCancel(
 
   return { ok: true, refundAmount };
 }
+
+/**
+ * Publieke runner-map met feature-flag-guard (Community Hub, Fase 1).
+ * Een job waarvan de flag uit staat doet niets en meldt dat in het resultaat.
+ * Eén centrale plek zodat de HTTP-routes, "Run nu" in het admin-panel én de
+ * in-process schedulers hetzelfde gedrag hebben.
+ */
+export const CRON_JOBS: Record<CronJobName, CronRunner> = Object.fromEntries(
+  _CRON_JOB_NAMES.map((name) => [
+    name,
+    async () => {
+      const disabledBy = cronJobDisabledBy(name);
+      if (disabledBy) {
+        return { itemsProcessed: 0, result: { skipped: "feature-flag", flag: disabledBy } };
+      }
+      return RAW_CRON_JOBS[name]();
+    },
+  ]),
+) as Record<CronJobName, CronRunner>;
