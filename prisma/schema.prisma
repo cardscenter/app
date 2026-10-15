@@ -188,6 +188,35 @@ model User {
   totpEnabled     Boolean @default(false)
   totpBackupCodes String?
 
+  // ── Community Hub (Fase 2) ──────────────────────────────────────────
+  // Rol los van het tier (`accountType`): PLAYER | STAFF | ADMIN. ADMIN hier
+  // loopt gelijk met accountType ADMIN (requireAdmin kijkt naar accountType);
+  // STAFF mag inchecken, bestellingen en bulk-aanvragen verwerken.
+  role              String    @default("PLAYER")
+  // Geboortedatum: nooit publiek, alleen de leeftijdsdivisie. Verplicht
+  // voor event-inschrijving (officiële Pokémon-events delen in op geboortejaar).
+  dateOfBirth       DateTime?
+  // Favoriete spellen (JSON string[] met GameOption.key) + spelers-ID's per
+  // spel (JSON { [gameKey]: id }, bv. Play! Pokémon Player ID, Konami ID).
+  favoriteGames     String?
+  playerIds         String?
+  // Ouder/noodcontact (verplicht onder 16) + AVG-toestemming van de ouder
+  // (bevestigd via mail-link). Zonder consentAt kan een minderjarige niet
+  // boeken of betalen.
+  guardianName      String?
+  guardianEmail     String?
+  guardianPhone     String?
+  guardianConsentAt DateTime?
+  // Privacy: zichtbaar op deelnemerslijsten ("wie komt er") en ranglijsten.
+  showOnParticipantLists Boolean @default(true)
+  showOnLeaderboards     Boolean @default(true)
+  // Nieuwsbrief: losse, niet vooraf aangevinkte opt-in; afmelden met één klik.
+  newsletterOptIn   Boolean   @default(false)
+  newsletterOptInAt DateTime?
+  // Account verwijderd (AVG): rij blijft (geanonimiseerd) zodat relaties niet
+  // breken; inloggen is onmogelijk.
+  deletedAt         DateTime?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -267,6 +296,9 @@ model User {
   // PendingPlatformFee — niet-inbare boetes/forfaits die bij volgende inkomst
   // automatisch worden afgeroomd. Anti-griefing tegen "saldo leeg houden".
   pendingPlatformFees PendingPlatformFee[]
+
+  // Community Hub (Fase 2)
+  guardianConsentTokens   GuardianConsentToken[]
 
   // Auth-tokens (Fase 37) — password-reset & e-mailverificatie
   passwordResetTokens     PasswordResetToken[]
@@ -2640,4 +2672,45 @@ model EventReport {
   @@index([reporterId])
   @@index([eventId])
   @@index([status])
+}
+
+// ── Community Hub (Fase 2) ────────────────────────────────────────────
+
+// Inloglink per e-mail (magic link). Alleen de SHA-256-hash van het token
+// staat in de DB; het token zelf zit enkel in de mail. 15 min geldig, eenmalig.
+model MagicLinkToken {
+  id        String    @id @default(cuid())
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
+// Ouder-toestemming (AVG, <16): de ouder krijgt een mail met een link; na
+// bevestiging wordt User.guardianConsentAt gezet. 7 dagen geldig, eenmalig.
+model GuardianConsentToken {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guardianEmail String
+  token         String    @unique
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Spellen die in de hub gekozen kunnen worden (favoriet + spelers-ID).
+// Admin zet een spel aan/uit; de defaults staan in src/lib/games.ts.
+model GameOption {
+  key           String  @id          // pokemon | yugioh | lorcana | onepiece | mtg | digimon
+  name          String
+  enabled       Boolean @default(true)
+  sortOrder     Int     @default(0)
+  // Label van het officiële spelers-ID (bv. "Play! Pokémon Player ID"); leeg = geen ID.
+  playerIdLabel String?
 }
