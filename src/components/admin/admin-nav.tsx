@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { NAV_ROW, NAV_ROW_ACTIVE, NAV_ROW_IDLE, NAV_ICON_IDLE, NAV_GROUP_LABEL } from "@/components/dashboard/nav-styles";
+import { CalendarCheck, Tags, Settings2, ScanLine } from "lucide-react";
 import {
   LayoutDashboard,
   Scale,
@@ -85,6 +86,15 @@ export function AdminNav({
         { href: "/dashboard/admin/verifications", labelKey: "navVerifications", icon: ShieldCheck, badge: pendingCounts?.verifications },
         { href: "/dashboard/admin/enterprise-requests", labelKey: "navEnterpriseRequests", icon: Building2, badge: pendingCounts?.enterpriseRequests },
         { href: "/dashboard/admin/games", labelKey: "navGames", icon: Gamepad2 },
+      ],
+    },
+    {
+      label: "sectionShop",
+      items: [
+        { href: "/dashboard/admin/events", labelKey: "navShopEvents", icon: CalendarCheck },
+        { href: "/dashboard/admin/event-types", labelKey: "navEventTypes", icon: Tags },
+        { href: "/dashboard/staff/check-in", labelKey: "navCheckIn", icon: ScanLine },
+        { href: "/dashboard/admin/hub-settings", labelKey: "navHubSettings", icon: Settings2 },
       ],
     },
     {

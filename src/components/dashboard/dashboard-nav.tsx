@@ -10,6 +10,7 @@ import { useRealtime } from "@/components/providers/realtime-provider";
 import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
 import type { FeatureFlag } from "@/lib/feature-flags";
 import { NAV_ROW, NAV_ROW_ACTIVE, NAV_ROW_IDLE, NAV_ICON_IDLE, NAV_GROUP_LABEL } from "./nav-styles";
+import { Ticket, ScanLine } from "lucide-react";
 import {
   LayoutDashboard,
   BarChart3,
@@ -85,6 +86,8 @@ type UnreadCounts = { messages: number; notifications: number };
 
 type DashboardNavProps = {
   accountType?: string;
+  /** Rol (PLAYER | STAFF | ADMIN) voor de staff-groep (Community Hub). */
+  role?: string;
   level?: LevelInfo;
   /** Voor de gebruikerskaart onderaan. */
   user?: { name: string; handle?: string; email: string | null; image: string | null };
@@ -109,7 +112,7 @@ export function DashboardNav(props: DashboardNavProps) {
 
 const NO_UNREAD: UnreadCounts = { messages: 0, notifications: 0 };
 
-function DashboardNavInner({ accountType, level, user, counts, unread }: DashboardNavProps) {
+function DashboardNavInner({ accountType, role, level, user, counts, unread }: DashboardNavProps) {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
   const pathname = usePathname();
@@ -156,6 +159,7 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
   }, [subscribe]);
 
   const isAdmin = accountType === "ADMIN";
+  const isStaffUser = isAdmin || role === "STAFF";
   const features = useFeatureFlags();
 
   function handleLogoutClick() {
@@ -191,6 +195,7 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
         labelKey: "sectionGeneral",
         items: [
           { href: "/dashboard", labelKey: "title", icon: LayoutDashboard },
+          { href: "/dashboard/tickets", labelKey: "myTickets", icon: Ticket },
           { href: "/dashboard/statistieken", labelKey: "myStatistics", icon: BarChart3, flag: "FEATURE_WALLET" },
           {
             href: "/dashboard/saldo",
@@ -255,6 +260,15 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
           { href: "/dashboard/reviews", labelKey: "myReputation", icon: Star, match: ["/dashboard/level"], flag: "FEATURE_WALLET" },
         ],
       },
+      ...(isStaffUser
+        ? [
+            {
+              id: "staff",
+              labelKey: "sectionStaff",
+              items: [{ href: "/dashboard/staff/check-in", labelKey: "staffCheckIn", icon: ScanLine }],
+            } as NavGroup,
+          ]
+        : []),
       {
         id: "support",
         labelKey: "sectionSupport",
@@ -283,7 +297,7 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
         .map((g) => ({ ...g, items: g.items.filter((i) => !i.flag || features[i.flag]) }))
         .filter((g) => g.items.length > 0);
     },
-    [offerBadge, offerHref, features, unreadState.messages, unreadState.notifications],
+    [offerBadge, offerHref, features, unreadState.messages, unreadState.notifications, isStaffUser],
   );
 
   function isPathActive(href: string) {

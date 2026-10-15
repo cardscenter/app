@@ -23,12 +23,22 @@ const LEGACY_SELL_SEGMENTS: Record<string, string> = {
  *  Probeert de secure- én de gewone cookienaam: achter de Railway-proxy kan
  *  `nextUrl.protocol` http zijn terwijl de cookie als __Secure- is gezet. */
 async function accountTypeFromJwt(request: NextRequest): Promise<string | null> {
+  return (await sessionFromJwt(request))?.accountType ?? null;
+}
+
+/** accountType + rol (Fase 2) uit de sessie-JWT, zonder DB. null = niet ingelogd. */
+async function sessionFromJwt(request: NextRequest): Promise<{ accountType: string | null; role: string | null } | null> {
   const secret = process.env.AUTH_SECRET;
   if (!secret) return null;
   const preferSecure = request.nextUrl.protocol === "https:";
   for (const secureCookie of [preferSecure, !preferSecure]) {
     const token = await getToken({ req: request, secret, secureCookie });
-    if (token) return typeof token.accountType === "string" ? token.accountType : null;
+    if (token) {
+      return {
+        accountType: typeof token.accountType === "string" ? token.accountType : null,
+        role: typeof token.role === "string" ? token.role : null,
+      };
+    }
   }
   return null;
 }
@@ -97,6 +107,30 @@ export default async function middleware(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = `/${localeMatch ? localeMatch[1] : routing.defaultLocale}`;
         url.search = "";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
+  // Admin- en staff-bomen (Community Hub, Fase 3): harde 307 vóór render.
+  // Een redirect vanuit een layout alleen is zacht: bij parallelle RSC-
+  // rendering lekt de pagina-inhoud met status 200 (zelfde les als de
+  // customization-lockdown). De layouts/pages blijven belt-and-braces.
+  {
+    const m = request.nextUrl.pathname.match(/^\/(nl|en)\/dashboard\/(admin|staff)(?:\/|$)/);
+    if (m) {
+      const session = await sessionFromJwt(request);
+      const url = request.nextUrl.clone();
+      url.search = "";
+      if (!session) {
+        url.pathname = `/${m[1]}/login`;
+        url.search = `?callbackUrl=${encodeURIComponent(request.nextUrl.pathname.replace(/^\/(nl|en)/, ""))}`;
+        return NextResponse.redirect(url);
+      }
+      const isAdmin = session.accountType === "ADMIN";
+      const allowed = m[2] === "admin" ? isAdmin : isAdmin || session.role === "STAFF";
+      if (!allowed) {
+        url.pathname = `/${m[1]}/dashboard`;
         return NextResponse.redirect(url);
       }
     }

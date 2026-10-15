@@ -36,6 +36,7 @@ export async function DashboardChrome({
     where: { id: session.user.id! },
     select: {
       accountType: true,
+      role: true,
       suspendedUntil: true,
       suspensionType: true,
       suspensionReason: true,
@@ -71,6 +72,7 @@ export async function DashboardChrome({
       nav={
         <DashboardNav
           accountType={user?.accountType}
+          role={user?.role}
           user={
             user
               ? { name: getProfileTitle(user), handle: user.displayName, email: user.email, image: user.avatarUrl }

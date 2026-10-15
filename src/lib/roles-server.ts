@@ -1,4 +1,5 @@
 import "server-only";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isStaff, type Role, effectiveRole } from "./roles";
@@ -16,5 +17,17 @@ export async function requireStaff(): Promise<{ userId: string; role: Role }> {
     select: { role: true, accountType: true, deletedAt: true },
   });
   if (!me || me.deletedAt || !isStaff(me)) throw new Error("Forbidden");
+  return { userId: session.user.id, role: effectiveRole(me) };
+}
+
+/** Page-variant: redirect i.p.v. throw (zelfde patroon als requireAdminPage). */
+export async function requireStaffPage(locale = "nl"): Promise<{ userId: string; role: Role }> {
+  const session = await auth();
+  if (!session?.user?.id) redirect(`/${locale}/login`);
+  const me = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, accountType: true, deletedAt: true },
+  });
+  if (!me || me.deletedAt || !isStaff(me)) redirect(`/${locale}/dashboard`);
   return { userId: session.user.id, role: effectiveRole(me) };
 }

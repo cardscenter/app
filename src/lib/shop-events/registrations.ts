@@ -76,17 +76,23 @@ function occupyingWhere(eventId: string, now: Date): Prisma.EventRegistrationWhe
   };
 }
 
+/**
+ * Beschikbaarheid. Binnen een `$transaction` ALTIJD `maxOccupancy` meegeven
+ * (vooraf opgehaald): een query via de globale client terwijl de transactie
+ * de SQLite-lock houdt, blokkeert tot de transactie verloopt.
+ */
 export async function getEventAvailability(
   event: { id: string; capacity: number | null },
   db: Tx | typeof prisma = prisma,
   now: Date = new Date(),
+  maxOccupancy?: number | null,
 ): Promise<Availability> {
-  const [occupied, waitlistCount, maxOccupancy] = await Promise.all([
+  const limit = maxOccupancy === undefined ? await getMaxOccupancy() : maxOccupancy;
+  const [occupied, waitlistCount] = await Promise.all([
     db.eventRegistration.count({ where: occupyingWhere(event.id, now) }),
     db.eventRegistration.count({ where: { eventId: event.id, status: "WAITLIST" } }),
-    getMaxOccupancy(),
   ]);
-  return computeAvailability({ eventCapacity: event.capacity, maxOccupancy, occupied, waitlistCount });
+  return computeAvailability({ eventCapacity: event.capacity, maxOccupancy: limit, occupied, waitlistCount });
 }
 
 // ---------------------------------------------------------------- notifications
@@ -222,8 +228,9 @@ export async function registerForEvent(args: {
     }
   }
 
+  const maxOccupancy = await getMaxOccupancy();
   const outcome = await prisma.$transaction(async (tx) => {
-    const availability = await getEventAvailability(event, tx, now);
+    const availability = await getEventAvailability(event, tx, now, maxOccupancy);
     const base = {
       divisionKey,
       supervisedByAdult: args.supervisedByAdult,
@@ -505,10 +512,11 @@ export async function applyPaymentStatus(args: {
     // Betaling kwam ná het verlopen van de reservering/het aanbod: alsnog een
     // plek proberen te pakken; lukt dat niet, dan automatisch terugbetalen.
     if (reg.status === "EXPIRED") {
+      const maxOccupancy = await getMaxOccupancy();
       const got = await prisma.$transaction(async (tx) => {
         const ev = await tx.shopEvent.findUnique({ where: { id: reg.eventId }, select: { id: true, capacity: true, status: true, startsAt: true } });
         if (!ev || ev.status !== "PUBLISHED" || ev.startsAt <= now) return false;
-        const availability = await getEventAvailability(ev, tx, now);
+        const availability = await getEventAvailability(ev, tx, now, maxOccupancy);
         if (availability.full) return false;
         const r = await tx.eventRegistration.updateMany({
           where: { id: reg.id, status: "EXPIRED" },
@@ -586,6 +594,7 @@ export async function refundPayment(paymentId: string, description: string): Pro
 export async function promoteWaitlist(eventId: string): Promise<number> {
   const now = new Date();
   let promoted = 0;
+  const maxOccupancy = await getMaxOccupancy();
   for (let i = 0; i < 50; i++) {
     const result = await prisma.$transaction(async (tx) => {
       const ev = await tx.shopEvent.findUnique({
@@ -593,7 +602,7 @@ export async function promoteWaitlist(eventId: string): Promise<number> {
         select: { id: true, capacity: true, status: true, startsAt: true, endsAt: true, title: true, price: true, waitlistEnabled: true },
       });
       if (!ev || ev.status !== "PUBLISHED" || ev.startsAt <= now) return null;
-      const availability = await getEventAvailability(ev, tx, now);
+      const availability = await getEventAvailability(ev, tx, now, maxOccupancy);
       if (availability.full) return null;
       const next = await tx.eventRegistration.findFirst({
         where: { eventId, status: "WAITLIST" },
