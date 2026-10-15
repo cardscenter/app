@@ -31,7 +31,23 @@ export const PLATFORM = {
   },
   kvkNumber: "",
   vatId: "",
+  // Fysieke winkel (Community Hub): locatie van alle winkel-events en de
+  // bestelapp. Postcode invullen zodra bekend (lege waarde wordt overgeslagen).
+  shop: {
+    name: "Cards Center",
+    street: "Dubbele Poort",
+    houseNumber: "7",
+    postalCode: "",
+    city: "Hulst",
+    countryCode: "NL",
+  },
 } as const;
+
+/** "Dubbele Poort 7, Hulst" (met postcode zodra ingevuld). */
+export function formatShopAddress(separator = ", "): string {
+  const s = PLATFORM.shop;
+  return [`${s.street} ${s.houseNumber}`, `${s.postalCode ? s.postalCode + " " : ""}${s.city}`].join(separator);
+}
 
 /** IBAN in leesbare groepen van 4: "NL94 RABO 0361 3805 93". */
 export const PLATFORM_IBAN_DISPLAY = formatIbanForDisplay(PLATFORM.bank.iban);

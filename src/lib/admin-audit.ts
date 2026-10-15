@@ -47,6 +47,18 @@ export type AdminAction =
   // Community Hub (Fase 2) — rollen en spellen
   | "SET_USER_ROLE"
   | "TOGGLE_GAME"
+  // Community Hub (Fase 3): winkel-events
+  | "CREATE_EVENT_TYPE"
+  | "UPDATE_EVENT_TYPE"
+  | "CREATE_SHOP_EVENT"
+  | "UPDATE_SHOP_EVENT"
+  | "PUBLISH_SHOP_EVENT"
+  | "CANCEL_SHOP_EVENT"
+  | "COMPLETE_SHOP_EVENT"
+  | "DUPLICATE_SHOP_EVENT"
+  | "ADMIN_CANCEL_REGISTRATION"
+  | "ADMIN_ADD_REGISTRATION"
+  | "UPDATE_HUB_SETTINGS"
   // Fase 45 — tier-beheer door admin
   | "GRANT_TIER"
   | "REVOKE_TIER";
@@ -70,7 +82,11 @@ export type AdminTargetType =
   | "SHIPPING_ISSUE"
   | "EVENT"
   | "EVENT_REPORT"
-  | "GAME";
+  | "GAME"
+  | "EVENT_TYPE"
+  | "SHOP_EVENT"
+  | "EVENT_REGISTRATION"
+  | "HUB_SETTINGS";
 
 /**
  * Log an admin or system action.

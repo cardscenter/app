@@ -100,6 +100,18 @@ export function notificationTypeToCategory(type: string): EmailCategory | null {
     return "account";
   }
 
+  // Winkel-events (Community Hub, Fase 3): tickets, wachtlijst-aanbod en
+  // annuleringen zijn transactioneel en gaan altijd per mail.
+  if (
+    type === "EVENT_TICKET" ||
+    type === "EVENT_WAITLIST_OFFER" ||
+    type === "EVENT_WAITLIST_EXPIRED" ||
+    type === "EVENT_CANCELLED" ||
+    type === "EVENT_REGISTRATION_CANCELLED"
+  ) {
+    return "account";
+  }
+
   // Nieuwe volger: alleen in de bel, geen mail (zou spam worden).
   if (type === "NEW_FOLLOWER") return null;
 

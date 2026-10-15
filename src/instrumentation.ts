@@ -56,6 +56,16 @@ export async function register() {
       console.error("[instrumentation] claimsale-activator scheduler boot failed", err);
     }
 
+    // Community Hub (Fase 3): verlopen ticket-reserveringen en wachtlijst-
+    // aanbiedingen elke minuut opruimen (altijd aan, geen flag).
+    try {
+      const { startEventMaintenanceScheduler } = await import("@/lib/event-maintenance-scheduler");
+      startEventMaintenanceScheduler("boot");
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[instrumentation] event-maintenance scheduler boot failed", err);
+    }
+
     // In-process scheduler voor expire-claims: claimsale-items die >15 min in
     // iemands cart staan worden elke 60s automatisch teruggezet naar AVAILABLE.
     // Vervangt de externe cron-route als primaire trigger zodat het ook in

@@ -36,6 +36,7 @@ import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 import { recordPendingFeeInTx } from "@/lib/pending-fees";
 import { getBlockedUserIds } from "@/lib/blocking";
 import { parseImageUrls, deleteUploadedFile } from "@/lib/upload";
+import { expireReservations, expireWaitlistOffers } from "@/lib/shop-events/registrations";
 import {
   STALE_PAID_SELLER_DEADLINE_DAYS,
   STALE_PAID_AUTO_CANCEL_AFTER_DAYS,
@@ -443,12 +444,32 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     schedule: "Elk uur (in-process)",
     allowManualRun: true,
   },
+  "expire-event-reservations": {
+    description:
+      "Winkel-events (hub): reserveringen van betaalde tickets die na 10 minuten nog niet betaald zijn vrijgeven, en de plek aanbieden aan de wachtlijst. Draait primair in-process elke minuut via de event-maintenance-scheduler.",
+    schedule: "Elke minuut (in-process)",
+    allowManualRun: true,
+  },
+  "expire-event-waitlist-offers": {
+    description:
+      "Winkel-events (hub): wachtlijst-aanbiedingen die na 24 uur niet betaald of bevestigd zijn laten vervallen en de plek aan de volgende op de wachtlijst geven.",
+    schedule: "Elke minuut (in-process)",
+    allowManualRun: true,
+  },
 };
 
 export type CronRunner = () => Promise<{ itemsProcessed: number; result: object }>;
 
 // Ongewrapte runners — alleen via CRON_JOBS aanroepen (feature-flag-guard).
 const RAW_CRON_JOBS: Record<CronJobName, CronRunner> = {
+  "expire-event-reservations": async () => {
+    const r = await expireReservations();
+    return { itemsProcessed: r.expired, result: r };
+  },
+  "expire-event-waitlist-offers": async () => {
+    const r = await expireWaitlistOffers();
+    return { itemsProcessed: r.expired, result: r };
+  },
   "auto-confirm": async () => {
     const r = await autoConfirmDeliveries();
     return { itemsProcessed: r.confirmed, result: r };

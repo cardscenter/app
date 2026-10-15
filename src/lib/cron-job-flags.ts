@@ -38,6 +38,9 @@ export const CRON_JOB_NAMES = [
   "cleanup-sold-images",
   "email-unread-messages",
   "cleanup-notifications",
+  // Community Hub (Fase 3): winkel-events
+  "expire-event-reservations",
+  "expire-event-waitlist-offers",
 ] as const;
 
 export type CronJobName = (typeof CRON_JOB_NAMES)[number];
@@ -72,6 +75,9 @@ export const CRON_JOB_FLAG: Record<CronJobName, FeatureFlag | null> = {
   "cleanup-sold-images": null,
   "email-unread-messages": null,
   "cleanup-notifications": null,
+  // Winkel-events (hub): altijd aan
+  "expire-event-reservations": null,
+  "expire-event-waitlist-offers": null,
 };
 
 /** De flag die deze job momenteel blokkeert, of `null` als de job mag draaien. */
