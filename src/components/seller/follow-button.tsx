@@ -29,7 +29,7 @@ export function FollowButton({ targetUserId, initiallyFollowing, loggedIn, class
 
   function toggle() {
     if (!loggedIn) {
-      router.push(`/login?callbackUrl=${encodeURIComponent(`/verkoper/${targetUserId}`)}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(`/spelers/${targetUserId}`)}`);
       return;
     }
     const next = !following;

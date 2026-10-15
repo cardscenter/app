@@ -48,9 +48,17 @@ Zie `.env.example` voor de volledige lijst met uitleg. Verplicht lokaal: `DATABA
 
 ## Rollen
 
-- **Speler** (`accountType` FREE/PRO/UNLIMITED/ENTERPRISE): gewone gebruiker.
+- **Speler** (`role` PLAYER): gewone gebruiker. Registreert met e-mail en wachtwoord, kan daarna ook inloggen met een inloglink per e-mail.
+- **Staff** (`role` STAFF): mag inchecken bij evenementen, bestellingen en bulk-aanvragen verwerken. Een admin zet de rol op de gebruikerspagina in het admin-panel.
 - **Admin** (`accountType` ADMIN): volledig beheer via `/dashboard/admin/*`, ziet ook de verborgen functies. Vereist 2FA.
-- **Staff** (check-in, bestellingen, bulk verwerken): volgt in Fase 2 als aparte rol.
+
+## Accounts en privacy
+
+- Geboortedatum is verplicht bij registratie en nooit publiek; alleen de leeftijdsdivisie wordt gebruikt.
+- Onder de 16: een ouder of verzorger moet per e-mail toestemming geven voordat het account evenementen kan boeken (`/ouder-toestemming`).
+- Nieuwsbrief is een losse opt-in die standaard uit staat; afmelden kan met één klik.
+- Gebruikers kunnen hun account zelf verwijderen (Instellingen). De rij blijft geanonimiseerd bestaan; inloggen is daarna onmogelijk.
+- Welke spellen gekozen kunnen worden (en welk spelers-ID erbij hoort) beheert een admin op `/dashboard/admin/games`.
 
 ## Mapstructuur
 

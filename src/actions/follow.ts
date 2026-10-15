@@ -49,11 +49,11 @@ export async function followUser(targetUserId: string) {
       "NEW_FOLLOWER",
       "Nieuwe volger",
       `${getFullName(me)} (@${me.displayName}) volgt je nu.`,
-      `/verkoper/${userId}`,
+      `/spelers/${userId}`,
     );
   }
 
-  revalidatePath(`/verkoper/${targetUserId}`);
+  revalidatePath(`/spelers/${targetUserId}`);
   return { success: true };
 }
 
@@ -65,6 +65,6 @@ export async function unfollowUser(targetUserId: string) {
     where: { followerId: session.user.id, followingId: targetUserId },
   });
 
-  revalidatePath(`/verkoper/${targetUserId}`);
+  revalidatePath(`/spelers/${targetUserId}`);
   return { success: true };
 }

@@ -21,6 +21,7 @@ import {
   ArrowLeft,
   AlertTriangle,
   Building2,
+  Gamepad2,
   Truck,
   CalendarDays,
 } from "lucide-react";
@@ -83,6 +84,7 @@ export function AdminNav({
         { href: "/dashboard/admin/users", labelKey: "navUsers", icon: Users },
         { href: "/dashboard/admin/verifications", labelKey: "navVerifications", icon: ShieldCheck, badge: pendingCounts?.verifications },
         { href: "/dashboard/admin/enterprise-requests", labelKey: "navEnterpriseRequests", icon: Building2, badge: pendingCounts?.enterpriseRequests },
+        { href: "/dashboard/admin/games", labelKey: "navGames", icon: Gamepad2 },
       ],
     },
     {

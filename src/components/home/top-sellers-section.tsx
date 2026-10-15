@@ -35,7 +35,7 @@ export function TopSellersSection({ sellers }: TopSellersSectionProps) {
           {sellers.map((seller) => (
             <StaggerItem key={seller.id}>
               <Link
-                href={`/verkoper/${seller.id}`}
+                href={`/spelers/${seller.id}`}
                 className="glass rounded-2xl p-4 flex flex-col items-center text-center transition-all hover:shadow-lg hover:scale-[1.03] group"
               >
                 {/* Avatar */}

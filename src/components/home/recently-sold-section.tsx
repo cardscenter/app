@@ -55,7 +55,7 @@ export function RecentlySoldSection({ items, bgClass = "bg-card" }: RecentlySold
                 return (
                   <CarouselSlide key={item.bundleId}>
                     <Link
-                      href={`/verkoper/${item.sellerId}`}
+                      href={`/spelers/${item.sellerId}`}
                       className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:shadow-card-hover"
                     >
                       <div className="relative aspect-square w-full overflow-hidden bg-muted">

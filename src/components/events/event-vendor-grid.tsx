@@ -22,7 +22,7 @@ export function EventVendorGrid({ vendors }: { vendors: VendorCardData[] }) {
         return (
           <Link
             key={v.userId}
-            href={`/verkoper/${v.userId}`}
+            href={`/spelers/${v.userId}`}
             className="group overflow-hidden rounded-xl border border-border bg-card shadow-card transition hover:shadow-card-hover"
           >
             {/* Banner-strook */}

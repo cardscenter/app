@@ -60,7 +60,7 @@ export function BusinessInvites({ rows }: { rows: MembershipRow[] }) {
           <UserAvatar src={r.avatarUrl} name={r.companyName} size="md" />
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-x-2 text-sm">
-              <Link href={`/verkoper/${r.businessId}`} className="font-semibold text-foreground hover:underline">
+              <Link href={`/spelers/${r.businessId}`} className="font-semibold text-foreground hover:underline">
                 {r.companyName}
               </Link>
               {r.status === "PENDING" && <StatusBadge tone="warning">{t("teamInvitePending")}</StatusBadge>}

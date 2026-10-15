@@ -126,7 +126,7 @@ export default async function CustomizationPage() {
 
       {session?.user?.id && (
         <Link
-          href={`/verkoper/${session.user.id}`}
+          href={`/spelers/${session.user.id}`}
           className="mb-10 flex items-center gap-3 glass rounded-2xl p-4 transition-all hover:ring-2 hover:ring-primary/30"
         >
           <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">

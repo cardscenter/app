@@ -244,7 +244,20 @@
     "magicLoggingIn": "Signing you in",
     "magicLoggingInHint": "One moment, we are checking your sign-in link.",
     "magicInvalid": "This sign-in link is no longer valid. Links work for 15 minutes and only once. Request a new one.",
-    "magicBackToLogin": "Back to sign in"
+    "magicBackToLogin": "Back to sign in",
+    "stepAboutYou": "About you",
+    "aboutYouSubtitle": "Only we see your name and date of birth. On the site you are your username.",
+    "dateOfBirth": "Date of birth",
+    "dateOfBirthHint": "Never public. We only use it for your age division at tournaments.",
+    "dobRequired": "Enter your date of birth",
+    "dobInvalid": "Check your date of birth",
+    "minorNotice": "You are under {age}. You can create an account, but before you book an event we will ask your parent or guardian for consent. You can arrange that on your profile.",
+    "favoriteGames": "Favourite games",
+    "newsletterOptIn": "Keep me posted with the newsletter",
+    "newsletterOptInHint": "Releases, events and deals. A few times a month at most, unsubscribe with one click.",
+    "referralShop": "In the shop",
+    "selectCountry": "Choose a country",
+    "fullName": "Name"
   },
   "home": {
     "heroTitle": "The Pokémon Card Marketplace",
@@ -1285,7 +1298,26 @@
     "sectionNotifications": "Notification behaviour",
     "sectionNotificationsDesc": "How notifications behave in your browser.",
     "achievementToasts": "Show achievement pop-ups",
-    "achievementToastsDesc": "A small celebration pop-up when you unlock an achievement. Only applies to this device."
+    "achievementToastsDesc": "A small celebration pop-up when you unlock an achievement. Only applies to this device.",
+    "sectionNewsletter": "Newsletter",
+    "sectionNewsletterDesc": "Releases, events and deals from Cards Center. Off by default.",
+    "newsletterOptIn": "Receive the newsletter",
+    "newsletterOptInDesc": "A few times a month at most. Unsubscribe any time with one click at the bottom of the email.",
+    "showOnParticipantLists": "Visible on attendee lists",
+    "showOnParticipantListsDesc": "Others see your username under \"who is coming\" on an event.",
+    "showOnLeaderboards": "Visible on leaderboards",
+    "showOnLeaderboardsDesc": "Your name appears in the league season standings.",
+    "sectionDanger": "Delete account",
+    "sectionDangerDesc": "Gone is gone: we erase your personal data and you can no longer sign in.",
+    "deleteAccount": "Delete my account",
+    "deleteAccountDesc": "Your tickets, orders and buyback requests must be completed first. Not sure? Email support first.",
+    "deleteAccountButton": "Delete account",
+    "deleteAccountWarning": "This cannot be undone. Your profile, player details and preferences will be erased.",
+    "deleteAccountPassword": "Your password",
+    "deleteAccountTotp": "2FA code",
+    "deleteAccountConfirmPlaceholder": "Type VERWIJDER to confirm",
+    "deleteAccountConfirm": "Delete permanently",
+    "cancel": "Cancel"
   },
   "profile": {
     "displayName": "Username",
@@ -1412,7 +1444,9 @@
     "teamLeave": "Leave team",
     "teamInviteAccepted": "You are now part of the team",
     "teamInviteDeclined": "Invitation declined",
-    "teamLeft": "You left the team"
+    "teamLeft": "You left the team",
+    "playerSection": "Player details",
+    "playerSectionHint": "Your date of birth and contact details are private. Your favourite games show on your profile."
   },
   "chat": {
     "inbox": "Inbox",
@@ -2082,7 +2116,7 @@
     "shopEmptyOwner": "Add blocks in the editor to present your shop.",
     "shopEmptyVisitor": "The owner hasn't added any content yet.",
     "viewFullProfile": "View full profile",
-    "breadcrumbSellers": "Sellers",
+    "breadcrumbSellers": "Players",
     "sellerNotFound": "Seller not found",
     "editProfile": "Edit profile",
     "editShop": "Edit shop page",
@@ -3256,6 +3290,39 @@
     "kpiEnterpriseRequests": "Enterprise requests",
     "groupQueuesDisputes": "Disputes & reports",
     "groupQueuesFinance": "Finance",
-    "groupQueuesUsers": "Users & content"
+    "groupQueuesUsers": "Users & content",
+    "navGames": "Games"
+  },
+  "player": {
+    "dateOfBirth": "Date of birth",
+    "dateOfBirthHint": "Never public. Sets your age division at tournaments and is required to book an event.",
+    "ageLine": "You are {age} years old.",
+    "minorNote": "Under {age} we need consent from a parent or guardian before you can book.",
+    "favoriteGames": "Favourite games",
+    "favoriteGamesHint": "Which games do you play? That way you spot the right events faster.",
+    "playerIds": "Player IDs",
+    "playerIdsHint": "Your official player ID per game, so your registration for official events is correct.",
+    "guardian": "Parent or emergency contact",
+    "guardianHint": "Required under 16: name, email and phone number of a parent or guardian. We email them to ask for consent.",
+    "guardianName": "Name of parent or guardian",
+    "guardianEmail": "Email of parent or guardian",
+    "guardianPhone": "Phone number (emergency contact)",
+    "consentGiven": "Consent given",
+    "consentMissing": "Your parent has not given consent yet",
+    "consentSend": "Send consent email",
+    "consentSaveFirst": "Save your details first",
+    "consentSent": "Email sent to {email}",
+    "save": "Save player details",
+    "saved": "Player details saved"
+  },
+  "guardian": {
+    "successTitle": "Thanks, consent is recorded",
+    "alreadyTitle": "Consent was already recorded",
+    "successBody": "{name} can now book and pay for events at Cards Center. We only keep what is needed: name, email, date of birth (never public) and your details as emergency contact.",
+    "revokeHint": "Want to withdraw consent? Email us via the support page and we will sort it right away.",
+    "invalidTitle": "This link does not work",
+    "invalidBody": "The link is not valid. Ask your child to send a new consent email from their profile.",
+    "expiredBody": "The link has expired or was used with a different email address. Ask your child to send a new consent email from their profile.",
+    "toHome": "To the homepage"
   }
 }

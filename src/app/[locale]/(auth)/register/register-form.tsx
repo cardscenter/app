@@ -7,9 +7,6 @@ import { useState, useActionState, Suspense, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { EUROPEAN_COUNTRIES } from "@/lib/shipping/countries";
 import {
-  User,
-  Building2,
-  MapPin,
   Camera,
   Settings,
   ChevronRight,
@@ -17,79 +14,61 @@ import {
   Check,
   Upload,
   X,
-  ShoppingCart,
-  Store,
-  ArrowLeftRight,
-  Sparkles,
-  UserRound,
   KeyRound,
-  Pencil,
+  UserRound,
+  Cake,
 } from "lucide-react";
 import { PasswordInput } from "@/components/auth/password-input";
 import { PasswordStrengthMeter } from "@/components/auth/password-strength-meter";
 import { UsernameAvailabilityIndicator } from "@/components/auth/username-availability-indicator";
-import { ACCOUNT_TIERS, type TierKey } from "@/lib/subscription-tiers";
 import { USERNAME_MAX, USERNAME_MIN, USERNAME_REGEX } from "@/lib/username-policy";
+import { GUARDIAN_CONSENT_AGE, ageOn, isPlausibleDateOfBirth, parseDateOfBirth } from "@/lib/age";
+import type { GameDefinition } from "@/lib/games";
 
 /**
- * Registratie (Fase 45-redesign): 5 stappen met het accounttype als éérste
- * keuze — particulier of bedrijf — zodat het formulier (en later de
- * winkelpagina) daar direct op inspeelt.
+ * Registratie (Community Hub, Fase 2): vier korte stappen voor spelers.
  *
- *  1 Type · 2 Account · 3 Gegevens & adres (+ bedrijfsgegevens) · 4 Foto/logo
- *  · 5 Voorkeuren + samenvatting + voorwaarden
+ *  1 Account (gebruikersnaam, e-mail, wachtwoord)
+ *  2 Over jou (naam, geboortedatum, woonplaats, land, favoriete spellen)
+ *  3 Foto (optioneel)
+ *  4 Voorkeuren (nieuwsbrief-opt-in, samenvatting, voorwaarden)
+ *
+ * Geen accounttype-keuze en geen verplicht adres meer: dat hoorde bij de
+ * marktplaats. Bedrijfsaccounts ontstaan later via convertToBusinessAccount.
  */
-const TOTAL_STEPS = 5;
-
-// NL KvK = 8 cijfers; overige landen vrij (6-14 alfanumeriek). Btw-id = landcode + 2-12 tekens.
-const KVK_NL_REGEX = /^\d{8}$/;
-const REG_ID_REGEX = /^[0-9A-Za-z.-]{6,14}$/;
-const VAT_REGEX = /^[A-Z]{2}[A-Z0-9]{2,12}$/;
+const TOTAL_STEPS = 4;
 
 interface FormData {
   displayName: string;
   email: string;
   password: string;
   confirmPassword: string;
-  accountKind: "INDIVIDUAL" | "BUSINESS" | "";
   firstName: string;
   lastName: string;
+  dateOfBirth: string;
   city: string;
   country: string;
-  companyName: string;
-  cocNumber: string;
-  vatNumber: string;
-  street: string;
-  houseNumber: string;
-  postalCode: string;
+  favoriteGames: string[];
   avatarUrl: string;
   avatarFile: File | null;
-  accountFocus: "BUYING" | "SELLING" | "BOTH" | "";
   referralSource: string;
+  newsletterOptIn: boolean;
   termsAccepted: boolean;
 }
 
-export function RegisterForm() {
+export function RegisterForm({ games }: { games: GameDefinition[] }) {
   return (
     <Suspense>
-      <MultiStepRegisterForm />
+      <MultiStepRegisterForm games={games} />
     </Suspense>
   );
 }
 
-function MultiStepRegisterForm() {
+function MultiStepRegisterForm({ games }: { games: GameDefinition[] }) {
   const t = useTranslations("auth");
-  const tSub = useTranslations("subscription");
   const locale = useLocale();
   const searchParams = useSearchParams();
   const prefillEmail = searchParams.get("email") ?? "";
-
-  // `?plan=PRO|UNLIMITED|ENTERPRISE` voor plan-selectie via homepage TierCards.
-  const planParam = searchParams.get("plan")?.toUpperCase() ?? null;
-  const selectedPlan: TierKey | null =
-    planParam && planParam !== "FREE" && planParam in ACCOUNT_TIERS
-      ? (planParam as TierKey)
-      : null;
 
   const [currentStep, setCurrentStep] = useState(1);
   const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
@@ -98,21 +77,16 @@ function MultiStepRegisterForm() {
     email: prefillEmail,
     password: "",
     confirmPassword: "",
-    accountKind: "",
     firstName: "",
     lastName: "",
+    dateOfBirth: "",
     city: "",
     country: locale === "nl" ? "NL" : "",
-    companyName: "",
-    cocNumber: "",
-    vatNumber: "",
-    street: "",
-    houseNumber: "",
-    postalCode: "",
+    favoriteGames: [],
     avatarUrl: "",
     avatarFile: null,
-    accountFocus: "",
     referralSource: "",
+    newsletterOptIn: false,
     termsAccepted: false,
   });
 
@@ -120,7 +94,6 @@ function MultiStepRegisterForm() {
     async (_prev: { error?: string } | null, fd: globalThis.FormData) => {
       const result = await register(fd);
       if (!result || ("success" in result && result.success)) {
-        // Eénmalige "Welkom," ipv "Welkom terug," op de homepage.
         try {
           window.localStorage.setItem("cards-center-new-user", "1");
         } catch {
@@ -147,16 +120,10 @@ function MultiStepRegisterForm() {
     });
   }, []);
 
-  const isBusiness = formData.accountKind === "BUSINESS";
-
   function validateStep(step: number): boolean {
     const errors: Record<string, string> = {};
 
     if (step === 1) {
-      if (!formData.accountKind) errors.accountKind = t("typeRequired");
-    }
-
-    if (step === 2) {
       if (!formData.displayName || formData.displayName.length < USERNAME_MIN) errors.displayName = `Minimaal ${USERNAME_MIN} tekens`;
       else if (formData.displayName.length > USERNAME_MAX) errors.displayName = `Maximaal ${USERNAME_MAX} tekens`;
       else if (!USERNAME_REGEX.test(formData.displayName)) errors.displayName = "Alleen letters, cijfers, - en _";
@@ -165,31 +132,18 @@ function MultiStepRegisterForm() {
       if (formData.password !== formData.confirmPassword) errors.confirmPassword = "Wachtwoorden komen niet overeen";
     }
 
-    if (step === 3) {
+    if (step === 2) {
       if (!formData.firstName.trim()) errors.firstName = "Verplicht";
       if (!formData.lastName.trim()) errors.lastName = "Verplicht";
-      // Adres verplicht sinds Fase 43 — account moet direct shipping-geldig zijn.
-      if (!formData.street.trim()) errors.street = "Verplicht";
-      if (!formData.houseNumber.trim()) errors.houseNumber = "Verplicht";
-      if (!formData.postalCode.trim()) errors.postalCode = "Verplicht";
-      if (!formData.city.trim()) errors.city = "Verplicht";
+      const dob = parseDateOfBirth(formData.dateOfBirth);
+      if (!dob) errors.dateOfBirth = t("dobRequired");
+      else if (!isPlausibleDateOfBirth(dob)) errors.dateOfBirth = t("dobInvalid");
       if (!formData.country) errors.country = "Verplicht";
-      if (isBusiness) {
-        if (!formData.companyName.trim()) errors.companyName = "Verplicht";
-        const coc = formData.cocNumber.trim();
-        if (!coc) errors.cocNumber = "Verplicht";
-        else if (formData.country === "NL" ? !KVK_NL_REGEX.test(coc) : !REG_ID_REGEX.test(coc)) {
-          errors.cocNumber = formData.country === "NL" ? t("cocInvalidNl") : t("cocInvalid");
-        }
-        const vat = formData.vatNumber.trim().toUpperCase();
-        if (vat && !VAT_REGEX.test(vat)) errors.vatNumber = t("vatInvalid");
-      }
     }
 
-    // Stap 4 (foto) is optioneel
+    // Stap 3 (foto) is optioneel
 
-    if (step === 5) {
-      if (!formData.accountFocus) errors.accountFocus = "Maak een keuze";
+    if (step === 4) {
       if (!formData.termsAccepted) errors.termsAccepted = "Verplicht";
     }
 
@@ -220,43 +174,27 @@ function MultiStepRegisterForm() {
   }
 
   function handleSubmit() {
-    if (!validateStep(5)) return;
+    if (!validateStep(4)) return;
 
     const fd = new globalThis.FormData();
     Object.entries(formData).forEach(([key, value]) => {
-      if (key === "avatarFile") return; // apart
+      if (key === "avatarFile" || key === "favoriteGames") return; // apart
       fd.set(key, String(value));
     });
-    fd.set("vatNumber", formData.vatNumber.trim().toUpperCase());
+    for (const g of formData.favoriteGames) fd.append("favoriteGames", g);
     if (formData.avatarFile) fd.set("avatarFile", formData.avatarFile);
-    if (selectedPlan) fd.set("selectedPlan", selectedPlan);
     formAction(fd);
   }
 
   const steps = [
-    { icon: UserRound, label: t("stepType") },
     { icon: KeyRound, label: t("stepAccount") },
-    { icon: MapPin, label: t("stepDetails") },
-    { icon: Camera, label: isBusiness ? t("stepLogo") : t("stepPhoto") },
+    { icon: UserRound, label: t("stepAboutYou") },
+    { icon: Camera, label: t("stepPhoto") },
     { icon: Settings, label: t("stepPreferences") },
   ];
 
   return (
     <div className="w-full max-w-xl space-y-5">
-      {selectedPlan && (
-        <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm dark:border-sky-900/50 dark:bg-sky-950/30">
-          <Sparkles className="size-4 shrink-0 text-sky-600 dark:text-sky-400" />
-          <div className="flex-1 text-sky-900 dark:text-sky-200">
-            <span className="font-semibold">
-              {t("planBannerRegisteringFor", {
-                tier: tSub(ACCOUNT_TIERS[selectedPlan].nameKey as "tierFree" | "tierPro" | "tierUnlimited" | "tierEnterprise"),
-              })}
-            </span>
-            <span className="ml-1.5 text-sky-700/80 dark:text-sky-300/80">{t("planBannerAfterRegister")}</span>
-          </div>
-        </div>
-      )}
-
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("registerTitle")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("step", { current: currentStep, total: TOTAL_STEPS })}</p>
@@ -292,20 +230,6 @@ function MultiStepRegisterForm() {
         })}
       </ol>
 
-      {/* Gekozen type als chip boven latere stappen */}
-      {currentStep > 1 && formData.accountKind && (
-        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
-          <span className="inline-flex items-center gap-2 text-foreground">
-            {isBusiness ? <Building2 className="size-4 text-primary" /> : <User className="size-4 text-primary" />}
-            {isBusiness ? t("typeBusinessTitle") : t("typeIndividualTitle")}
-          </span>
-          <button type="button" onClick={() => goTo(1)} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-            <Pencil className="size-3" />
-            {t("change")}
-          </button>
-        </div>
-      )}
-
       {/* Form-kaart */}
       <div className="rounded-xl border border-border bg-card p-6 shadow-card sm:p-8">
         {serverState?.error && (
@@ -314,11 +238,10 @@ function MultiStepRegisterForm() {
           </div>
         )}
 
-        {currentStep === 1 && <StepType formData={formData} updateField={updateField} errors={stepErrors} t={t} />}
-        {currentStep === 2 && <StepAccount formData={formData} updateField={updateField} errors={stepErrors} t={t} />}
-        {currentStep === 3 && <StepDetails formData={formData} updateField={updateField} errors={stepErrors} t={t} locale={locale} />}
-        {currentStep === 4 && <StepPhoto formData={formData} updateField={updateField} t={t} />}
-        {currentStep === 5 && <StepPreferences formData={formData} updateField={updateField} errors={stepErrors} t={t} locale={locale} />}
+        {currentStep === 1 && <StepAccount formData={formData} updateField={updateField} errors={stepErrors} t={t} />}
+        {currentStep === 2 && <StepAboutYou formData={formData} updateField={updateField} errors={stepErrors} t={t} locale={locale} games={games} />}
+        {currentStep === 3 && <StepPhoto formData={formData} updateField={updateField} t={t} />}
+        {currentStep === 4 && <StepPreferences formData={formData} updateField={updateField} errors={stepErrors} t={t} locale={locale} games={games} />}
 
         {/* Navigatie */}
         <div className="mt-8 flex items-center justify-between gap-3 border-t border-border pt-5">
@@ -336,7 +259,7 @@ function MultiStepRegisterForm() {
           )}
 
           <div className="flex items-center gap-2">
-            {currentStep === 4 && (
+            {currentStep === 3 && (
               <button
                 type="button"
                 onClick={skipStep}
@@ -408,83 +331,31 @@ function StepHeading({ title, description }: { title: string; description?: stri
   );
 }
 
-function StepType({ formData, updateField, errors, t }: StepProps) {
-  const options = [
-    {
-      kind: "INDIVIDUAL" as const,
-      icon: User,
-      title: t("typeIndividualTitle"),
-      desc: t("typeIndividualDesc"),
-      bullets: [t("typeIndividualB1"), t("typeIndividualB2"), t("typeIndividualB3")],
-    },
-    {
-      kind: "BUSINESS" as const,
-      icon: Building2,
-      title: t("typeBusinessTitle"),
-      desc: t("typeBusinessDesc"),
-      bullets: [t("typeBusinessB1"), t("typeBusinessB2"), t("typeBusinessB3")],
-    },
-  ];
-  return (
-    <div>
-      <StepHeading title={t("typeTitle")} description={t("typeSubtitle")} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        {options.map(({ kind, icon: Icon, title, desc, bullets }) => {
-          const selected = formData.accountKind === kind;
-          return (
-            <button
-              key={kind}
-              type="button"
-              onClick={() => updateField("accountKind", kind)}
-              aria-pressed={selected}
-              className={`flex flex-col items-start rounded-xl border-2 p-4 text-left transition ${
-                selected ? "border-primary bg-primary/5" : "border-border bg-background hover:border-primary/40 hover:bg-muted/40"
-              }`}
-            >
-              <span className={`flex size-10 items-center justify-center rounded-lg ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                <Icon className="size-5" />
-              </span>
-              <span className="mt-3 text-base font-semibold text-foreground">{title}</span>
-              <span className="mt-0.5 text-sm text-muted-foreground">{desc}</span>
-              <ul className="mt-3 space-y-1">
-                {bullets.map((b) => (
-                  <li key={b} className="flex items-start gap-1.5 text-xs text-foreground/80">
-                    <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
-                    {b}
-                  </li>
-                ))}
-              </ul>
-            </button>
-          );
-        })}
-      </div>
-      <FieldError error={errors.accountKind} />
-      <p className="mt-4 text-xs text-muted-foreground">{t("typeNote")}</p>
-    </div>
-  );
-}
-
+/* ---------- Stap 1: Account ---------- */
 function StepAccount({ formData, updateField, errors, t }: StepProps) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <StepHeading title={t("stepAccount")} description={t("accountSubtitle")} />
 
       <div>
         <label htmlFor="displayName" className={LABEL}>
           {t("displayName")}
         </label>
-        <input
-          id="displayName"
-          type="text"
-          maxLength={USERNAME_MAX}
-          autoComplete="username"
-          value={formData.displayName}
-          onChange={(e) => updateField("displayName", e.target.value)}
-          className={INPUT}
-        />
+        <div className="relative">
+          <input
+            id="displayName"
+            type="text"
+            value={formData.displayName}
+            onChange={(e) => updateField("displayName", e.target.value)}
+            className={`${INPUT} pr-10`}
+            placeholder="bv. ashketchum"
+            maxLength={USERNAME_MAX}
+            autoComplete="username"
+          />
+          <UsernameAvailabilityIndicator displayName={formData.displayName} />
+        </div>
         <p className="mt-1 text-xs text-muted-foreground">{t("displayNameHint", { min: USERNAME_MIN, max: USERNAME_MAX })}</p>
         <FieldError error={errors.displayName} />
-        <UsernameAvailabilityIndicator displayName={formData.displayName} />
       </div>
 
       <div>
@@ -494,10 +365,11 @@ function StepAccount({ formData, updateField, errors, t }: StepProps) {
         <input
           id="email"
           type="email"
-          autoComplete="email"
           value={formData.email}
           onChange={(e) => updateField("email", e.target.value)}
           className={INPUT}
+          placeholder="naam@voorbeeld.nl"
+          autoComplete="email"
         />
         <FieldError error={errors.email} />
       </div>
@@ -509,12 +381,12 @@ function StepAccount({ formData, updateField, errors, t }: StepProps) {
           </label>
           <PasswordInput
             id="password"
-            autoComplete="new-password"
             value={formData.password}
             onChange={(e) => updateField("password", e.target.value)}
-            large={false}
-            className={`${INPUT} pr-10`}
+            autoComplete="new-password"
+            className="mt-1"
           />
+          <PasswordStrengthMeter password={formData.password} />
           <FieldError error={errors.password} />
         </div>
         <div>
@@ -523,133 +395,123 @@ function StepAccount({ formData, updateField, errors, t }: StepProps) {
           </label>
           <PasswordInput
             id="confirmPassword"
-            autoComplete="new-password"
             value={formData.confirmPassword}
             onChange={(e) => updateField("confirmPassword", e.target.value)}
-            large={false}
-            className={`${INPUT} pr-10`}
+            autoComplete="new-password"
+            className="mt-1"
           />
           <FieldError error={errors.confirmPassword} />
         </div>
       </div>
-      <PasswordStrengthMeter password={formData.password} />
     </div>
   );
 }
 
-function StepDetails({ formData, updateField, errors, t, locale }: StepProps & { locale: string }) {
-  const isBusiness = formData.accountKind === "BUSINESS";
+/* ---------- Stap 2: Over jou ---------- */
+function StepAboutYou({ formData, updateField, errors, t, locale, games }: StepProps & { locale: string; games: GameDefinition[] }) {
+  const dob = parseDateOfBirth(formData.dateOfBirth);
+  const age = dob && isPlausibleDateOfBirth(dob) ? ageOn(dob) : null;
+  const minor = age !== null && age < GUARDIAN_CONSENT_AGE;
+
+  function toggleGame(key: string) {
+    const next = formData.favoriteGames.includes(key)
+      ? formData.favoriteGames.filter((k) => k !== key)
+      : [...formData.favoriteGames, key];
+    updateField("favoriteGames", next);
+  }
+
   return (
     <div className="space-y-5">
-      <StepHeading title={t("stepDetails")} description={t("detailsSubtitle")} />
+      <StepHeading title={t("stepAboutYou")} description={t("aboutYouSubtitle")} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="firstName" className={LABEL}>
             {t("firstName")}
           </label>
-          <input id="firstName" type="text" autoComplete="given-name" value={formData.firstName} onChange={(e) => updateField("firstName", e.target.value)} className={INPUT} />
+          <input id="firstName" type="text" value={formData.firstName} onChange={(e) => updateField("firstName", e.target.value)} className={INPUT} autoComplete="given-name" maxLength={50} />
           <FieldError error={errors.firstName} />
         </div>
         <div>
           <label htmlFor="lastName" className={LABEL}>
             {t("lastName")}
           </label>
-          <input id="lastName" type="text" autoComplete="family-name" value={formData.lastName} onChange={(e) => updateField("lastName", e.target.value)} className={INPUT} />
+          <input id="lastName" type="text" value={formData.lastName} onChange={(e) => updateField("lastName", e.target.value)} className={INPUT} autoComplete="family-name" maxLength={50} />
           <FieldError error={errors.lastName} />
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-muted/30 p-4">
-        <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <MapPin className="size-4 text-primary" />
-          {t("addressTitle")}
-        </p>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-2">
-            <label htmlFor="street" className={LABEL}>
-              {t("street")}
-            </label>
-            <input id="street" type="text" autoComplete="address-line1" value={formData.street} onChange={(e) => updateField("street", e.target.value)} className={INPUT} />
-            <FieldError error={errors.street} />
-          </div>
-          <div>
-            <label htmlFor="houseNumber" className={LABEL}>
-              {t("houseNumber")}
-            </label>
-            <input id="houseNumber" type="text" value={formData.houseNumber} onChange={(e) => updateField("houseNumber", e.target.value)} className={INPUT} />
-            <FieldError error={errors.houseNumber} />
-          </div>
+      <div>
+        <label htmlFor="dateOfBirth" className={LABEL}>
+          {t("dateOfBirth")}
+        </label>
+        <div className="relative">
+          <Cake className="pointer-events-none absolute left-3 top-[calc(50%+2px)] size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            id="dateOfBirth"
+            type="date"
+            value={formData.dateOfBirth}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => updateField("dateOfBirth", e.target.value)}
+            className={`${INPUT} pl-9`}
+            autoComplete="bday"
+          />
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-3">
-          <div>
-            <label htmlFor="postalCode" className={LABEL}>
-              {t("postalCode")}
-            </label>
-            <input id="postalCode" type="text" autoComplete="postal-code" value={formData.postalCode} onChange={(e) => updateField("postalCode", e.target.value)} className={INPUT} />
-            <FieldError error={errors.postalCode} />
-          </div>
-          <div>
-            <label htmlFor="city" className={LABEL}>
-              {t("city")}
-            </label>
-            <input id="city" type="text" autoComplete="address-level2" value={formData.city} onChange={(e) => updateField("city", e.target.value)} className={INPUT} />
-            <FieldError error={errors.city} />
-          </div>
-          <div>
-            <label htmlFor="country" className={LABEL}>
-              {t("country")}
-            </label>
-            <select id="country" value={formData.country} onChange={(e) => updateField("country", e.target.value)} className={INPUT}>
-              <option value="">—</option>
-              {EUROPEAN_COUNTRIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {locale === "en" ? c.nameEn : c.nameNl}
-                </option>
-              ))}
-            </select>
-            <FieldError error={errors.country} />
-          </div>
+        <p className="mt-1 text-xs text-muted-foreground">{t("dateOfBirthHint")}</p>
+        {minor && (
+          <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+            {t("minorNotice", { age: GUARDIAN_CONSENT_AGE })}
+          </p>
+        )}
+        <FieldError error={errors.dateOfBirth} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="city" className={LABEL}>
+            {t("city")} <span className="font-normal text-muted-foreground">({t("optional")})</span>
+          </label>
+          <input id="city" type="text" value={formData.city} onChange={(e) => updateField("city", e.target.value)} className={INPUT} autoComplete="address-level2" maxLength={100} />
+        </div>
+        <div>
+          <label htmlFor="country" className={LABEL}>
+            {t("country")}
+          </label>
+          <select id="country" value={formData.country} onChange={(e) => updateField("country", e.target.value)} className={INPUT} autoComplete="country">
+            <option value="">{t("selectCountry")}</option>
+            {EUROPEAN_COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {locale === "en" ? c.nameEn : c.nameNl}
+              </option>
+            ))}
+          </select>
+          <FieldError error={errors.country} />
         </div>
       </div>
 
-      {isBusiness && (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-          <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Building2 className="size-4 text-primary" />
-            {t("businessDetailsTitle")}
+      {games.length > 0 && (
+        <div>
+          <p className={LABEL}>
+            {t("favoriteGames")} <span className="font-normal text-muted-foreground">({t("optional")})</span>
           </p>
-          <p className="mb-3 text-xs text-muted-foreground">{t("businessDetailsHint")}</p>
-          <div>
-            <label htmlFor="companyName" className={LABEL}>
-              {t("companyName")}
-            </label>
-            <input id="companyName" type="text" autoComplete="organization" value={formData.companyName} onChange={(e) => updateField("companyName", e.target.value)} className={INPUT} />
-            <FieldError error={errors.companyName} />
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="cocNumber" className={LABEL}>
-                {formData.country === "NL" ? t("cocNumber") : t("businessRegistrationId")}
-              </label>
-              <input
-                id="cocNumber"
-                type="text"
-                inputMode={formData.country === "NL" ? "numeric" : "text"}
-                value={formData.cocNumber}
-                onChange={(e) => updateField("cocNumber", e.target.value)}
-                placeholder={formData.country === "NL" ? "12345678" : undefined}
-                className={INPUT}
-              />
-              <FieldError error={errors.cocNumber} />
-            </div>
-            <div>
-              <label htmlFor="vatNumber" className={LABEL}>
-                {t("vatNumber")} <span className="font-normal text-muted-foreground">({t("optional")})</span>
-              </label>
-              <input id="vatNumber" type="text" value={formData.vatNumber} onChange={(e) => updateField("vatNumber", e.target.value)} placeholder="NL123456789B01" className={INPUT} />
-              <FieldError error={errors.vatNumber} />
-            </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {games.map((g) => {
+              const on = formData.favoriteGames.includes(g.key);
+              return (
+                <button
+                  key={g.key}
+                  type="button"
+                  onClick={() => toggleGame(g.key)}
+                  aria-pressed={on}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    on ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:bg-muted/40"
+                  }`}
+                >
+                  {on && <Check className="size-3.5" />}
+                  {g.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -657,114 +519,81 @@ function StepDetails({ formData, updateField, errors, t, locale }: StepProps & {
   );
 }
 
+/* ---------- Stap 3: Foto ---------- */
 function StepPhoto({ formData, updateField, t }: Omit<StepProps, "errors">) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isBusiness = formData.accountKind === "BUSINESS";
 
-  function handleFileSelect(file: File) {
-    const previewUrl = URL.createObjectURL(file);
-    updateField("avatarUrl", previewUrl);
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
     updateField("avatarFile", file);
-  }
-
-  function handleRemove() {
-    if (formData.avatarUrl) URL.revokeObjectURL(formData.avatarUrl);
-    updateField("avatarUrl", "");
-    updateField("avatarFile", null);
+    updateField("avatarUrl", URL.createObjectURL(file));
   }
 
   return (
-    <div className="space-y-5">
-      <StepHeading
-        title={isBusiness ? t("logoTitle") : t("photoTitle")}
-        description={isBusiness ? t("logoDescription") : t("photoDescription")}
-      />
-
+    <div className="space-y-4">
+      <StepHeading title={t("photoTitle")} description={t("photoDescription")} />
       <div className="flex flex-col items-center gap-4">
-        <div className="relative size-32 overflow-hidden rounded-[22%] bg-muted ring-4 ring-background">
-          {formData.avatarUrl ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+        <div className="relative">
+          <div className="flex size-28 items-center justify-center overflow-hidden rounded-[22%] border-2 border-dashed border-border bg-muted/40">
+            {formData.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={formData.avatarUrl} alt="" className="size-full object-cover" />
-              <button
-                type="button"
-                onClick={handleRemove}
-                className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5 text-white transition-opacity hover:bg-black/80"
-                aria-label={t("removePhoto")}
-              >
-                <X className="size-3.5" />
-              </button>
-            </>
-          ) : (
-            <div className="flex size-full items-center justify-center">
-              {isBusiness ? <Building2 className="size-14 text-muted-foreground/40" /> : <User className="size-16 text-muted-foreground/40" />}
-            </div>
+            ) : (
+              <Camera className="size-8 text-muted-foreground" />
+            )}
+          </div>
+          {formData.avatarUrl && (
+            <button
+              type="button"
+              onClick={() => {
+                updateField("avatarFile", null);
+                updateField("avatarUrl", "");
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+              aria-label={t("removePhoto")}
+              className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-white shadow"
+            >
+              <X className="size-3" />
+            </button>
           )}
         </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="sr-only"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFileSelect(file);
-          }}
-        />
+        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFile} className="hidden" id="avatarFile" />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary-hover"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
         >
           <Upload className="size-4" />
           {formData.avatarUrl ? t("changePhoto") : t("uploadPhoto")}
         </button>
-
-        <p className="text-xs text-muted-foreground">JPG, PNG of WebP — max 5MB</p>
       </div>
     </div>
   );
 }
 
-function StepPreferences({ formData, updateField, errors, t, locale }: StepProps & { locale: string }) {
-  const isBusiness = formData.accountKind === "BUSINESS";
-  const focusOptions = [
-    { value: "BUYING" as const, icon: ShoppingCart, label: t("focusBuying"), desc: t("focusBuyingDesc") },
-    { value: "SELLING" as const, icon: Store, label: t("focusSelling"), desc: t("focusSellingDesc") },
-    { value: "BOTH" as const, icon: ArrowLeftRight, label: t("focusBoth"), desc: t("focusBothDesc") },
-  ];
+/* ---------- Stap 4: Voorkeuren ---------- */
+function StepPreferences({ formData, updateField, errors, t, locale, games }: StepProps & { locale: string; games: GameDefinition[] }) {
   const countryName = EUROPEAN_COUNTRIES.find((c) => c.code === formData.country);
+  const favoriteNames = games.filter((g) => formData.favoriteGames.includes(g.key)).map((g) => g.name);
 
   return (
     <div className="space-y-6">
-      <div>
-        <StepHeading title={t("accountFocus")} />
-        <div className="space-y-2">
-          {focusOptions.map(({ value, icon: Icon, label, desc }) => {
-            const selected = formData.accountFocus === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => updateField("accountFocus", value)}
-                aria-pressed={selected}
-                className={`flex w-full items-center gap-4 rounded-xl border px-4 py-3 text-left transition ${
-                  selected ? "border-primary bg-primary/5" : "border-border bg-background hover:bg-muted/40"
-                }`}
-              >
-                <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                  <Icon className="size-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{label}</p>
-                  <p className="text-xs text-muted-foreground">{desc}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <FieldError error={errors.accountFocus} />
+      <StepHeading title={t("stepPreferences")} />
+
+      <div className="rounded-xl border border-border bg-muted/20 p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={formData.newsletterOptIn}
+            onChange={(e) => updateField("newsletterOptIn", e.target.checked)}
+            className="mt-0.5 size-4 rounded border-border text-primary focus:ring-primary"
+          />
+          <span className="text-sm text-foreground">
+            <span className="font-medium">{t("newsletterOptIn")}</span>
+            <span className="block text-xs text-muted-foreground">{t("newsletterOptInHint")}</span>
+          </span>
+        </label>
       </div>
 
       <div>
@@ -773,11 +602,11 @@ function StepPreferences({ formData, updateField, errors, t, locale }: StepProps
         </label>
         <select id="referralSource" value={formData.referralSource} onChange={(e) => updateField("referralSource", e.target.value)} className={INPUT}>
           <option value="">{t("referralNone")}</option>
+          <option value="shop">{t("referralShop")}</option>
           <option value="google">{t("referralGoogle")}</option>
           <option value="social_media">{t("referralSocialMedia")}</option>
           <option value="friend">{t("referralFriend")}</option>
           <option value="youtube">{t("referralYoutube")}</option>
-          <option value="forum">{t("referralForum")}</option>
           <option value="other">{t("referralOther")}</option>
         </select>
       </div>
@@ -786,15 +615,15 @@ function StepPreferences({ formData, updateField, errors, t, locale }: StepProps
       <div className="rounded-lg border border-border bg-muted/30 p-4">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("summaryTitle")}</p>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <SummaryRow label={t("accountKind")} value={isBusiness ? t("typeBusinessTitle") : t("typeIndividualTitle")} />
           <SummaryRow label={t("displayName")} value={formData.displayName} />
           <SummaryRow label={t("email")} value={formData.email.trim().toLowerCase()} />
+          <SummaryRow label={t("fullName")} value={`${formData.firstName} ${formData.lastName}`.trim()} />
+          <SummaryRow label={t("dateOfBirth")} value={formData.dateOfBirth} />
           <SummaryRow
             label={t("city")}
             value={[formData.city, countryName ? (locale === "en" ? countryName.nameEn : countryName.nameNl) : formData.country].filter(Boolean).join(", ")}
           />
-          {isBusiness && <SummaryRow label={t("companyName")} value={formData.companyName} />}
-          {isBusiness && <SummaryRow label={formData.country === "NL" ? t("cocNumber") : t("businessRegistrationId")} value={formData.cocNumber} />}
+          <SummaryRow label={t("favoriteGames")} value={favoriteNames.join(", ")} />
         </dl>
       </div>
 

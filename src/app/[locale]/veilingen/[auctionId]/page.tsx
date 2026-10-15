@@ -123,7 +123,7 @@ export default async function AuctionDetailPage({
                 <h1 className="mt-2 text-2xl font-bold text-foreground">
                   {auction.title}
                 </h1>
-                <Link href={`/verkoper/${auction.sellerId}`} className="mt-1 inline-block text-sm text-primary hover:underline">
+                <Link href={`/spelers/${auction.sellerId}`} className="mt-1 inline-block text-sm text-primary hover:underline">
                   {auction.seller.displayName}
                 </Link>
               </div>

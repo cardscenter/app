@@ -387,7 +387,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                 {bundle.orderNumber}
               </span>
               <Link
-                href={`/verkoper/${bundle.sellerId}`}
+                href={`/spelers/${bundle.sellerId}`}
                 className="text-sm font-semibold text-foreground hover:text-primary truncate"
               >
                 {bundle.sellerName}

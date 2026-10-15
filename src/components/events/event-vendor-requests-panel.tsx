@@ -79,7 +79,7 @@ export function EventVendorRequestsPanel({ requests }: { requests: VendorRequest
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     <span className="truncate">{r.user.displayName ?? "Onbekend"}</span>
-                    <Link href={`/verkoper/${r.user.id}`} className="shrink-0 text-muted-foreground hover:text-primary" aria-label="Bekijk profiel">
+                    <Link href={`/spelers/${r.user.id}`} className="shrink-0 text-muted-foreground hover:text-primary" aria-label="Bekijk profiel">
                       <ExternalLink className="h-3.5 w-3.5" />
                     </Link>
                   </p>

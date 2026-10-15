@@ -342,7 +342,7 @@ function PendingAuctionCard({ auction, locale }: { auction: PendingAuction; loca
             <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
               <span>{formattedDate}</span>
               <span>{t("sourceAuction")}</span>
-              <Link href={`/verkoper/${auction.buyerId}`} className="hover:text-primary">
+              <Link href={`/spelers/${auction.buyerId}`} className="hover:text-primary">
                 {t("buyerFullName")}: {auction.buyerName}
               </Link>
             </div>
@@ -408,7 +408,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
                 {bundle.orderNumber}
               </span>
               <Link
-                href={`/verkoper/${bundle.buyerId}`}
+                href={`/spelers/${bundle.buyerId}`}
                 className="text-sm font-semibold text-foreground hover:text-primary truncate"
               >
                 {bundle.buyerName}

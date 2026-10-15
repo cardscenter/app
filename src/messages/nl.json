@@ -244,7 +244,20 @@
     "magicLoggingIn": "Je wordt ingelogd",
     "magicLoggingInHint": "Een momentje, we controleren je inloglink.",
     "magicInvalid": "Deze inloglink is niet (meer) geldig. Links werken 15 minuten en maar één keer. Vraag een nieuwe aan.",
-    "magicBackToLogin": "Terug naar inloggen"
+    "magicBackToLogin": "Terug naar inloggen",
+    "stepAboutYou": "Over jou",
+    "aboutYouSubtitle": "Je naam en geboortedatum zien we alleen zelf. Op de site ben je je gebruikersnaam.",
+    "dateOfBirth": "Geboortedatum",
+    "dateOfBirthHint": "Nooit publiek. We gebruiken hem alleen voor de leeftijdsdivisie bij toernooien.",
+    "dobRequired": "Vul je geboortedatum in",
+    "dobInvalid": "Controleer je geboortedatum",
+    "minorNotice": "Je bent jonger dan {age}. Je kunt gewoon een account maken, maar voordat je een evenement boekt vragen we je ouder of verzorger om toestemming. Dat regel je straks op je profiel.",
+    "favoriteGames": "Favoriete spellen",
+    "newsletterOptIn": "Houd me op de hoogte via de nieuwsbrief",
+    "newsletterOptInHint": "Releases, evenementen en acties. Hooguit een paar keer per maand, afmelden kan met één klik.",
+    "referralShop": "In de winkel",
+    "selectCountry": "Kies een land",
+    "fullName": "Naam"
   },
   "home": {
     "heroTitle": "De Pokémon Kaarten Marktplaats",
@@ -1285,7 +1298,26 @@
     "sectionNotifications": "Meldingsgedrag",
     "sectionNotificationsDesc": "Hoe meldingen zich gedragen in je browser.",
     "achievementToasts": "Prestatie-meldingen tonen",
-    "achievementToastsDesc": "Kleine felicitatie-popup wanneer je een prestatie ontgrendelt. Geldt alleen voor dit apparaat."
+    "achievementToastsDesc": "Kleine felicitatie-popup wanneer je een prestatie ontgrendelt. Geldt alleen voor dit apparaat.",
+    "sectionNewsletter": "Nieuwsbrief",
+    "sectionNewsletterDesc": "Releases, evenementen en acties van Cards Center. Staat standaard uit.",
+    "newsletterOptIn": "Nieuwsbrief ontvangen",
+    "newsletterOptInDesc": "Hooguit een paar keer per maand. Afmelden kan altijd met één klik onderaan de mail.",
+    "showOnParticipantLists": "Zichtbaar op deelnemerslijsten",
+    "showOnParticipantListsDesc": "Anderen zien je gebruikersnaam bij \"wie komt er\" op een evenement.",
+    "showOnLeaderboards": "Zichtbaar op ranglijsten",
+    "showOnLeaderboardsDesc": "Je naam staat in de seizoensranglijst van de league.",
+    "sectionDanger": "Account verwijderen",
+    "sectionDangerDesc": "Weg is weg: we wissen je persoonsgegevens en je kunt niet meer inloggen.",
+    "deleteAccount": "Verwijder mijn account",
+    "deleteAccountDesc": "Je tickets, bestellingen en inkoop-aanvragen moeten afgerond zijn. Twijfel je? Mail eerst even met support.",
+    "deleteAccountButton": "Account verwijderen",
+    "deleteAccountWarning": "Dit kan niet ongedaan worden gemaakt. Je profiel, spelersgegevens en voorkeuren worden gewist.",
+    "deleteAccountPassword": "Je wachtwoord",
+    "deleteAccountTotp": "2FA-code",
+    "deleteAccountConfirmPlaceholder": "Typ VERWIJDER om te bevestigen",
+    "deleteAccountConfirm": "Definitief verwijderen",
+    "cancel": "Annuleren"
   },
   "profile": {
     "displayName": "Gebruikersnaam",
@@ -1412,7 +1444,9 @@
     "teamLeave": "Team verlaten",
     "teamInviteAccepted": "Je staat nu in het team",
     "teamInviteDeclined": "Uitnodiging afgewezen",
-    "teamLeft": "Je hebt het team verlaten"
+    "teamLeft": "Je hebt het team verlaten",
+    "playerSection": "Spelersgegevens",
+    "playerSectionHint": "Je geboortedatum en contactgegevens zijn privé. Je favoriete spellen zijn zichtbaar op je profiel."
   },
   "chat": {
     "inbox": "Inbox",
@@ -2082,7 +2116,7 @@
     "shopEmptyOwner": "Voeg blokken toe via de editor om je winkel te presenteren.",
     "shopEmptyVisitor": "De eigenaar heeft nog geen inhoud toegevoegd.",
     "viewFullProfile": "Bekijk volledig profiel",
-    "breadcrumbSellers": "Verkopers",
+    "breadcrumbSellers": "Spelers",
     "sellerNotFound": "Verkoper niet gevonden",
     "editProfile": "Profiel bewerken",
     "editShop": "Winkelpagina bewerken",
@@ -3256,6 +3290,39 @@
     "kpiEnterpriseRequests": "Enterprise-aanvragen",
     "groupQueuesDisputes": "Geschillen & meldingen",
     "groupQueuesFinance": "Financieel",
-    "groupQueuesUsers": "Gebruikers & content"
+    "groupQueuesUsers": "Gebruikers & content",
+    "navGames": "Spellen"
+  },
+  "player": {
+    "dateOfBirth": "Geboortedatum",
+    "dateOfBirthHint": "Nooit publiek. Bepaalt je leeftijdsdivisie bij toernooien en is verplicht om een evenement te boeken.",
+    "ageLine": "Je bent {age} jaar.",
+    "minorNote": "Onder de {age} hebben we de toestemming van een ouder of verzorger nodig voordat je kunt boeken.",
+    "favoriteGames": "Favoriete spellen",
+    "favoriteGamesHint": "Welke spellen speel je? Zo zie je sneller wat er voor jou op de kalender staat.",
+    "playerIds": "Spelers-ID's",
+    "playerIdsHint": "Je officiële spelers-ID per spel, zodat je inschrijving voor officiële events klopt.",
+    "guardian": "Ouder of noodcontact",
+    "guardianHint": "Verplicht onder de 16: naam, e-mailadres en telefoonnummer van een ouder of verzorger. We mailen hen om toestemming te vragen.",
+    "guardianName": "Naam ouder of verzorger",
+    "guardianEmail": "E-mailadres ouder of verzorger",
+    "guardianPhone": "Telefoonnummer (noodcontact)",
+    "consentGiven": "Toestemming gegeven",
+    "consentMissing": "Toestemming van je ouder ontbreekt nog",
+    "consentSend": "Stuur toestemmingsmail",
+    "consentSaveFirst": "Sla eerst je gegevens op",
+    "consentSent": "Mail verstuurd naar {email}",
+    "save": "Spelersgegevens opslaan",
+    "saved": "Spelersgegevens opgeslagen"
+  },
+  "guardian": {
+    "successTitle": "Bedankt, de toestemming staat",
+    "alreadyTitle": "De toestemming stond al",
+    "successBody": "{name} kan vanaf nu evenementen boeken en betalen bij Cards Center. We bewaren alleen wat nodig is: naam, e-mailadres, geboortedatum (nooit publiek) en jouw gegevens als noodcontact.",
+    "revokeHint": "Toestemming intrekken? Mail ons via de supportpagina, dan regelen we het meteen.",
+    "invalidTitle": "Deze link werkt niet",
+    "invalidBody": "De link klopt niet. Vraag je kind om een nieuwe toestemmingsmail te sturen vanaf zijn of haar profiel.",
+    "expiredBody": "De link is verlopen of al gebruikt met een ander e-mailadres. Vraag je kind om een nieuwe toestemmingsmail te sturen vanaf zijn of haar profiel.",
+    "toHome": "Naar de homepage"
   }
 }

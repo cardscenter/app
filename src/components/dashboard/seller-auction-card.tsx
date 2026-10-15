@@ -194,7 +194,7 @@ export function SellerAuctionCard({ auction }: SellerAuctionCardProps) {
                 <div className="min-w-0 flex-1 text-xs">
                   <span className="text-muted-foreground">Hoogste bieder: </span>
                   <Link
-                    href={`/verkoper/${auction.topBidder.id}`}
+                    href={`/spelers/${auction.topBidder.id}`}
                     className="font-medium text-foreground hover:text-primary"
                   >
                     {auction.topBidder.displayName}

@@ -626,7 +626,7 @@ export default async function EventDetailPage({
                 {hasOrganizerOverride ? (
                   <p className="truncate font-semibold text-foreground">{organizerDisplay}</p>
                 ) : (
-                  <Link href={`/verkoper/${event.organizer.id}`} className="block truncate font-semibold text-foreground hover:text-primary">
+                  <Link href={`/spelers/${event.organizer.id}`} className="block truncate font-semibold text-foreground hover:text-primary">
                     {organizerDisplay}
                   </Link>
                 )}
@@ -679,7 +679,7 @@ export default async function EventDetailPage({
             )}
 
             {hasOrganizerOverride && (
-              <Link href={`/verkoper/${event.organizer.id}`} className="mt-2 block text-xs text-muted-foreground hover:text-foreground">
+              <Link href={`/spelers/${event.organizer.id}`} className="mt-2 block text-xs text-muted-foreground hover:text-foreground">
                 Geplaatst via {event.organizer.displayName ?? "account"}
               </Link>
             )}

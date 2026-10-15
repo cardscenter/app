@@ -30,6 +30,8 @@ import {
 } from "@/lib/magic-link";
 import { validateUsername } from "@/lib/username-policy";
 import { findUserByNameInsensitive } from "@/lib/username-policy-server";
+import { isPlausibleDateOfBirth, parseDateOfBirth } from "@/lib/age";
+import { listEnabledGames } from "@/lib/games-server";
 
 const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24u
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1u
@@ -50,10 +52,11 @@ export async function register(formData: FormData) {
     displayName: formData.get("displayName") as string,
     password: formData.get("password") as string,
     confirmPassword: formData.get("confirmPassword") as string,
-    accountKind: formData.get("accountKind") as string,
+    accountKind: (formData.get("accountKind") as string) || "INDIVIDUAL",
     firstName: formData.get("firstName") as string,
     lastName: formData.get("lastName") as string,
-    city: formData.get("city") as string,
+    dateOfBirth: (formData.get("dateOfBirth") as string) || "",
+    city: (formData.get("city") as string) || "",
     country: formData.get("country") as string,
     companyName: (formData.get("companyName") as string) || "",
     cocNumber: (formData.get("cocNumber") as string) || "",
@@ -62,8 +65,9 @@ export async function register(formData: FormData) {
     houseNumber: (formData.get("houseNumber") as string) || "",
     postalCode: (formData.get("postalCode") as string) || "",
     avatarUrl: (formData.get("avatarUrl") as string) || "",
-    accountFocus: formData.get("accountFocus") as string,
+    accountFocus: (formData.get("accountFocus") as string) || "BOTH",
     referralSource: (formData.get("referralSource") as string) || "",
+    newsletterOptIn: formData.get("newsletterOptIn") === "true",
     termsAccepted: formData.get("termsAccepted") === "true" ? true as const : undefined,
   };
 
@@ -73,6 +77,17 @@ export async function register(formData: FormData) {
   }
 
   const data = result.data;
+
+  // Geboortedatum (Community Hub, Fase 2): echte datum, niet in de toekomst.
+  const dateOfBirth = parseDateOfBirth(data.dateOfBirth);
+  if (!dateOfBirth || !isPlausibleDateOfBirth(dateOfBirth)) {
+    return { error: "Controleer je geboortedatum" };
+  }
+  // Favoriete spellen: alleen aangezette spellen tellen.
+  const enabledGameKeys = (await listEnabledGames()).map((g) => g.key);
+  const favoriteGames = Array.from(
+    new Set(formData.getAll("favoriteGames").filter((v): v is string => typeof v === "string" && enabledGameKeys.includes(v))),
+  );
 
   // Fase 43 — username-policy: reserved namen, rol-termen en scheldwoorden
   // server-side afdwingen (de availability-indicator is alleen UX).
@@ -126,8 +141,13 @@ export async function register(formData: FormData) {
       // wijzigen (met geldig ID-bewijs). Zie username-change-config.ts.
       fullNameLockedAt: new Date(),
       accountKind: data.accountKind,
-      city: data.city,
+      city: data.city || null,
       country: data.country,
+      // Community Hub (Fase 2)
+      dateOfBirth,
+      favoriteGames: JSON.stringify(favoriteGames),
+      newsletterOptIn: data.newsletterOptIn,
+      newsletterOptInAt: data.newsletterOptIn ? new Date() : null,
       companyName: data.companyName || null,
       cocNumber: data.cocNumber || null,
       vatNumber: data.vatNumber || null,

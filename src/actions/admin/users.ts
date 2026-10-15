@@ -78,7 +78,7 @@ export async function adminChangeUsername(userId: string, newNameRaw: string, re
   );
 
   revalidatePath(`/dashboard/admin/users/${userId}`);
-  revalidatePath(`/verkoper/${userId}`);
+  revalidatePath(`/spelers/${userId}`);
   return { success: true };
 }
 
@@ -149,7 +149,7 @@ export async function adminChangeFullName(
   );
 
   revalidatePath(`/dashboard/admin/users/${userId}`);
-  revalidatePath(`/verkoper/${userId}`);
+  revalidatePath(`/spelers/${userId}`);
   return { success: true };
 }
 

@@ -131,12 +131,12 @@ export async function respondToBusinessInvite(memberId: string, accept: boolean)
       "BUSINESS_INVITE_ACCEPTED",
       "Teamlid toegevoegd",
       `${getFullName(me)} (@${me.displayName}) heeft je uitnodiging geaccepteerd en staat nu in je team.`,
-      `/verkoper/${invite.businessId}`,
+      `/spelers/${invite.businessId}`,
     );
   }
 
   revalidatePath("/dashboard/profiel");
-  revalidatePath(`/verkoper/${invite.businessId}`);
+  revalidatePath(`/spelers/${invite.businessId}`);
   return { success: true };
 }
 
@@ -157,7 +157,7 @@ export async function removeBusinessMember(memberId: string) {
   await prisma.businessMember.delete({ where: { id: memberId } });
 
   revalidatePath("/dashboard/profiel");
-  revalidatePath(`/verkoper/${row.businessId}`);
+  revalidatePath(`/spelers/${row.businessId}`);
   return { success: true };
 }
 
@@ -173,6 +173,6 @@ export async function updateBusinessMemberTitle(memberId: string, title: string)
   if (updated.count === 0) return { error: "Teamlid niet gevonden" };
 
   revalidatePath("/dashboard/profiel");
-  revalidatePath(`/verkoper/${owner.me.id}`);
+  revalidatePath(`/spelers/${owner.me.id}`);
   return { success: true };
 }

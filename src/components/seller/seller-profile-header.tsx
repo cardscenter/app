@@ -24,7 +24,7 @@ type Props = {
   isOwner: boolean;
   viewerLoggedIn: boolean;
   initiallyBlocked: boolean;
-  /** "profile" = /verkoper/[id] (eigen omslag); "shop" = /winkel/[slug] (banner staat al boven de kaart). */
+  /** "profile" = /spelers/[id] (eigen omslag); "shop" = /winkel/[slug] (banner staat al boven de kaart). */
   variant: "profile" | "shop";
   locale: string;
   /** Feature-flags van de bezoeker (Community Hub, Fase 1): zegels/tellers per handelssoort. */
@@ -131,7 +131,7 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
                     {profile.worksAt.map((w, i) => (
                       <span key={w.businessId}>
                         {i > 0 && ", "}
-                        <Link href={`/verkoper/${w.businessId}`} className="font-medium text-foreground hover:underline">
+                        <Link href={`/spelers/${w.businessId}`} className="font-medium text-foreground hover:underline">
                           {w.companyName}
                         </Link>
                       </span>
@@ -178,7 +178,7 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
                   {viewerLoggedIn ? (
                     <ContactSellerButton sellerId={user.id} label={t("message")} className={PILL_OUTLINE} />
                   ) : (
-                    <Link href={`/login?callbackUrl=${encodeURIComponent(`/verkoper/${user.id}`)}`} className={PILL_OUTLINE}>
+                    <Link href={`/login?callbackUrl=${encodeURIComponent(`/spelers/${user.id}`)}`} className={PILL_OUTLINE}>
                       <MessageCircle className="size-4" />
                       {t("message")}
                     </Link>

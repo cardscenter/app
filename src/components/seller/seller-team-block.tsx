@@ -24,7 +24,7 @@ export async function SellerTeamBlock({ profile, isOwner }: { profile: SellerPro
   const people: { key: string; href: string; avatarUrl: string | null; name: string; role: string; verified: boolean }[] = [
     {
       key: "owner",
-      href: `/verkoper/${user.id}`,
+      href: `/spelers/${user.id}`,
       avatarUrl: user.avatarUrl,
       name: ownerName,
       role: t("owner"),
@@ -32,7 +32,7 @@ export async function SellerTeamBlock({ profile, isOwner }: { profile: SellerPro
     },
     ...team.map((m) => ({
       key: m.id,
-      href: `/verkoper/${m.userId}`,
+      href: `/spelers/${m.userId}`,
       avatarUrl: m.avatarUrl,
       name: m.fullName,
       role: m.title ?? t("teamMember"),

@@ -74,7 +74,7 @@ function ReportedUserGroup({ group }: { group: Group }) {
             </StatusBadge>
           )}
           <a
-            href={`/nl/verkoper/${group.reportedId}`}
+            href={`/nl/spelers/${group.reportedId}`}
             className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
           >
             <ExternalLink className="h-4 w-4" />

@@ -65,7 +65,7 @@ type Props = {
 /**
  * Profielformulier (redesign sept 2026, naar Connext-referentie): omslagfoto
  * bovenaan, daaronder rijen label-links/veld-rechts. Alles wat hier staat is
- * publiek zichtbaar op /verkoper/[id]. Eén Opslaan-knop onderaan.
+ * publiek zichtbaar op /spelers/[id]. Eén Opslaan-knop onderaan.
  */
 export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocials, fallbackGradient }: Props) {
   const t = useTranslations("profile");

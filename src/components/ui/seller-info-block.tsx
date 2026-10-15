@@ -57,7 +57,7 @@ export function SellerInfoBlock({ seller, showMapsLink = false }: SellerInfoBloc
   return (
     <div className="glass-subtle flex items-stretch rounded-xl">
       <Link
-        href={`/verkoper/${seller.id}`}
+        href={`/spelers/${seller.id}`}
         className="flex flex-1 items-center gap-4 rounded-xl p-4 transition-colors hover:bg-muted group"
       >
         {/* Avatar */}

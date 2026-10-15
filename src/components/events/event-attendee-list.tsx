@@ -12,7 +12,7 @@ function AttendeeRow({ user }: { user: AttendeeItem }) {
   return (
     <li>
       <Link
-        href={`/verkoper/${user.id}`}
+        href={`/spelers/${user.id}`}
         className="flex items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-muted"
       >
         {user.avatarUrl ? (

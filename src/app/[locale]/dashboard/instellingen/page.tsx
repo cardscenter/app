@@ -16,6 +16,10 @@ import { RunnerUpSettings } from "@/components/dashboard/runner-up-settings";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { parseEmailPreferences } from "@/lib/email/preferences-config";
 import { PREF_HIDE_BALANCE, PREF_ACHIEVEMENT_TOASTS } from "@/lib/local-preferences";
+import { AccountToggle } from "@/components/dashboard/settings/account-toggle";
+import { DeleteAccountForm } from "@/components/dashboard/settings/delete-account-form";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
+import { Newspaper, Users, Trash2 } from "lucide-react";
 
 /**
  * Centrale voorkeuren-pagina (Fase 44). Bundelt alles wat eerst verspreid
@@ -43,12 +47,18 @@ export default async function SettingsPage({
         emailVerifiedAt: true,
         maxRunnerUpAttempts: true,
         skipBidConfirmation: true,
+        accountType: true,
+        totpEnabled: true,
+        showOnParticipantLists: true,
+        showOnLeaderboards: true,
+        newsletterOptIn: true,
       },
     }),
     prisma.userBlock.count({ where: { blockerId: session.user.id } }),
   ]);
   if (!user) return null;
 
+  const features = getFeatureSnapshot(user.accountType);
   const rowsClass = "divide-y divide-border px-5 py-2";
 
   return (
@@ -83,7 +93,20 @@ export default async function SettingsPage({
         />
       </DashboardSection>
 
-      {/* Bieden & kopen */}
+      {/* Nieuwsbrief (Community Hub, Fase 2): losse opt-in, nooit vooraf aan */}
+      <DashboardSection
+        icon={<Newspaper className="size-5" />}
+        title={t("sectionNewsletter")}
+        description={t("sectionNewsletterDesc")}
+        contentClassName={rowsClass}
+      >
+        <SettingsRow label={t("newsletterOptIn")} description={t("newsletterOptInDesc")} htmlFor="newsletter-opt-in">
+          <AccountToggle id="newsletter-opt-in" field="newsletterOptIn" initialValue={user.newsletterOptIn} />
+        </SettingsRow>
+      </DashboardSection>
+
+      {/* Bieden & kopen (alleen met het handelsmodel) */}
+      {features.FEATURE_AUCTIONS && (
       <DashboardSection
         icon={<Gavel className="size-5" />}
         title={t("sectionTrading")}
@@ -105,6 +128,7 @@ export default async function SettingsPage({
           <RunnerUpSettings current={user.maxRunnerUpAttempts} />
         </SettingsRow>
       </DashboardSection>
+      )}
 
       {/* Privacy */}
       <DashboardSection
@@ -114,12 +138,29 @@ export default async function SettingsPage({
         contentClassName={rowsClass}
       >
         <SettingsRow
+          label={t("showOnParticipantLists")}
+          description={t("showOnParticipantListsDesc")}
+          icon={Users}
+          htmlFor="show-on-participant-lists"
+        >
+          <AccountToggle id="show-on-participant-lists" field="showOnParticipantLists" initialValue={user.showOnParticipantLists} />
+        </SettingsRow>
+        <SettingsRow
+          label={t("showOnLeaderboards")}
+          description={t("showOnLeaderboardsDesc")}
+          htmlFor="show-on-leaderboards"
+        >
+          <AccountToggle id="show-on-leaderboards" field="showOnLeaderboards" initialValue={user.showOnLeaderboards} />
+        </SettingsRow>
+        {features.FEATURE_WALLET && (
+        <SettingsRow
           label={t("hideBalance")}
           description={t("hideBalanceDesc")}
           htmlFor="pref-hide-balance"
         >
           <LocalPrefToggle id="pref-hide-balance" prefKey={PREF_HIDE_BALANCE} defaultValue={false} />
         </SettingsRow>
+        )}
         <SettingsRow
           label={t("blockedUsers")}
           description={t("blockedUsersDesc")}
@@ -149,6 +190,18 @@ export default async function SettingsPage({
           htmlFor="pref-achievement-toasts"
         >
           <LocalPrefToggle id="pref-achievement-toasts" prefKey={PREF_ACHIEVEMENT_TOASTS} defaultValue={true} />
+        </SettingsRow>
+      </DashboardSection>
+
+      {/* Account verwijderen (AVG, Community Hub Fase 2) */}
+      <DashboardSection
+        icon={<Trash2 className="size-5" />}
+        title={t("sectionDanger")}
+        description={t("sectionDangerDesc")}
+        contentClassName={rowsClass}
+      >
+        <SettingsRow label={t("deleteAccount")} description={t("deleteAccountDesc")} layout="stacked">
+          <DeleteAccountForm locale={locale} totpEnabled={user.totpEnabled} />
         </SettingsRow>
       </DashboardSection>
     </div>

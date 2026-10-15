@@ -60,7 +60,7 @@ export async function createReview(formData: FormData) {
   void checkAchievements(session.user.id);
   void checkAchievements(sellerId);
 
-  revalidatePath(`/verkoper/${sellerId}`);
+  revalidatePath(`/spelers/${sellerId}`);
   revalidatePath("/dashboard/reviews");
 }
 
@@ -78,7 +78,7 @@ export async function respondToReview(reviewId: string, response: string) {
     data: { sellerResponse: response },
   });
 
-  revalidatePath(`/verkoper/${review.sellerId}`);
+  revalidatePath(`/spelers/${review.sellerId}`);
   revalidatePath("/dashboard/reviews");
 }
 

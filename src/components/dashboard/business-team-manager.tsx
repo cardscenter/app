@@ -84,7 +84,7 @@ export function BusinessTeamManager({ members }: { members: TeamManagerRow[] }) 
               <UserAvatar src={m.avatarUrl} name={m.fullName} size="md" />
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
-                  <Link href={`/verkoper/${m.userId}`} className="font-semibold text-foreground hover:underline">
+                  <Link href={`/spelers/${m.userId}`} className="font-semibold text-foreground hover:underline">
                     {m.fullName}
                   </Link>
                   <span className="text-xs text-muted-foreground">@{m.displayName}</span>

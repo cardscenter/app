@@ -119,7 +119,7 @@ export default async function ListingDetailPage({
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">{displayTitle}</h1>
-              <Link href={`/verkoper/${listing.sellerId}`} className="mt-1 inline-block text-sm text-primary hover:underline">
+              <Link href={`/spelers/${listing.sellerId}`} className="mt-1 inline-block text-sm text-primary hover:underline">
                 {listing.seller.displayName}
               </Link>
             </div>

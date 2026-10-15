@@ -165,7 +165,7 @@ export async function updateProfile(formData: FormData) {
     select: { avatarUrl: true },
   });
 
-  revalidatePath(`/verkoper/${session.user.id}`);
+  revalidatePath(`/spelers/${session.user.id}`);
 
   return { success: true, avatarUrl: updated.avatarUrl };
 }
@@ -227,7 +227,7 @@ export async function changeUsername(newNameRaw: string) {
   if (isCaseOnlyRename(user.displayName, newName)) {
     await prisma.user.update({ where: { id: userId }, data: { displayName: newName } });
     revalidatePath("/dashboard/profiel");
-    revalidatePath(`/verkoper/${userId}`);
+    revalidatePath(`/spelers/${userId}`);
     return { success: true, charged: 0 };
   }
 
@@ -317,7 +317,7 @@ export async function changeUsername(newNameRaw: string) {
   publish(userChannel(userId), { type: "balance-changed", payload: {} });
 
   revalidatePath("/dashboard/profiel");
-  revalidatePath(`/verkoper/${userId}`);
+  revalidatePath(`/spelers/${userId}`);
 
   return { success: true, charged: USERNAME_CHANGE_FEE };
 }

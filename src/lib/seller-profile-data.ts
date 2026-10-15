@@ -7,7 +7,7 @@ import type { ShopBlock } from "@/lib/shop-config";
 import { getFullName, getProfileTitle } from "@/lib/user-name";
 
 /**
- * Eén data-bron voor het publieke verkopersprofiel (/verkoper/[id]) en de
+ * Eén data-bron voor het publieke verkopersprofiel (/spelers/[id]) en de
  * winkelpagina (/winkel/[slug]) — Fase 45. React-`cache()`d zodat page +
  * generateMetadata dezelfde query delen.
  */

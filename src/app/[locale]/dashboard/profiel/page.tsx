@@ -24,6 +24,10 @@ import { parseSocialLinks } from "@/lib/events/socials";
 import { IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
 import { formatDateShort } from "@/lib/format";
 import { USERNAME_CHANGE_FEE, getUsernameChangeState } from "@/lib/username-change-config";
+import { PlayerProfileForm } from "@/components/dashboard/player-profile-form";
+import { listGames } from "@/lib/games-server";
+import { readPlayerProfile } from "@/actions/player-profile";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
 
 /**
  * /dashboard/profiel (redesign sept 2026, naar Connext-referentie):
@@ -63,7 +67,14 @@ export default async function ProfilePage({
   const usernameChange = getUsernameChangeState(user.lastUsernameChange);
 
   const isBusiness = user.accountKind === "BUSINESS";
-  const canShop = hasFeature(user.accountType, "customProfile");
+  const features = getFeatureSnapshot(user.accountType);
+  const canShop = features.FEATURE_WALLET && hasFeature(user.accountType, "customProfile");
+
+  // Spelersgegevens (Community Hub, Fase 2)
+  const [games, playerProfile] = await Promise.all([
+    listGames(),
+    readPlayerProfile({ dateOfBirth: user.dateOfBirth, favoriteGames: user.favoriteGames, playerIds: user.playerIds }),
+  ]);
 
   // Bedrijfsteam (profiel-redesign sept 2026): als bedrijf beheer je je team,
   // als persoon zie je uitnodigingen + de bedrijven waar je bij hoort.
@@ -124,7 +135,7 @@ export default async function ProfilePage({
                 {tp("shopPage")}
               </Link>
             )}
-            <Link href={`/verkoper/${user.id}`} className={buttonVariants({ variant: "outline" })}>
+            <Link href={`/spelers/${user.id}`} className={buttonVariants({ variant: "outline" })}>
               <ExternalLink className="size-3.5" />
               {tp("viewPublicProfile")}
             </Link>
@@ -155,6 +166,24 @@ export default async function ProfilePage({
         />
       </section>
 
+      {/* BLOK 1b — Spelersgegevens (Community Hub, Fase 2; privé behalve de spellen) */}
+      <DashboardSection
+        title={tp("playerSection")}
+        description={tp("playerSectionHint")}
+        contentClassName="px-5 py-6 sm:px-6"
+      >
+        <PlayerProfileForm
+          games={games}
+          initial={{
+            ...playerProfile,
+            guardianName: user.guardianName ?? "",
+            guardianEmail: user.guardianEmail ?? "",
+            guardianPhone: user.guardianPhone ?? "",
+            guardianConsentAt: user.guardianConsentAt?.toISOString() ?? null,
+          }}
+        />
+      </DashboardSection>
+
       {/* BLOK 2 — Account & beveiliging (privé) */}
       <DashboardSection
         title={tp("accountSection")}
@@ -173,6 +202,7 @@ export default async function ProfilePage({
           <TwoFactorSettings enabled={user.totpEnabled} />
         </FieldRow>
 
+        {features.FEATURE_WALLET && (
         <FieldRow label={tp("accountTier")} hint={tp("accountTierHint")}>
           <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
             <TierPill accountType={user.accountType} />
@@ -184,6 +214,7 @@ export default async function ProfilePage({
             </Link>
           </div>
         </FieldRow>
+        )}
 
         {!isBusiness && memberships.length > 0 && (
           <FieldRow id="team" label={tp("membershipsLabel")} hint={tp("membershipsHint")}>
@@ -242,7 +273,9 @@ export default async function ProfilePage({
         </DashboardSection>
       )}
 
-      {/* BLOK 5 — Bankgegevens */}
+      {/* BLOK 5 — Bankgegevens (uitbetalingen van het saldo; inkoop vraagt
+          het IBAN per aanvraag, dus zonder wallet-flag is dit blok weg) */}
+      {features.FEATURE_WALLET && (
       <DashboardSection
         title={tp("bankSection")}
         description={tp("bankSectionHint", { days: IBAN_COOLDOWN_DAYS })}
@@ -257,6 +290,7 @@ export default async function ProfilePage({
           />
         </FieldRow>
       </DashboardSection>
+      )}
     </div>
   );
 }

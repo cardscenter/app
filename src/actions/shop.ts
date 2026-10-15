@@ -124,7 +124,7 @@ export async function updateShopPage(formData: FormData) {
   });
 
   if (user.shopSlug) revalidatePath(`/winkel/${user.shopSlug}`);
-  revalidatePath(`/verkoper/${userId}`);
+  revalidatePath(`/spelers/${userId}`);
   revalidatePath("/dashboard/winkel");
 
   return { success: true };

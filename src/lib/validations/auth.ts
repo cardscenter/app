@@ -21,31 +21,32 @@ export const registerSchema = z.object({
   password: z.string().min(8, "Minimaal 8 tekens"),
   confirmPassword: z.string(),
 
-  // Step 2: Personal info
-  accountKind: z.enum(["INDIVIDUAL", "BUSINESS"]),
+  // Step 2: Over jou (Community Hub, Fase 2: geboortedatum verplicht, adres
+  // optioneel; bedrijfsaccounts ontstaan niet meer bij registratie maar via
+  // convertToBusinessAccount zodra de marktplaats terugkomt)
+  accountKind: z.enum(["INDIVIDUAL", "BUSINESS"]).default("INDIVIDUAL"),
   firstName: z.string().min(1, "Voornaam is verplicht").max(50),
   lastName: z.string().min(1, "Achternaam is verplicht").max(50),
-  city: z.string().min(1, "Woonplaats is verplicht").max(100),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Vul je geboortedatum in"),
+  city: z.string().max(100).optional().or(z.literal("")),
   country: z.string().min(2, "Land is verplicht").max(2),
   // Business fields (optional, validated via superRefine)
   companyName: z.string().max(100).optional().or(z.literal("")),
   cocNumber: z.string().max(50).optional().or(z.literal("")),
   vatNumber: z.string().max(50).optional().or(z.literal("")),
 
-  // Step 3: Address — verplicht sinds Fase 43 zodat elk account vanaf dag 1
-  // hasValidShippingAddress-geldig is en gekoppeld aan de verzendmethoden van
-  // het land. Postcode-format bewust vrij (EU-breed; land-specifieke validatie
-  // is een follow-up).
-  street: z.string().min(1, "Straatnaam is verplicht").max(100),
-  houseNumber: z.string().min(1, "Huisnummer is verplicht").max(20),
-  postalCode: z.string().min(1, "Postcode is verplicht").max(20),
+  // Adres: optioneel in de hub (alleen nodig voor verzending bij de handel).
+  street: z.string().max(100).optional().or(z.literal("")),
+  houseNumber: z.string().max(20).optional().or(z.literal("")),
+  postalCode: z.string().max(20).optional().or(z.literal("")),
 
-  // Step 4: Avatar (optional)
+  // Step 3: Avatar (optional)
   avatarUrl: z.string().optional().or(z.literal("")),
 
-  // Step 5: Preferences
-  accountFocus: z.enum(["BUYING", "SELLING", "BOTH"]),
+  // Step 4: Voorkeuren
+  accountFocus: z.enum(["BUYING", "SELLING", "BOTH"]).default("BOTH"),
   referralSource: z.string().max(50).optional().or(z.literal("")),
+  newsletterOptIn: z.boolean().default(false),
   termsAccepted: z.literal(true, { error: "Je moet de voorwaarden accepteren" }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Wachtwoorden komen niet overeen",

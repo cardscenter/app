@@ -92,7 +92,7 @@ export function HomeAuctionCard({ auction }: HomeAuctionCardProps) {
   const sellerLocation = auction.seller.city ?? auction.seller.country ?? "";
 
   const auctionHref = `/veilingen/${auction.id}`;
-  const sellerHref = `/verkoper/${auction.sellerId}`;
+  const sellerHref = `/spelers/${auction.sellerId}`;
 
   return (
     <article className="group/card relative flex h-full flex-col overflow-hidden rounded-2xl bg-card shadow-card ring-1 ring-black/[0.04] transition-all hover:shadow-card-hover hover:ring-black/[0.08] dark:bg-slate-900 dark:shadow-lg dark:ring-white/[0.07] dark:hover:shadow-2xl dark:hover:ring-white/20">

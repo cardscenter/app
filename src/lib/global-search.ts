@@ -627,7 +627,7 @@ function toUserHit(u: {
     accountKind: u.accountKind,
     isVerified: u.isVerified,
     createdAt: u.createdAt.toISOString(),
-    href: `/verkoper/${u.id}`,
+    href: `/spelers/${u.id}`,
   };
 }
 
@@ -854,7 +854,7 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestions
       displayName: u.displayName,
       avatarUrl: u.avatarUrl,
       isVerified: u.isVerified,
-      href: `/verkoper/${u.id}`,
+      href: `/spelers/${u.id}`,
     })),
   };
 }

@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyUnsubscribeToken } from "@/lib/email/unsubscribe";
+import { NEWSLETTER_CATEGORY, verifyUnsubscribeToken } from "@/lib/email/unsubscribe";
 import {
   parseEmailPreferences,
   EMAIL_PREF_CATEGORIES,
@@ -26,6 +26,15 @@ async function applyUnsubscribe(token: string | null): Promise<{ ok: boolean; la
     select: { emailPreferences: true },
   });
   if (!user) return { ok: false };
+
+  // Nieuwsbrief (Community Hub, Fase 2): één klik = opt-in uit.
+  if (verified.category === NEWSLETTER_CATEGORY) {
+    await prisma.user.update({
+      where: { id: verified.userId },
+      data: { newsletterOptIn: false },
+    });
+    return { ok: true, label: "Nieuwsbrief" };
+  }
 
   const prefs = parseEmailPreferences(user.emailPreferences);
   prefs[verified.category] = false;

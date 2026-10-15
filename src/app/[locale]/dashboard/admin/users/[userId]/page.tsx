@@ -14,6 +14,9 @@ import { StatCard } from "@/components/dashboard/ui/stat-card";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { TierPill } from "@/components/ui/tier-pill";
+import { UserRoleSelect } from "@/components/admin/user-role-select";
+import { ageOn, isMinor } from "@/lib/age";
+import { parseFavoriteGames } from "@/lib/games";
 
 const USER_DETAIL_SELECT = {
   id: true, displayName: true, email: true, firstName: true, lastName: true,
@@ -31,6 +34,9 @@ const USER_DETAIL_SELECT = {
   sellingCountries: true, maxRunnerUpAttempts: true,
   paymentFailureCount: true, paymentFailureLastAt: true, isBusinessBidExempt: true,
   lastLoginIp: true, lastLoginIpAt: true,
+  // Community Hub (Fase 2)
+  role: true, dateOfBirth: true, favoriteGames: true, guardianName: true, guardianEmail: true,
+  guardianPhone: true, guardianConsentAt: true, newsletterOptIn: true, deletedAt: true,
   createdAt: true, updatedAt: true,
 } satisfies Prisma.UserSelect;
 type UserDetailPayload = Prisma.UserGetPayload<{ select: typeof USER_DETAIL_SELECT }>;
@@ -192,6 +198,22 @@ function ProfileTab({ user, subscription }: { user: UserDetailPayload; subscript
   return (
     <dl className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
       <Field label="ID" value={<code className="text-xs">{user.id}</code>} />
+      <Field label="Rol" value={<UserRoleSelect userId={user.id} current={user.role} isAdminAccount={user.accountType === "ADMIN"} />} />
+      <Field label="Leeftijd" value={user.dateOfBirth ? `${ageOn(user.dateOfBirth)} jaar${isMinor(user.dateOfBirth) ? " (minderjarig)" : ""}` : null} />
+      <Field
+        label="Ouder-toestemming"
+        value={
+          user.dateOfBirth && isMinor(user.dateOfBirth)
+            ? user.guardianConsentAt
+              ? `gegeven op ${user.guardianConsentAt.toLocaleString("nl-NL")}`
+              : "nog niet gegeven"
+            : null
+        }
+      />
+      <Field label="Ouder / noodcontact" value={[user.guardianName, user.guardianEmail, user.guardianPhone].filter(Boolean).join(" · ")} />
+      <Field label="Favoriete spellen" value={parseFavoriteGames(user.favoriteGames).join(", ")} />
+      <Field label="Nieuwsbrief" value={user.newsletterOptIn ? "aangemeld" : "niet aangemeld"} />
+      {user.deletedAt && <Field label="Verwijderd op" value={user.deletedAt.toLocaleString("nl-NL")} />}
       <Field label="Voornaam" value={user.firstName} />
       <Field label="Achternaam" value={user.lastName} />
       <Field label="Bio" value={user.bio} />

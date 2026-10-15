@@ -44,6 +44,9 @@ export type AdminAction =
   | "GRANT_TRUSTED_ORGANIZER"
   | "REVOKE_TRUSTED_ORGANIZER"
   | "REVIEW_EVENT_REPORT"
+  // Community Hub (Fase 2) — rollen en spellen
+  | "SET_USER_ROLE"
+  | "TOGGLE_GAME"
   // Fase 45 — tier-beheer door admin
   | "GRANT_TIER"
   | "REVOKE_TIER";
@@ -66,7 +69,8 @@ export type AdminTargetType =
   | "ENTERPRISE_REQUEST"
   | "SHIPPING_ISSUE"
   | "EVENT"
-  | "EVENT_REPORT";
+  | "EVENT_REPORT"
+  | "GAME";
 
 /**
  * Log an admin or system action.

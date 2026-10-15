@@ -72,6 +72,17 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
+  // Spelersprofiel (Community Hub, Fase 2): /verkoper/<id> → /spelers/<id>,
+  // permanent, zodat oude links (mails, meldingen) blijven werken.
+  {
+    const seller = request.nextUrl.pathname.match(/^\/(nl|en)\/verkoper\/([^/]+)\/?$/);
+    if (seller) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/${seller[1]}/spelers/${seller[2]}`;
+      return NextResponse.redirect(url, 308);
+    }
+  }
+
   // Feature-flags (Community Hub, Fase 1): verborgen handelsfuncties gaan
   // netjes naar de homepage van de locale. Alleen admins komen erdoor (JWT-
   // check zonder DB). De page-layouts (createFeatureLayout) zijn de

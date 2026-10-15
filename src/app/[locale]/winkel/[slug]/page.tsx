@@ -23,7 +23,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 /**
  * /winkel/<slug> — de winkelpagina (Fase 45): het "aangepaste verkopersprofiel"
  * voor tiers met `features.customProfile`. Zelfde header + stat-rij als
- * /verkoper/[id], plus banner, slogan en de eigen blokken van de eigenaar.
+ * /spelers/[id], plus banner, slogan en de eigen blokken van de eigenaar.
  * Slug blijft bewaard bij downgrade; de route geeft dan notFound.
  */
 async function loadOwner(slug: string) {
@@ -76,7 +76,7 @@ export default async function ShopPage({
       <nav className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground" aria-label="Breadcrumb">
         <span>{t("breadcrumbSellers")}</span>
         <ChevronRight className="size-3.5" />
-        <Link href={`/verkoper/${owner.id}`} className="hover:text-foreground">
+        <Link href={`/spelers/${owner.id}`} className="hover:text-foreground">
           {profile.user.displayName}
         </Link>
         <ChevronRight className="size-3.5" />
@@ -126,7 +126,7 @@ export default async function ShopPage({
         )}
 
         <div className="text-center">
-          <Link href={`/verkoper/${owner.id}`} className="text-sm font-medium text-primary hover:underline">
+          <Link href={`/spelers/${owner.id}`} className="text-sm font-medium text-primary hover:underline">
             {t("viewFullProfile")}
           </Link>
         </div>
