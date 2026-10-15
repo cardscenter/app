@@ -303,6 +303,8 @@ model User {
   shopEventsCreated       ShopEvent[]          @relation("ShopEventCreator")
   eventRegistrations      EventRegistration[]  @relation("EventRegistrationUser")
   payments                Payment[]            @relation("PaymentUser")
+  // Community Hub (Fase 4): bestelgeschiedenis van ingelogde gasten
+  foodOrders              FoodOrder[]          @relation("FoodOrderUser")
 
   // Auth-tokens (Fase 37) — password-reset & e-mailverificatie
   passwordResetTokens     PasswordResetToken[]
@@ -2874,7 +2876,112 @@ model Payment {
   updatedAt   DateTime @updatedAt
 
   registration EventRegistration?
+  foodOrder    FoodOrder?
 
   @@index([purpose, status])
+  @@index([userId])
+}
+
+// ============================================================
+// COMMUNITY HUB — FASE 4: ETEN BESTELLEN (tafel-QR / bar-QR)
+// ============================================================
+// Port van het prototype in cards-center-bestelapp/ (spec is leidend).
+// Menu en kortingscodes in de DB (admin-beheer), bestellingen met
+// dagnummer, Mollie via het gedeelde Payment-model (purpose FOOD_ORDER).
+
+model MenuCategory {
+  key       String  @id            // burgers | friet | loaded | snacks | sauzen | drank
+  code      String                 // letter voor het collector-nummer (B·001/006)
+  name      String
+  nameEn    String
+  sortOrder Int     @default(0)
+  enabled   Boolean @default(true)
+
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id            String  @id         // prototype-id (classic, friet-k, saus-curry, cola, ...)
+  categoryKey   String
+  category      MenuCategory @relation(fields: [categoryKey], references: [key])
+  name          String
+  nameEn        String
+  description   String?
+  descriptionEn String?
+  price         Float
+  flow          String?             // burger | fries | snack | loaded (combo-stappen), null = los
+  veg           Boolean @default(false)
+  spice         Int?                // 1 (mild) t/m 4
+  tag           String?             // hoekbadge ("Favoriet")
+  tagEn         String?
+  image         String?             // /images/menu/food/bacon.webp
+  art           String  @default("burger") // SVG-fallback: burger|fries|loaded|nuggets|sticks|balls|rolls|box|can|bottle|dip
+  color         String?             // kleur voor can/bottle/dip
+  allergens     String  @default("[]") // JSON string[] (keys uit ALLERGENS)
+  ingredients   String?             // JSON [{nl,en}] — weg te halen; volgorde is vast (removed-indexen)
+  sortOrder     Int     @default(0)
+  enabled       Boolean @default(true)
+  soldOut       Boolean @default(false) // keuken zet aan/uit
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([categoryKey, sortOrder])
+}
+
+model DiscountCode {
+  code      String   @id           // hoofdletters, geen spaties
+  type      String                  // PCT | EUR
+  value     Float
+  enabled   Boolean  @default(true)
+  expiresAt DateTime?
+  maxUses   Int?
+  uses      Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// Bestelling. Statusmachine:
+//   AWAITING_PAYMENT (online, nog niet betaald; keuken ziet 'm niet)
+//   NEW → PREPARING → READY → DONE   (keuken; bar-bestelling start pas na "Markeer betaald")
+//   PAYMENT_FAILED (online mislukt/verlopen; gast kan opnieuw betalen tot 30 min)
+model FoodOrder {
+  id          String   @id @default(cuid())
+  dayKey      String                 // "2027-06-12" (winkel-tijd); nummer loopt per dag op vanaf 101
+  number      Int
+  mode        String                 // TABLE | BAR
+  tableNumber Int?
+  name        String?                // bar: voornaam om te roepen
+  userId      String?                // ingelogd = bestelgeschiedenis in het account
+  user        User?    @relation("FoodOrderUser", fields: [userId], references: [id], onDelete: SetNull)
+  locale      String   @default("nl")
+
+  lines       String                 // JSON BasketLine[] {id, qty, removed[], g, role}
+  note        String?                // max 140
+  subtotal    Float                  // na menuvoordeel
+  savings     Float    @default(0)
+  code        String?
+  discount    Float    @default(0)
+  total       Float                  // subtotaal - korting (zonder fooi) = wat de bar int
+  tip         Float    @default(0)
+  payment     String                 // ONLINE | BAR
+  method      String?                // "iDEAL" etc. (label voor de klant)
+  paid        Boolean  @default(false)
+  paidAt      DateTime?
+  paymentId   String?  @unique
+  paymentRef  Payment? @relation(fields: [paymentId], references: [id])
+
+  status      String   @default("NEW")
+  waitMinutes Int                    // beloofde wachttijd op het moment van plaatsen
+  accessToken String   @unique       // gast-toegang tot de statuspagina (geen account nodig)
+
+  startedAt   DateTime?
+  readyAt     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([dayKey, number])
+  @@index([status, createdAt])
+  @@index([dayKey, createdAt])
   @@index([userId])
 }
