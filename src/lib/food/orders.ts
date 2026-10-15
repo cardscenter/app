@@ -313,9 +313,13 @@ export async function onFoodOrderPaymentStatus(paymentId: string, next: PaymentS
 
 // ---------------------------------------------------------------- gast
 
-export async function getGuestOrder(orderId: string, accessToken: string): Promise<OrderView | null> {
+/** Gast via accessToken, of de ingelogde eigenaar (bestelgeschiedenis in het account). */
+export async function getGuestOrder(orderId: string, accessToken: string, userId?: string | null): Promise<OrderView | null> {
   const o = await loadOrder(orderId);
-  if (!o || o.accessToken !== accessToken) return null;
+  if (!o) return null;
+  const byToken = !!accessToken && o.accessToken === accessToken;
+  const byUser = !!userId && o.userId === userId;
+  if (!byToken && !byUser) return null;
   return toOrderView(o);
 }
 

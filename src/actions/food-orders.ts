@@ -29,14 +29,15 @@ export async function placeFoodOrder(input: Omit<PlaceOrderInput, "userId">) {
 }
 
 export async function getFoodOrderStatus(orderId: string, accessToken: string): Promise<OrderView | null> {
-  const order = await getGuestOrder(orderId, accessToken);
+  const session = await auth();
+  const order = await getGuestOrder(orderId, accessToken, session?.user?.id ?? null);
   if (!order) return null;
   // Terugkeer van de checkout: status direct bij Mollie ophalen (webhook blijft leidend).
   if (order.payment === "ONLINE" && !order.paid && isMollieConfigured()) {
     const row = await prisma.foodOrder.findUnique({ where: { id: orderId }, select: { paymentId: true } });
     if (row?.paymentId) {
       await syncPaymentFromProvider(row.paymentId, "return");
-      return getGuestOrder(orderId, accessToken);
+      return getGuestOrder(orderId, accessToken, session?.user?.id ?? null);
     }
   }
   return order;
