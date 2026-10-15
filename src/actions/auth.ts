@@ -20,7 +20,14 @@ import {
   sendEmailVerificationEmail,
   sendWelcomeEmail,
   sendPasswordResetEmail,
+  sendMagicLinkEmail,
 } from "@/lib/email/send-email";
+import {
+  MAGIC_LINK_MIN_INTERVAL_MS,
+  MAGIC_LINK_TTL_MS,
+  generateMagicToken,
+  hashMagicToken,
+} from "@/lib/magic-link";
 import { validateUsername } from "@/lib/username-policy";
 import { findUserByNameInsensitive } from "@/lib/username-policy-server";
 
@@ -458,6 +465,56 @@ export async function resetPassword(
  * wachtwoord als bewijs; geen e-mail-flow nodig. Stuurt na succes een
  * ACCOUNT_UPDATE-notificatie (altijd-aan mailcategorie) als security-signaal.
  */
+/**
+ * Inloglink per e-mail aanvragen (Community Hub, Fase 2). Antwoordt altijd
+ * neutraal (geen e-mail-enumeratie). Max één link per minuut per adres;
+ * oudere ongebruikte links van hetzelfde adres worden ongeldig gemaakt.
+ */
+export async function requestMagicLink(rawEmail: string, locale?: string): Promise<{ ok: true } | { error: string }> {
+  const email = normalizeEmail(rawEmail ?? "");
+  if (!email || !email.includes("@")) return { error: "Vul een geldig e-mailadres in" };
+
+  // Zelfde IP-cooldown als de login (brute-force op de aanvraag-knop).
+  const requestHeaders = await headers();
+  const ip = extractIp(requestHeaders);
+  if (getCooldownRemaining(ip) > 0) {
+    return { error: "Te veel pogingen. Probeer het over een paar minuten opnieuw." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, displayName: true, deletedAt: true },
+  });
+  // Onbekend of verwijderd adres: stil ok (zelfde antwoord als bekend adres).
+  if (!user || user.deletedAt) return { ok: true };
+
+  const recent = await prisma.magicLinkToken.findFirst({
+    where: { email, createdAt: { gt: new Date(Date.now() - MAGIC_LINK_MIN_INTERVAL_MS) } },
+    select: { id: true },
+  });
+  if (recent) return { ok: true };
+
+  const token = generateMagicToken();
+  await prisma.$transaction([
+    prisma.magicLinkToken.updateMany({
+      where: { email, usedAt: null },
+      data: { usedAt: new Date() },
+    }),
+    prisma.magicLinkToken.create({
+      data: {
+        email,
+        tokenHash: hashMagicToken(token),
+        expiresAt: new Date(Date.now() + MAGIC_LINK_TTL_MS),
+      },
+    }),
+  ]);
+
+  void sendMagicLinkEmail({ to: email, displayName: user.displayName, token, locale }).catch((err) =>
+    console.error("[magic-link] mail faalde:", err),
+  );
+  return { ok: true };
+}
+
 export async function changePassword(
   formData: FormData,
 ): Promise<{ success: true } | { error: string; totpRequired?: boolean }> {

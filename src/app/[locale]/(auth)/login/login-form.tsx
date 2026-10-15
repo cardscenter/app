@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { login } from "@/actions/auth";
-import { Mail, AlertCircle, ArrowRight, ArrowLeft } from "lucide-react";
+import { login, requestMagicLink } from "@/actions/auth";
+import { Mail, AlertCircle, ArrowRight, ArrowLeft, Sparkles, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,7 +23,9 @@ interface LoginFormProps {
  */
 export function LoginForm({ locale }: LoginFormProps) {
   const t = useTranslations("auth");
-  const [step, setStep] = useState<"credentials" | "totp">("credentials");
+  // "magic" = inloglink per e-mail (Community Hub, Fase 2): alleen een
+  // e-mailadres, daarna "check je mail". Geen wachtwoord, geen 2FA-stap.
+  const [step, setStep] = useState<"credentials" | "totp" | "magic" | "magic-sent">("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -35,6 +37,18 @@ export function LoginForm({ locale }: LoginFormProps) {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    if (step === "magic") {
+      startTransition(async () => {
+        const res = await requestMagicLink(email, locale);
+        if ("error" in res) {
+          setError(res.error);
+          return;
+        }
+        setStep("magic-sent");
+      });
+      return;
+    }
 
     const formData = new FormData();
     formData.set("email", email);
@@ -85,15 +99,23 @@ export function LoginForm({ locale }: LoginFormProps) {
         {/* Header */}
         <div className="mb-8 text-center lg:text-left">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            {step === "credentials" ? t("loginTitle") : "Nog één stap"}
+            {step === "totp"
+              ? "Nog één stap"
+              : step === "magic"
+                ? t("magicTitle")
+                : step === "magic-sent"
+                  ? t("magicSentTitle")
+                  : t("loginTitle")}
           </h1>
-          {step === "credentials" ? (
+          {step === "credentials" || step === "magic" ? (
             <p className="mt-2 text-sm text-muted-foreground">
               {t("loginSubtitle")}{" "}
               <Link href="/register" className="font-semibold text-primary hover:underline">
                 {t("registerButton")}
               </Link>
             </p>
+          ) : step === "magic-sent" ? (
+            <p className="mt-2 text-sm text-muted-foreground">{t("magicSentSubtitle", { email })}</p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">
               Je gegevens kloppen — bevestig nu met je Google Authenticator-code.
@@ -101,6 +123,25 @@ export function LoginForm({ locale }: LoginFormProps) {
           )}
         </div>
 
+        {step === "magic-sent" ? (
+          <div className="space-y-5">
+            <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+              <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
+              <span>{t("magicSentBody")}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setStep("credentials");
+                setError(null);
+              }}
+              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="size-3.5" />
+              {t("magicBackToLogin")}
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
@@ -109,7 +150,7 @@ export function LoginForm({ locale }: LoginFormProps) {
             </div>
           )}
 
-          {step === "credentials" ? (
+          {step === "credentials" || step === "magic" ? (
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-sm font-medium text-foreground">
@@ -129,8 +170,12 @@ export function LoginForm({ locale }: LoginFormProps) {
                     className="h-11 pl-9 text-sm"
                   />
                 </div>
+                {step === "magic" && (
+                  <p className="text-xs text-muted-foreground">{t("magicHint")}</p>
+                )}
               </div>
 
+              {step === "credentials" && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium text-foreground">
@@ -153,7 +198,9 @@ export function LoginForm({ locale }: LoginFormProps) {
                   placeholder="••••••••"
                 />
               </div>
+              )}
 
+              {step === "credentials" && (
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="rememberMe"
@@ -168,6 +215,7 @@ export function LoginForm({ locale }: LoginFormProps) {
                   {t("rememberMe")}
                 </Label>
               </div>
+              )}
             </>
           ) : (
             <div className="space-y-4">
@@ -231,10 +279,31 @@ export function LoginForm({ locale }: LoginFormProps) {
             disabled={pending}
             className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-card transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {pending ? t("loginPending") : step === "totp" ? "Bevestig en log in" : t("loginButton")}
+            {pending
+              ? t("loginPending")
+              : step === "totp"
+                ? "Bevestig en log in"
+                : step === "magic"
+                  ? t("magicSend")
+                  : t("loginButton")}
             {!pending && <ArrowRight className="size-4" />}
           </button>
+
+          {(step === "credentials" || step === "magic") && (
+            <button
+              type="button"
+              onClick={() => {
+                setStep(step === "magic" ? "credentials" : "magic");
+                setError(null);
+              }}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Sparkles className="size-4 text-primary" />
+              {step === "magic" ? t("magicUsePassword") : t("magicUseLink")}
+            </button>
+          )}
         </form>
+        )}
 
         {/* Trust footer (mobile-only — desktop heeft de aside) */}
         <p className="mt-8 text-center text-xs text-muted-foreground lg:hidden">

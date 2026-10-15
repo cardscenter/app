@@ -232,7 +232,19 @@
     "usernameReasonTaken": "Username already taken",
     "socialGoogleContinue": "Continue with Google",
     "socialGoogleUnavailable": "Google sign-in is not configured yet",
-    "socialOrDivider": "or"
+    "socialOrDivider": "or",
+    "magicTitle": "Sign in with a link",
+    "magicHint": "We will email you a link. Click it and you are signed in, no password needed.",
+    "magicSend": "Send me a sign-in link",
+    "magicUseLink": "Prefer no password? Send me a link",
+    "magicUsePassword": "Sign in with a password instead",
+    "magicSentTitle": "Check your email",
+    "magicSentSubtitle": "If {email} is known to us, a sign-in link is now in your inbox.",
+    "magicSentBody": "The link is valid for 15 minutes and works once. Nothing received? Check your spam folder or try again in a minute.",
+    "magicLoggingIn": "Signing you in",
+    "magicLoggingInHint": "One moment, we are checking your sign-in link.",
+    "magicInvalid": "This sign-in link is no longer valid. Links work for 15 minutes and only once. Request a new one.",
+    "magicBackToLogin": "Back to sign in"
   },
   "home": {
     "heroTitle": "The Pokémon Card Marketplace",

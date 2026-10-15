@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/validations/auth";
 import { verifyTotpOrBackupCode } from "@/lib/two-factor";
 import { isTrustedDevice } from "@/lib/trusted-device";
+import { hashMagicToken, looksLikeMagicToken } from "@/lib/magic-link";
+import { effectiveRole } from "@/lib/roles";
 
 /**
  * 2FA-signalen vanuit authorize (Fase 16-followup). CredentialsSignin-
@@ -29,10 +31,13 @@ declare module "next-auth" {
       name?: string | null;
       image?: string | null;
       accountType?: string;
+      /** PLAYER | STAFF | ADMIN (Community Hub, Fase 2). */
+      role?: string;
     };
   }
   interface User {
     accountType?: string;
+    role?: string;
   }
 }
 
@@ -40,7 +45,45 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     accountType?: string;
+    role?: string;
   }
+}
+
+/** Snapshot van de login-IP (Fase 29, anti-shill-bidding). Nooit blokkerend. */
+async function snapshotLoginIp(userId: string) {
+  try {
+    const reqHeaders = await headers();
+    const ip =
+      reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      reqHeaders.get("x-real-ip") ||
+      null;
+    if (ip) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { lastLoginIp: ip, lastLoginIpAt: new Date() },
+      });
+    }
+  } catch {
+    // Negeer — IP-tracking is niet kritiek voor de login-flow.
+  }
+}
+
+function toAuthUser(user: {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  accountType: string;
+  role: string;
+}) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.displayName,
+    image: user.avatarUrl,
+    accountType: user.accountType,
+    role: effectiveRole(user),
+  };
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -60,6 +103,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
 
         if (!user) return null;
+        // Verwijderd account (AVG, Fase 2): nooit meer inloggen.
+        if (user.deletedAt) return null;
 
         const passwordMatch = await bcrypt.compare(
           credentials.password as string,
@@ -88,34 +133,46 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
 
-        // Fase 29: snapshot login-IP voor anti-shill-bidding-detectie. Wordt
-        // door placeBid gebruikt om hard-block te triggeren als een bidder
-        // hetzelfde netwerk als de seller deelt. Headers() werkt in NextAuth
-        // callbacks (server-context). Falen we de IP te bepalen, dan slaan
-        // we de update gewoon over — login mag daarop niet vastlopen.
-        try {
-          const reqHeaders = await headers();
-          const ip =
-            reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-            reqHeaders.get("x-real-ip") ||
-            null;
-          if (ip) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { lastLoginIp: ip, lastLoginIpAt: new Date() },
-            });
-          }
-        } catch {
-          // Negeer — IP-tracking is niet kritiek voor de login-flow.
-        }
+        // Fase 29: snapshot login-IP voor anti-shill-bidding-detectie.
+        await snapshotLoginIp(user.id);
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.displayName,
-          image: user.avatarUrl,
-          accountType: user.accountType,
-        };
+        return toAuthUser(user);
+      },
+    }),
+    // Inloglink per e-mail (Community Hub, Fase 2). De link uit de mail landt
+    // op /magic?token=…; die pagina roept signIn("magic-link", { token }) aan.
+    // Het token is eenmalig (usedAt) en 15 min geldig; alleen de hash staat
+    // in de DB. 2FA wordt hier niet gevraagd: bezit van de mailbox is de
+    // tweede factor, zoals bij een wachtwoord-reset.
+    Credentials({
+      id: "magic-link",
+      name: "magic-link",
+      credentials: {
+        token: { label: "Token", type: "text" },
+      },
+      async authorize(credentials) {
+        const token = typeof credentials?.token === "string" ? credentials.token : null;
+        if (!looksLikeMagicToken(token)) return null;
+        const tokenHash = hashMagicToken(token);
+        const now = new Date();
+        // Claim-first: markeer als gebruikt in dezelfde query zodat twee
+        // gelijktijdige klikken niet allebei inloggen.
+        const claimed = await prisma.magicLinkToken.updateMany({
+          where: { tokenHash, usedAt: null, expiresAt: { gt: now } },
+          data: { usedAt: now },
+        });
+        if (claimed.count !== 1) return null;
+        const row = await prisma.magicLinkToken.findUnique({ where: { tokenHash } });
+        if (!row) return null;
+        const user = await prisma.user.findUnique({ where: { email: row.email } });
+        if (!user || user.deletedAt) return null;
+
+        // Klik op de inloglink bewijst de mailbox: e-mail meteen geverifieerd.
+        if (!user.emailVerifiedAt) {
+          await prisma.user.update({ where: { id: user.id }, data: { emailVerifiedAt: now } });
+        }
+        await snapshotLoginIp(user.id);
+        return toAuthUser(user);
       },
     }),
   ],
@@ -128,6 +185,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.picture = user.image;
         token.accountType = user.accountType;
+        token.role = user.role;
       }
       // De JWT is een snapshot van het inlogmoment. Na een profielfoto- of
       // gebruikersnaamwijziging roept de header `update()` aan (trigger
@@ -136,12 +194,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (trigger === "update" && token.id) {
         const fresh = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { displayName: true, avatarUrl: true, accountType: true },
+          select: { displayName: true, avatarUrl: true, accountType: true, role: true },
         });
         if (fresh) {
           token.name = fresh.displayName;
           token.picture = fresh.avatarUrl;
           token.accountType = fresh.accountType;
+          token.role = effectiveRole(fresh);
         }
       }
       return token;
@@ -151,6 +210,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.image = token.picture as string | null;
         session.user.accountType = token.accountType as string | undefined;
+        session.user.role = token.role as string | undefined;
       }
       return session;
     },

@@ -232,7 +232,19 @@
     "usernameReasonTaken": "Deze naam is al in gebruik",
     "socialGoogleContinue": "Doorgaan met Google",
     "socialGoogleUnavailable": "Google-login is nog niet geconfigureerd",
-    "socialOrDivider": "of"
+    "socialOrDivider": "of",
+    "magicTitle": "Inloggen met een link",
+    "magicHint": "We sturen een link naar je e-mail. Klik erop en je bent ingelogd, zonder wachtwoord.",
+    "magicSend": "Stuur me een inloglink",
+    "magicUseLink": "Liever inloggen zonder wachtwoord? Stuur me een link",
+    "magicUsePassword": "Toch met wachtwoord inloggen",
+    "magicSentTitle": "Check je mail",
+    "magicSentSubtitle": "Als {email} bij ons bekend is, staat er nu een inloglink in je inbox.",
+    "magicSentBody": "De link is 15 minuten geldig en werkt één keer. Niets ontvangen? Kijk in je spam-map of probeer het over een minuut opnieuw.",
+    "magicLoggingIn": "Je wordt ingelogd",
+    "magicLoggingInHint": "Een momentje, we controleren je inloglink.",
+    "magicInvalid": "Deze inloglink is niet (meer) geldig. Links werken 15 minuten en maar één keer. Vraag een nieuwe aan.",
+    "magicBackToLogin": "Terug naar inloggen"
   },
   "home": {
     "heroTitle": "De Pokémon Kaarten Marktplaats",

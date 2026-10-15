@@ -146,16 +146,62 @@ export async function sendWelcomeEmail(args: {
   const { html, text } = renderNotificationEmail({
     recipientName: args.displayName,
     title: "Welkom bij Cards Center 🎴",
-    body: `Je account staat klaar. Volgende stappen om écht van start te gaan:
+    body: `Je account staat klaar. Zo haal je er het meeste uit:
 
-• Voeg je bankgegevens toe op je profiel
-• Stel je verzendgebied in
-• Beveilig je account met twee-factor-authenticatie (2FA) — optioneel, ingesteld in een minuut
-• Personaliseer je profiel met een avatar en bio
-• Ontdek de marktplaats`,
+• Vul je spelersgegevens aan: favoriete spellen en je spelers-ID's
+• Zet een profielfoto en een korte bio op je profiel
+• Beveilig je account met twee-factor-authenticatie (2FA), ingesteld in een minuut
+• Kijk in de kalender welke evenementen eraan komen`,
     ctaUrl: dashboardUrl,
     ctaLabel: "Naar je dashboard",
     categoryLabel: "Welkom",
   });
   return sendEmail({ to: args.to, subject: "Welkom bij Cards Center 🎴", text, html });
+}
+
+/** Inloglink (magic link, Community Hub Fase 2). Token is 15 minuten geldig en eenmalig. */
+export async function sendMagicLinkEmail(args: {
+  to: string;
+  displayName: string;
+  token: string;
+  locale?: string;
+}) {
+  const locale = args.locale ?? "nl";
+  const loginUrl = `${getAppUrl()}/${locale}/magic?token=${encodeURIComponent(args.token)}`;
+  const { html, text } = renderNotificationEmail({
+    recipientName: args.displayName,
+    title: "Je inloglink",
+    body: `Klik op de knop hieronder om in te loggen bij Cards Center. Je hoeft geen wachtwoord in te vullen.
+
+De link is 15 minuten geldig en werkt één keer. Heb je dit niet aangevraagd? Negeer dan dit bericht.`,
+    ctaUrl: loginUrl,
+    ctaLabel: "Log in",
+    categoryLabel: "Account",
+  });
+  return sendEmail({ to: args.to, subject: "Je inloglink voor Cards Center", text, html });
+}
+
+/** Ouder-toestemming (AVG, <16; Community Hub Fase 2). Link is 7 dagen geldig. */
+export async function sendGuardianConsentEmail(args: {
+  to: string;
+  guardianName: string | null;
+  childDisplayName: string;
+  token: string;
+  locale?: string;
+}) {
+  const locale = args.locale ?? "nl";
+  const consentUrl = `${getAppUrl()}/${locale}/ouder-toestemming?token=${encodeURIComponent(args.token)}`;
+  const { html, text } = renderNotificationEmail({
+    recipientName: args.guardianName ?? "ouder of verzorger",
+    title: "Toestemming voor het account van je kind",
+    body: `${args.childDisplayName} heeft een account bij Cards Center, de community-app van onze winkel in Hulst. Omdat je kind jonger is dan 16, hebben we jouw toestemming nodig voordat het account evenementen kan boeken en betalen.
+
+We bewaren alleen wat nodig is: naam, e-mailadres, geboortedatum (nooit publiek) en jouw contactgegevens als noodcontact. Je kunt deze toestemming altijd intrekken via onze support.
+
+Klik op de knop om toestemming te geven. De link is 7 dagen geldig.`,
+    ctaUrl: consentUrl,
+    ctaLabel: "Ik geef toestemming",
+    categoryLabel: "Account",
+  });
+  return sendEmail({ to: args.to, subject: `Toestemming voor het Cards Center-account van ${args.childDisplayName}`, text, html });
 }
