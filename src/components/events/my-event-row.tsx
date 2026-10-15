@@ -57,12 +57,12 @@ export function MyEventRow({ event }: { event: MyEvent }) {
       </span>
 
       {event.status === "LIVE" && (
-        <Link href={`/evenementen/${event.id}`} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-sm text-foreground transition hover:bg-muted">
+        <Link href={`/beurzen/${event.id}`} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-sm text-foreground transition hover:bg-muted">
           <ExternalLink className="h-4 w-4" /> Bekijk
         </Link>
       )}
       {(event.status === "LIVE" || event.status === "PENDING" || event.status === "REJECTED") && (
-        <Link href={`/dashboard/evenementen/${event.id}/bewerken`} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-sm text-foreground transition hover:bg-muted">
+        <Link href={`/dashboard/beurzen/${event.id}/bewerken`} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-sm text-foreground transition hover:bg-muted">
           <Pencil className="h-4 w-4" /> Bewerken
         </Link>
       )}

@@ -31,7 +31,7 @@ export async function OfferTabs({ userId, action }: { userId: string; action?: R
           { href: "/dashboard/claimsales", label: t("myClaimsales"), badge: activity.counts.claimsales },
           { href: "/dashboard/marktplaats", label: t("myListings"), badge: activity.counts.listings },
           {
-            href: "/dashboard/evenementen",
+            href: "/dashboard/beurzen",
             label: t("myEvents"),
             badge: activity.counts.events,
             // Zonder eigen events geen tab — maar een deep-link naar de pagina

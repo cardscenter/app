@@ -54,7 +54,7 @@ export default async function MyEventsPage({
       <OfferTabs
         userId={session.user.id}
         action={
-          <Link href="/evenementen/nieuw" className={buttonVariants()}>
+          <Link href="/beurzen/nieuw" className={buttonVariants()}>
             <Plus className="h-4 w-4" /> Nieuw evenement
           </Link>
         }
@@ -66,7 +66,7 @@ export default async function MyEventsPage({
           title="Nog geen evenementen"
           description="Je hebt nog geen evenementen aangemaakt."
           action={
-            <Link href="/evenementen/nieuw" className={buttonVariants({ size: "sm" })}>
+            <Link href="/beurzen/nieuw" className={buttonVariants({ size: "sm" })}>
               <Plus className="h-4 w-4" /> Nieuw evenement
             </Link>
           }

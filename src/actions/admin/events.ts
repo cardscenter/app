@@ -57,7 +57,7 @@ export async function approveEvent(eventId: string) {
     "EVENT_APPROVED",
     "Evenement goedgekeurd",
     `Je evenement "${event.title}" is goedgekeurd en staat nu live.`,
-    `/evenementen/${event.id}`,
+    `/beurzen/${event.id}`,
   );
 
   await logAdminAction({
@@ -69,7 +69,7 @@ export async function approveEvent(eventId: string) {
   });
 
   revalidatePath("/dashboard/admin/event-approvals");
-  revalidatePath("/evenementen");
+  revalidatePath("/beurzen");
   return { success: true };
 }
 
@@ -101,7 +101,7 @@ export async function rejectEvent(eventId: string, reason: string) {
     "EVENT_REJECTED",
     "Evenement afgewezen",
     `Je evenement "${event.title}" is afgewezen. Reden: ${trimmed}`,
-    `/dashboard/evenementen`,
+    `/dashboard/beurzen`,
   );
 
   await logAdminAction({
@@ -139,7 +139,7 @@ export async function setEventOfficial(eventId: string, official: boolean) {
   });
 
   revalidatePath("/dashboard/admin/event-approvals");
-  revalidatePath(`/evenementen/${eventId}`);
+  revalidatePath(`/beurzen/${eventId}`);
   return { success: true };
 }
 
@@ -163,7 +163,7 @@ export async function setTrustedOrganizer(userId: string, trusted: boolean) {
       "TRUSTED_ORGANIZER",
       "Vertrouwde organisator",
       "Je bent aangewezen als vertrouwde organisator — je evenementen worden voortaan direct gepubliceerd.",
-      `/dashboard/evenementen`,
+      `/dashboard/beurzen`,
     );
   }
 
@@ -211,7 +211,7 @@ export async function reviewEventReport(
       where: { id: report.eventId },
       data: { status: "DELETED" },
     });
-    revalidatePath("/evenementen");
+    revalidatePath("/beurzen");
   }
 
   await logAdminAction({

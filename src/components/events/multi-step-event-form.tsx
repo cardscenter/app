@@ -209,7 +209,7 @@ export function MultiStepEventForm({
         const res = await updateEvent(eventId, buildFormData(false));
         if (res?.error) { toast.error(res.error); return; }
         toast.success(res?.resubmitted ? "Wijzigingen opgeslagen — je evenement wordt opnieuw beoordeeld." : "Wijzigingen opgeslagen");
-        router.push("/dashboard/evenementen");
+        router.push("/dashboard/beurzen");
         return;
       }
       const res = await createEvent(buildFormData(confirm));
@@ -223,10 +223,10 @@ export function MultiStepEventForm({
       if (res?.success) {
         if (res.status === "LIVE") {
           toast.success("Evenement gepubliceerd!");
-          router.push(`/evenementen/${res.eventId}`);
+          router.push(`/beurzen/${res.eventId}`);
         } else {
           toast.success("Evenement ingediend — het wordt beoordeeld voordat het zichtbaar wordt.");
-          router.push("/dashboard/evenementen");
+          router.push("/dashboard/beurzen");
         }
       }
     });

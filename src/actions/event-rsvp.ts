@@ -37,6 +37,6 @@ export async function setEventRsvp(eventId: string, status: "INTERESTED" | "GOIN
     });
   }
 
-  revalidatePath(`/evenementen/${eventId}`);
+  revalidatePath(`/beurzen/${eventId}`);
   return { success: true };
 }

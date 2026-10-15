@@ -50,7 +50,7 @@ export function EventsLaunchBanner({ tab }: { tab: "beurzen" | "events" }) {
         </div>
       </div>
       <Link
-        href={isBeurzen ? "/evenementen/nieuw?type=BEURS" : "/evenementen/nieuw"}
+        href={isBeurzen ? "/beurzen/nieuw?type=BEURS" : "/beurzen/nieuw"}
         className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 sm:self-auto"
       >
         <Plus className="h-4 w-4" /> {isBeurzen ? "Beurs toevoegen" : "Evenement toevoegen"}

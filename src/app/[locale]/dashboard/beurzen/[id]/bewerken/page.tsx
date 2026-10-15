@@ -26,7 +26,7 @@ export default async function EditEventPage({
 
   if (!event || event.organizerId !== session.user.id) notFound();
   if (event.status === "ENDED" || event.status === "DELETED") {
-    redirect(`/${locale}/dashboard/evenementen`);
+    redirect(`/${locale}/dashboard/beurzen`);
   }
 
   return (

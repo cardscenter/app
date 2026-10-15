@@ -381,7 +381,7 @@ export async function createEvent(formData: FormData) {
       "EVENT_PUBLISHED",
       "Evenement live",
       `Je evenement "${event.title}" staat live in de kalender.`,
-      `/evenementen/${event.id}`,
+      `/beurzen/${event.id}`,
     );
   } else {
     await createNotification(
@@ -389,7 +389,7 @@ export async function createEvent(formData: FormData) {
       "EVENT_SUBMITTED",
       "Evenement ingediend",
       `Je evenement "${event.title}" is ingediend en wordt beoordeeld voordat het zichtbaar wordt.`,
-      `/dashboard/evenementen`,
+      `/dashboard/beurzen`,
     );
     const admins = await prisma.user.findMany({ where: { accountType: "ADMIN" }, select: { id: true } });
     await Promise.all(
@@ -405,8 +405,8 @@ export async function createEvent(formData: FormData) {
     );
   }
 
-  revalidatePath("/evenementen");
-  revalidatePath("/dashboard/evenementen");
+  revalidatePath("/beurzen");
+  revalidatePath("/dashboard/beurzen");
   return { success: true, eventId: event.id, status };
 }
 
@@ -585,9 +585,9 @@ export async function updateEvent(eventId: string, formData: FormData) {
   }
 
   await prisma.event.update({ where: { id: eventId }, data: updateData });
-  revalidatePath(`/evenementen/${eventId}`);
-  revalidatePath("/evenementen");
-  revalidatePath("/dashboard/evenementen");
+  revalidatePath(`/beurzen/${eventId}`);
+  revalidatePath("/beurzen");
+  revalidatePath("/dashboard/beurzen");
   return { success: true, resubmitted: event.status === "REJECTED" };
 }
 
@@ -603,7 +603,7 @@ export async function deleteEvent(eventId: string) {
   if (event.organizerId !== session.user.id) return { error: "Niet bevoegd" };
 
   await prisma.event.update({ where: { id: eventId }, data: { status: "DELETED" } });
-  revalidatePath("/evenementen");
-  revalidatePath("/dashboard/evenementen");
+  revalidatePath("/beurzen");
+  revalidatePath("/dashboard/beurzen");
   return { success: true };
 }

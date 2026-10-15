@@ -64,7 +64,7 @@ function ReportCard({ report }: { report: ReportRow }) {
     <div className="dash-card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge tone="danger" icon={Flag}>{REASON_LABELS[report.reason] ?? report.reason}</StatusBadge>
-        <Link href={`/evenementen/${report.event.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-foreground hover:text-primary">
+        <Link href={`/beurzen/${report.event.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-foreground hover:text-primary">
           {report.event.title} <ExternalLink className="h-3 w-3" />
         </Link>
         <span className="text-xs text-muted-foreground">

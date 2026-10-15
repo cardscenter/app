@@ -416,7 +416,7 @@ export default async function EventDetailPage({
 
   return (
     <PageContainer width="default" className="py-8">
-      <Link href="/evenementen" className="text-sm text-muted-foreground hover:text-foreground">← Terug naar evenementen</Link>
+      <Link href="/beurzen" className="text-sm text-muted-foreground hover:text-foreground">← Terug naar evenementen</Link>
 
       {/* ── Hero: banner + kerninfo in één omkaderde kaart ── */}
       <section className="mt-3 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
@@ -477,7 +477,7 @@ export default async function EventDetailPage({
             />
             <div className="flex flex-wrap items-center gap-2">
               <a
-                href={`/api/events/${event.id}/ics`}
+                href={`/api/beurzen/${event.id}/ics`}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
               >
                 <CalendarPlus className="h-4 w-4" /> Zet in mijn agenda
@@ -705,7 +705,7 @@ export default async function EventDetailPage({
               <ul className="space-y-2">
                 {otherEvents.map((o) => (
                   <li key={o.id}>
-                    <Link href={`/evenementen/${o.id}`} className="group flex items-center gap-3">
+                    <Link href={`/beurzen/${o.id}`} className="group flex items-center gap-3">
                       <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                         {o.coverImage ? (
                           <Image src={o.coverImage} alt="" fill className="object-cover" sizes="48px" unoptimized />

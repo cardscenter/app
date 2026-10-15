@@ -299,6 +299,10 @@ model User {
 
   // Community Hub (Fase 2)
   guardianConsentTokens   GuardianConsentToken[]
+  // Community Hub (Fase 3): winkel-events, tickets, betalingen
+  shopEventsCreated       ShopEvent[]          @relation("ShopEventCreator")
+  eventRegistrations      EventRegistration[]  @relation("EventRegistrationUser")
+  payments                Payment[]            @relation("PaymentUser")
 
   // Auth-tokens (Fase 37) — password-reset & e-mailverificatie
   passwordResetTokens     PasswordResetToken[]
@@ -2713,4 +2717,164 @@ model GameOption {
   sortOrder     Int     @default(0)
   // Label van het officiële spelers-ID (bv. "Play! Pokémon Player ID"); leeg = geen ID.
   playerIdLabel String?
+}
+
+// ============================================================
+// COMMUNITY HUB — FASE 3: WINKEL-EVENTS, TICKETS, BETALINGEN
+// ============================================================
+// Winkel-events zijn een apart model naast het community-`Event` (beurzen in
+// heel Europa, achter FEATURE_COMMUNITY_EVENTS). De winkel heeft één vaste
+// locatie (src/lib/platform-config.ts), dus geen adres/geocoding per event.
+
+// Event-type (admin-beheerd): League-avond, Pre-release, Toernooi, ...
+// Leeftijdsdivisies zijn per type instelbaar (JSON AgeDivisionRule[]).
+model EventType {
+  id          String   @id @default(cuid())
+  key         String   @unique   // slug, bv. "league-avond"
+  name        String
+  game        String?            // GameOption.key (pokemon, yugioh, ...) of null = spel-onafhankelijk
+  description String?
+  color       String   @default("blue") // blue | amber | emerald | violet | rose | slate
+  ageDivisions String?           // JSON AgeDivisionRule[] (null = geen divisies)
+  defaultPrice    Float  @default(0)
+  defaultCapacity Int?
+  countsForLeague    Boolean @default(false)
+  countsForStampCard Boolean @default(true)
+  enabled     Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events      ShopEvent[]
+}
+
+model ShopEvent {
+  id          String   @id @default(cuid())
+
+  typeId      String
+  type        EventType @relation(fields: [typeId], references: [id])
+
+  title       String
+  description String?            // vrije tekst (regels, format, prijzen)
+  game        String?            // GameOption.key, default uit het type
+
+  startsAt    DateTime           // UTC
+  endsAt      DateTime           // UTC
+  registrationOpensAt   DateTime?  // null = direct open zodra gepubliceerd
+  registrationDeadline  DateTime?  // null = tot de start
+
+  price       Float    @default(0)   // EUR, 0 = gratis (geen Mollie)
+  capacity    Int?                   // null = alleen het pand-maximum (instelling)
+  minAge      Int?
+  maxAge      Int?
+  underTwelveWithAdult Boolean @default(true) // <12 alleen met begeleiding (vinkje bij boeken)
+  waitlistEnabled      Boolean @default(true)
+  countsForLeague      Boolean @default(false)
+  countsForStampCard   Boolean @default(true)
+  showParticipants     Boolean @default(true) // "Wie komt er" (alleen spelers met opt-in)
+  cancellationHours    Int     @default(24)   // tot zoveel uur vooraf annuleren met terugbetaling
+  refundPolicy         String?                // extra uitleg bij de annuleringsregels
+
+  // DRAFT (niet publiek) | PUBLISHED | CANCELLED | COMPLETED
+  status      String   @default("DRAFT")
+  publishedAt DateTime?
+  cancelledAt DateTime?
+  cancelReason String?
+  coverImage  String?
+
+  createdById String
+  createdBy   User     @relation("ShopEventCreator", fields: [createdById], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registrations EventRegistration[]
+
+  @@index([status, startsAt])
+  @@index([typeId])
+}
+
+// Eén rij per speler per event. Statusmachine:
+//   RESERVED  — plek 10 min vastgezet, wacht op betaling (betaald event)
+//   CONFIRMED — ticket geldig (gratis event, of betaling binnen)
+//   WAITLIST  — vol; wacht op een vrijgekomen plek
+//   OFFERED   — plek aangeboden vanaf de wachtlijst; betalen vóór offerExpiresAt
+//   CHECKED_IN / NO_SHOW — na het event (staff)
+//   CANCELLED (door speler of admin) | REFUNDED (geld terug) | EXPIRED (reservering/aanbod verlopen)
+// Plek-bezetting = RESERVED (niet verlopen) + CONFIRMED + OFFERED + CHECKED_IN.
+model EventRegistration {
+  id          String   @id @default(cuid())
+
+  eventId     String
+  event       ShopEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation("EventRegistrationUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  status      String   @default("RESERVED")
+  divisionKey String?            // leeftijdsdivisie op boekmoment (uit het type)
+  supervisedByAdult Boolean @default(false) // <12: komt met een volwassene
+
+  ticketCode  String   @unique   // bv. "CC-7K3M9Q" — op het ticket en in de QR
+  qrSecret    String             // HMAC-materiaal voor de QR (nooit in de UI)
+  amount      Float    @default(0)
+
+  paymentId   String?  @unique
+  payment     Payment? @relation(fields: [paymentId], references: [id])
+
+  reservedUntil   DateTime?      // RESERVED: vervalt hierna (cron)
+  waitlistJoinedAt DateTime?     // volgorde op de wachtlijst
+  offerExpiresAt   DateTime?     // OFFERED: betalen vóór dit moment
+  confirmedAt     DateTime?
+  checkedInAt     DateTime?
+  checkedInById   String?
+  cancelledAt     DateTime?
+  refundedAt      DateTime?
+  note            String?        // interne notitie (staff/admin)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@index([userId])
+  @@index([status, reservedUntil])
+  @@index([status, offerExpiresAt])
+}
+
+// Betaling via Mollie (tickets in Fase 3, eten in Fase 4). De webhook is de
+// bron van waarheid; verwerking is idempotent op providerPaymentId + status.
+// Zonder MOLLIE_API_KEY (lokaal) draait een simulatie-modus (provider "FAKE").
+model Payment {
+  id          String   @id @default(cuid())
+
+  provider    String   @default("MOLLIE") // MOLLIE | FAKE
+  providerPaymentId String? @unique       // Mollie "tr_..." (of "fake_...")
+  purpose     String                      // EVENT_REGISTRATION | FOOD_ORDER
+  // OPEN | PENDING | PAID | FAILED | CANCELED | EXPIRED | REFUNDED | PARTIALLY_REFUNDED
+  status      String   @default("OPEN")
+  amount      Float
+  currency    String   @default("EUR")
+  description String
+
+  userId      String?
+  user        User?    @relation("PaymentUser", fields: [userId], references: [id])
+
+  checkoutUrl String?
+  metadata    String?  // JSON (eventId, registrationId, ...)
+
+  refundedAmount    Float   @default(0)
+  providerRefundId  String?
+  paidAt      DateTime?
+  failedAt    DateTime?
+  webhookCount  Int    @default(0)
+  lastWebhookAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registration EventRegistration?
+
+  @@index([purpose, status])
+  @@index([userId])
 }

@@ -40,6 +40,10 @@ export const FEATURE_ROUTE_PREFIXES: ReadonlyArray<readonly [string, FeatureFlag
   ["/dashboard/reviews", "FEATURE_WALLET"],
   // Rang en XP (geparkeerd tot de league in Fase 5)
   ["/dashboard/level", "FEATURE_XP"],
+  // Community-beurzenkalender (door leden ingediend, Europa) — de winkel-events
+  // van de hub leven op /evenementen en zijn altijd zichtbaar.
+  ["/beurzen", "FEATURE_COMMUNITY_EVENTS"],
+  ["/dashboard/beurzen", "FEATURE_COMMUNITY_EVENTS"],
 ];
 
 const LOCALE_PREFIX = /^\/(nl|en)(?=\/|$)/;

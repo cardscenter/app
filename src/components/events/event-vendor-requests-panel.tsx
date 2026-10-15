@@ -25,7 +25,7 @@ const STATUS_PILL: Record<string, { label: string; cls: string }> = {
   REJECTED: { label: "Afgewezen", cls: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" },
 };
 
-/** Uitklapbaar paneel onder een event-rij in /dashboard/evenementen: de
+/** Uitklapbaar paneel onder een event-rij in /dashboard/beurzen: de
  *  standhouder-aanvragen voor dat event, met goedkeuren/afwijzen bij PENDING. */
 export function EventVendorRequestsPanel({ requests }: { requests: VendorRequestRow[] }) {
   const router = useRouter();

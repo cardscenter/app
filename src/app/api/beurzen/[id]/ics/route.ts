@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/site-url";
+import { assertFeatureForRoute } from "@/lib/feature-flags-server";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,8 @@ function toIcsUtc(date: Date): string {
 /** Publieke agenda-export ("Zet in mijn agenda") voor één LIVE evenement. */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const blocked = await assertFeatureForRoute("FEATURE_COMMUNITY_EVENTS");
+  if (blocked) return blocked;
 
   const event = await prisma.event.findUnique({
     where: { id },
@@ -50,7 +53,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     `DTEND:${toIcsUtc(event.endTime)}`,
     `SUMMARY:${escapeIcsText(event.title)}`,
     `LOCATION:${escapeIcsText(location)}`,
-    `URL:${siteUrl}/evenementen/${event.id}`,
+    `URL:${siteUrl}/beurzen/${event.id}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ];

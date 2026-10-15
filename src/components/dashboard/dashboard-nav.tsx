@@ -217,7 +217,7 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
                     "/dashboard/veilingen",
                     "/dashboard/claimsales",
                     "/dashboard/marktplaats",
-                    "/dashboard/evenementen",
+                    "/dashboard/beurzen",
                   ],
                 },
               ]

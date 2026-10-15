@@ -274,7 +274,7 @@ function linkLabelFor(link: string | null): string {
   if (l.startsWith("/dashboard/volglijst")) return "Naar volglijst";
   if (l.startsWith("/dashboard/geschillen")) return "Naar het geschil";
   if (l.startsWith("/dashboard/verificatie")) return "Naar verificatie";
-  if (l.startsWith("/dashboard/evenementen") || l.startsWith("/evenementen")) return "Naar evenementen";
+  if (l.startsWith("/dashboard/evenementen") || l.startsWith("/evenementen") || l.startsWith("/dashboard/beurzen") || l.startsWith("/beurzen")) return "Naar evenementen";
   if (l.startsWith("/dashboard/claimsales")) return "Naar mijn claimsales";
   return "Bekijk pagina";
 }

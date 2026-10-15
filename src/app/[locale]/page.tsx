@@ -136,7 +136,7 @@ async function HomePageContent({
 
   // 4b. Uitgelichte evenementen — bg-background. Alleen tonen als er events met
   //     een actieve HOMEPAGE_SPOTLIGHT-upsell zijn (anders rendert de sectie null).
-  if (data.spotlightEvents.length > 0) {
+  if (features.FEATURE_COMMUNITY_EVENTS && data.spotlightEvents.length > 0) {
     sections.push({
       surface: "bg",
       node: <SpotlightEvents items={data.spotlightEvents} locale={locale} bgClass="bg-background" />,

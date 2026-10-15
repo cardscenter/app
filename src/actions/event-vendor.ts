@@ -52,11 +52,11 @@ export async function requestVendorSpot(eventId: string, formData: FormData) {
     "EVENT_VENDOR_REQUEST",
     "Nieuwe standhouder-aanvraag",
     `Iemand wil als standhouder vermeld worden bij "${event.title}". Beoordeel de aanvraag in je dashboard.`,
-    "/dashboard/evenementen",
+    "/dashboard/beurzen",
   );
 
-  revalidatePath(`/evenementen/${eventId}`);
-  revalidatePath("/dashboard/evenementen");
+  revalidatePath(`/beurzen/${eventId}`);
+  revalidatePath("/dashboard/beurzen");
   return { success: true };
 }
 
@@ -89,7 +89,7 @@ export async function respondToVendorRequest(requestId: string, decision: "APPRO
       "EVENT_VENDOR_APPROVED",
       "Standhouder-aanvraag goedgekeurd",
       `Je staat nu in de standhouderslijst van "${request.event.title}".`,
-      `/evenementen/${request.event.id}`,
+      `/beurzen/${request.event.id}`,
     );
   } else {
     await createNotification(
@@ -97,12 +97,12 @@ export async function respondToVendorRequest(requestId: string, decision: "APPRO
       "EVENT_VENDOR_REJECTED",
       "Standhouder-aanvraag afgewezen",
       `De organisator van "${request.event.title}" heeft je aanvraag afgewezen.`,
-      `/evenementen/${request.event.id}`,
+      `/beurzen/${request.event.id}`,
     );
   }
 
-  revalidatePath(`/evenementen/${request.event.id}`);
-  revalidatePath("/dashboard/evenementen");
+  revalidatePath(`/beurzen/${request.event.id}`);
+  revalidatePath("/dashboard/beurzen");
   return { success: true };
 }
 
@@ -121,7 +121,7 @@ export async function withdrawVendorRequest(requestId: string) {
 
   await prisma.eventVendorRequest.delete({ where: { id: requestId } });
 
-  revalidatePath(`/evenementen/${request.eventId}`);
-  revalidatePath("/dashboard/evenementen");
+  revalidatePath(`/beurzen/${request.eventId}`);
+  revalidatePath("/dashboard/beurzen");
   return { success: true };
 }

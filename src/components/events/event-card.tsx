@@ -23,7 +23,7 @@ export function EventCard({ event }: { event: EventListItem }) {
 
   return (
     <Link
-      href={`/evenementen/${event.id}`}
+      href={`/beurzen/${event.id}`}
       className={`group flex flex-col overflow-hidden rounded-xl border bg-card shadow-card transition hover:shadow-card-hover sm:flex-row ${
         event.featured
           ? "border-amber-300 ring-1 ring-amber-300 dark:border-amber-500/60 dark:ring-amber-500/40"
@@ -132,7 +132,7 @@ export function EventBanner({ event }: { event: EventListItem }) {
   const start = new Date(event.startTime);
   return (
     <Link
-      href={`/evenementen/${event.id}`}
+      href={`/beurzen/${event.id}`}
       className="group relative block aspect-[3/1] w-full overflow-hidden rounded-xl border border-border bg-muted shadow-card transition hover:shadow-card-hover"
     >
       {event.coverImage ? (

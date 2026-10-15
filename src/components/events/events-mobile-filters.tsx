@@ -6,7 +6,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { EventFilterSidebar } from "@/components/events/event-filter-sidebar";
 import { parseEventFilters, countActiveEventFilters } from "@/lib/event-filters";
 
-/** Mobiele filter-drawer voor /evenementen — zelfde patroon als marktplaats.
+/** Mobiele filter-drawer voor /beurzen — zelfde patroon als marktplaats.
  *  z-[1000] i.p.v. z-50 zodat de drawer óók boven de Leaflet-kaart valt. */
 export function EventsMobileFilters({ buyerHasPostcode }: { buyerHasPostcode: boolean }) {
   const [open, setOpen] = useState(false);

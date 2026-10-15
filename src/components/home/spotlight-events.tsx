@@ -39,7 +39,7 @@ export function SpotlightEvents({
               </div>
             </div>
             <Link
-              href="/evenementen"
+              href="/beurzen"
               className="hidden shrink-0 items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-700 sm:inline-flex"
             >
               Alle evenementen <ArrowRight className="size-4" />
@@ -51,7 +51,7 @@ export function SpotlightEvents({
               {items.map((event) => (
                 <CarouselSlide key={event.id}>
                   <Link
-                    href={`/evenementen/${event.id}`}
+                    href={`/beurzen/${event.id}`}
                     className="group flex h-full flex-col overflow-hidden rounded-xl border border-amber-300 bg-card shadow-card ring-1 ring-amber-300 transition hover:shadow-card-hover dark:border-amber-500/60 dark:ring-amber-500/40"
                   >
                     <div className="relative aspect-[16/9] w-full bg-muted">

@@ -60,7 +60,7 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
     params.set("view", "list");
     params.set("date_from", key);
     params.set("date_to", key);
-    return `/evenementen?${params.toString()}`;
+    return `/beurzen?${params.toString()}`;
   }
 
   const eventsByDay = useMemo(() => {
@@ -155,7 +155,7 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
                 {dayEvents.slice(0, 3).map((e) => (
                   <div key={e.id} className="group/qv relative">
                     <Link
-                      href={`/evenementen/${e.id}`}
+                      href={`/beurzen/${e.id}`}
                       className={`flex items-center gap-1 rounded-md p-0.5 text-[10px] font-medium transition ${
                         e.featured
                           ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-900"
@@ -175,7 +175,7 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
                         zodat je met de muis naar het paneel kunt en het klikbaar
                         is. Op touch geen hover → tap = link. */}
                     <Link
-                      href={`/evenementen/${e.id}`}
+                      href={`/beurzen/${e.id}`}
                       className="absolute left-1/2 top-full z-50 hidden -translate-x-1/2 pt-1 group-hover/qv:block"
                     >
                       <EventQuickViewPanel event={e} />
@@ -230,7 +230,7 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
                     {dayEvents.map((e) => (
                       <Link
                         key={e.id}
-                        href={`/evenementen/${e.id}`}
+                        href={`/beurzen/${e.id}`}
                         className={`flex items-center gap-2.5 rounded-lg p-2 transition ${
                           e.featured
                             ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-900"

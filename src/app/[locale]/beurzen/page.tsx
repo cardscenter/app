@@ -70,7 +70,7 @@ export default async function EventsPage({
     where,
     orderBy: { startTime: "asc" },
     take: 300,
-    // "Featured" op /evenementen = een actieve banner-upsell (CATEGORY_HIGHLIGHT).
+    // "Featured" op /beurzen = een actieve banner-upsell (CATEGORY_HIGHLIGHT).
     // De homepage-spotlight (HOMEPAGE_SPOTLIGHT) telt hier bewust niet mee.
     include: {
       upsells: {
@@ -151,7 +151,7 @@ export default async function EventsPage({
         </div>
         {session?.user?.id && (
           <Link
-            href={filters.tab === "beurzen" ? "/evenementen/nieuw?type=BEURS" : "/evenementen/nieuw"}
+            href={filters.tab === "beurzen" ? "/beurzen/nieuw?type=BEURS" : "/beurzen/nieuw"}
             className="inline-flex items-center gap-2 self-start rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
           >
             <Plus className="h-4 w-4" /> {filters.tab === "beurzen" ? "Beurs toevoegen" : "Evenement toevoegen"}

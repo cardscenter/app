@@ -94,7 +94,7 @@ function ClusterLayer({ events, locale }: { events: MapEvent[]; locale: string }
           <p style="color:#64748b;margin:0 0 1px;font-size:12px">${escapeHtml(e.venueName)}</p>
           <p style="color:#64748b;margin:0 0 4px;font-size:12px">${escapeHtml(address)}</p>
           <p style="color:#64748b;margin:0 0 6px;font-size:12px">${dateStr} · ${timeStr}</p>
-          <a href="/${locale}/evenementen/${e.id}" style="color:#4f46e5;text-decoration:underline;font-size:13px">Bekijk details</a>
+          <a href="/${locale}/beurzen/${e.id}" style="color:#4f46e5;text-decoration:underline;font-size:13px">Bekijk details</a>
         </div>`,
       );
       group.addLayer(marker);

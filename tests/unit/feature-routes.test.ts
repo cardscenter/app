@@ -34,6 +34,9 @@ describe("featureForPath", () => {
     ["/nl/customization/packs", "FEATURE_WALLET"],
     ["/veilingen", "FEATURE_AUCTIONS"],
     ["/nl/dashboard/level", "FEATURE_XP"],
+    ["/nl/beurzen", "FEATURE_COMMUNITY_EVENTS"],
+    ["/nl/beurzen/nieuw", "FEATURE_COMMUNITY_EVENTS"],
+    ["/nl/dashboard/beurzen", "FEATURE_COMMUNITY_EVENTS"],
     ["/nl/dashboard/reviews", "FEATURE_WALLET"],
   ] as const)("%s → %s", (path, flag) => {
     expect(featureForPath(path)).toBe(flag);
@@ -49,6 +52,8 @@ describe("featureForPath", () => {
     "/nl/dashboard/profiel",
     "/nl/dashboard/instellingen",
     "/nl/evenementen",
+    "/nl/evenementen/abc",
+    "/nl/dashboard/tickets",
     "/nl/kaarten",
     "/nl/berichten/abc",
     "/nl/verkoper/abc",
