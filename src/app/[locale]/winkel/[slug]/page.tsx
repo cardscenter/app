@@ -6,6 +6,7 @@ import { ChevronRight, LayoutTemplate } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { hasFeature } from "@/lib/subscription-tiers";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
 import { getLevelByKey } from "@/lib/seller-levels";
 import { isUserBlocked } from "@/actions/block-report";
 import { getSellerProfileData } from "@/lib/seller-profile-data";
@@ -101,6 +102,7 @@ export default async function ShopPage({
           initiallyBlocked={initiallyBlocked}
           variant="shop"
           locale={locale}
+          features={getFeatureSnapshot(session?.user?.accountType)}
         />
 
         <SellerStatRow profile={profile} />

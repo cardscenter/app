@@ -12,6 +12,7 @@ import { ProfileOfferGrid } from "@/components/seller/profile-offer-grid";
 import { SellerAboutPanel } from "@/components/seller/seller-about-panel";
 import { SellerTeamBlock } from "@/components/seller/seller-team-block";
 import { ReviewsTable, RecentSalesTable } from "@/components/seller/seller-history-tables";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
 
 type Params = Promise<{ locale: string; userId: string }>;
 
@@ -53,21 +54,41 @@ export default async function SellerProfilePage({ params }: { params: Params }) 
   const initiallyBlocked = !isOwner && isLoggedIn ? await isUserBlocked(userId) : false;
   const title = getProfileTitle(profile.user);
 
+  // Feature-flags (Community Hub, Fase 1): aanbod/reviews/verkopen horen bij
+  // het handelsmodel; zonder flags blijft het een spelersprofiel (Over + Team).
+  const features = getFeatureSnapshot(session?.user?.accountType);
+  const activeOffers = profile.activeOffers.filter((o) =>
+    o.type === "auction"
+      ? features.FEATURE_AUCTIONS
+      : o.type === "claimsale"
+        ? features.FEATURE_CLAIMSALES
+        : features.FEATURE_MARKETPLACE,
+  );
+  const anyTrade = features.FEATURE_AUCTIONS || features.FEATURE_CLAIMSALES || features.FEATURE_MARKETPLACE;
+
   const tabs = [
-    {
-      key: "offers",
-      label: t("tabOffers"),
-      count: profile.activeCounts.auctions + profile.activeCounts.listings + profile.activeCounts.claimsales,
-      content: <ProfileOfferGrid offers={profile.activeOffers} isOwner={isOwner} />,
-    },
-    {
-      key: "reviews",
-      label: t("tabReviews"),
-      count: profile.reviews.length,
-      content: <ReviewsTable reviews={profile.reviews} />,
-    },
+    ...(anyTrade
+      ? [
+          {
+            key: "offers",
+            label: t("tabOffers"),
+            count: activeOffers.length,
+            content: <ProfileOfferGrid offers={activeOffers} isOwner={isOwner} />,
+          },
+        ]
+      : []),
+    ...(features.FEATURE_WALLET
+      ? [
+          {
+            key: "reviews",
+            label: t("tabReviews"),
+            count: profile.reviews.length,
+            content: <ReviewsTable reviews={profile.reviews} />,
+          },
+        ]
+      : []),
     { key: "about", label: t("tabAbout"), content: <SellerAboutPanel profile={profile} locale={locale} /> },
-    ...(profile.recentSales
+    ...(profile.recentSales && features.FEATURE_WALLET
       ? [{ key: "sales", label: t("tabSales"), count: profile.recentSales.length, content: <RecentSalesTable sales={profile.recentSales} /> }]
       : []),
   ];
@@ -88,6 +109,7 @@ export default async function SellerProfilePage({ params }: { params: Params }) 
           initiallyBlocked={initiallyBlocked}
           variant="profile"
           locale={locale}
+          features={features}
         />
 
         <SellerHistoryTabs tabs={tabs} />

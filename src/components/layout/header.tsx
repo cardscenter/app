@@ -16,6 +16,7 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { getUnreadCount } from "@/actions/notification";
 import { getUnreadConversationCount } from "@/actions/message";
 import { useRealtime } from "@/components/providers/realtime-provider";
+import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
 import {
   HEADER_ICON_BTN,
   HEADER_AVATAR_PILL,
@@ -57,6 +58,7 @@ function HeaderContent() {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const { subscribe } = useRealtime();
+  const features = useFeatureFlags();
 
   // De sessie-JWT bevat naam + avatar van het inlogmoment. Profielformulier
   // en gebruikersnaam-wijziging sturen een DOM-event; wij tonen de nieuwe foto
@@ -138,14 +140,16 @@ function HeaderContent() {
   // brand-kleur (blauw/amber/groen — zelfde als hun pagina's) als klein
   // bolletje + gekleurde onderstreep; de overige links zijn neutraal.
   // "Verkopen" = verkopen aan Cards Center (inkoopservice), niet /dashboard/verkopen.
+  // Handelslinks alleen zolang hun feature-flag zichtbaar is (Community Hub, Fase 1).
   const navLinks = [
-    { href: "/veilingen" as const, label: t("auctions"), accent: "blue" as const },
-    { href: "/claimsales" as const, label: t("claimsales"), accent: "amber" as const },
-    { href: "/marktplaats" as const, label: t("marketplace"), accent: "emerald" as const },
-    { href: "/evenementen" as const, label: t("events"), accent: null },
-    { href: "/kaarten" as const, label: t("cards"), accent: null },
-    { href: "/verkopen" as const, label: t("sell"), accent: null },
-  ];
+    { href: "/veilingen" as const, label: t("auctions"), accent: "blue" as const, group: "left" as const, show: features.FEATURE_AUCTIONS },
+    { href: "/claimsales" as const, label: t("claimsales"), accent: "amber" as const, group: "left" as const, show: features.FEATURE_CLAIMSALES },
+    { href: "/marktplaats" as const, label: t("marketplace"), accent: "emerald" as const, group: "left" as const, show: features.FEATURE_MARKETPLACE },
+    { href: "/evenementen" as const, label: t("events"), accent: null, group: "right" as const, show: true },
+    { href: "/kaarten" as const, label: t("cards"), accent: null, group: "right" as const, show: true },
+    { href: "/verkopen" as const, label: t("sell"), accent: null, group: "right" as const, show: true },
+  ].filter((l) => l.show);
+  const rightGroupStart = navLinks.findIndex((l) => l.group === "right");
 
   const isActivePath = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
@@ -184,7 +188,7 @@ function HeaderContent() {
             overige links rechts naast de acties (ml-auto op de tweede groep). */}
         <nav className="hidden items-center gap-0.5 xl:contents" aria-label="Hoofdmenu">
           {navLinks.map((link, i) => {
-            const firstOfRightGroup = i === 3;
+            const firstOfRightGroup = i === rightGroupStart;
             const active = isActivePath(link.href);
             const a = link.accent ? ACCENT[link.accent] : null;
             return (
@@ -213,7 +217,7 @@ function HeaderContent() {
           {session?.user ? (
             <>
               {/* Saldo — altijd zichtbaar (mobiel + desktop) */}
-              <UserBalance />
+              {features.FEATURE_WALLET && <UserBalance />}
 
               {/* Desktop-only iconen */}
               <div className="hidden items-center gap-1 xl:flex 2xl:gap-1.5">
@@ -222,7 +226,7 @@ function HeaderContent() {
                 <MessageIcon />
               </div>
 
-              <CartIcon />
+              {features.FEATURE_CLAIMSALES && <CartIcon />}
 
               {/* Avatar → dashboard. Altijd zichtbaar; op mobiel/tablet alleen
                   het plaatje, de naam pas vanaf 2xl. De pil heeft dezelfde

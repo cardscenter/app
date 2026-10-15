@@ -12,6 +12,8 @@ import {
 } from "@/lib/dashboard-queries";
 import { hasValidShippingAddress } from "@/lib/address-validation";
 import { formatCurrency, formatDateShort } from "@/lib/format";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
+import { maskActionItems, maskActiveActivity } from "@/lib/dashboard-feature-mask";
 import { PeriodSelector } from "@/components/dashboard/statistics/period-selector";
 import { BalanceHero } from "@/components/dashboard/home/balance-hero";
 import { CashFlowCard } from "@/components/dashboard/home/cash-flow-card";
@@ -23,6 +25,11 @@ import { ActiveActivityWidget } from "@/components/dashboard/home/active-activit
 // Dashboard-home in TailAdmin-stijl (sept 2026): saldo-band → KPI-rij →
 // cash flow + actie-nodig → recente orders + lopend aanbod.
 // Periode via ?period= (zelfde selector als /dashboard/statistieken), default 30d.
+//
+// Feature-flags (Community Hub, Fase 1): zonder FEATURE_WALLET vervallen de
+// saldo-band, KPI-rij, cash flow en recente orders — er blijft een compacte
+// kop met "Actie nodig" en lopende activiteit over. De echte hub-home
+// (events, tickets, stempelkaart) komt in latere fases.
 
 const DEFAULT_PERIOD = "30d";
 
@@ -50,14 +57,44 @@ export default async function DashboardPage({
   if (!user) return null;
 
   const hasPremium = user.accountType !== "FREE";
+  const features = getFeatureSnapshot(user.accountType);
+  const walletOn = features.FEATURE_WALLET;
 
-  const [actionItems, balance, activity, cashFlow, orders, hasShippingAddress] = await Promise.all([
+  const [actionItemsRaw, activityRaw, hasShippingAddress] = await Promise.all([
     fetchActionItems(userId),
-    fetchBalanceOverview(userId),
     fetchActiveActivity(userId),
+    hasValidShippingAddress(userId),
+  ]);
+  const actionItems = maskActionItems(actionItemsRaw, features);
+  const activity = maskActiveActivity(activityRaw, features);
+
+  if (!walletOn) {
+    return (
+      <div className="space-y-4">
+        <header>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{th("greeting", { name: user.displayName })}</p>
+        </header>
+
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="xl:col-span-2">
+            <ActionItemsWidget
+              counts={actionItems}
+              totpEnabled={user.totpEnabled}
+              hasShippingAddress={hasShippingAddress}
+              layout="grid"
+            />
+          </div>
+          <ActiveActivityWidget data={activity} />
+        </div>
+      </div>
+    );
+  }
+
+  const [balance, cashFlow, orders] = await Promise.all([
+    fetchBalanceOverview(userId),
     fetchCashFlow(userId, period),
     fetchRecentOrders(userId, 8),
-    hasValidShippingAddress(userId),
   ]);
 
   const rangeLabel = `${formatDateShort(cashFlow.range.start)} – ${formatDateShort(cashFlow.range.end)}`;

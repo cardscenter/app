@@ -15,6 +15,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { ActionItemsCounts } from "@/lib/dashboard-queries";
+import { useFeature } from "@/components/providers/feature-flags-provider";
 
 type Props = {
   counts: ActionItemsCounts;
@@ -44,6 +45,8 @@ export function ActionItemsWidget({
 }: Props) {
   const isList = layout === "list";
   const t = useTranslations("dashboard.essentials.actionItems");
+  // Verzendadres-tegel hoort bij bestellen/verzenden (saldo-model).
+  const walletOn = useFeature("FEATURE_WALLET");
 
   const items: Item[] = [
     {
@@ -177,7 +180,7 @@ export function ActionItemsWidget({
         {/* Verzendadres-vangnet (Fase 43) — voor accounts van vóór het
             verplichte registratie-adres. Amber pill: zonder adres kan er niet
             besteld of verzonden worden. */}
-        {!hasShippingAddress && (
+        {walletOn && !hasShippingAddress && (
           <Link
             href="/dashboard/verzending"
             className="mt-4 flex items-center gap-3 rounded-md border border-dashed border-amber-400/60 p-3 transition-colors hover:border-amber-500 hover:bg-amber-500/5 dark:border-amber-700/60"

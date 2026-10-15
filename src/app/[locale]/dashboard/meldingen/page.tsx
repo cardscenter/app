@@ -9,6 +9,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
+import { isNotificationVisible } from "@/lib/notification-display";
 
 const PAGE_SIZE = 25;
 
@@ -32,12 +34,17 @@ export default async function MeldingenPage({
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const page = Math.min(Math.max(1, parseInt(pageParam ?? "1", 10) || 1), totalPages);
 
-  const notifications = await prisma.notification.findMany({
+  const rows = await prisma.notification.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
   });
+  // Feature-flags (Community Hub, Fase 1): oude meldingen over verborgen
+  // functies niet tonen. Nieuwe worden al niet meer aangemaakt (createNotification),
+  // dus dit is alleen een vangnet voor historische rijen.
+  const features = getFeatureSnapshot(session.user.accountType);
+  const notifications = rows.filter((n) => isNotificationVisible(n, features));
 
   return (
     <div className="space-y-6">

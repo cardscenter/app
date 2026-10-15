@@ -7,6 +7,8 @@ import { signOut } from "next-auth/react";
 import { AdminNav } from "@/components/admin/admin-nav";
 import type { AdminQueueCounts } from "@/lib/admin-queue-counts";
 import { useRealtime } from "@/components/providers/realtime-provider";
+import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
+import type { FeatureFlag } from "@/lib/feature-flags";
 import { NAV_ROW, NAV_ROW_ACTIVE, NAV_ROW_IDLE, NAV_ICON_IDLE, NAV_GROUP_LABEL } from "./nav-styles";
 import {
   LayoutDashboard,
@@ -57,6 +59,8 @@ type NavItem = {
   badgeTone?: "neutral" | "attention";
   /** Extra route-prefixes waarop dit item ook actief is (cluster-tabs). */
   match?: string[];
+  /** Alleen tonen zolang deze feature-flag zichtbaar is (Community Hub, Fase 1). */
+  flag?: FeatureFlag;
 };
 
 type NavGroup = {
@@ -152,6 +156,7 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
   }, [subscribe]);
 
   const isAdmin = accountType === "ADMIN";
+  const features = useFeatureFlags();
 
   function handleLogoutClick() {
     if (confirmLogout) {
@@ -163,25 +168,36 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
     confirmTimerRef.current = setTimeout(() => setConfirmLogout(false), 4000);
   }
 
+  // Aanbod-cluster: alleen de zichtbare handelssoorten tellen mee; de link
+  // wijst naar de eerste zichtbare. Alles verborgen = geen Aanbod-item.
   const offerBadge =
-    (counts?.auctions ?? 0) +
-    (counts?.claimsales ?? 0) +
-    (counts?.listings ?? 0) +
-    (counts?.events ?? 0);
+    (features.FEATURE_AUCTIONS ? counts?.auctions ?? 0 : 0) +
+    (features.FEATURE_CLAIMSALES ? counts?.claimsales ?? 0 : 0) +
+    (features.FEATURE_MARKETPLACE ? counts?.listings ?? 0 : 0) +
+    (features.FEATURE_COMMUNITY_EVENTS ? counts?.events ?? 0 : 0);
+  const offerHref = features.FEATURE_AUCTIONS
+    ? "/dashboard/veilingen"
+    : features.FEATURE_CLAIMSALES
+      ? "/dashboard/claimsales"
+      : features.FEATURE_MARKETPLACE
+        ? "/dashboard/marktplaats"
+        : null;
 
   const groups: NavGroup[] = useMemo(
-    () => [
+    () => {
+      const all: NavGroup[] = [
       {
         id: "general",
         labelKey: "sectionGeneral",
         items: [
           { href: "/dashboard", labelKey: "title", icon: LayoutDashboard },
-          { href: "/dashboard/statistieken", labelKey: "myStatistics", icon: BarChart3 },
+          { href: "/dashboard/statistieken", labelKey: "myStatistics", icon: BarChart3, flag: "FEATURE_WALLET" },
           {
             href: "/dashboard/saldo",
             labelKey: "navFinance",
             icon: Wallet,
             match: ["/dashboard/uitbetalingen"],
+            flag: "FEATURE_WALLET",
           },
         ],
       },
@@ -189,16 +205,25 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
         id: "selling",
         labelKey: "sectionSales",
         items: [
-          {
-            href: "/dashboard/veilingen",
-            labelKey: "navOffer",
-            icon: Store,
-            badge: offerBadge,
-            badgeTone: "neutral",
-            match: ["/dashboard/claimsales", "/dashboard/marktplaats", "/dashboard/evenementen"],
-          },
-          { href: "/dashboard/verkopen", labelKey: "mySales", icon: Package },
-          { href: "/dashboard/winkel", labelKey: "myShop", icon: LayoutTemplate },
+          ...(offerHref
+            ? [
+                {
+                  href: offerHref,
+                  labelKey: "navOffer",
+                  icon: Store,
+                  badge: offerBadge,
+                  badgeTone: "neutral" as const,
+                  match: [
+                    "/dashboard/veilingen",
+                    "/dashboard/claimsales",
+                    "/dashboard/marktplaats",
+                    "/dashboard/evenementen",
+                  ],
+                },
+              ]
+            : []),
+          { href: "/dashboard/verkopen", labelKey: "mySales", icon: Package, flag: "FEATURE_WALLET" },
+          { href: "/dashboard/winkel", labelKey: "myShop", icon: LayoutTemplate, flag: "FEATURE_WALLET" },
           { href: "/dashboard/inkoop", labelKey: "myBuyback", icon: ArrowDownToLine },
         ],
       },
@@ -206,10 +231,10 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
         id: "buying",
         labelKey: "sectionBuying",
         items: [
-          { href: "/dashboard/aankopen", labelKey: "myPurchases", icon: ShoppingBag },
-          { href: "/dashboard/biedingen", labelKey: "myBids", icon: HandCoins, liveIndicator: true },
-          { href: "/dashboard/volglijst", labelKey: "myWatchlist", icon: Heart },
-          { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale },
+          { href: "/dashboard/aankopen", labelKey: "myPurchases", icon: ShoppingBag, flag: "FEATURE_WALLET" },
+          { href: "/dashboard/biedingen", labelKey: "myBids", icon: HandCoins, liveIndicator: true, flag: "FEATURE_AUCTIONS" },
+          { href: "/dashboard/volglijst", labelKey: "myWatchlist", icon: Heart, flag: "FEATURE_AUCTIONS" },
+          { href: "/dashboard/geschillen", labelKey: "myDisputes", icon: Scale, flag: "FEATURE_WALLET" },
         ],
       },
       {
@@ -224,9 +249,9 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
             icon: Settings,
             match: ["/dashboard/blokkeerlijst"],
           },
-          { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck },
+          { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck, flag: "FEATURE_WALLET" },
           { href: "/dashboard/verificatie", labelKey: "myVerification", icon: ShieldCheck },
-          { href: "/dashboard/abonnement", labelKey: "mySubscription", icon: CreditCard },
+          { href: "/dashboard/abonnement", labelKey: "mySubscription", icon: CreditCard, flag: "FEATURE_WALLET" },
           { href: "/dashboard/reviews", labelKey: "myReputation", icon: Star, match: ["/dashboard/level"] },
         ],
       },
@@ -252,8 +277,13 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
           { href: "/support", labelKey: "help", icon: LifeBuoy },
         ],
       },
-    ],
-    [offerBadge, unreadState.messages, unreadState.notifications],
+      ];
+      // Items achter een uitgeschakelde flag weg; lege groepen ook.
+      return all
+        .map((g) => ({ ...g, items: g.items.filter((i) => !i.flag || features[i.flag]) }))
+        .filter((g) => g.items.length > 0);
+    },
+    [offerBadge, offerHref, features, unreadState.messages, unreadState.notifications],
   );
 
   function isPathActive(href: string) {

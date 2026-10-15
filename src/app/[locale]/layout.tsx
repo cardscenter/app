@@ -8,9 +8,11 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { RealtimeProvider } from "@/components/providers/realtime-provider";
+import { FeatureFlagsProvider } from "@/components/providers/feature-flags-provider";
 import { AchievementUnlockListener } from "@/components/customization/achievement-unlock-listener";
 import { ResponsiveToaster } from "@/components/ui/responsive-toaster";
 import { auth } from "@/lib/auth";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
 import "../globals.css";
 
 const poppins = Poppins({
@@ -57,6 +59,8 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
   const session = await auth();
+  // Feature-flags per bezoeker (Community Hub, Fase 1): admins zien alles.
+  const features = getFeatureSnapshot(session?.user?.accountType);
 
   return (
     <html
@@ -67,13 +71,18 @@ export default async function LocaleLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            <RealtimeProvider isAuthenticated={!!session?.user?.id}>
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <ResponsiveToaster />
-              <AchievementUnlockListener isAuthenticated={!!session?.user?.id} />
-            </RealtimeProvider>
+            <FeatureFlagsProvider value={features}>
+              <RealtimeProvider isAuthenticated={!!session?.user?.id}>
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+                <ResponsiveToaster />
+                {/* Prestatie-toasts tonen Ember; die horen bij het saldo-model. */}
+                {features.FEATURE_WALLET && (
+                  <AchievementUnlockListener isAuthenticated={!!session?.user?.id} />
+                )}
+              </RealtimeProvider>
+            </FeatureFlagsProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

@@ -3,17 +3,20 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { ArrowRight, ShieldCheck, BadgeCheck, MessageSquare } from "lucide-react";
 import type { HomepageStats, PlatformStats } from "@/lib/homepage-data";
+import type { FeatureSnapshot } from "@/lib/feature-flags";
 
 interface MarketingHeroV2Props {
   stats: HomepageStats;
   platformStats: PlatformStats;
+  /** Feature-flags per bezoeker (Community Hub, Fase 1): handel-CTA's en -stats alleen met flag. */
+  features: FeatureSnapshot;
 }
 
 function formatNumber(n: number): string {
   return new Intl.NumberFormat("nl-NL").format(Math.round(n));
 }
 
-export function MarketingHeroV2({ stats, platformStats }: MarketingHeroV2Props) {
+export function MarketingHeroV2({ stats, platformStats, features }: MarketingHeroV2Props) {
   const t = useTranslations("home");
 
   return (
@@ -67,19 +70,23 @@ export function MarketingHeroV2({ stats, platformStats }: MarketingHeroV2Props) 
               {t("heroV2CtaPrimary")}
               <ArrowRight className="size-4" />
             </Link>
-            <Link
-              href="/veilingen?sort=ending"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/10 px-5 py-3 text-sm font-medium text-white ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-white/15"
-            >
-              {t("heroV2CtaSecondary")}
-            </Link>
+            {features.FEATURE_AUCTIONS && (
+              <Link
+                href="/veilingen?sort=ending"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/10 px-5 py-3 text-sm font-medium text-white ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-white/15"
+              >
+                {t("heroV2CtaSecondary")}
+              </Link>
+            )}
           </div>
 
           <ul className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-200">
-            <li className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="size-4 text-emerald-400" />
-              {t("heroV2TrustEscrow")}
-            </li>
+            {features.FEATURE_WALLET && (
+              <li className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="size-4 text-emerald-400" />
+                {t("heroV2TrustEscrow")}
+              </li>
+            )}
             <li className="inline-flex items-center gap-1.5">
               <MessageSquare className="size-4 text-sky-400" />
               {t("heroV2TrustSupport")}
@@ -92,9 +99,13 @@ export function MarketingHeroV2({ stats, platformStats }: MarketingHeroV2Props) 
 
           {/* Mini-stat-pills */}
           <div className="mt-8 flex flex-wrap gap-2">
-            <StatPill value={formatNumber(platformStats.totalCompletedSales)} label={t("heroV2StatSales")} />
+            {features.FEATURE_WALLET && (
+              <StatPill value={formatNumber(platformStats.totalCompletedSales)} label={t("heroV2StatSales")} />
+            )}
             <StatPill value={formatNumber(platformStats.totalMembers)} label={t("heroV2StatMembers")} />
-            <StatPill value={formatNumber(stats.activeAuctions)} label={t("heroV2StatActiveAuctions")} />
+            {features.FEATURE_AUCTIONS && (
+              <StatPill value={formatNumber(stats.activeAuctions)} label={t("heroV2StatActiveAuctions")} />
+            )}
           </div>
         </div>
       </div>

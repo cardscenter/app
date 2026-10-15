@@ -4,11 +4,14 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Gavel, Tag, Store, TrendingUp, TrendingDown, Activity } from "lucide-react";
 import type { ActiveActivity } from "@/lib/dashboard-queries";
+import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
 
 type Props = { data: ActiveActivity };
 
 export function ActiveActivityWidget({ data }: Props) {
   const t = useTranslations("dashboard.essentials.activity");
+  // Feature-flags (Community Hub, Fase 1): rijen van verborgen handelssoorten weg.
+  const features = useFeatureFlags();
 
   const sellerRows = [
     {
@@ -16,20 +19,23 @@ export function ActiveActivityWidget({ data }: Props) {
       count: data.counts.auctions,
       href: "/dashboard/veilingen",
       icon: Gavel,
+      show: features.FEATURE_AUCTIONS,
     },
     {
       key: "activeListings",
       count: data.counts.listings,
       href: "/dashboard/marktplaats",
       icon: Store,
+      show: features.FEATURE_MARKETPLACE,
     },
     {
       key: "activeClaimsales",
       count: data.counts.claimsales,
       href: "/dashboard/claimsales",
       icon: Tag,
+      show: features.FEATURE_CLAIMSALES,
     },
-  ] as const;
+  ].filter((r) => r.show);
 
   return (
     <section className="overflow-hidden dash-card">
@@ -55,7 +61,7 @@ export function ActiveActivityWidget({ data }: Props) {
           ))}
         </div>
 
-        {data.bids.totalActive > 0 && (
+        {features.FEATURE_AUCTIONS && data.bids.totalActive > 0 && (
           <>
             <div className="my-3 border-t border-border" />
             <div className="mb-2 flex items-center justify-between">

@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { ContactSellerButton } from "@/components/message/contact-seller-button";
 import { FollowButton } from "@/components/seller/follow-button";
 import type { SellerProfileData } from "@/lib/seller-profile-data";
+import type { FeatureSnapshot } from "@/lib/feature-flags";
 
 type Props = {
   profile: SellerProfileData;
@@ -26,6 +27,8 @@ type Props = {
   /** "profile" = /verkoper/[id] (eigen omslag); "shop" = /winkel/[slug] (banner staat al boven de kaart). */
   variant: "profile" | "shop";
   locale: string;
+  /** Feature-flags van de bezoeker (Community Hub, Fase 1): zegels/tellers per handelssoort. */
+  features: FeatureSnapshot;
 };
 
 const PILL_OUTLINE =
@@ -38,7 +41,7 @@ const PILL_OUTLINE =
  * "zegels" met het aantal veilingen/advertenties/claimsales en de tellers
  * Volgers · Volgend · Verkopen. Geen kaart-rand: de kop ligt op de pagina.
  */
-export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, initiallyBlocked, variant, locale }: Props) {
+export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, initiallyBlocked, variant, locale, features }: Props) {
   const t = await getTranslations("sellerProfile");
   const { user, stats, activeCounts } = profile;
   const isBusiness = user.accountKind === "BUSINESS";
@@ -52,16 +55,16 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
   const showCover = variant === "profile";
   const location = [user.city, user.country ? getCountryName(user.country, locale) : null].filter(Boolean).join(", ");
 
-  const seals: { count: number; tone: string; label: string; icon: React.ReactNode }[] = [
-    { count: activeCounts.auctions, tone: "text-blue-600", label: t("sealAuctions", { count: activeCounts.auctions }), icon: <Gavel className="size-3" /> },
-    { count: activeCounts.listings, tone: "text-emerald-600", label: t("sealListings", { count: activeCounts.listings }), icon: <Store className="size-3" /> },
-    { count: activeCounts.claimsales, tone: "text-amber-500", label: t("sealClaimsales", { count: activeCounts.claimsales }), icon: <Tag className="size-3" /> },
-  ];
+  const seals: { count: number; tone: string; label: string; icon: React.ReactNode; show: boolean }[] = [
+    { count: activeCounts.auctions, tone: "text-blue-600", label: t("sealAuctions", { count: activeCounts.auctions }), icon: <Gavel className="size-3" />, show: features.FEATURE_AUCTIONS },
+    { count: activeCounts.listings, tone: "text-emerald-600", label: t("sealListings", { count: activeCounts.listings }), icon: <Store className="size-3" />, show: features.FEATURE_MARKETPLACE },
+    { count: activeCounts.claimsales, tone: "text-amber-500", label: t("sealClaimsales", { count: activeCounts.claimsales }), icon: <Tag className="size-3" />, show: features.FEATURE_CLAIMSALES },
+  ].filter((s) => s.show);
 
   const counters: { label: string; value: number }[] = [
     { label: t("followers"), value: profile.followers },
     { label: t("followingCount"), value: profile.following },
-    { label: t("sales"), value: stats.totalSales },
+    ...(features.FEATURE_WALLET ? [{ label: t("sales"), value: stats.totalSales }] : []),
   ];
 
   return (
@@ -201,6 +204,7 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
 
         {/* Rechts: zegels + tellers */}
         <div className="flex shrink-0 flex-col items-start gap-5 lg:items-end lg:pt-1">
+          {seals.length > 0 && (
           <div className="flex items-center gap-1.5" aria-label={t("activeOffers")}>
             {seals.map((s) => (
               <span key={s.label} title={s.label} className={`relative inline-flex size-10 items-center justify-center ${s.tone}`}>
@@ -209,6 +213,7 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
               </span>
             ))}
           </div>
+          )}
           <dl className="flex gap-8 sm:gap-10">
             {counters.map((c) => (
               <div key={c.label} className="min-w-[4.5rem]">

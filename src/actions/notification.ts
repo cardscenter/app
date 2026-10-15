@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { publish, userChannel } from "@/lib/realtime";
 import { maybeSendNotificationEmail } from "@/lib/email/notification-email";
+import { getFeatureSnapshot, isFeatureEnabled } from "@/lib/feature-flags";
+import { isNotificationVisible, notificationFeatureFlag } from "@/lib/notification-display";
 
 export async function createNotification(
   userId: string,
@@ -12,6 +14,18 @@ export async function createNotification(
   body: string,
   link?: string
 ) {
+  // Feature-flags (Community Hub, Fase 1): meldingen over een verborgen
+  // functie niet aanmaken en dus ook niet mailen — behalve voor admins, die
+  // de functie nog kunnen testen. Eén haakpunt voor alle ~130 callsites.
+  const flag = notificationFeatureFlag({ type, link: link ?? null });
+  if (flag && !isFeatureEnabled(flag)) {
+    const recipient = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { accountType: true },
+    });
+    if (recipient?.accountType !== "ADMIN") return;
+  }
+
   await prisma.notification.create({
     data: { userId, type, title, body, link },
   });
@@ -74,10 +88,12 @@ export async function getRecentNotifications(limit = 6) {
   const session = await auth();
   if (!session?.user?.id) return [];
 
-  return prisma.notification.findMany({
+  const rows = await prisma.notification.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
-    take: limit,
+    // Iets ruimer ophalen: oude meldingen over verborgen functies vallen er
+    // hieronder uit (feature-flags, Community Hub Fase 1).
+    take: limit * 2,
     select: {
       id: true,
       type: true,
@@ -88,4 +104,6 @@ export async function getRecentNotifications(limit = 6) {
       createdAt: true,
     },
   });
+  const features = getFeatureSnapshot(session.user.accountType);
+  return rows.filter((n) => isNotificationVisible(n, features)).slice(0, limit);
 }

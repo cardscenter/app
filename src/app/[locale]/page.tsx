@@ -5,6 +5,8 @@ import { getHomepageData } from "@/lib/homepage-data";
 import { pickDailyBanner } from "@/lib/hero-banners";
 import { getBuyerLocation } from "@/lib/shipping/filter";
 import { fetchActionItems, type ActionItemsCounts } from "@/lib/dashboard-queries";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
+import { maskActionItems } from "@/lib/dashboard-feature-mask";
 import { Tag, Store } from "lucide-react";
 import { ZDivider } from "@/components/ui/z-divider";
 
@@ -58,17 +60,23 @@ async function HomePageContent({
 
   const isLoggedIn = !!session?.user;
   const accountType = session?.user?.accountType;
+  // Feature-flags per bezoeker (Community Hub, Fase 1): handel-secties alleen
+  // zolang hun flag zichtbaar is. De marketing-blokken over handelen (escrow,
+  // tiers, FAQ, concurrentie) hangen allemaal aan het saldo-model.
+  const features = getFeatureSnapshot(accountType);
+  const anyTrade = features.FEATURE_AUCTIONS || features.FEATURE_CLAIMSALES || features.FEATURE_MARKETPLACE;
 
   // Fase 37: action-items voor de "Sinds je vorige bezoek"-strip op de hero.
   // Alleen voor logged-in users — anders skip de query.
   let actionItems: ActionItemsCounts | null = null;
   if (isLoggedIn && session?.user?.id) {
-    actionItems = await fetchActionItems(session.user.id);
+    actionItems = maskActionItems(await fetchActionItems(session.user.id), features);
   }
   // Tier-comparison sectie tonen aan: alle logged-out users + logged-in FREE-tier users
   // (zodat FREE upgrade-opties ziet op de homepage). PRO/UNLIMITED/ENTERPRISE-users
   // verbergen we omdat ze hun plan al beheren via /dashboard/abonnement.
-  const showTierComparison = !isLoggedIn || accountType === "FREE" || !accountType;
+  const showTierComparison =
+    features.FEATURE_WALLET && (!isLoggedIn || accountType === "FREE" || !accountType);
   const hasRecentClaimsales = data.recentClaimsales.length > 0;
   const hasRecentListings = data.recentListings.length > 0;
 
@@ -93,31 +101,32 @@ async function HomePageContent({
         actionItems={actionItems}
       />
     ) : (
-      <MarketingHeroV2 stats={data.stats} platformStats={data.platformStats} />
+      <MarketingHeroV2 stats={data.stats} platformStats={data.platformStats} features={features} />
     ),
   });
 
   // 2. 3-paden uitleg (logged-out only) — bg-card
-  if (!isLoggedIn) {
+  if (!isLoggedIn && anyTrade) {
     sections.push({ surface: "card", node: <HowItWorksThreePaths stats={data.stats} /> });
   }
 
   // 3. Scroll-pinned storytelling (logged-out only) — bg-background
-  if (!isLoggedIn) {
+  if (!isLoggedIn && features.FEATURE_CLAIMSALES) {
     sections.push({ surface: "bg", node: <ClaimsalesScrollStory /> });
   }
 
   // 4. Sponsored Spotlight — bg-card. Alleen tonen als er content is (anders
   //    rendert de sectie null → zou twee dividers op elkaar geven).
-  const hasSponsored =
-    data.sponsoredAuctions.length > 0 || data.sponsoredListings.length > 0;
+  const sponsoredAuctions = features.FEATURE_AUCTIONS ? data.sponsoredAuctions : [];
+  const sponsoredListings = features.FEATURE_MARKETPLACE ? data.sponsoredListings : [];
+  const hasSponsored = sponsoredAuctions.length > 0 || sponsoredListings.length > 0;
   if (hasSponsored) {
     sections.push({
       surface: "card",
       node: (
         <SponsoredSpotlight
-          auctions={data.sponsoredAuctions}
-          listings={data.sponsoredListings}
+          auctions={sponsoredAuctions}
+          listings={sponsoredListings}
           locale={locale}
           buyer={buyerLocation}
         />
@@ -137,9 +146,10 @@ async function HomePageContent({
   // 5. Live veilingen — bg-background (light) / slate-950 (dark). Alleen tonen
   //    als er veilingen zijn (anders rendert de sectie null).
   const hasLiveAuctions =
-    data.endingSoonAuctions.length > 0 ||
-    data.trendingAuctions.length > 0 ||
-    data.recentAuctions.length > 0;
+    features.FEATURE_AUCTIONS &&
+    (data.endingSoonAuctions.length > 0 ||
+      data.trendingAuctions.length > 0 ||
+      data.recentAuctions.length > 0);
   if (hasLiveAuctions) {
     sections.push({
       surface: "live",
@@ -154,7 +164,7 @@ async function HomePageContent({
   }
 
   // 6. Recent Claimsales — bg-card (of EmptyHomeSection fallback)
-  sections.push({
+  if (features.FEATURE_CLAIMSALES) sections.push({
     surface: "card",
     node: hasRecentClaimsales ? (
       <ItemSection
@@ -187,7 +197,7 @@ async function HomePageContent({
   });
 
   // 7. Recent Listings — bg-background (of EmptyHomeSection fallback)
-  sections.push({
+  if (features.FEATURE_MARKETPLACE) sections.push({
     surface: "bg",
     node: hasRecentListings ? (
       <ItemSection
@@ -220,7 +230,7 @@ async function HomePageContent({
   });
 
   // 8. Recently Sold — bg-card (of EmptyHomeSection bij geen sales)
-  sections.push({
+  if (features.FEATURE_WALLET) sections.push({
     surface: "card",
     node:
       data.recentlySoldItems.length > 0 ? (
@@ -239,12 +249,12 @@ async function HomePageContent({
   });
 
   // 9. Trust Pillars (logged-out only) — bg-background
-  if (!isLoggedIn) {
+  if (!isLoggedIn && features.FEATURE_WALLET) {
     sections.push({ surface: "bg", node: <TrustPillarsSection /> });
   }
 
   // 10. Buyer-Protection deep-dive (logged-out only) — bg-card
-  if (!isLoggedIn) {
+  if (!isLoggedIn && features.FEATURE_WALLET) {
     sections.push({ surface: "card", node: <BuyerProtectionSection bgClass="bg-card" /> });
   }
 
@@ -261,7 +271,7 @@ async function HomePageContent({
   // 11b. Concurrent-vergelijking — desktop-only, logged-out only. Eigen bg-card
   //      zodat 'ie contrasteert met Tier (boven) en FAQ (onder). De sectie is
   //      hidden md:block, dus de dividers eromheen ook (anders stapelen ze op mobile).
-  if (!isLoggedIn) {
+  if (!isLoggedIn && features.FEATURE_WALLET) {
     sections.push({
       surface: "card",
       desktopOnly: true,
@@ -280,8 +290,11 @@ async function HomePageContent({
   //   });
   // }
 
-  // 13. FAQ — voor iedereen — bg-background
-  sections.push({ surface: "bg", node: <FaqSection bgClass="bg-background" /> });
+  // 13. FAQ — voor iedereen — bg-background. De vragen gaan over handelen
+  //     (claimsales, veilingen, escrow, commissie), dus alleen met het saldo-model.
+  if (features.FEATURE_WALLET) {
+    sections.push({ surface: "bg", node: <FaqSection bgClass="bg-background" /> });
+  }
 
   return (
     <div className="flex flex-col">

@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "./language-switcher";
 import { PageContainer } from "@/components/layout/page-container";
 import { ZDivider } from "@/components/ui/z-divider";
 import { PLATFORM, formatPlatformAddress, hasKvk, hasVat } from "@/lib/platform-config";
+import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
 
 const FOOTER_LINK_CLASS = "text-sm text-muted-foreground transition-colors hover:text-foreground";
 
@@ -15,6 +16,7 @@ export function Footer() {
   const t = useTranslations("footer");
   const tc = useTranslations("common");
   const currentYear = new Date().getFullYear();
+  const features = useFeatureFlags();
 
   return (
     <>
@@ -57,9 +59,9 @@ export function Footer() {
             </h3>
             {/* Zelfde volgorde als de header: primaire secties, dan de secundaire. */}
             <div className="mt-3 flex flex-col gap-2">
-              <Link href="/veilingen" className={FOOTER_LINK_CLASS}>{tc("auctions")}</Link>
-              <Link href="/claimsales" className={FOOTER_LINK_CLASS}>{tc("claimsales")}</Link>
-              <Link href="/marktplaats" className={FOOTER_LINK_CLASS}>{tc("marketplace")}</Link>
+              {features.FEATURE_AUCTIONS && <Link href="/veilingen" className={FOOTER_LINK_CLASS}>{tc("auctions")}</Link>}
+              {features.FEATURE_CLAIMSALES && <Link href="/claimsales" className={FOOTER_LINK_CLASS}>{tc("claimsales")}</Link>}
+              {features.FEATURE_MARKETPLACE && <Link href="/marktplaats" className={FOOTER_LINK_CLASS}>{tc("marketplace")}</Link>}
               <Link href="/evenementen" className={FOOTER_LINK_CLASS}>{tc("events")}</Link>
               <Link href="/kaarten" className={FOOTER_LINK_CLASS}>{tc("cards")}</Link>
               <Link href="/verkopen" className={FOOTER_LINK_CLASS}>{tc("sell")}</Link>

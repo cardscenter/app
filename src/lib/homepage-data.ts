@@ -4,6 +4,7 @@ import { calculateXP, getLevel } from "@/lib/seller-levels";
 import { getRecentlySold } from "@/lib/home-recently-sold";
 import type { EventListItem } from "@/components/events/event-view-types";
 import { getEventPriceLabel } from "@/lib/events/format";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 export type HomepageStats = {
   activeAuctions: number;
@@ -45,6 +46,16 @@ async function fetchHomepageData() {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
+  // Feature-flags (Community Hub, Fase 1): de handel-queries overslaan zolang
+  // hun flag uit staat. Dit is de globale (env-)stand; de per-bezoeker-
+  // zichtbaarheid (admin-bypass) wordt in page.tsx per sectie beslist — een
+  // admin ziet dan hooguit lege secties, geen verkeerde data.
+  const auctionsOn = isFeatureEnabled("FEATURE_AUCTIONS");
+  const claimsalesOn = isFeatureEnabled("FEATURE_CLAIMSALES");
+  const listingsOn = isFeatureEnabled("FEATURE_MARKETPLACE");
+  const walletOn = isFeatureEnabled("FEATURE_WALLET");
+  const none = <T,>(value: T) => Promise.resolve(value);
+
   const [
     activeAuctions,
     activeClaimsales,
@@ -61,13 +72,13 @@ async function fetchHomepageData() {
     platformStatsRaw,
   ] = await Promise.all([
     // Counts
-    prisma.auction.count({ where: { status: "ACTIVE" } }),
-    prisma.claimsale.count({ where: { status: "LIVE" } }),
-    prisma.listing.count({ where: { status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } } }),
+    auctionsOn ? prisma.auction.count({ where: { status: "ACTIVE" } }) : none(0),
+    claimsalesOn ? prisma.claimsale.count({ where: { status: "LIVE" } }) : none(0),
+    listingsOn ? prisma.listing.count({ where: { status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } } }) : none(0),
     prisma.user.count(),
 
     // Recent items (8 each for carousels)
-    prisma.auction.findMany({
+    !auctionsOn ? none([]) : prisma.auction.findMany({
       where: { status: "ACTIVE" },
       orderBy: { createdAt: "desc" },
       take: 8,
@@ -76,7 +87,7 @@ async function fetchHomepageData() {
         _count: { select: { bids: true } },
       },
     }),
-    prisma.claimsale.findMany({
+    !claimsalesOn ? none([]) : prisma.claimsale.findMany({
       where: { status: "LIVE" },
       orderBy: { publishedAt: "desc" },
       take: 8,
@@ -86,7 +97,7 @@ async function fetchHomepageData() {
         _count: { select: { items: true } },
       },
     }),
-    prisma.listing.findMany({
+    !listingsOn ? none([]) : prisma.listing.findMany({
       where: { status: { in: ["ACTIVE", "PARTIALLY_SOLD"] } },
       orderBy: { createdAt: "desc" },
       take: 8,
@@ -97,7 +108,7 @@ async function fetchHomepageData() {
     }),
 
     // Ending soon (within 24h)
-    prisma.auction.findMany({
+    !auctionsOn ? none([]) : prisma.auction.findMany({
       where: {
         status: "ACTIVE",
         endTime: { gt: now, lt: in24h },
@@ -111,7 +122,7 @@ async function fetchHomepageData() {
     }),
 
     // Trending (most bids)
-    prisma.auction.findMany({
+    !auctionsOn ? none([]) : prisma.auction.findMany({
       where: { status: "ACTIVE" },
       orderBy: { bids: { _count: "desc" } },
       take: 12,
@@ -122,7 +133,7 @@ async function fetchHomepageData() {
     }),
 
     // Sponsored auctions
-    prisma.auction.findMany({
+    !auctionsOn ? none([]) : prisma.auction.findMany({
       where: {
         status: "ACTIVE",
         upsells: { some: { type: "HOMEPAGE_SPOTLIGHT", expiresAt: { gt: now } } },
@@ -135,7 +146,7 @@ async function fetchHomepageData() {
     }),
 
     // Sponsored listings
-    prisma.listing.findMany({
+    !listingsOn ? none([]) : prisma.listing.findMany({
       where: {
         status: { in: ["ACTIVE", "PARTIALLY_SOLD"] },
         upsells: { some: { type: "HOMEPAGE_SPOTLIGHT", expiresAt: { gt: now } } },
@@ -195,15 +206,15 @@ async function fetchHomepageData() {
 
   // Fase 36 additions: recently-sold-for + testimonials gating count
   const [recentlySoldItems, fiveStarReviewCount] = await Promise.all([
-    getRecentlySold(8),
+    walletOn ? getRecentlySold(8) : none([] as Awaited<ReturnType<typeof getRecentlySold>>),
     prisma.review.count({ where: { rating: 5 } }),
   ]);
 
   // Filter trending: min 2 bids
   const filteredTrending = trendingAuctions.filter((a) => (a._count?.bids ?? 0) >= 2).slice(0, 8);
 
-  // Top sellers (fetched separately due to complexity)
-  const topSellers = await getTopSellers();
+  // Top sellers (fetched separately due to complexity) — handel-statistiek.
+  const topSellers = walletOn ? await getTopSellers() : [];
 
   const stats: HomepageStats = { activeAuctions, activeClaimsales, activeListings, totalUsers };
 

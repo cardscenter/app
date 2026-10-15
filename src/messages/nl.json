@@ -558,7 +558,9 @@
     "faqA13": "Bij elke bid wordt 10% van het bedrag (inclusief 2,9% veilingkosten) gereserveerd op het saldo van de bieder. Iemand zonder storting kan dus simpelweg geen bod uitbrengen. Boven €2.000 is bovendien ID-verificatie verplicht en wanbetalers krijgen automatisch strikes die kunnen leiden tot schorsing. Resultaat: alleen serieuze biedingen, geen prijs-opdrijvende neptactieken — zowel verkopers als kopers profiteren daarvan.",
     "faqSupportTitle": "Antwoord niet gevonden?",
     "faqSupportDesc": "Ons supportteam reageert doorgaans binnen één werkdag — en spreekt gewoon Nederlands.",
-    "faqSupportCta": "Neem contact op"
+    "faqSupportCta": "Neem contact op",
+    "heroLoggedInSubtitleHub": "Je profiel, meldingen en berichten staan klaar in je dashboard.",
+    "heroLoggedInDashboardCta": "Naar je dashboard"
   },
   "auction": {
     "createTitle": "Nieuwe Veiling",

@@ -558,7 +558,9 @@
     "faqA13": "Every bid reserves 10% of the amount (including the 2.9% buyer's premium) on the bidder's balance. Someone without a deposit simply can't place a bid. Above €2,000 ID verification is also required, and non-paying winners get automatic strikes that can lead to suspension. Result: only serious bids, no price-inflating fake tactics — sellers and buyers both benefit.",
     "faqSupportTitle": "Didn't find your answer?",
     "faqSupportDesc": "Our support team usually replies within one business day — and we speak both English and Dutch.",
-    "faqSupportCta": "Get in touch"
+    "faqSupportCta": "Get in touch",
+    "heroLoggedInSubtitleHub": "Your profile, notifications and messages are ready in your dashboard.",
+    "heroLoggedInDashboardCta": "Go to your dashboard"
   },
   "auction": {
     "createTitle": "New Auction",

@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { cardSlug } from "@/lib/card-helpers";
 import { getSiteUrl } from "@/lib/site-url";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 // Public sitemap covering the card-database (Fase 4) so search engines can
 // index every Pokémon card page. Marketplace listings/auctions are NOT

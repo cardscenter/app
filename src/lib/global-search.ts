@@ -14,6 +14,7 @@ import { cardSlug } from "@/lib/card-helpers";
 import { listAllSpecies, dexIdFromUrl } from "@/lib/pokeapi/client";
 import { pokedexSlug } from "@/lib/pokeapi/slug";
 import { parseImageUrls } from "@/lib/upload";
+import { isFeatureVisibleFor } from "@/lib/feature-flags";
 
 /**
  * Centrale query-laag voor de globale zoekfunctie: header-suggesties
@@ -110,6 +111,8 @@ export interface SupplyGuards {
   blockingWhere: { sellerId: { notIn: string[] } } | Record<string, never>;
   /** Voor de gebruikers-categorie: geblokkeerde IDs allebei richtingen. */
   blockedIds: Set<string>;
+  /** Feature-flags (Community Hub, Fase 1): welke handelssoorten deze bezoeker mag zien. */
+  enabledTypes: Set<"auction" | "claimsale" | "listing">;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,10 +127,16 @@ export async function getSupplyGuards(): Promise<SupplyGuards> {
     getBlockedUserIds(userId),
   ]);
   const sellerFilter = sellerNotInBlockedFilter(blockedIds);
+  const accountType = session?.user?.accountType;
+  const enabledTypes = new Set<"auction" | "claimsale" | "listing">();
+  if (isFeatureVisibleFor("FEATURE_AUCTIONS", accountType)) enabledTypes.add("auction");
+  if (isFeatureVisibleFor("FEATURE_CLAIMSALES", accountType)) enabledTypes.add("claimsale");
+  if (isFeatureVisibleFor("FEATURE_MARKETPLACE", accountType)) enabledTypes.add("listing");
   return {
     countryFilter: getSellerCountryFilter(location?.country ?? null),
     blockingWhere: sellerFilter ? { sellerId: sellerFilter } : {},
     blockedIds,
+    enabledTypes,
   };
 }
 
@@ -423,9 +432,9 @@ export async function searchSupply(
     guards
   );
 
-  const searchAuctions = !filters.type || filters.type === "auction";
-  const searchClaimsales = !filters.type || filters.type === "claimsale";
-  const searchListings = !filters.type || filters.type === "listing";
+  const searchAuctions = (!filters.type || filters.type === "auction") && guards.enabledTypes.has("auction");
+  const searchClaimsales = (!filters.type || filters.type === "claimsale") && guards.enabledTypes.has("claimsale");
+  const searchListings = (!filters.type || filters.type === "listing") && guards.enabledTypes.has("listing");
 
   const [auctions, claimsales, listings, auctionCount, claimsaleCount, listingCount] =
     await Promise.all([
@@ -550,9 +559,9 @@ export async function countSupply(
 ): Promise<number> {
   const { auctionWhere, claimsaleWhere, listingWhere } = buildSupplyWheres(q, {}, guards);
   const [a, c, l] = await Promise.all([
-    prisma.auction.count({ where: auctionWhere }),
-    prisma.claimsale.count({ where: claimsaleWhere }),
-    prisma.listing.count({ where: listingWhere }),
+    guards.enabledTypes.has("auction") ? prisma.auction.count({ where: auctionWhere }) : 0,
+    guards.enabledTypes.has("claimsale") ? prisma.claimsale.count({ where: claimsaleWhere }) : 0,
+    guards.enabledTypes.has("listing") ? prisma.listing.count({ where: listingWhere }) : 0,
   ]);
   return a + c + l;
 }
@@ -746,7 +755,7 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestions
         take: 30,
       }),
       filterPokemon(query),
-      prisma.auction.findMany({
+      !guards.enabledTypes.has("auction") ? [] : prisma.auction.findMany({
         where: auctionWhere,
         select: {
           id: true,
@@ -758,7 +767,7 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestions
         orderBy: { createdAt: "desc" as const },
         take: SUGGEST_LIMITS.supply,
       }),
-      prisma.claimsale.findMany({
+      !guards.enabledTypes.has("claimsale") ? [] : prisma.claimsale.findMany({
         where: claimsaleWhere,
         select: {
           id: true,
@@ -773,7 +782,7 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestions
         orderBy: { publishedAt: "desc" as const },
         take: SUGGEST_LIMITS.supply,
       }),
-      prisma.listing.findMany({
+      !guards.enabledTypes.has("listing") ? [] : prisma.listing.findMany({
         where: listingWhere,
         select: { id: true, title: true, price: true, imageUrls: true },
         orderBy: { createdAt: "desc" as const },

@@ -8,6 +8,7 @@ import Image from "next/image";
 import { Gavel, Tag, Store, MessageCircle, Bell, AlertTriangle, CreditCard, Package, XCircle, MapPin } from "lucide-react";
 import type { HomepageStats } from "@/lib/homepage-data";
 import type { ActionItemsCounts } from "@/lib/dashboard-queries";
+import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
 
 interface LoggedInHeroV2Props {
   userName: string;
@@ -23,6 +24,8 @@ function formatNumber(n: number): string {
 export function LoggedInHeroV2({ userName, stats, bannerSrc, actionItems }: LoggedInHeroV2Props) {
   const t = useTranslations("home");
   const tActions = useTranslations("dashboard.essentials.actionItems");
+  // Feature-flags (Community Hub, Fase 1): aanmaak-knoppen en stat-pills per handelssoort.
+  const features = useFeatureFlags();
 
   // Fase 37: éénmalige "Welkom," ipv "Welkom terug," direct na registratie.
   // localStorage-flag wordt door register-form.tsx gezet en hier consumed+gewist.
@@ -91,7 +94,9 @@ export function LoggedInHeroV2({ userName, stats, bannerSrc, actionItems }: Logg
             transition={{ duration: 0.5, delay: 0.15 }}
             className="mt-6 max-w-md text-base text-slate-200 sm:text-lg"
           >
-            {t("heroLoggedInSubtitle")}
+            {features.FEATURE_AUCTIONS || features.FEATURE_CLAIMSALES || features.FEATURE_MARKETPLACE
+              ? t("heroLoggedInSubtitle")
+              : t("heroLoggedInSubtitleHub")}
           </motion.p>
 
           <motion.div
@@ -100,27 +105,41 @@ export function LoggedInHeroV2({ userName, stats, bannerSrc, actionItems }: Logg
             transition={{ duration: 0.5, delay: 0.25 }}
             className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
           >
-            <Link
-              href="/veilingen/nieuw"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-hover"
-            >
-              <Gavel className="size-4" />
-              {t("createAuction")}
-            </Link>
-            <Link
-              href="/claimsales/nieuw"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-amber-600/30 transition-colors hover:bg-amber-700"
-            >
-              <Tag className="size-4" />
-              {t("createClaimsale")}
-            </Link>
-            <Link
-              href="/marktplaats/nieuw"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-emerald-600/30 transition-colors hover:bg-emerald-700"
-            >
-              <Store className="size-4" />
-              {t("createListing")}
-            </Link>
+            {features.FEATURE_AUCTIONS && (
+              <Link
+                href="/veilingen/nieuw"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-hover"
+              >
+                <Gavel className="size-4" />
+                {t("createAuction")}
+              </Link>
+            )}
+            {features.FEATURE_CLAIMSALES && (
+              <Link
+                href="/claimsales/nieuw"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-amber-600/30 transition-colors hover:bg-amber-700"
+              >
+                <Tag className="size-4" />
+                {t("createClaimsale")}
+              </Link>
+            )}
+            {features.FEATURE_MARKETPLACE && (
+              <Link
+                href="/marktplaats/nieuw"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-emerald-600/30 transition-colors hover:bg-emerald-700"
+              >
+                <Store className="size-4" />
+                {t("createListing")}
+              </Link>
+            )}
+            {!features.FEATURE_AUCTIONS && !features.FEATURE_CLAIMSALES && !features.FEATURE_MARKETPLACE && (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-hover"
+              >
+                {t("heroLoggedInDashboardCta")}
+              </Link>
+            )}
           </motion.div>
 
           {/* Sinds je vorige bezoek — alleen tonen als er werkelijk actie-items
@@ -133,9 +152,15 @@ export function LoggedInHeroV2({ userName, stats, bannerSrc, actionItems }: Logg
             transition={{ duration: 0.5, delay: 0.35 }}
             className="mt-8 flex flex-wrap gap-2"
           >
-            <StatPill value={formatNumber(stats.activeAuctions)} label={t("activeAuctions")} />
-            <StatPill value={formatNumber(stats.activeClaimsales)} label={t("activeClaimsales")} />
-            <StatPill value={formatNumber(stats.activeListings)} label={t("activeListings")} />
+            {features.FEATURE_AUCTIONS && (
+              <StatPill value={formatNumber(stats.activeAuctions)} label={t("activeAuctions")} />
+            )}
+            {features.FEATURE_CLAIMSALES && (
+              <StatPill value={formatNumber(stats.activeClaimsales)} label={t("activeClaimsales")} />
+            )}
+            {features.FEATURE_MARKETPLACE && (
+              <StatPill value={formatNumber(stats.activeListings)} label={t("activeListings")} />
+            )}
           </motion.div>
         </div>
       </div>

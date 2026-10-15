@@ -21,6 +21,8 @@
  */
 
 import type { LucideIcon } from "lucide-react";
+import type { FeatureFlag, FeatureSnapshot } from "./feature-flags";
+import { featureForPath } from "./feature-routes";
 import {
   Bell,
   CalendarDays,
@@ -52,6 +54,45 @@ export function localizeNotificationLink(link: string | null, locale: string): s
   const normalized = normalizeNotificationLink(link);
   if (!normalized) return null;
   return `/${locale}${normalized}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Feature-flags (Community Hub, Fase 1)                                */
+/* ------------------------------------------------------------------ */
+
+const AUCTION_TYPES = new Set(["OUTBID", "AUCTION_WON", "AUCTION_WIN", "WATCHLIST_ENDING"]);
+
+/**
+ * Onder welke feature-flag valt deze melding? `null` = altijd tonen.
+ * Eerst op de link (dezelfde prefix-map als de proxy), dan op type.
+ * `NEW_MESSAGE` is een verzamel-type (ook voor voorstellen/ophalen): een
+ * chat-link blijft door, een handel-link niet.
+ */
+export function notificationFeatureFlag(n: { type: string; link: string | null }): FeatureFlag | null {
+  const link = normalizeNotificationLink(n.link);
+  if (link) {
+    const byRoute = featureForPath(link);
+    if (byRoute) return byRoute;
+  }
+  if (AUCTION_TYPES.has(n.type)) return "FEATURE_AUCTIONS";
+  if (
+    n.type.startsWith("DISPUTE_") ||
+    n.type.startsWith("ORDER_") ||
+    n.type.startsWith("WITHDRAWAL") ||
+    n.type === "ITEM_SOLD"
+  ) {
+    return "FEATURE_WALLET";
+  }
+  return null;
+}
+
+/** Mag deze bezoeker de melding zien? */
+export function isNotificationVisible(
+  n: { type: string; link: string | null },
+  features: FeatureSnapshot,
+): boolean {
+  const flag = notificationFeatureFlag(n);
+  return !flag || features[flag];
 }
 
 /* ------------------------------------------------------------------ */

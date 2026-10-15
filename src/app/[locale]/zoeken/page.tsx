@@ -129,7 +129,10 @@ export default async function ZoekenPage({ searchParams }: Props) {
     { key: "alles", label: t("tabAll"), count: totalAll, href: tabHref("alles") },
     { key: "kaarten", label: t("tabCards"), count: counts.cards, href: tabHref("kaarten") },
     { key: "pokemon", label: t("tabPokemon"), count: counts.pokemon, href: tabHref("pokemon") },
-    { key: "aanbod", label: t("tabSupply"), count: counts.supply, href: tabHref("aanbod") },
+    // Aanbod-tab alleen als er een handelssoort zichtbaar is (feature-flags, Fase 1).
+    ...(guards.enabledTypes.size > 0
+      ? [{ key: "aanbod", label: t("tabSupply"), count: counts.supply, href: tabHref("aanbod") }]
+      : []),
     {
       key: "gebruikers",
       label: t("tabUsers"),
