@@ -48,6 +48,15 @@ const XP_PER_5STAR_REVIEW = 20;
 const XP_PER_REVIEW_GIVEN = 5;
 const XP_PER_COMPLETED_TRANSACTION = 10;
 
+export type CalculateXPOptions = {
+  /**
+   * Community Hub (Fase 1): met `false` tellen omzet, aankopen en afgeronde
+   * bestellingen niet mee — het rang-systeem staat dan los van geld. Default
+   * `true` (oud gedrag); callers geven `isFeatureEnabled("FEATURE_WALLET")` mee.
+   */
+  includeMoney?: boolean;
+};
+
 export function calculateXP(stats: {
   accountCreatedAt: Date;
   totalSalesRevenue: number;
@@ -56,18 +65,21 @@ export function calculateXP(stats: {
   reviewsGivenCount: number;
   completedTransactionCount: number;
   bonusXP?: number;
-}): XPBreakdown {
+}, opts: CalculateXPOptions = {}): XPBreakdown {
+  const includeMoney = opts.includeMoney ?? true;
   const now = new Date();
   const ageInDays = Math.floor(
     (now.getTime() - stats.accountCreatedAt.getTime()) / (1000 * 60 * 60 * 24)
   );
 
   const accountAge = ageInDays * XP_PER_DAY;
-  const sales = Math.floor(stats.totalSalesRevenue * XP_PER_EUR_SOLD);
-  const purchases = Math.floor(stats.totalPurchasesRevenue * XP_PER_EUR_BOUGHT);
+  const sales = includeMoney ? Math.floor(stats.totalSalesRevenue * XP_PER_EUR_SOLD) : 0;
+  const purchases = includeMoney ? Math.floor(stats.totalPurchasesRevenue * XP_PER_EUR_BOUGHT) : 0;
   const positiveReviews = stats.fiveStarReviewCount * XP_PER_5STAR_REVIEW;
   const reviewsGiven = stats.reviewsGivenCount * XP_PER_REVIEW_GIVEN;
-  const completedTransactions = stats.completedTransactionCount * XP_PER_COMPLETED_TRANSACTION;
+  const completedTransactions = includeMoney
+    ? stats.completedTransactionCount * XP_PER_COMPLETED_TRANSACTION
+    : 0;
   const bonus = stats.bonusXP ?? 0;
 
   return {

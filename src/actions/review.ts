@@ -166,8 +166,10 @@ export async function getSellerStats(userId: string) {
     ? Math.round((positiveReviewCount / totalReviews) * 100)
     : 100;
 
-  // Calculate XP (revenue-based)
+  // Calculate XP (revenue-based zolang FEATURE_WALLET aan staat; anders
+  // alleen de geldvrije bronnen — Community Hub, Fase 1)
   const { calculateXP } = await import("@/lib/seller-levels");
+  const { isFeatureEnabled } = await import("@/lib/feature-flags");
   const xpBreakdown = calculateXP({
     accountCreatedAt: user.createdAt,
     totalSalesRevenue,
@@ -176,7 +178,7 @@ export async function getSellerStats(userId: string) {
     reviewsGivenCount,
     completedTransactionCount,
     bonusXP: user.bonusXP,
-  });
+  }, { includeMoney: isFeatureEnabled("FEATURE_WALLET") });
 
   return {
     displayName: user.displayName,

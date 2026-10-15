@@ -14,6 +14,7 @@ import {
   isCaseOnlyRename,
 } from "@/lib/username-change-config";
 import { requireNotSuspended } from "@/lib/suspension";
+import { isFeatureVisibleFor } from "@/lib/feature-flags";
 import { createNotification } from "@/actions/notification";
 import { publish, userChannel } from "@/lib/realtime";
 import { findUserByNameInsensitive } from "@/lib/username-policy-server";
@@ -188,6 +189,12 @@ export async function changeUsername(newNameRaw: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
+
+  // Community Hub (Fase 1): de eenmalige wijziging kost saldo; zonder
+  // FEATURE_WALLET kan alleen support (admin) de naam nog aanpassen.
+  if (!isFeatureVisibleFor("FEATURE_WALLET", session.user.accountType)) {
+    return { error: "Je gebruikersnaam wijzigen is tijdelijk niet mogelijk. Neem contact op met support." };
+  }
 
   try {
     await requireNotSuspended(userId);

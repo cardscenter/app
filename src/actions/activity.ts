@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { checkActivityReward, hashIP } from "@/lib/activity-guard";
 import type { ActivityAction } from "@/lib/cosmetic-config";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 /**
  * Log a user activity and award Ember if eligible.
@@ -14,6 +15,10 @@ export async function logActivity(
   metadata?: Record<string, unknown>,
   ip?: string
 ) {
+  // Ember hoort bij het saldo-/handelsmodel (Community Hub, Fase 1): zonder
+  // FEATURE_WALLET geen Ember-uitkering en geen activiteitslog.
+  if (!isFeatureEnabled("FEATURE_WALLET")) return 0;
+
   const embersToAward = await checkActivityReward(userId, action);
 
   await prisma.activityLog.create({

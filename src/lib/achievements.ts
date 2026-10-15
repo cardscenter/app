@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { publish, userChannel } from "@/lib/realtime";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 // ============================================================
 // TIERED ACHIEVEMENT DEFINITIONS (source of truth — DB is mirrored)
@@ -318,9 +319,15 @@ export interface TierUnlock {
  * newly-reached tiers. Returns every tier that unlocked during this call so
  * callers can show a celebration.
  */
+/** Metrics die aan handel/geld hangen — tellen niet zonder FEATURE_WALLET. */
+const MONEY_METRICS = new Set<MetricKey>(["purchaseCount", "purchaseTotal", "saleCount", "saleTotal"]);
+
 export async function checkAchievements(userId: string): Promise<TierUnlock[]> {
   const stats = await fetchUserStats(userId);
   if (!stats) return [];
+  // Community Hub (Fase 1): zonder wallet-flag geen Ember/cosmetics en geen
+  // voortgang op de handel-achievements. rewardXP blijft (rang staat los van geld).
+  const walletOn = isFeatureEnabled("FEATURE_WALLET");
 
   const existing = await prisma.userAchievement.findMany({
     where: { userId },
@@ -331,6 +338,7 @@ export async function checkAchievements(userId: string): Promise<TierUnlock[]> {
   const newlyUnlocked: TierUnlock[] = [];
 
   for (const def of ACHIEVEMENTS) {
+    if (!walletOn && MONEY_METRICS.has(def.metric)) continue;
     const progress = metricValue(def, stats);
     const reachedTier = tierForProgress(def, progress);
     const priorTier = existingMap.get(def.key) ?? 0;
@@ -368,7 +376,7 @@ export async function checkAchievements(userId: string): Promise<TierUnlock[]> {
       });
 
       for (const t of tiersToGrant) {
-        if (t.rewardEmber && t.rewardEmber > 0) {
+        if (walletOn && t.rewardEmber && t.rewardEmber > 0) {
           const user = await tx.user.findUnique({
             where: { id: userId },
             select: { emberBalance: true },
@@ -398,7 +406,7 @@ export async function checkAchievements(userId: string): Promise<TierUnlock[]> {
           });
         }
 
-        if (t.rewardCosmeticKey) {
+        if (walletOn && t.rewardCosmeticKey) {
           const item = await tx.cosmeticItem.findUnique({
             where: { key: t.rewardCosmeticKey },
             select: { id: true },

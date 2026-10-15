@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Banknote, Wallet } from "lucide-react";
 import type { PayoutMethod } from "@/types";
+import { useFeature } from "@/components/providers/feature-flags-provider";
 
 interface PayoutMethodSelectProps {
   value: PayoutMethod;
@@ -26,12 +27,15 @@ export function PayoutMethodSelect({
   bonusAmount,
 }: PayoutMethodSelectProps) {
   const t = useTranslations("buyback");
+  // Community Hub (Fase 1/6): tegoed hoort bij het saldo-model. Zonder
+  // FEATURE_WALLET is alleen uitbetaling naar een bankrekening mogelijk.
+  const storeCreditAvailable = useFeature("FEATURE_WALLET");
 
   return (
     <div className="space-y-4">
       <h3 className="font-semibold">{t("payoutMethod")}</h3>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className={`grid gap-3 ${storeCreditAvailable ? "md:grid-cols-2" : ""}`}>
         {/* Bank transfer */}
         <button
           type="button"
@@ -52,6 +56,7 @@ export function PayoutMethodSelect({
         </button>
 
         {/* Store credit */}
+        {storeCreditAvailable && (
         <button
           type="button"
           onClick={() => onChange("STORE_CREDIT")}
@@ -84,6 +89,7 @@ export function PayoutMethodSelect({
             )}
           </div>
         </button>
+        )}
       </div>
 
       {/* IBAN fields (only for bank) */}

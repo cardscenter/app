@@ -8,6 +8,7 @@ import { createNotification } from "@/actions/notification";
 import { requireNotSuspended } from "@/lib/suspension";
 import { requireEmailVerified } from "@/lib/email-verification";
 import { applyFreeUpsellsToCost } from "@/lib/upsell-config";
+import { isFeatureVisibleFor } from "@/lib/feature-flags";
 import { timezoneForCountry, zonedWallClockToUtc } from "@/lib/events/timezones";
 import { toLocalDate, toLocalTime } from "@/lib/events/event-to-form";
 import { geocodeAddress } from "@/lib/events/geocoding";
@@ -213,6 +214,12 @@ export async function createEvent(formData: FormData) {
   // evenementenpagina (CATEGORY_HIGHLIGHT) en/of de homepage-spotlight
   // (HOMEPAGE_SPOTLIGHT). Server-side anti-tamper hercheck van dagen + kosten.
   const wantsPromo = data.promote && (data.promoteDays ?? 0) > 0;
+  // Community Hub (Fase 1): promotie loopt via het app-saldo; zonder
+  // FEATURE_WALLET (en geen admin) is betaalde promotie niet mogelijk.
+  if ((wantsPromo || (data.spotlight && (data.spotlightDays ?? 0) > 0)) &&
+      !isFeatureVisibleFor("FEATURE_WALLET", user.accountType)) {
+    return { error: "Promotie van evenementen is tijdelijk niet beschikbaar. Maak het evenement aan zonder promotie." };
+  }
   const promoDays = wantsPromo
     ? Math.max(EVENT_BANNER_MIN_DAYS, Math.min(data.promoteDays ?? 0, EVENT_BANNER_MAX_DAYS))
     : 0;

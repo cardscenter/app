@@ -1,3 +1,4 @@
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { prisma } from "@/lib/prisma";
 import { calculateXP } from "@/lib/seller-levels";
 import type { SellerInfo } from "@/components/ui/seller-info-block";
@@ -92,7 +93,7 @@ export async function getSellerInfo(sellerId: string): Promise<SellerInfo | null
     reviewsGivenCount,
     completedTransactionCount,
     bonusXP: user.bonusXP,
-  });
+  }, { includeMoney: isFeatureEnabled("FEATURE_WALLET") });
 
   return {
     id: user.id,

@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireFeature } from "@/lib/feature-flags-server";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
 import {
@@ -40,6 +41,14 @@ export async function submitCollectionBuyback(formData: FormData) {
   }
 
   const { payoutMethod, iban, accountHolder } = parsed.data;
+  // Community Hub (Fase 1/6): uitbetaling naar tegoed hoort bij het saldo-model.
+  // Zonder FEATURE_WALLET (geen admin) alleen nog naar een bankrekening.
+  if (payoutMethod === "STORE_CREDIT") {
+    const feat = await requireFeature("FEATURE_WALLET");
+    if ("error" in feat) {
+      return { error: "Uitbetaling naar tegoed is niet meer mogelijk. Kies uitbetaling naar je bankrekening." };
+    }
+  }
   const items: Array<{ cardId: string; quantity: number; isReverse?: boolean }> = JSON.parse(parsed.data.items);
 
   // Re-fetch prices server-side to prevent manipulation
@@ -167,6 +176,14 @@ export async function submitBulkBuyback(formData: FormData) {
   }
 
   const { payoutMethod, iban, accountHolder } = parsed.data;
+  // Community Hub (Fase 1/6): uitbetaling naar tegoed hoort bij het saldo-model.
+  // Zonder FEATURE_WALLET (geen admin) alleen nog naar een bankrekening.
+  if (payoutMethod === "STORE_CREDIT") {
+    const feat = await requireFeature("FEATURE_WALLET");
+    if ("error" in feat) {
+      return { error: "Uitbetaling naar tegoed is niet meer mogelijk. Kies uitbetaling naar je bankrekening." };
+    }
+  }
   const bulkItems: Array<{ category: string; quantity: number }> = JSON.parse(parsed.data.bulkItems);
 
   // Validate categories and compute totals

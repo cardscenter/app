@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { changeUsername } from "@/actions/profile";
 import { USERNAME_MAX, USERNAME_MIN, validateUsername } from "@/lib/username-policy";
 import { formatCurrency, formatDateShort } from "@/lib/format";
+import { useFeature } from "@/components/providers/feature-flags-provider";
 
 type Props = {
   currentName: string;
@@ -31,8 +32,12 @@ type Props = {
  * `<form>` (nested forms zijn ongeldig) en geen `name`-attribuut op de input.
  * Enter in het veld bevestigt de wijziging in plaats van het profiel op te slaan.
  */
-export function UsernameChangeForm({ currentName, canChange, usedAt, fee }: Props) {
+export function UsernameChangeForm({ currentName, canChange: canChangeProp, usedAt, fee }: Props) {
   const t = useTranslations("profile");
+  // Community Hub (Fase 1): de wijziging kost saldo; zonder FEATURE_WALLET
+  // staat de naam op slot en verwijst de hint naar support.
+  const walletOn = useFeature("FEATURE_WALLET");
+  const canChange = canChangeProp && walletOn;
   const tc = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();

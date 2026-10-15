@@ -15,6 +15,7 @@ import { StepTickets } from "@/components/events/steps/step-tickets";
 import { StepFacilities } from "@/components/events/steps/step-facilities";
 import { StepPhoto } from "@/components/events/steps/step-photo";
 import { StepPromotion } from "@/components/events/steps/step-promotion";
+import { useFeature } from "@/components/providers/feature-flags-provider";
 import { StepReview } from "@/components/events/steps/step-review";
 
 interface DuplicateMatch {
@@ -89,7 +90,14 @@ export function MultiStepEventForm({
   const isEdit = mode === "edit";
   // Edit-flow: type is niet bewerkbaar (bepaalt kalender-tab + toernooivelden)
   // en promotie evenmin (pro-rata refund-interactie — aparte flow later).
-  const steps = isEdit ? ALL_STEPS.filter((s) => s.key !== "type" && s.key !== "promotion") : ALL_STEPS;
+  // Community Hub (Fase 1): promotie betaalt uit het app-saldo — zonder
+  // FEATURE_WALLET verdwijnt de stap (server weigert betaalde promotie ook).
+  const walletOn = useFeature("FEATURE_WALLET");
+  const steps = ALL_STEPS.filter((s) => {
+    if (isEdit && (s.key === "type" || s.key === "promotion")) return false;
+    if (!walletOn && s.key === "promotion") return false;
+    return true;
+  });
   const [form, setForm] = useState<EventFormState>(initialForm ?? INITIAL_EVENT_FORM);
   const [step, setStep] = useState(0);
   const [maxReached, setMaxReached] = useState(isEdit ? steps.length - 1 : 0);
