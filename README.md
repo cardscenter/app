@@ -60,6 +60,16 @@ Zie `.env.example` voor de volledige lijst met uitleg. Verplicht lokaal: `DATABA
 - Gebruikers kunnen hun account zelf verwijderen (Instellingen). De rij blijft geanonimiseerd bestaan; inloggen is daarna onmogelijk.
 - Welke spellen gekozen kunnen worden (en welk spelers-ID erbij hoort) beheert een admin op `/dashboard/admin/games`.
 
+## Winkel-events en tickets
+
+- Publiek: `/evenementen` (lijst per maand of maandkalender, filters op spel en type) en `/evenementen/[id]` met inschrijfpaneel. Alle events vinden plaats in de winkel (adres in `src/lib/platform-config.ts`, `PLATFORM.shop`).
+- Inschrijven: gratis event = direct een ticket; betaald event = plek 10 minuten vastgezet, betalen via Mollie (iDEAL), ticket zodra de betaling binnen is. Vol = wachtlijst; komt er een plek vrij, dan krijgt de eerste op de wachtlijst 24 uur om te betalen of te bevestigen.
+- Eisen: e-mail bevestigd, geboortedatum ingevuld, onder de 16 ouder-toestemming, onder de 12 alleen met begeleiding (vinkje). Leeftijdsdivisies per event-type op geboortejaar.
+- Tickets: `/dashboard/tickets` met QR (HMAC-gesigneerd), ticketcode `CC-XXXXXX`, agenda-export, zelf annuleren tot X uur vooraf met automatische terugbetaling.
+- Staff: `/dashboard/staff/check-in` (camera-scanner via BarcodeDetector of code intypen, deelnemerslijst, CSV-export). Admin: `/dashboard/admin/events` (aanmaken, publiceren, annuleren met terugbetaling, afronden, dupliceren, handmatig toevoegen), `/dashboard/admin/event-types` (divisies, standaardprijs/capaciteit), `/dashboard/admin/hub-settings` (pand-maximum, openingstijden, annuleringsbeleid).
+- Mollie: `MOLLIE_API_KEY` leeg = simulatiemodus (checkout vervangen door `/betalen/simuleer/<id>` met knoppen geslaagd/mislukt). Met een `test_`-key gebruikt de app de Mollie test-checkout; de webhook `/api/mollie/webhook` vereist dan een publieke `NEXT_PUBLIC_SITE_URL`. Lokaal haalt de bedankt-pagina de status ook direct bij Mollie op.
+- Demo-events lokaal: `npx tsx scripts/seed-shop-events-demo.ts`. Integratietest van de hele flow: `npm run test:int` (tegen `dev.db`).
+
 ## Mapstructuur
 
 - `src/app/[locale]/` pagina's (nl/en), `src/app/api/` route handlers en crons
