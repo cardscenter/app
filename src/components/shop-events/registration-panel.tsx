@@ -32,7 +32,8 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
 
   function go(href: string) {
     if (href.startsWith("http")) window.location.href = href;
-    else router.push(href);
+    // De i18n-router voegt zelf de locale toe; een al-geprefixt pad zou /nl/nl/... geven.
+    else router.push(href.replace(/^\/(nl|en)(?=\/|$)/, "") || "/");
   }
 
   function register(joinWaitlist: boolean) {
