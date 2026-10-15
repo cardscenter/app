@@ -87,7 +87,7 @@ export default async function SellerProfilePage({ params }: { params: Params }) 
           },
         ]
       : []),
-    { key: "about", label: t("tabAbout"), content: <SellerAboutPanel profile={profile} locale={locale} /> },
+    { key: "about", label: t("tabAbout"), content: <SellerAboutPanel profile={profile} locale={locale} features={features} /> },
     ...(profile.recentSales && features.FEATURE_WALLET
       ? [{ key: "sales", label: t("tabSales"), count: profile.recentSales.length, content: <RecentSalesTable sales={profile.recentSales} /> }]
       : []),

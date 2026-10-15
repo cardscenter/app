@@ -23,6 +23,7 @@ export const FEATURE_FLAG_KEYS = [
   "FEATURE_CLAIMSALES",
   "FEATURE_MARKETPLACE",
   "FEATURE_COMMUNITY_EVENTS",
+  "FEATURE_XP",
 ] as const;
 
 export type FeatureFlag = (typeof FEATURE_FLAG_KEYS)[number];
@@ -32,6 +33,11 @@ export interface FeatureFlagMeta {
   description: string;
   /** Flags die óók aan moeten staan voordat deze flag effectief aan is. */
   requires?: readonly FeatureFlag[];
+  /**
+   * Zien admins de functie ook als de flag uit staat? Default true (testen
+   * zonder de flag om te zetten). `false` = voor iedereen verborgen.
+   */
+  adminBypass?: boolean;
 }
 
 export const FEATURE_FLAGS: Record<FeatureFlag, FeatureFlagMeta> = {
@@ -59,6 +65,12 @@ export const FEATURE_FLAGS: Record<FeatureFlag, FeatureFlagMeta> = {
     label: "Community-evenementen",
     description:
       "Door leden ingediende beurzen en events in heel Europa (kaart, geocoding, standhouders, goedkeuring). Uit = alleen winkel-events van Cards Center.",
+  },
+  FEATURE_XP: {
+    label: "Rang en XP",
+    description:
+      "Levels, XP-voortgang, prestaties en level-badges (/dashboard/level, voortgangsbalk in de zijbalk, badge op het spelersprofiel). Geparkeerd tot de league in Fase 5; ook voor admins verborgen.",
+    adminBypass: false,
   },
 };
 
@@ -96,6 +108,7 @@ export function isFeatureVisibleFor(
   env: FlagEnv = process.env,
 ): boolean {
   if (isFeatureEnabled(flag, env)) return true;
+  if (FEATURE_FLAGS[flag].adminBypass === false) return false;
   return accountType === "ADMIN";
 }
 

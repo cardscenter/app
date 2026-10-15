@@ -37,6 +37,9 @@ export const FEATURE_ROUTE_PREFIXES: ReadonlyArray<readonly [string, FeatureFlag
   ["/dashboard/winkel", "FEATURE_WALLET"],
   ["/winkel", "FEATURE_WALLET"],
   ["/customization", "FEATURE_WALLET"],
+  ["/dashboard/reviews", "FEATURE_WALLET"],
+  // Rang en XP (geparkeerd tot de league in Fase 5)
+  ["/dashboard/level", "FEATURE_XP"],
 ];
 
 const LOCALE_PREFIX = /^\/(nl|en)(?=\/|$)/;

@@ -78,7 +78,7 @@ export default async function LocaleLayout({
                 <Footer />
                 <ResponsiveToaster />
                 {/* Prestatie-toasts tonen Ember; die horen bij het saldo-model. */}
-                {features.FEATURE_WALLET && (
+                {features.FEATURE_WALLET && features.FEATURE_XP && (
                   <AchievementUnlockListener isAuthenticated={!!session?.user?.id} />
                 )}
               </RealtimeProvider>

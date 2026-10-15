@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FEATURE_FLAG_KEYS,
+  FEATURE_FLAGS,
   anyTradeFeatureVisible,
   emptyFeatureSnapshot,
   getFeatureSnapshot,
@@ -53,6 +54,12 @@ describe("isFeatureVisibleFor", () => {
     expect(isFeatureVisibleFor("FEATURE_WALLET", "ADMIN", {})).toBe(true);
   });
 
+  it("een flag zonder admin-bypass blijft ook voor admins uit", () => {
+    expect(isFeatureVisibleFor("FEATURE_XP", "ADMIN", {})).toBe(false);
+    expect(isFeatureVisibleFor("FEATURE_XP", "ADMIN", { FEATURE_XP: "true" })).toBe(true);
+    expect(isFeatureVisibleFor("FEATURE_XP", "FREE", { FEATURE_XP: "true" })).toBe(true);
+  });
+
   it("gewone gebruikers en anonieme bezoekers niet", () => {
     for (const type of ["FREE", "PRO", "UNLIMITED", "ENTERPRISE", null, undefined]) {
       expect(isFeatureVisibleFor("FEATURE_AUCTIONS", type, {})).toBe(false);
@@ -74,9 +81,12 @@ describe("snapshots", () => {
     expect(snap.FEATURE_AUCTIONS).toBe(false);
   });
 
-  it("admin-snapshot is overal true", () => {
+  it("admin-snapshot is overal true, behalve flags zonder admin-bypass", () => {
     const snap = getFeatureSnapshot("ADMIN", {});
-    expect(Object.values(snap).every(Boolean)).toBe(true);
+    for (const flag of FEATURE_FLAG_KEYS) {
+      expect(snap[flag]).toBe(FEATURE_FLAGS[flag].adminBypass !== false);
+    }
+    expect(snap.FEATURE_XP).toBe(false);
   });
 
   it("emptyFeatureSnapshot is overal false", () => {

@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { fetchActiveActivity } from "@/lib/dashboard-queries";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { PageTabs } from "@/components/dashboard/page-tabs";
+import { auth } from "@/lib/auth";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
 
 /**
  * Cluster-koppen (Fase 44): samengevoegde dashboard-onderdelen delen één
@@ -65,6 +67,8 @@ export async function FinanceTabs({ action }: { action?: ReactNode }) {
 
 export async function ReputationTabs({ action }: { action?: ReactNode }) {
   const t = await getTranslations("dashboard");
+  const session = await auth();
+  const features = getFeatureSnapshot(session?.user?.accountType);
 
   return (
     <div className="space-y-4">
@@ -76,7 +80,7 @@ export async function ReputationTabs({ action }: { action?: ReactNode }) {
       <PageTabs
         tabs={[
           { href: "/dashboard/reviews", label: t("tabReviews") },
-          { href: "/dashboard/level", label: t("tabLevel") },
+          ...(features.FEATURE_XP ? [{ href: "/dashboard/level" as const, label: t("tabLevel") }] : []),
         ]}
       />
     </div>

@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import {
-  Gavel,
-  Store,
-  PlusCircle,
+  CalendarDays,
+  Layers,
   Truck,
+  Settings,
   UserCircle,
   ArrowRight,
   PartyPopper,
@@ -19,6 +19,7 @@ import type { User } from "@prisma/client";
 import { AddressForm } from "@/components/dashboard/address-form";
 import { SellingScopeToggle } from "@/components/dashboard/selling-scope-toggle";
 import type { SellingScope } from "@/lib/shipping/static-methods";
+import type { FeatureSnapshot } from "@/lib/feature-flags";
 
 type StepKey = "address" | "scope" | "twofa" | "discover";
 
@@ -31,6 +32,8 @@ interface WelcomeOnboardingProps {
   originCountry: string | null;
   neighbors: string[];
   totpEnabled: boolean;
+  /** Adres- en verzendstappen horen bij het handelsmodel (alleen met FEATURE_WALLET). */
+  features: FeatureSnapshot;
 }
 
 /**
@@ -47,12 +50,13 @@ export function WelcomeOnboarding({
   originCountry,
   neighbors,
   totpEnabled,
+  features,
 }: WelcomeOnboardingProps) {
   const t = useTranslations("auth");
 
   const steps: StepKey[] = [
-    ...(addressComplete ? [] : (["address"] as StepKey[])),
-    ...(originCountry ? (["scope"] as StepKey[]) : []),
+    ...(addressComplete || !features.FEATURE_WALLET ? [] : (["address"] as StepKey[])),
+    ...(originCountry && features.FEATURE_WALLET ? (["scope"] as StepKey[]) : []),
     ...(totpEnabled ? [] : (["twofa"] as StepKey[])),
     "discover",
   ];
@@ -222,42 +226,23 @@ export function WelcomeOnboarding({
         )}
 
         {/* Step: ontdekken (de oorspronkelijke /welkom-kaartjes) */}
-        {step === "discover" && <DiscoverCards />}
+        {step === "discover" && <DiscoverCards features={features} />}
       </div>
     </div>
   );
 }
 
-function DiscoverCards() {
+function DiscoverCards({ features }: { features: FeatureSnapshot }) {
   const t = useTranslations("auth");
+  // Community Hub: evenementen, spelersgegevens, kaartendatabase, instellingen.
+  // De verzendkaart alleen zolang het handelsmodel (saldo) zichtbaar is.
   const actions = [
     {
-      href: "/veilingen" as const,
-      icon: Gavel,
-      title: t("welcomeAuctions"),
-      description: t("welcomeAuctionsDesc"),
+      href: "/evenementen" as const,
+      icon: CalendarDays,
+      title: t("welcomeEvents"),
+      description: t("welcomeEventsDesc"),
       color: "bg-blue-500",
-    },
-    {
-      href: "/marktplaats" as const,
-      icon: Store,
-      title: t("welcomeMarketplace"),
-      description: t("welcomeMarketplaceDesc"),
-      color: "bg-emerald-500",
-    },
-    {
-      href: "/marktplaats/nieuw" as const,
-      icon: PlusCircle,
-      title: t("welcomeCreateListing"),
-      description: t("welcomeCreateListingDesc"),
-      color: "bg-amber-500",
-    },
-    {
-      href: "/dashboard/verzending" as const,
-      icon: Truck,
-      title: t("welcomeShipping"),
-      description: t("welcomeShippingDesc"),
-      color: "bg-purple-500",
     },
     {
       href: "/dashboard/profiel" as const,
@@ -266,6 +251,31 @@ function DiscoverCards() {
       description: t("welcomeProfileDesc"),
       color: "bg-pink-500",
     },
+    {
+      href: "/kaarten" as const,
+      icon: Layers,
+      title: t("welcomeCards"),
+      description: t("welcomeCardsDesc"),
+      color: "bg-emerald-500",
+    },
+    {
+      href: "/dashboard/instellingen" as const,
+      icon: Settings,
+      title: t("welcomeSettings"),
+      description: t("welcomeSettingsDesc"),
+      color: "bg-amber-500",
+    },
+    ...(features.FEATURE_WALLET
+      ? [
+          {
+            href: "/dashboard/verzending" as const,
+            icon: Truck,
+            title: t("welcomeShipping"),
+            description: t("welcomeShippingDesc"),
+            color: "bg-purple-500",
+          },
+        ]
+      : []),
   ];
 
   return (

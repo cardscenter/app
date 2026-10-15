@@ -252,7 +252,7 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
           { href: "/dashboard/verzending", labelKey: "myShipping", icon: Truck, flag: "FEATURE_WALLET" },
           { href: "/dashboard/verificatie", labelKey: "myVerification", icon: ShieldCheck },
           { href: "/dashboard/abonnement", labelKey: "mySubscription", icon: CreditCard, flag: "FEATURE_WALLET" },
-          { href: "/dashboard/reviews", labelKey: "myReputation", icon: Star, match: ["/dashboard/level"] },
+          { href: "/dashboard/reviews", labelKey: "myReputation", icon: Star, match: ["/dashboard/level"], flag: "FEATURE_WALLET" },
         ],
       },
       {
@@ -415,7 +415,7 @@ function DashboardNavInner({ accountType, level, user, counts, unread }: Dashboa
       }`}
     >
       <Link
-        href="/dashboard/level"
+        href={level ? "/dashboard/level" : "/dashboard/profiel"}
         className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1 py-0.5 transition-colors hover:bg-white/5"
         title={level ? `${t("myLevel")}: ${level.name}` : undefined}
       >

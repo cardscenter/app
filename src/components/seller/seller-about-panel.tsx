@@ -9,6 +9,7 @@ import { CountryFlag } from "@/components/ui/country-flag";
 import { TrustBadges } from "@/components/ui/trust-badges";
 import { TierPill } from "@/components/ui/tier-pill";
 import type { SellerProfileData } from "@/lib/seller-profile-data";
+import type { FeatureSnapshot } from "@/lib/feature-flags";
 
 /**
  * "Over"-tab van het verkopersprofiel (redesign sept 2026): bio, feiten
@@ -16,7 +17,16 @@ import type { SellerProfileData } from "@/lib/seller-profile-data";
  * (website + socials). Bedrijfsgegevens staan hier ook; het team heeft een
  * eigen blok op de pagina.
  */
-export async function SellerAboutPanel({ profile, locale }: { profile: SellerProfileData; locale: string }) {
+export async function SellerAboutPanel({
+  profile,
+  locale,
+  features,
+}: {
+  profile: SellerProfileData;
+  locale: string;
+  /** Feature-flags van de bezoeker: rating/tier alleen met saldo, level alleen met XP. */
+  features: FeatureSnapshot;
+}) {
   const t = await getTranslations("sellerProfile");
   const { user, stats } = profile;
   const isBusiness = user.accountKind === "BUSINESS";
@@ -53,11 +63,11 @@ export async function SellerAboutPanel({ profile, locale }: { profile: SellerPro
       value: (
         <span className="inline-flex flex-wrap items-center gap-1.5">
           <span>{isBusiness ? t("business") : t("private")}</span>
-          <TierPill accountType={user.accountType} />
+          {features.FEATURE_WALLET && <TierPill accountType={user.accountType} />}
         </span>
       ),
     },
-    {
+    ...(features.FEATURE_WALLET ? [{
       label: t("rating"),
       value:
         stats.totalReviews > 0 ? (
@@ -69,7 +79,7 @@ export async function SellerAboutPanel({ profile, locale }: { profile: SellerPro
         ) : (
           <span className="text-muted-foreground">{t("reviewsCount", { count: 0 })}</span>
         ),
-    },
+    }] : []),
     {
       label: t("verifications"),
       value:
@@ -84,7 +94,7 @@ export async function SellerAboutPanel({ profile, locale }: { profile: SellerPro
           <span className="text-muted-foreground">{t("noVerifications")}</span>
         ),
     },
-    {
+    ...(features.FEATURE_XP ? [{
       label: t("level"),
       value: (
         <div className="min-w-[10rem]">
@@ -99,7 +109,7 @@ export async function SellerAboutPanel({ profile, locale }: { profile: SellerPro
           </p>
         </div>
       ),
-    },
+    }] : []),
   ];
 
   if (isBusiness) {

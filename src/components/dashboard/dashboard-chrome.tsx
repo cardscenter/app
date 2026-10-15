@@ -9,6 +9,7 @@ import { fetchActiveActivity } from "@/lib/dashboard-queries";
 import { getUnreadConversationCountFor, getUnreadNotificationCountFor } from "@/lib/unread-counts";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getLevel, getNextLevel, getLevelProgress } from "@/lib/seller-levels";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
 import { isUserSuspended } from "@/lib/suspension";
 import { SuspensionBanner } from "@/components/dashboard/suspension-banner";
 import { EmailVerificationBanner } from "@/components/dashboard/email-verification-banner";
@@ -59,6 +60,7 @@ export async function DashboardChrome({
     // Sidebar-badges van het admin-panel (zelfde bron als de KPI-tegels).
     user?.accountType === "ADMIN" ? getAdminQueueCounts() : Promise.resolve(undefined),
   ]);
+  const features = getFeatureSnapshot(user?.accountType);
   const xp = stats?.xp ?? 0;
   const currentLevel = getLevel(xp);
   const nextLevel = getNextLevel(xp);
@@ -74,15 +76,21 @@ export async function DashboardChrome({
               ? { name: getProfileTitle(user), handle: user.displayName, email: user.email, image: user.avatarUrl }
               : undefined
           }
-          level={{
-            name: currentLevel.name,
-            icon: currentLevel.icon,
-            color: currentLevel.color,
-            bgColor: currentLevel.bgColor,
-            borderColor: currentLevel.borderColor,
-            progress,
-            nextLevelName: nextLevel?.name ?? null,
-          }}
+          level={
+            // Rang/XP is geparkeerd (FEATURE_XP, ook voor admins uit): dan geen
+            // voortgangsbalk in de gebruikerskaart.
+            features.FEATURE_XP
+              ? {
+                  name: currentLevel.name,
+                  icon: currentLevel.icon,
+                  color: currentLevel.color,
+                  bgColor: currentLevel.bgColor,
+                  borderColor: currentLevel.borderColor,
+                  progress,
+                  nextLevelName: nextLevel?.name ?? null,
+                }
+              : undefined
+          }
           counts={activity.counts}
           unread={{ messages: unreadMessages, notifications: unreadNotifications }}
           adminPendingCounts={adminCounts}

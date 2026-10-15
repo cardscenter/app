@@ -149,7 +149,11 @@ function HeaderContent() {
     { href: "/kaarten" as const, label: t("cards"), accent: null, group: "right" as const, show: true },
     { href: "/verkopen" as const, label: t("sell"), accent: null, group: "right" as const, show: true },
   ].filter((l) => l.show);
-  const rightGroupStart = navLinks.findIndex((l) => l.group === "right");
+  // Zonder handelslinks (Community Hub) staan alle links links tegen het logo
+  // en schuiven de acties met ml-auto naar rechts; mét handelslinks splitst de
+  // eerste "rechter" link de balk (ml-auto op die link, acties sluiten aan).
+  const hasLeftGroup = navLinks.some((l) => l.group === "left");
+  const rightGroupStart = hasLeftGroup ? navLinks.findIndex((l) => l.group === "right") : -1;
 
   const isActivePath = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
@@ -208,7 +212,7 @@ function HeaderContent() {
         </nav>
 
         {/* Acties */}
-        <div className="ml-auto flex shrink-0 items-center gap-1 xl:ml-2 2xl:ml-3 2xl:gap-1.5">
+        <div className={`ml-auto flex shrink-0 items-center gap-1 2xl:gap-1.5 ${hasLeftGroup ? "xl:ml-2 2xl:ml-3" : ""}`}>
           <GlobalSearch variant="desktop" />
           <span className="hidden xl:block">
             <ThemeIconButton />

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { ShieldCheck, Coins, MessageSquare, Globe2 } from "lucide-react";
+import { ShieldCheck, CalendarDays, MessageSquare, Globe2 } from "lucide-react";
 
 interface AuthMarketingAsideProps {
   variant?: "login" | "register" | "default";
@@ -42,7 +42,7 @@ export async function AuthMarketingAside({ variant = "default" }: AuthMarketingA
 
   const pills = [
     { Icon: ShieldCheck, titleKey: "asidePillEscrowTitle", descKey: "asidePillEscrowDesc", color: "emerald" },
-    { Icon: Coins, titleKey: "asidePillRealBidsTitle", descKey: "asidePillRealBidsDesc", color: "teal" },
+    { Icon: CalendarDays, titleKey: "asidePillEventsTitle", descKey: "asidePillEventsDesc", color: "teal" },
     { Icon: MessageSquare, titleKey: "asidePillSupportTitle", descKey: "asidePillSupportDesc", color: "sky" },
     { Icon: Globe2, titleKey: "asidePillGdprTitle", descKey: "asidePillGdprDesc", color: "violet" },
   ] as const;

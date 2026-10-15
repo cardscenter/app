@@ -33,6 +33,8 @@ describe("featureForPath", () => {
     ["/nl/winkel/mijn-slug", "FEATURE_WALLET"],
     ["/nl/customization/packs", "FEATURE_WALLET"],
     ["/veilingen", "FEATURE_AUCTIONS"],
+    ["/nl/dashboard/level", "FEATURE_XP"],
+    ["/nl/dashboard/reviews", "FEATURE_WALLET"],
   ] as const)("%s → %s", (path, flag) => {
     expect(featureForPath(path)).toBe(flag);
   });
@@ -45,7 +47,7 @@ describe("featureForPath", () => {
     "/nl/dashboard/inkoop",
     "/nl/dashboard",
     "/nl/dashboard/profiel",
-    "/nl/dashboard/level",
+    "/nl/dashboard/instellingen",
     "/nl/evenementen",
     "/nl/kaarten",
     "/nl/berichten/abc",

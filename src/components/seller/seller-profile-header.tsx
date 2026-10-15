@@ -146,7 +146,7 @@ export async function SellerProfileHeader({ profile, isOwner, viewerLoggedIn, in
               <p className="mt-2 line-clamp-2 max-w-xl whitespace-pre-line text-sm text-foreground/80">{user.bio}</p>
             ) : null}
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <SellerLevelBadge xp={stats.xp} size="sm" />
+              {features.FEATURE_XP && <SellerLevelBadge xp={stats.xp} size="sm" />}
               {(user.isVerified || user.isIbanVerified || user.isAddressVerified) && (
                 <TrustBadges
                   isVerified={user.isVerified}

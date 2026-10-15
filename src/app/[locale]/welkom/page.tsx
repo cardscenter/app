@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { normalizeSellingScope } from "@/lib/shipping/static-methods";
 import { getEuNearNeighbors } from "@/lib/shipping/zones";
 import { WelcomeOnboarding } from "@/components/onboarding/welcome-onboarding";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
 
 /**
  * Onboarding-wizard (Fase 43) — landing na de klik op de verificatie-link.
@@ -46,6 +47,7 @@ export default async function WelcomePage({
       originCountry={user.country ?? null}
       neighbors={neighbors}
       totpEnabled={user.totpEnabled}
+      features={getFeatureSnapshot(session.user.accountType)}
     />
   );
 }
