@@ -7,13 +7,24 @@ import { CheckCircle2, XCircle, Ban } from "lucide-react";
 import { simulatePayment } from "@/actions/shop-events";
 
 /** Knoppen van de simulatie-"bank": geslaagd / mislukt / geannuleerd. */
-export function SimulatePaymentButtons({ paymentId, returnPath, alreadySettled }: { paymentId: string; returnPath: string; alreadySettled: boolean }) {
+export function SimulatePaymentButtons({
+  paymentId,
+  returnPath,
+  guestToken,
+  alreadySettled,
+}: {
+  paymentId: string;
+  /** Locale-loos pad (de i18n-router voegt de taal toe). */
+  returnPath: string;
+  guestToken?: string | null;
+  alreadySettled: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   function pick(outcome: "paid" | "failed" | "canceled") {
     startTransition(async () => {
-      const r = await simulatePayment(paymentId, outcome);
+      const r = await simulatePayment(paymentId, outcome, guestToken ?? null);
       if ("error" in r) {
         toast.error(r.error);
         return;

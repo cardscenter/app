@@ -37,6 +37,7 @@ import { recordPendingFeeInTx } from "@/lib/pending-fees";
 import { getBlockedUserIds } from "@/lib/blocking";
 import { parseImageUrls, deleteUploadedFile } from "@/lib/upload";
 import { expireReservations, expireWaitlistOffers } from "@/lib/shop-events/registrations";
+import { expireUnpaidOnlineOrders } from "@/lib/food/orders";
 import {
   STALE_PAID_SELLER_DEADLINE_DAYS,
   STALE_PAID_AUTO_CANCEL_AFTER_DAYS,
@@ -456,6 +457,12 @@ export const CRON_JOB_META: Record<CronJobName, CronJobMeta> = {
     schedule: "Elke minuut (in-process)",
     allowManualRun: true,
   },
+  "expire-food-payments": {
+    description:
+      "Eten bestellen (hub): online bestellingen die na 30 minuten nog niet betaald zijn op PAYMENT_FAILED zetten, zodat ze niet in de keuken verschijnen en de gast opnieuw kan bestellen. Draait primair in-process elke minuut via de event-maintenance-scheduler.",
+    schedule: "Elke minuut (in-process)",
+    allowManualRun: true,
+  },
 };
 
 export type CronRunner = () => Promise<{ itemsProcessed: number; result: object }>;
@@ -468,6 +475,10 @@ const RAW_CRON_JOBS: Record<CronJobName, CronRunner> = {
   },
   "expire-event-waitlist-offers": async () => {
     const r = await expireWaitlistOffers();
+    return { itemsProcessed: r.expired, result: r };
+  },
+  "expire-food-payments": async () => {
+    const r = await expireUnpaidOnlineOrders();
     return { itemsProcessed: r.expired, result: r };
   },
   "auto-confirm": async () => {

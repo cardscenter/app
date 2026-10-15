@@ -21,8 +21,9 @@ async function tick() {
     const { CRON_JOBS } = await import("@/lib/cron-jobs");
     const a = await CRON_JOBS["expire-event-reservations"]();
     const b = await CRON_JOBS["expire-event-waitlist-offers"]();
-    if (a.itemsProcessed > 0 || b.itemsProcessed > 0) {
-      console.log(`[event-maintenance] reserveringen verlopen: ${a.itemsProcessed}, aanbiedingen verlopen: ${b.itemsProcessed}`);
+    const c = await CRON_JOBS["expire-food-payments"]();
+    if (a.itemsProcessed > 0 || b.itemsProcessed > 0 || c.itemsProcessed > 0) {
+      console.log(`[event-maintenance] reserveringen verlopen: ${a.itemsProcessed}, aanbiedingen verlopen: ${b.itemsProcessed}, onbetaalde bestellingen: ${c.itemsProcessed}`);
     }
   } catch (err) {
     console.error("[event-maintenance] in-process tick failed:", err);

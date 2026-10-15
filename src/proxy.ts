@@ -117,8 +117,10 @@ export default async function middleware(request: NextRequest) {
   // rendering lekt de pagina-inhoud met status 200 (zelfde les als de
   // customization-lockdown). De layouts/pages blijven belt-and-braces.
   {
-    const m = request.nextUrl.pathname.match(/^\/(nl|en)\/dashboard\/(admin|staff)(?:\/|$)/);
+    // /keuken (Fase 4) telt als staff-boom.
+    const m = request.nextUrl.pathname.match(/^\/(nl|en)\/(?:dashboard\/(admin|staff)|(keuken))(?:\/|$)/);
     if (m) {
+      const tree = m[2] ?? "staff";
       const session = await sessionFromJwt(request);
       const url = request.nextUrl.clone();
       url.search = "";
@@ -128,7 +130,7 @@ export default async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
       }
       const isAdmin = session.accountType === "ADMIN";
-      const allowed = m[2] === "admin" ? isAdmin : isAdmin || session.role === "STAFF";
+      const allowed = tree === "admin" ? isAdmin : isAdmin || session.role === "STAFF";
       if (!allowed) {
         url.pathname = `/${m[1]}/dashboard`;
         return NextResponse.redirect(url);

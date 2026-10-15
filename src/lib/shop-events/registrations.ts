@@ -7,6 +7,7 @@ import { ageOn, needsSupervision } from "@/lib/age";
 import { getMaxOccupancy } from "@/lib/app-config";
 import { createProviderPayment, fetchProviderPayment, refundProviderPayment } from "@/lib/mollie";
 import { newQrSecret, verifyTicketSignature } from "./tickets";
+import { onFoodOrderPaymentStatus } from "@/lib/food/orders";
 import {
   ACTIVE_TICKET_STATUSES,
   DEFAULT_EVENT_TYPES,
@@ -481,6 +482,24 @@ export async function applyPaymentStatus(args: {
     where: { id: payment.id },
     data: args.source === "webhook" ? { webhookCount: { increment: 1 }, lastWebhookAt: now } : {},
   });
+
+  // Eten bestellen (Fase 4): eigen afhandeling, zelfde idempotente betaalstatus.
+  if (payment.purpose === "FOOD_ORDER") {
+    if (payment.status === "PAID" || payment.status === "REFUNDED" || payment.status === "PARTIALLY_REFUNDED" || next === payment.status) {
+      return { ok: true, paymentStatus: payment.status, registrationStatus: null };
+    }
+    if (next === "PAID") {
+      const claimed = await prisma.payment.updateMany({
+        where: { id: payment.id, status: { in: ["OPEN", "PENDING", "FAILED", "CANCELED", "EXPIRED"] } },
+        data: { status: "PAID", paidAt: args.paidAt ?? now },
+      });
+      if (claimed.count === 1) await onFoodOrderPaymentStatus(payment.id, "PAID", now);
+      return { ok: true, paymentStatus: "PAID", registrationStatus: null };
+    }
+    await prisma.payment.updateMany({ where: { id: payment.id, status: { in: ["OPEN", "PENDING"] } }, data: { status: next, failedAt: next === "PENDING" ? null : now } });
+    await onFoodOrderPaymentStatus(payment.id, next, now);
+    return { ok: true, paymentStatus: next, registrationStatus: null };
+  }
 
   // Al betaald (of terugbetaald): niets meer veranderen, alleen loggen.
   if (payment.status === "PAID" || payment.status === "REFUNDED" || payment.status === "PARTIALLY_REFUNDED") {

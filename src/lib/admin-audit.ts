@@ -59,6 +59,10 @@ export type AdminAction =
   | "ADMIN_CANCEL_REGISTRATION"
   | "ADMIN_ADD_REGISTRATION"
   | "UPDATE_HUB_SETTINGS"
+  // Community Hub (Fase 4): eten bestellen
+  | "UPDATE_MENU_ITEM"
+  | "SAVE_DISCOUNT_CODE"
+  | "CLEAR_FOOD_ORDERS"
   // Fase 45 — tier-beheer door admin
   | "GRANT_TIER"
   | "REVOKE_TIER";
@@ -86,7 +90,10 @@ export type AdminTargetType =
   | "EVENT_TYPE"
   | "SHOP_EVENT"
   | "EVENT_REGISTRATION"
-  | "HUB_SETTINGS";
+  | "HUB_SETTINGS"
+  | "MENU_ITEM"
+  | "DISCOUNT_CODE"
+  | "FOOD_ORDER";
 
 /**
  * Log an admin or system action.

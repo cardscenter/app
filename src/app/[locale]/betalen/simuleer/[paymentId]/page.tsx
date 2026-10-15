@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { FlaskConical } from "lucide-react";
 import { auth } from "@/lib/auth";
@@ -13,22 +13,44 @@ export const dynamic = "force-dynamic";
 /**
  * Simulatie van de Mollie-checkout (alleen zonder MOLLIE_API_KEY). Vervangt
  * de bankpagina: kies "betaling geslaagd" of "mislukt" en je landt op de
- * gewone bedankt-pagina, precies zoals bij een echte betaling.
+ * gewone bedankt-/statuspagina, precies zoals bij een echte betaling.
+ * Tickets: eigenaar = ingelogde gebruiker. Eten (gast, geen account): het
+ * accessToken van de bestelling in `?t=` moet kloppen met de metadata.
  */
-export default async function SimulatePaymentPage({ params }: { params: Promise<{ locale: string; paymentId: string }> }) {
+export default async function SimulatePaymentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string; paymentId: string }>;
+  searchParams: Promise<{ t?: string }>;
+}) {
   const { locale, paymentId } = await params;
+  const { t: guestToken } = await searchParams;
   setRequestLocale(locale);
   if (isMollieConfigured()) notFound();
   const session = await auth();
-  if (!session?.user?.id) redirect(`/${locale}/login`);
 
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
-    include: { registration: { select: { id: true, eventId: true, event: { select: { title: true } } } } },
+    include: { registration: { select: { id: true, eventId: true } } },
   });
-  if (!payment || payment.userId !== session.user.id || payment.provider !== "FAKE") notFound();
+  if (!payment || payment.provider !== "FAKE") notFound();
 
-  const returnPath = payment.registration ? `/evenementen/${payment.registration.eventId}/bedankt?r=${payment.registration.id}` : "/dashboard";
+  let meta: { returnPath?: string; accessToken?: string } = {};
+  try {
+    meta = JSON.parse(payment.metadata ?? "{}") as typeof meta;
+  } catch {
+    meta = {};
+  }
+  const ownedBySession = !!session?.user?.id && payment.userId === session.user.id;
+  const ownedByGuest = payment.purpose === "FOOD_ORDER" && !!guestToken && meta.accessToken === guestToken;
+  if (!ownedBySession && !ownedByGuest) notFound();
+
+  const returnPath = payment.registration
+    ? `/evenementen/${payment.registration.eventId}/bedankt?r=${payment.registration.id}`
+    : meta.returnPath
+      ? meta.returnPath.replace(/^\/(nl|en)(?=\/|$)/, "")
+      : "/";
 
   return (
     <PageContainer width="narrow" className="py-10 sm:py-16">
@@ -48,7 +70,12 @@ export default async function SimulatePaymentPage({ params }: { params: Promise<
           <dt className="text-muted-foreground">Status</dt>
           <dd className="font-mono text-foreground">{payment.status}</dd>
         </dl>
-        <SimulatePaymentButtons paymentId={payment.id} returnPath={returnPath} alreadySettled={payment.status === "PAID" || payment.status === "FAILED" || payment.status === "CANCELED"} />
+        <SimulatePaymentButtons
+          paymentId={payment.id}
+          returnPath={returnPath}
+          guestToken={ownedByGuest ? guestToken ?? null : null}
+          alreadySettled={payment.status === "PAID" || payment.status === "FAILED" || payment.status === "CANCELED"}
+        />
       </div>
     </PageContainer>
   );

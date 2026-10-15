@@ -100,12 +100,25 @@ export async function refreshRegistrationStatus(registrationId: string) {
  * Simulatiemodus (geen MOLLIE_API_KEY): de "bank" kiest geslaagd/mislukt.
  * Alleen de eigenaar van de betaling mag dit, en alleen zonder Mollie-key.
  */
-export async function simulatePayment(paymentId: string, outcome: "paid" | "failed" | "canceled") {
+export async function simulatePayment(paymentId: string, outcome: "paid" | "failed" | "canceled", guestToken?: string | null) {
   if (isMollieConfigured()) return { error: "Simulatie is uitgeschakeld zodra Mollie geconfigureerd is." };
   const session = await auth();
-  if (!session?.user?.id) return { error: "Log eerst in." };
-  const payment = await prisma.payment.findUnique({ where: { id: paymentId }, select: { userId: true, provider: true, registration: { select: { eventId: true } } } });
-  if (!payment || payment.userId !== session.user.id) return { error: "Betaling niet gevonden" };
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { userId: true, provider: true, purpose: true, metadata: true, registration: { select: { eventId: true } } },
+  });
+  if (!payment) return { error: "Betaling niet gevonden" };
+  // Eigenaar: ingelogde gebruiker, of (eten bestellen, gast) het accessToken uit de metadata.
+  let allowed = !!session?.user?.id && payment.userId === session.user.id;
+  if (!allowed && payment.purpose === "FOOD_ORDER" && guestToken) {
+    try {
+      const meta = JSON.parse(payment.metadata ?? "{}") as { accessToken?: string };
+      allowed = !!meta.accessToken && meta.accessToken === guestToken;
+    } catch {
+      allowed = false;
+    }
+  }
+  if (!allowed) return { error: "Betaling niet gevonden" };
   if (payment.provider !== "FAKE") return { error: "Dit is geen simulatiebetaling" };
   const result = await applyPaymentStatus({ paymentId, providerStatus: outcome, source: "simulate" });
   if (payment.registration) revalidateEvent(payment.registration.eventId);
