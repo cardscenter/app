@@ -70,9 +70,18 @@ Zie `.env.example` voor de volledige lijst met uitleg. Verplicht lokaal: `DATABA
 - Mollie: `MOLLIE_API_KEY` leeg = simulatiemodus (checkout vervangen door `/betalen/simuleer/<id>` met knoppen geslaagd/mislukt). Met een `test_`-key gebruikt de app de Mollie test-checkout; de webhook `/api/mollie/webhook` vereist dan een publieke `NEXT_PUBLIC_SITE_URL`. Lokaal haalt de bedankt-pagina de status ook direct bij Mollie op.
 - Demo-events lokaal: `npx tsx scripts/seed-shop-events-demo.ts`. Integratietest van de hele flow: `npm run test:int` (tegen `dev.db`).
 
+## Eten bestellen (tafel-QR en bar-QR)
+
+- Gasten scannen de QR op hun tafel (`/bestellen?tafel=7`, tafel 1 t/m 16) of aan de bar (`/bestellen?modus=bar`, naam invullen) en bestellen met hun eigen telefoon. Geen account nodig; de statuspagina werkt met een gast-token in de link. Ingelogd = bestelgeschiedenis op `/dashboard/bestellingen`.
+- Flow uit de spec in `cards-center-bestelapp/`: welkom, doorlopend menu met meescrollende categoriebalk, upsell in stappen (friet, gratis eerste saus, drankje met korting), winkelmand met losse menu-onderdelen en menuvoordeel, besteloverzicht met opmerking, betalen (Mollie of aan de bar, fooi, kortingscode), bevestiging met aftelbalk en live status.
+- Regels: minstens één eten-item (alleen drinken haal je aan de bar), uitverkochte items blokkeren, geen annuleren na plaatsen. De server rekent prijzen, menuvoordeel en kortingscodes zelf uit (`src/lib/food/pricing.ts`); het bedrag van de telefoon wordt nooit vertrouwd.
+- Betalen: online bestellingen komen pas in de keuken als de betaling binnen is (webhook of simulatie); barbestellingen komen direct binnen en starten na "Markeer betaald". Onbetaalde online bestellingen vervallen na 30 minuten.
+- Keuken & bar: `/keuken` (alleen staff/admin), tablet-scherm met kolommen Nieuw, In bereiding, Klaar; wachttijd voor gasten (15 tot 60 min), uitverkocht per product, geluid bij een nieuwe bestelling, scherm aan houden, dagoverzicht. Pollt elke 5 seconden.
+- Admin: `/dashboard/admin/menu` (prijzen, aan/uit, uitverkocht, teksten, kortingscodes) en `/dashboard/admin/qr-codes` (printbare tafelkaartjes). Menu en codes worden bij de eerste start geseed uit `src/lib/food/menu-data.ts`.
+
 ## Mapstructuur
 
 - `src/app/[locale]/` pagina's (nl/en), `src/app/api/` route handlers en crons
 - `src/actions/` server actions, `src/lib/` domeinlogica, `src/components/` UI
 - `src/messages/` vertalingen, `prisma/` schema en seeds, `scripts/` beheerscripts, `tests/` unit-tests
-- `cards-center-bestelapp/` prototype en spec van de bestelapp (bron van waarheid voor Fase 4)
+- `cards-center-bestelapp/` prototype en spec van de bestelapp (referentie; geport in Fase 4)
