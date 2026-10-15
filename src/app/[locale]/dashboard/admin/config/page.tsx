@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AppConfigEditor } from "@/components/admin/app-config-editor";
+import { FeatureFlagsPanel } from "@/components/admin/feature-flags-panel";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 export default async function AdminConfigPage() {
@@ -19,6 +20,7 @@ export default async function AdminConfigPage() {
         title="AppConfig"
         subtitle="Key-value records voor runtime-instellingen. Wijzigingen worden direct van kracht en gelogd in audit log. De waarde moet geldige JSON zijn (kan een primitive, object of array zijn)."
       />
+      <FeatureFlagsPanel />
       <AppConfigEditor entries={entries} />
     </div>
   );

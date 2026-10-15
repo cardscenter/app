@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cards Center Community Hub
 
-## Getting Started
+De app van de fysieke Cards Center-winkel (Dubbele Poort 7, Hulst): accounts voor spelers, evenementen met betaalde inschrijving, eten bestellen via tafel-QR, league en stempelkaart, nieuws, en bulk-inkoop van kaarten. De oude marktplaats-functies (claimsales, marktplaats, veilingen, app-saldo) zitten nog in de code maar staan achter feature-flags uit.
 
-First, run the development server:
+Stack: Next.js 16 (App Router), TypeScript, Tailwind v4, Prisma (SQLite lokaal, Turso live), Auth.js v5, next-intl (nl + en). Hosting: Railway, auto-deploy vanaf `main`.
+
+## Lokaal draaien
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env        # vul minimaal AUTH_SECRET in
+npx prisma db push          # lokale SQLite-database aanmaken
+npx prisma db seed          # testaccounts en voorbeelddata
+npm run dev                 # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Testaccounts uit de seed (wachtwoord `Test1234!`): `admin@cardscenter.nl` (admin), `pikachu@test.nl` (speler). Een admin moet eerst 2FA aanzetten via /dashboard/profiel voordat het admin-panel werkt.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Schema wijzigen: pas `prisma/schema.prisma` aan, stop de dev server, en draai `npx prisma db push --accept-data-loss && npx prisma generate`. Zie `CLAUDE.md` voor de live-database (Turso) en de deploy-afspraken.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Commando | Doet |
+|---|---|
+| `npm run dev` | Dev server |
+| `npm run build` / `npm start` | Productie-build en -start |
+| `npm test` | Unit-tests (vitest, map `tests/`) |
+| `npm run lint` | ESLint |
+| `npx tsc --noEmit` | Typecheck (Turbopack typecheckt niet volledig, dus draai dit vóór een push) |
 
-To learn more about Next.js, take a look at the following resources:
+## Feature-flags
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+De handelsfuncties zijn verborgen achter server-side flags. Ze staan **standaard uit**; alleen de waarde `true` (of `1`/`on`) zet ze aan. Admins zien de functies altijd, zodat er getest kan worden zonder ze voor iedereen aan te zetten.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variabele | Verbergt |
+|---|---|
+| `FEATURE_WALLET` | App-saldo, storten, uitbetalen, bestellingen, verzending, geschillen, abonnementen, Ember en cosmetics, winkelpagina, statistieken |
+| `FEATURE_AUCTIONS` | Veilingen, bieden, Live Hub, volglijst (vereist `FEATURE_WALLET`) |
+| `FEATURE_CLAIMSALES` | Claimsales en winkelwagen (vereist `FEATURE_WALLET`) |
+| `FEATURE_MARKETPLACE` | Marktplaats, voorstellen, bundel-aanbod (vereist `FEATURE_WALLET`) |
+| `FEATURE_COMMUNITY_EVENTS` | Door leden ingediende beurzen in heel Europa; uit = alleen winkel-events |
 
-## Deploy on Vercel
+Bij een flag die uit staat: de links verdwijnen uit navigatie, homepage, zoeken, sitemap en meldingen; de pagina's sturen door naar de homepage; de API-routes en server actions weigeren niet-admins; de bijbehorende crons en realtime-kanalen draaien niet. Het overzicht staat op `/dashboard/admin/config`. Code: `src/lib/feature-flags.ts`, `src/lib/feature-routes.ts`, `src/lib/cron-job-flags.ts`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Omgevingsvariabelen
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Zie `.env.example` voor de volledige lijst met uitleg. Verplicht lokaal: `DATABASE_URL` (`file:dev.db`), `AUTH_SECRET`. Verplicht live: ook `AUTH_TRUST_HOST`, `NEXTAUTH_URL`, `NEXT_PUBLIC_SITE_URL`, `CRON_SECRET`, de Turso- en R2-variabelen. Optioneel: `EMAIL_PROVIDER` + `RESEND_API_KEY`, `ANTHROPIC_API_KEY` (foto-moderatie), `POKEWALLET_API_KEY` (kaartprijzen). Geheimen alleen via omgevingsvariabelen, nooit in de code.
+
+## Rollen
+
+- **Speler** (`accountType` FREE/PRO/UNLIMITED/ENTERPRISE): gewone gebruiker.
+- **Admin** (`accountType` ADMIN): volledig beheer via `/dashboard/admin/*`, ziet ook de verborgen functies. Vereist 2FA.
+- **Staff** (check-in, bestellingen, bulk verwerken): volgt in Fase 2 als aparte rol.
+
+## Mapstructuur
+
+- `src/app/[locale]/` pagina's (nl/en), `src/app/api/` route handlers en crons
+- `src/actions/` server actions, `src/lib/` domeinlogica, `src/components/` UI
+- `src/messages/` vertalingen, `prisma/` schema en seeds, `scripts/` beheerscripts, `tests/` unit-tests
+- `cards-center-bestelapp/` prototype en spec van de bestelapp (bron van waarheid voor Fase 4)
