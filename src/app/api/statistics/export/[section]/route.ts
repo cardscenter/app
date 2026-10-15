@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { assertFeatureForRoute } from "@/lib/feature-flags-server";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import {
@@ -29,6 +30,10 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ section: string }> }
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): 404 voor niet-admins zolang FEATURE_WALLET uit staat.
+  const blocked = await assertFeatureForRoute("FEATURE_WALLET");
+  if (blocked) return blocked;
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

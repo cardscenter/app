@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/prisma";
+import { assertFeatureForRoute } from "@/lib/feature-flags-server";
 import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ auctionId: string }> }
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): 404 voor niet-admins zolang FEATURE_AUCTIONS uit staat.
+  const blocked = await assertFeatureForRoute("FEATURE_AUCTIONS");
+  if (blocked) return blocked;
+
   const { auctionId } = await params;
 
   const auction = await prisma.auction.findUnique({

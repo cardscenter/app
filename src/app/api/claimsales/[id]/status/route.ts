@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { assertFeatureForRoute } from "@/lib/feature-flags-server";
 import { expireClaimedItems } from "@/actions/claimsale";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -6,6 +7,10 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): 404 voor niet-admins zolang FEATURE_CLAIMSALES uit staat.
+  const blocked = await assertFeatureForRoute("FEATURE_CLAIMSALES");
+  if (blocked) return blocked;
+
   const { id } = await params;
 
   // Lazy expiration: expire stale claims for this claimsale on every poll

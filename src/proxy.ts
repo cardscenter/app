@@ -2,6 +2,9 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
 import { BETA_COOKIE, betaToken } from "./lib/beta-gate";
+import { getToken } from "next-auth/jwt";
+import { isFeatureEnabled } from "./lib/feature-flags";
+import { featureForPath } from "./lib/feature-routes";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -15,6 +18,20 @@ const LEGACY_SELL_SEGMENTS: Record<string, string> = {
   voorwaarden: "voorwaarden-bulk",
   "voorwaarden-collectie": "voorwaarden-losse-kaarten",
 };
+
+/** Leest alleen `accountType` uit de Auth.js-sessie-JWT (cookie), zonder DB.
+ *  Probeert de secure- én de gewone cookienaam: achter de Railway-proxy kan
+ *  `nextUrl.protocol` http zijn terwijl de cookie als __Secure- is gezet. */
+async function accountTypeFromJwt(request: NextRequest): Promise<string | null> {
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) return null;
+  const preferSecure = request.nextUrl.protocol === "https:";
+  for (const secureCookie of [preferSecure, !preferSecure]) {
+    const token = await getToken({ req: request, secret, secureCookie });
+    if (token) return typeof token.accountType === "string" ? token.accountType : null;
+  }
+  return null;
+}
 
 /** Matcht de unlock-pagina (`/beta`, `/nl/beta`, `/en/beta`) — die moet altijd
  *  bereikbaar blijven, anders kan niemand de gate ontgrendelen. */
@@ -51,6 +68,25 @@ export default async function middleware(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = `/${locale}/verkopen${target ? `/${target}` : ""}`;
         return NextResponse.redirect(url, 308);
+      }
+    }
+  }
+
+  // Feature-flags (Community Hub, Fase 1): verborgen handelsfuncties gaan
+  // netjes naar de homepage van de locale. Alleen admins komen erdoor (JWT-
+  // check zonder DB). De page-layouts (createFeatureLayout) zijn de
+  // autoritatieve guard; dit is de snelle weg vóór render. /api/* valt buiten
+  // de matcher en heeft per-route guards.
+  {
+    const flag = featureForPath(request.nextUrl.pathname);
+    if (flag && !isFeatureEnabled(flag)) {
+      const accountType = await accountTypeFromJwt(request);
+      if (accountType !== "ADMIN") {
+        const localeMatch = request.nextUrl.pathname.match(/^\/(nl|en)(?:\/|$)/);
+        const url = request.nextUrl.clone();
+        url.pathname = `/${localeMatch ? localeMatch[1] : routing.defaultLocale}`;
+        url.search = "";
+        return NextResponse.redirect(url);
       }
     }
   }
