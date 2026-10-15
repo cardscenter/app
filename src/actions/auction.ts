@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createAuctionSchema, updateAuctionSchema } from "@/lib/validations/auction";
@@ -31,6 +32,10 @@ import { redirect } from "next/navigation";
 import type { UpsellType } from "@/types";
 
 export async function createAuction(formData: FormData) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -333,6 +338,10 @@ export async function createAuction(formData: FormData) {
 }
 
 export async function placeBid(auctionId: string, amount: number, deliveryChoice?: "SHIP" | "PICKUP") {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -550,6 +559,10 @@ export async function placeBid(auctionId: string, amount: number, deliveryChoice
 }
 
 export async function buyNow(auctionId: string, deliveryChoice?: "SHIP" | "PICKUP") {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1089,6 +1102,10 @@ export async function finalizeAuction(auctionId: string) {
 // ============================================================
 
 export async function setAutoBid(auctionId: string, maxAmount: number, deliveryChoice?: "SHIP" | "PICKUP") {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1186,6 +1203,10 @@ export async function getAutoBid(auctionId: string) {
 }
 
 export async function cancelAutoBid(auctionId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1205,6 +1226,10 @@ export async function cancelAutoBid(auctionId: string) {
 // ============================================================
 
 export async function completeAuctionPayment(auctionId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1354,6 +1379,10 @@ export async function completeAuctionPayment(auctionId: string) {
 // frustreren door bewust hoog/laag te annuleren). Race-safe: updateMany met
 // status- én bids-count-gate via een transactie.
 export async function cancelAuction(auctionId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1593,6 +1622,10 @@ export async function getActiveRunnerUpOffersForUser() {
 }
 
 export async function acceptRunnerUpOffer(offerId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1741,6 +1774,10 @@ export async function acceptRunnerUpOffer(offerId: string) {
 }
 
 export async function declineRunnerUpOffer(offerId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1813,6 +1850,10 @@ export async function updateAuction(
   auctionId: string,
   formData: FormData,
 ): Promise<{ success: true } | { error: string; field?: string }> {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_AUCTIONS uit = alleen admins.
+  const feat = await requireFeature("FEATURE_AUCTIONS");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

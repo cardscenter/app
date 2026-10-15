@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -9,6 +10,10 @@ type WatchlistTarget =
   | { listingId: string };
 
 export async function toggleWatchlist(target: WatchlistTarget) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

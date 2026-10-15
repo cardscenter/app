@@ -22,9 +22,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/nl`, changeFrequency: "daily", priority: 1 },
     { url: `${BASE_URL}/nl/kaarten`, changeFrequency: "weekly", priority: 0.9 },
-    { url: `${BASE_URL}/nl/marktplaats`, changeFrequency: "hourly", priority: 0.8 },
-    { url: `${BASE_URL}/nl/veilingen`, changeFrequency: "hourly", priority: 0.8 },
-    { url: `${BASE_URL}/nl/claimsales`, changeFrequency: "hourly", priority: 0.8 },
+    // Handel alleen zolang de feature-flags aan staan (Community Hub, Fase 1).
+    ...(isFeatureEnabled("FEATURE_MARKETPLACE")
+      ? [{ url: `${BASE_URL}/nl/marktplaats`, changeFrequency: "hourly" as const, priority: 0.8 }]
+      : []),
+    ...(isFeatureEnabled("FEATURE_AUCTIONS")
+      ? [{ url: `${BASE_URL}/nl/veilingen`, changeFrequency: "hourly" as const, priority: 0.8 }]
+      : []),
+    ...(isFeatureEnabled("FEATURE_CLAIMSALES")
+      ? [{ url: `${BASE_URL}/nl/claimsales`, changeFrequency: "hourly" as const, priority: 0.8 }]
+      : []),
     { url: `${BASE_URL}/nl/evenementen`, changeFrequency: "daily", priority: 0.7 },
     // Inkoopservice — de calculators zelf zijn login-gated en staan er niet in.
     { url: `${BASE_URL}/nl/verkopen`, changeFrequency: "weekly", priority: 0.8 },

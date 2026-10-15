@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -18,6 +19,10 @@ import { parseImageUrls } from "@/lib/upload";
  * items op eigenaarschap gecheckt (onbekende/andermans id's stil weg).
  */
 export async function updateShopPage(formData: FormData) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;

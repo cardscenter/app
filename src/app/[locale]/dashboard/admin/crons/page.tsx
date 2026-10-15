@@ -110,6 +110,11 @@ export default async function AdminCronsPage() {
                   <StatusBadge tone="neutral" icon={Calendar}>
                     {job.schedule}
                   </StatusBadge>
+                  {job.disabledByFlag && (
+                    <StatusBadge tone="warning">
+                      uitgeschakeld (feature-flag {job.disabledByFlag})
+                    </StatusBadge>
+                  )}
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{job.description}</p>
                 {job.runWarning && (
@@ -151,8 +156,12 @@ export default async function AdminCronsPage() {
               </div>
               <CronRunNowButton
                 jobName={job.name}
-                allowManualRun={job.allowManualRun}
-                runWarning={job.runWarning}
+                allowManualRun={job.allowManualRun && !job.disabledByFlag}
+                runWarning={
+                  job.disabledByFlag
+                    ? `Uitgeschakeld via feature-flag ${job.disabledByFlag}.`
+                    : job.runWarning
+                }
                 isRunning={
                   job.latest?.status === "RUNNING" &&
                   // Stale-guard: RUNNING ouder dan 2u = achtergebleven rij na

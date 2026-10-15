@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireNotSuspended } from "@/lib/suspension";
@@ -28,6 +29,10 @@ export async function proposePickup(input: {
   windowStart: string;
   windowEnd: string;
 }) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -152,6 +157,10 @@ export async function proposePickup(input: {
 // Tegenpartij van proposer accepteert/weigert het ophaalmoment.
 // Bij ACCEPT: schedule.status=ACCEPTED, bundle PAID/PENDING → SCHEDULED.
 export async function respondToPickup(scheduleId: string, action: "ACCEPT" | "REJECT") {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -262,6 +271,10 @@ export async function respondToPickup(scheduleId: string, action: "ACCEPT" | "RE
 // Bij PLATFORM: escrow-release naar seller. Bij EXTERNAL: alleen state-flip,
 // geen geldverschuiving.
 export async function confirmPickup(input: { shippingBundleId: string; code: string }) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -395,6 +408,10 @@ export async function confirmPickup(input: { shippingBundleId: string; code: str
 // Anti-self-inflation: alleen koper kan bevestigen, seller niet — voorkomt
 // dat sellers eigen sales fakes om level-tier te boosten.
 export async function confirmExternalPickup(shippingBundleId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -507,6 +524,10 @@ export async function confirmExternalPickup(shippingBundleId: string) {
 // Beide partijen kunnen een EXTERNAL-bundle vroegtijdig annuleren (geen
 // wederzijds-akkoord nodig, want er staat geen geld op het spel).
 export async function cancelExternalReservation(shippingBundleId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

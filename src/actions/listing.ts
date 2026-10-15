@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createListingSchema } from "@/lib/validations/listing";
@@ -27,6 +28,10 @@ function publishListingChanged(listingId: string, status: string) {
 
 
 export async function createListing(formData: FormData) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -365,6 +370,10 @@ export async function buyListing(
   quantity: number = 1,
   deliveryChoice: DeliveryChoice = "SHIP"
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -892,6 +901,10 @@ async function reserveStockedListingForExternalPickup(args: {
 // SOLD-flip zou cascade-rejection van pendings missen en seller-stats
 // verstoren zonder echte transactie.
 export async function updateListingStatus(listingId: string, status: "DELETED") {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1003,6 +1016,10 @@ async function cascadeRejectProposalsAndBundleOffers({
 // niet te willen verkopen. Resume zet alleen de listing weer ACTIVE; oude
 // proposals zijn dan al weg.
 export async function pauseListing(listingId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1044,6 +1061,10 @@ export async function pauseListing(listingId: string) {
 // Status-restore (Fase 27.14): PARTIALLY_SOLD als er nog SOLD items zijn,
 // anders ACTIVE.
 export async function resumeListing(listingId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1090,6 +1111,10 @@ export async function resumeListing(listingId: string) {
 // in zit. Titel/foto's/prijs blijven gelocked om misbruik te voorkomen.
 // Werkt op ACTIVE en PARTIALLY_SOLD.
 export async function updateListingDescription(listingId: string, description: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1125,6 +1150,10 @@ export async function updateListingDescription(listingId: string, description: s
 // bij DELETED. Items blijven historisch op AVAILABLE staan; de listing-status
 // is leidend voor zichtbaarheid (SOLD = niet meer publiek koopbaar).
 export async function closePartiallySoldListing(listingId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1166,6 +1195,10 @@ import { hasFeature } from "@/lib/subscription-tiers";
 import { parseCsvText, type BulkRow } from "@/lib/listing-bulk-import";
 
 export async function bulkImportListings(csvText: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

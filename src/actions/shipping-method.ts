@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -85,6 +86,10 @@ export async function updateShippingSlot(
   id: string,
   patch: { carrier?: string; priceOverride?: number | null; isActive?: boolean },
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   await requireNotSuspended(session.user.id);
@@ -139,6 +144,10 @@ export async function updateShippingSlot(
 }
 
 export async function toggleShippingMethod(id: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -217,6 +226,10 @@ export async function getSellerShippingMethods(sellerId?: string) {
 }
 
 export async function updateSellingScope(input: { scope: SellingScope }) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   await requireNotSuspended(session.user.id);

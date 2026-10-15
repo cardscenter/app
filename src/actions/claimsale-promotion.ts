@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { creditBalance, deductBalance } from "@/actions/wallet";
@@ -40,6 +41,10 @@ async function loadOwnedClaimsale(claimsaleId: string, userId: string) {
  * (nieuwe) homepage-spotlight, zie addClaimsaleUpsell.
  */
 export async function extendClaimsaleUpsell(upsellId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
@@ -94,6 +99,10 @@ export async function extendClaimsaleUpsell(upsellId: string) {
  * (net als bij aanmaken); race-safe decrement in één transactie.
  */
 export async function addClaimsaleUpsell(claimsaleId: string, type: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
@@ -180,6 +189,10 @@ export async function addClaimsaleUpsell(claimsaleId: string, type: string) {
  * gerefund.
  */
 export async function cancelClaimsaleUpsell(upsellId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;

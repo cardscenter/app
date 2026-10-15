@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductBalance, escrowCredit } from "@/actions/wallet";
@@ -20,6 +21,10 @@ async function publishCartCount(userId: string) {
  * Remove item from cart. This also unclaims the item so it becomes available again.
  */
 export async function removeFromCart(cartItemId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -220,6 +225,10 @@ export async function checkout(
   shippingSelections?: Record<string, string>,
   mergeIntoBundles?: Record<string, string>
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

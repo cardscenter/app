@@ -21,7 +21,7 @@
 // Hosting-aanname: single-instance Node-container (Railway). HMR-resistance
 // via globalThis-handle.
 
-import type { CronJobName } from "@/lib/cron-jobs";
+import { cronJobDisabledBy, type CronJobName } from "@/lib/cron-job-flags";
 
 const TARGET_HOUR_UTC = 4;
 const TARGET_MINUTE = 30;
@@ -34,6 +34,9 @@ const DAILY_JOBS = [
   "prune-bid-ips",
   "cleanup-sold-images",
   "cleanup-archived-chats",
+  // Meldingen-retentie zit normaal in de order-maintenance-scheduler; die
+  // start niet zonder FEATURE_WALLET, dus hier als vangnet (idempotent).
+  "cleanup-notifications",
 ] as const satisfies readonly CronJobName[];
 
 const MONTHLY_JOBS = ["reset-free-upsells"] as const satisfies readonly CronJobName[];
@@ -87,6 +90,9 @@ async function tick() {
     const isFirstOfMonth = new Date().getUTCDate() === 1;
     const jobs: CronJobName[] = [...DAILY_JOBS, ...(isFirstOfMonth ? MONTHLY_JOBS : [])];
     for (const job of jobs) {
+      // Feature-flags (Community Hub, Fase 1): geblokkeerde jobs overslaan,
+      // zonder CronRun-rij (anders dagelijks een lege SUCCESS-regel).
+      if (cronJobDisabledBy(job)) continue;
       await runJob(job);
     }
   } finally {

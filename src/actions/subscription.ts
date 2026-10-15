@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -59,6 +60,10 @@ export async function upgradeToTier(
   billingCycle: BillingCycle,
   customMonthlyPrice?: number
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
@@ -116,6 +121,10 @@ export async function upgradeToTier(
 
 // Cancel subscription — keeps active until expiresAt
 export async function cancelSubscription(userId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const subscription = await prisma.subscription.findFirst({
     where: { userId, status: "ACTIVE" },
     orderBy: { createdAt: "desc" },

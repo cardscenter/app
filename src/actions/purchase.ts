@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { refundEscrow, releaseEscrow, partialRefundEscrow } from "@/actions/wallet";
@@ -31,6 +32,10 @@ export async function markAsShipped(
   buyerCountry?: string,
   buyerPostalCode?: string,
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -143,6 +148,10 @@ export async function markAsShipped(
  * tweede klik retourneert success met dezelfde lock-timestamp.
  */
 export async function lockBundleForPacking(bundleId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -175,6 +184,10 @@ export async function confirmDelivery(
     comment?: string;
   }
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -334,6 +347,10 @@ const COMPLETED_REFUND_WINDOW_DAYS = 30;
 //  - COMPLETED binnen 30d na deliveredAt: deduct van seller's balance
 //    (escrow al released; refund gaat uit eigen zak — commissie blijft betaald)
 export async function issueSellerRefund(bundleId: string, amount: number, reason?: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

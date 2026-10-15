@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { refundEscrow, refundAuctionPremium } from "@/actions/wallet";
@@ -21,6 +22,10 @@ const requestSchema = z.object({
 });
 
 export async function requestCancellation(bundleId: string, formData: FormData) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -92,6 +97,10 @@ export async function respondToCancellation(
   action: "ACCEPT" | "REJECT",
   rejectionNote?: string
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -266,6 +275,10 @@ export async function getActiveCancellationRequest(bundleId: string) {
  * notificaties, realtime) lopen via de gedeelde race-safe executor.
  */
 export async function cancelOverdueOrder(bundleId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

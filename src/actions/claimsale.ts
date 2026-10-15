@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkClaimsaleLimit } from "@/lib/account-limits";
@@ -52,6 +53,10 @@ const claimsaleProductItemSchema = z.object({
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function createClaimsale(formData: FormData) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
@@ -343,6 +348,10 @@ export async function createClaimsale(formData: FormData) {
 }
 
 export async function publishClaimsale(claimsaleId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -374,6 +383,10 @@ export async function publishClaimsale(claimsaleId: string) {
 }
 
 export async function deleteClaimsale(claimsaleId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -403,6 +416,10 @@ export async function deleteClaimsale(claimsaleId: string) {
  * to either expire or check out.
  */
 export async function closeClaimsale(claimsaleId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -590,6 +607,10 @@ export async function expireClaimedItems(claimsaleId?: string) {
  * No balance deduction — that happens at checkout.
  */
 export async function claimItem(claimsaleItemId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
@@ -707,6 +728,10 @@ export async function claimItem(claimsaleItemId: string) {
  * Claim all available items in a claimsale at once.
  */
 export async function claimAllItems(claimsaleId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
@@ -836,6 +861,10 @@ export async function claimAllItems(claimsaleId: string) {
  * Unclaim an item (remove from cart, make available again).
  */
 export async function unclaimItem(claimsaleItemId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
@@ -893,6 +922,10 @@ export async function updateClaimsaleItem(
   itemId: string,
   data: { cardName?: string; condition?: string; price?: number; imageUrls?: string[] }
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -940,6 +973,10 @@ export async function updateClaimsaleItem(
  * If item is CLAIMED: unclaim first, then mark DELETED.
  */
 export async function deleteClaimsaleItem(itemId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -1017,6 +1054,10 @@ export async function addClaimsaleItem(
   claimsaleId: string,
   data: { cardName: string; condition: string; price: number; imageUrls?: string[]; cardSetId?: string; reference?: string }
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_CLAIMSALES uit = alleen admins.
+  const feat = await requireFeature("FEATURE_CLAIMSALES");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

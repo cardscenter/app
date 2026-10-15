@@ -40,6 +40,7 @@
 //                   niets meer vrij te geven.
 //   Veilingkosten (buyer's premium) gaan alleen terug bij een VOLLEDIGE refund.
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireNotSuspended } from "@/lib/suspension";
@@ -192,6 +193,10 @@ export async function openDisputeV2(params: {
   buyerStatement: string;
   evidenceUrls?: string[];
 }) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
   const userId = session.user.id;
@@ -344,6 +349,10 @@ export async function respondToDisputeV2(params: {
   evidenceUrls?: string[];
   proposedRefund?: number;
 }) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -438,6 +447,10 @@ export async function respondToDisputeV2(params: {
 // Een nieuw voorstel vervangt het uitstaande voorstel (ook je eigen).
 // ============================================================
 export async function proposeRefundV2(disputeId: string, amount: number) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -508,6 +521,10 @@ export async function proposeRefundV2(disputeId: string, amount: number) {
 // ACCEPT PROPOSAL (de andere partij accepteert) → RESOLVED_MUTUAL
 // ============================================================
 export async function acceptProposalV2(disputeId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -613,6 +630,10 @@ export async function acceptProposalV2(disputeId: string) {
 // REJECT PROPOSAL → terug naar SELLER_RESPONDED (met verse deadline)
 // ============================================================
 export async function rejectProposalV2(disputeId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -672,6 +693,10 @@ export async function rejectProposalV2(disputeId: string) {
 // resterende bedrag (escrow-variant) — koper zegt hiermee "opgelost".
 // ============================================================
 export async function withdrawDisputeV2(disputeId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -755,6 +780,10 @@ export async function withdrawDisputeV2(disputeId: string) {
 // ESCALATE — eenzijdig, zodra de verkoper heeft gereageerd.
 // ============================================================
 export async function requestEscalationV2(disputeId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -828,6 +857,10 @@ async function notifyAdmins(title: string, body: string, link: string) {
 // ADD EVIDENCE (beide partijen, alle open fases incl. ESCALATED)
 // ============================================================
 export async function addEvidenceV2(params: { disputeId: string; urls: string[] }) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

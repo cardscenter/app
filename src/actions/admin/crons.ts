@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin";
 import { logAdminAction } from "@/lib/admin-audit";
 import { withCronLogging } from "@/lib/cron-logging";
 import { CRON_JOBS, CRON_JOB_NAMES, CRON_JOB_META, type CronJobName } from "@/lib/cron-jobs";
+import { cronJobDisabledBy } from "@/lib/cron-job-flags";
 import { revalidatePath } from "next/cache";
 
 export async function runCronManually(jobName: string) {
@@ -17,6 +18,14 @@ export async function runCronManually(jobName: string) {
   const meta = CRON_JOB_META[jobName as CronJobName];
   if (!meta.allowManualRun) {
     return { error: `Manual run niet toegestaan voor "${jobName}". ${meta.runWarning ?? ""}`.trim() };
+  }
+
+  // Feature-flags (Community Hub, Fase 1): een job van een verborgen functie
+  // mag ook handmatig niet draaien — hij zou anders geld/status kunnen verschuiven
+  // in een flow die voor gebruikers niet bestaat.
+  const disabledBy = cronJobDisabledBy(jobName as CronJobName);
+  if (disabledBy) {
+    return { error: `"${jobName}" is uitgeschakeld via feature-flag ${disabledBy}.` };
   }
 
   // Concurrency-guard: weiger als er al een run van deze job bezig is —
@@ -82,6 +91,8 @@ export async function getCronStatus() {
         schedule: meta.schedule,
         allowManualRun: meta.allowManualRun,
         runWarning: meta.runWarning ?? null,
+        /** Feature-flag die deze job momenteel blokkeert (Community Hub, Fase 1). */
+        disabledByFlag: cronJobDisabledBy(name),
         latest: latest ? {
           id: latest.id,
           status: latest.status,

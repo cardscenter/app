@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
-import { subscribe, userChannel, auctionChannel } from "@/lib/realtime";
+import { subscribe, userChannel } from "@/lib/realtime";
+import { isFeatureVisibleFor, type FeatureFlag } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 // Long-lived connection — geen Edge runtime want we draaien op Node (Railway).
@@ -17,13 +18,23 @@ export async function GET(req: Request) {
   // Optionele extra channels via query param ?channels=auction:abc,claimsale:def
   // Whitelist op resource-prefix om DoS via willekeurige user:-channel sniffing
   // te voorkomen. User-channel wordt automatisch ingesteld op basis van auth.
-  const PUBLIC_PREFIXES = ["auction:", "claimsale:", "listing:"] as const;
+  // Feature-flags (Community Hub, Fase 1): een prefix is alleen abonneerbaar
+  // zolang de bijbehorende handel-flag zichtbaar is voor deze bezoeker.
+  const PREFIX_FLAG: Record<string, FeatureFlag> = {
+    "auction:": "FEATURE_AUCTIONS",
+    "claimsale:": "FEATURE_CLAIMSALES",
+    "listing:": "FEATURE_MARKETPLACE",
+  };
+  const accountType = session.user.accountType;
+  const publicPrefixes = Object.entries(PREFIX_FLAG)
+    .filter(([, flag]) => isFeatureVisibleFor(flag, accountType))
+    .map(([prefix]) => prefix);
   const url = new URL(req.url);
   const extraChannels = (url.searchParams.get("channels") ?? "")
     .split(",")
     .map((c) => c.trim())
     .filter((c) => c.length > 0)
-    .filter((c) => PUBLIC_PREFIXES.some((p) => c.startsWith(p)));
+    .filter((c) => publicPrefixes.some((p) => c.startsWith(p)));
 
   const subscriberChannels = [userChannel(userId), ...extraChannels];
 

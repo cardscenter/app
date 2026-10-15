@@ -11,45 +11,62 @@ export async function register() {
   // setTimeout-state is daar per-request.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
-  // Dynamic import zodat Edge-bundle de scheduler-modules niet meeneemt.
-  const { scheduleNextAuctionFinalize } = await import("@/lib/auction-scheduler");
-  const { scheduleNextAuctionActivation } = await import("@/lib/auction-activator-scheduler");
-  const { scheduleNextClaimsaleActivation } = await import("@/lib/claimsale-activator-scheduler");
+  // Feature-flags (Community Hub, Fase 1): schedulers van verborgen
+  // handelsfuncties starten niet. De CRON_JOBS-wrapper is de tweede laag
+  // (route/"Run nu"/maintenance-schedulers slaan geblokkeerde jobs over).
+  const { FEATURE_FLAG_KEYS, isFeatureEnabled } = await import("@/lib/feature-flags");
+  const auctionsOn = isFeatureEnabled("FEATURE_AUCTIONS");
+  const claimsalesOn = isFeatureEnabled("FEATURE_CLAIMSALES");
+  const walletOn = isFeatureEnabled("FEATURE_WALLET");
+  // eslint-disable-next-line no-console
+  console.log(
+    "[instrumentation] feature flags: " +
+      FEATURE_FLAG_KEYS.map((k) => `${k}=${isFeatureEnabled(k) ? "aan" : "uit"}`).join(", "),
+  );
 
-  try {
-    await scheduleNextAuctionFinalize("boot");
-  } catch (err) {
-    // Niet fataal — de 5-min cron `auction-finalize` is de safety-net.
-    // eslint-disable-next-line no-console
-    console.error("[instrumentation] auction-finalize scheduler boot failed", err);
+  if (auctionsOn) {
+    // Dynamic import zodat Edge-bundle de scheduler-modules niet meeneemt.
+    const { scheduleNextAuctionFinalize } = await import("@/lib/auction-scheduler");
+    const { scheduleNextAuctionActivation } = await import("@/lib/auction-activator-scheduler");
+
+    try {
+      await scheduleNextAuctionFinalize("boot");
+    } catch (err) {
+      // Niet fataal — de 5-min cron `auction-finalize` is de safety-net.
+      // eslint-disable-next-line no-console
+      console.error("[instrumentation] auction-finalize scheduler boot failed", err);
+    }
+
+    try {
+      await scheduleNextAuctionActivation("boot");
+    } catch (err) {
+      // Niet fataal — de 1-min cron `auction-activate` is de safety-net.
+      // eslint-disable-next-line no-console
+      console.error("[instrumentation] auction-activator scheduler boot failed", err);
+    }
   }
 
-  try {
-    await scheduleNextAuctionActivation("boot");
-  } catch (err) {
-    // Niet fataal — de 1-min cron `auction-activate` is de safety-net.
-    // eslint-disable-next-line no-console
-    console.error("[instrumentation] auction-activator scheduler boot failed", err);
-  }
+  if (claimsalesOn) {
+    const { scheduleNextClaimsaleActivation } = await import("@/lib/claimsale-activator-scheduler");
+    try {
+      await scheduleNextClaimsaleActivation("boot");
+    } catch (err) {
+      // Niet fataal — de 1-min cron `claimsale-activate` is de safety-net.
+      // eslint-disable-next-line no-console
+      console.error("[instrumentation] claimsale-activator scheduler boot failed", err);
+    }
 
-  try {
-    await scheduleNextClaimsaleActivation("boot");
-  } catch (err) {
-    // Niet fataal — de 1-min cron `claimsale-activate` is de safety-net.
-    // eslint-disable-next-line no-console
-    console.error("[instrumentation] claimsale-activator scheduler boot failed", err);
-  }
-
-  // In-process scheduler voor expire-claims: claimsale-items die >15 min in
-  // iemands cart staan worden elke 60s automatisch teruggezet naar AVAILABLE.
-  // Vervangt de externe cron-route als primaire trigger zodat het ook in
-  // dev-mode + Railway zonder externe scheduler werkt.
-  try {
-    const { startExpireClaimsScheduler } = await import("@/lib/expire-claims-scheduler");
-    startExpireClaimsScheduler("boot");
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("[instrumentation] expire-claims scheduler boot failed", err);
+    // In-process scheduler voor expire-claims: claimsale-items die >15 min in
+    // iemands cart staan worden elke 60s automatisch teruggezet naar AVAILABLE.
+    // Vervangt de externe cron-route als primaire trigger zodat het ook in
+    // dev-mode + Railway zonder externe scheduler werkt.
+    try {
+      const { startExpireClaimsScheduler } = await import("@/lib/expire-claims-scheduler");
+      startExpireClaimsScheduler("boot");
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[instrumentation] expire-claims scheduler boot failed", err);
+    }
   }
 
   // In-process scheduler voor sync-pokewallet: dagelijks om 03:00 UTC een
@@ -80,12 +97,17 @@ export async function register() {
   // cancellation-expiry (7d mutual-deadline) + auto-cancel-stale-paid
   // (14d niet verzonden → volledige refund). De externe cron voor deze
   // routes was nooit ingesteld waardoor de flows in de praktijk dood waren.
-  try {
-    const { startOrderMaintenanceScheduler } = await import("@/lib/order-maintenance-scheduler");
-    startOrderMaintenanceScheduler("boot");
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("[instrumentation] order-maintenance scheduler boot failed", err);
+  // Zonder wallet-flag draait er geen enkele order-job (ze vallen allemaal
+  // onder FEATURE_WALLET of een handel-flag); alleen cleanup-notifications
+  // blijft nodig en draait dan via de daily-maintenance-scheduler.
+  if (walletOn) {
+    try {
+      const { startOrderMaintenanceScheduler } = await import("@/lib/order-maintenance-scheduler");
+      startOrderMaintenanceScheduler("boot");
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[instrumentation] order-maintenance scheduler boot failed", err);
+    }
   }
 
   // Dagelijkse onderhoudscrons (04:30 UTC): check-subscriptions,

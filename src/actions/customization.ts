@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLoginStreakReward, LOGIN_STREAK_REWARDS } from "@/lib/cosmetic-config";
@@ -57,6 +58,10 @@ export async function getLoginStreakInfo() {
 }
 
 export async function claimDailyLogin() {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -145,6 +150,10 @@ export async function getOwnedItems(filters?: { type?: string; bundleId?: string
 }
 
 export async function equipItem(itemKey: string, slot: "banner" | "emblem" | "background") {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -201,6 +210,10 @@ export async function equipItem(itemKey: string, slot: "banner" | "emblem" | "ba
 }
 
 export async function unequipSlot(slot: "banner" | "emblem" | "background") {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_WALLET uit = alleen admins.
+  const feat = await requireFeature("FEATURE_WALLET");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

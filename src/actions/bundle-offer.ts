@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireNotSuspended } from "@/lib/suspension";
@@ -137,6 +138,10 @@ interface CreateBundleOfferInput {
 // Buyer creates a bundle-offer in an existing chat. Listings stay ACTIVE during
 // the PENDING phase — we resolve the lock atomically only at seller-accept.
 export async function createBundleOffer(input: CreateBundleOfferInput) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -320,6 +325,10 @@ export async function createBundleOffer(input: CreateBundleOfferInput) {
 
 // Buyer trekt eigen PENDING offer in.
 export async function withdrawBundleOffer(bundleProposalId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -382,6 +391,10 @@ export async function withdrawBundleOffer(bundleProposalId: string) {
 // Counter-chain depth wordt afgekapt op MAX_COUNTER_DEPTH om eindeloze
 // onderhandelingen te voorkomen.
 export async function counterBundleOffer(input: { parentProposalId: string; totalAmount: number }) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -520,6 +533,10 @@ export async function respondToBundleOffer(
   action: "ACCEPT" | "REJECT",
   shippingMethodId?: string
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -824,6 +841,10 @@ export async function respondToBundleOffer(
 // Buyer betaalt het restant van een AWAITING_PAYMENT bundle-offer (PLATFORM
 // only). Promotie van PENDING bundle naar PAID + listings RESERVED → SOLD.
 export async function completeBundleOfferPayment(bundleProposalId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

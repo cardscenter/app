@@ -1,5 +1,6 @@
 "use server";
 
+import { requireFeature } from "@/lib/feature-flags-server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
@@ -58,6 +59,10 @@ export async function createPartialSaleProposal(input: {
   totalAmount: number;
   requestInsuredShipping?: boolean;
 }) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -150,6 +155,10 @@ export async function createProposal(
   amount: number,
   type: "BUY" | "SELL"
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -287,6 +296,10 @@ export async function respondToProposal(
   proposalId: string,
   action: "ACCEPT" | "REJECT"
 ) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -559,6 +572,10 @@ export async function respondToProposal(
 }
 
 export async function completeProposalPayment(proposalId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 
@@ -722,6 +739,10 @@ export async function completeProposalPayment(proposalId: string) {
 }
 
 export async function withdrawProposal(proposalId: string) {
+  // Feature-flag-guard (Community Hub, Fase 1): FEATURE_MARKETPLACE uit = alleen admins.
+  const feat = await requireFeature("FEATURE_MARKETPLACE");
+  if ("error" in feat) return { error: feat.error };
+
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
 

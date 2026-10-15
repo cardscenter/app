@@ -69,7 +69,10 @@ async function tick() {
   tickRunning = true;
   try {
     const { CRON_JOBS } = await import("@/lib/cron-jobs");
+    const { cronJobDisabledBy } = await import("@/lib/cron-job-flags");
     for (const job of JOBS) {
+      // Feature-flags (Community Hub, Fase 1): geblokkeerde jobs overslaan.
+      if (cronJobDisabledBy(job)) continue;
       try {
         const result = await CRON_JOBS[job]();
         if (result.itemsProcessed > 0) {
