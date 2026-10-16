@@ -1712,6 +1712,20 @@ model BuybackRequest {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  // Community Hub (Fase 6): na een aangepaste berekening (PARTIALLY_APPROVED)
+  // of afkeur (REJECTED) kiest de verkoper: akkoord of retour. Retour kost
+  // RETURN_FEE_EUR, vooraf betaald via Mollie (gedeeld Payment-model, purpose
+  // BUYBACK_RETURN). Zonder keuze vóór `decisionDeadline` mag de winkel
+  // uitbetalen (akkoord) resp. houdt ze de afgekeurde kaarten.
+  userDecision        String?   // ACCEPT | RETURN
+  userDecidedAt       DateTime?
+  decisionDeadline    DateTime?
+  returnPaymentId     String?   @unique
+  returnPayment       Payment?  @relation("BuybackReturnPayment", fields: [returnPaymentId], references: [id])
+  returnCarrier       String?
+  returnTrackingNumber String?
+  returnedAt          DateTime?
+
   items            BuybackItem[]
   bulkItems        BulkBuybackItem[]
 
@@ -1719,6 +1733,23 @@ model BuybackRequest {
   @@index([status])
   @@index([type])
   @@index([createdAt])
+}
+
+// Community Hub (Fase 6): bulk-inkooptarieven, beheerbaar in het admin-panel.
+// Geseed uit BULK_PRICING in `src/lib/buyback-pricing.ts`; `key` blijft de
+// categorie-sleutel die op BulkBuybackItem.category staat.
+model BulkPriceCategory {
+  key         String   @id
+  name        String
+  nameEn      String
+  description String?            // toelichting onder de naam (bv. welke rariteiten)
+  price       Float
+  group       String             // pokemon | other
+  tier        String             // common | uncommon | rare | holo | ultra | pokeball | masterball | oversized | code | coin | sleeves | energy
+  weightGrams Float    @default(1.8)
+  sortOrder   Int      @default(0)
+  enabled     Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
 }
 
 // Individual card items for COLLECTION type buyback requests
@@ -2859,7 +2890,7 @@ model Payment {
 
   provider    String   @default("MOLLIE") // MOLLIE | FAKE
   providerPaymentId String? @unique       // Mollie "tr_..." (of "fake_...")
-  purpose     String                      // EVENT_REGISTRATION | FOOD_ORDER
+  purpose     String                      // EVENT_REGISTRATION | FOOD_ORDER | BUYBACK_RETURN
   // OPEN | PENDING | PAID | FAILED | CANCELED | EXPIRED | REFUNDED | PARTIALLY_REFUNDED
   status      String   @default("OPEN")
   amount      Float
@@ -2884,6 +2915,7 @@ model Payment {
 
   registration EventRegistration?
   foodOrder    FoodOrder?
+  buybackReturn BuybackRequest? @relation("BuybackReturnPayment")
 
   @@index([purpose, status])
   @@index([userId])
