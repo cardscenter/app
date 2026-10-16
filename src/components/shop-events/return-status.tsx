@@ -61,13 +61,6 @@ export function ReturnStatus({ registrationId, eventId, eventTitle, locale }: Pr
     });
   }
 
-  const Card = ({ balloon, children }: { balloon: "green" | "yellow" | "pink"; children: React.ReactNode }) => (
-    <PunchCard className="relative overflow-hidden bg-white px-6 py-12 text-center sm:px-12 sm:py-16" dot="var(--border)">
-      <Balloon color={balloon} shape="cloud" className="pointer-events-none absolute -right-10 -top-10 w-40 opacity-90" />
-      <div className="relative flex flex-col items-center gap-5">{children}</div>
-    </PunchCard>
-  );
-
   if (!state || ((state.status === "RESERVED" || state.status === "OFFERED") && attempts < 6 && state.paymentStatus !== "FAILED" && state.paymentStatus !== "CANCELED" && state.paymentStatus !== "EXPIRED")) {
     return (
       <Card balloon="yellow">
@@ -118,5 +111,14 @@ export function ReturnStatus({ registrationId, eventId, eventTitle, locale }: Pr
         {t("backToEvent")}
       </CtaButton>
     </Card>
+  );
+}
+
+function Card({ balloon, children }: { balloon: "green" | "yellow" | "pink"; children: React.ReactNode }) {
+  return (
+    <PunchCard className="relative overflow-hidden bg-white px-6 py-12 text-center sm:px-12 sm:py-16" dot="var(--border)">
+      <Balloon color={balloon} shape="cloud" className="pointer-events-none absolute -right-10 -top-10 w-40 opacity-90" />
+      <div className="relative flex flex-col items-center gap-5">{children}</div>
+    </PunchCard>
   );
 }

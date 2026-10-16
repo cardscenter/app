@@ -90,30 +90,6 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
     });
   }
 
-  const Box = ({ children }: { children: React.ReactNode }) => (
-    <div className="rounded-[12px] bg-white p-6 shadow-[0_2px_8px_0_var(--cc-border-subtle)] sm:p-7">{children}</div>
-  );
-  const Primary = ({ onClick, children, disabled }: { onClick: () => void; children: React.ReactNode; disabled?: boolean }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={pending || disabled}
-      className="cc-pill inline-flex w-full items-center justify-center gap-2 bg-[var(--primary)] px-5 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
-    >
-      {children}
-    </button>
-  );
-  const Secondary = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={pending}
-      className="cc-pill inline-flex w-full items-center justify-center gap-2 border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--background)] disabled:opacity-60"
-    >
-      {children}
-    </button>
-  );
-
   const cancelBlock = mine?.canCancel ? (
     <div className="mt-4 border-t border-[var(--border)] pt-4">
       {!confirmCancel ? (
@@ -173,7 +149,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
             </div>
           </div>
           <div className="mt-4">
-            <Primary onClick={pay}>{t("payNow", { price })}</Primary>
+            <Primary pending={pending} onClick={pay}>{t("payNow", { price })}</Primary>
           </div>
           {cancelBlock}
         </Box>
@@ -194,7 +170,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
             </div>
           </div>
           <div className="mt-4">
-            <Primary onClick={pay}>{event.price > 0 ? t("payNow", { price }) : t("confirmSpot")}</Primary>
+            <Primary pending={pending} onClick={pay}>{event.price > 0 ? t("payNow", { price }) : t("confirmSpot")}</Primary>
           </div>
           {cancelBlock}
         </Box>
@@ -288,7 +264,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
         {a.full ? (
           event.waitlistEnabled ? (
             <>
-              <Primary onClick={() => register(true)}>
+              <Primary pending={pending} onClick={() => register(true)}>
                 <Users className="size-4" /> {t("joinWaitlist")}
               </Primary>
               <p className="text-center text-xs text-muted-foreground">{t("waitlistExplain")}</p>
@@ -298,7 +274,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
           )
         ) : (
           <>
-            <Primary onClick={() => register(false)} disabled={viewer.needsSupervision && event.underTwelveWithAdult && !supervised}>
+            <Primary pending={pending} onClick={() => register(false)} disabled={viewer.needsSupervision && event.underTwelveWithAdult && !supervised}>
               <Ticket className="size-4" /> {event.price > 0 ? t("registerAndPay", { price }) : t("registerFree")}
             </Primary>
             {event.price > 0 && (
@@ -309,8 +285,38 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
           </>
         )}
       </div>
-      {a.full && !event.waitlistEnabled ? null : <Secondary onClick={() => router.push("/dashboard/tickets")}>{t("myTickets")}</Secondary>}
+      {a.full && !event.waitlistEnabled ? null : <Secondary pending={pending} onClick={() => router.push("/dashboard/tickets")}>{t("myTickets")}</Secondary>}
     </Box>
+  );
+}
+
+function Box({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[12px] bg-white p-6 shadow-[0_2px_8px_0_var(--cc-border-subtle)] sm:p-7">{children}</div>
+  );
+}
+function Primary({ onClick, children, disabled, pending }: { onClick: () => void; children: React.ReactNode; disabled?: boolean; pending?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending || disabled}
+      className="cc-pill inline-flex w-full items-center justify-center gap-2 bg-[var(--primary)] px-5 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+    >
+      {children}
+    </button>
+  );
+}
+function Secondary({ onClick, children, pending }: { onClick: () => void; children: React.ReactNode; pending?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      className="cc-pill inline-flex w-full items-center justify-center gap-2 border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--background)] disabled:opacity-60"
+    >
+      {children}
+    </button>
   );
 }
 
