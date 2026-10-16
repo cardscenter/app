@@ -625,14 +625,6 @@
     "hubHouseRules": "Huisregels",
     "hubHouseRulesDesc": "Respect voor elkaar en de kaarten, geen eigen eten of drinken, onder de 12 met begeleiding. Lees alle regels op de info-pagina.",
     "landing": {
-      "navEvents": "Evenementen",
-      "navLeague": "League",
-      "navNews": "Nieuws",
-      "navCards": "Kaarten",
-      "navSell": "Verkopen",
-      "navInfo": "Info",
-      "navCta": "Account aanmaken",
-      "navClose": "Menu sluiten",
       "heroEyebrow": "{address} · opening zomer 2027",
       "heroTitle": "Spelen. Eten. Verzamelen. Alles onder één dak.",
       "heroTitleLoggedIn": "Welkom terug, {name}.",
@@ -758,28 +750,7 @@
       "ctaPlaceholder": "jij@voorbeeld.nl",
       "ctaButton": "Account aanmaken",
       "ctaReassurance": "Gratis account · Tickets, eten en punten op één plek",
-      "ctaDashboard": "Naar je dashboard",
-      "footerTagline": "Cards Center, {address}. De winkel, speelvloer en community voor trading card games in Zeeuws-Vlaanderen.",
-      "colShop": "Winkel",
-      "colCommunity": "Community",
-      "colAccount": "Account",
-      "colAbout": "Over",
-      "linkEvents": "Evenementen",
-      "linkOrder": "Eten bestellen",
-      "linkSell": "Verkopen aan ons",
-      "linkInfo": "Info en huisregels",
-      "linkLeague": "League",
-      "linkNews": "Nieuws",
-      "linkCards": "Kaartendatabase",
-      "linkDashboard": "Dashboard",
-      "linkTickets": "Mijn tickets",
-      "linkMyLeague": "Mijn league",
-      "linkLogin": "Inloggen",
-      "linkRegister": "Account aanmaken",
-      "linkSupport": "Contact",
-      "linkPrivacy": "Privacy",
-      "linkTerms": "Voorwaarden",
-      "copyright": "© {year} Cards Center"
+      "ctaDashboard": "Naar je dashboard"
     }
   },
   "auction": {
@@ -2674,7 +2645,7 @@
     "cancel": "Annuleren"
   },
   "footer": {
-    "tagline": "Koop, verkoop en veil Pokémon trading cards op één plek.",
+    "tagline": "Cards Center, {address}. De winkel, speelvloer en community voor trading card games in Zeeuws-Vlaanderen.",
     "navigation": "Navigatie",
     "legal": "Juridisch",
     "privacyPolicy": "Privacybeleid",
@@ -2682,7 +2653,18 @@
     "contact": "Contact",
     "kvk": "KvK",
     "vat": "Btw-id",
-    "copyright": "© {year} Cards Center. Alle rechten voorbehouden."
+    "copyright": "© {year} Cards Center",
+    "colShop": "Winkel",
+    "colCommunity": "Community",
+    "colAccount": "Account",
+    "colAbout": "Over",
+    "order": "Eten bestellen",
+    "sellToUs": "Verkopen aan ons",
+    "infoRules": "Info en huisregels",
+    "cardsDb": "Kaartendatabase",
+    "tickets": "Mijn tickets",
+    "myLeague": "Mijn league",
+    "createAccount": "Account aanmaken"
   },
   "cart": {
     "title": "Winkelwagen",

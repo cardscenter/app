@@ -13,7 +13,7 @@ export default function OrderLayout({ children }: { children: React.ReactNode })
   return (
     <div className={`cc-order ${archivo.variable} ${figtree.variable}`} style={{ colorScheme: "light" }}>
       <style>{`
-        body > header, footer, main + div { display: none !important; }
+        body > header, footer { display: none !important; }
         main { padding: 0 !important; background: #FFFFFF; }
         .cc-order {
           --ink: #1F1F22; --ink-2: #5E5C61; --ink-3: #8E8A90; --line: #E7E3E6; --wash: #F6F4F5; --card: #FFFFFF;

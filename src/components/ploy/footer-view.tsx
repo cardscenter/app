@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Link } from "@/i18n/navigation";
 
@@ -9,10 +10,11 @@ export interface FooterColumn {
 }
 
 /**
- * Donkere footer: groot wit logo dat in beeld veert, slagzin, contact-link,
- * kolommen met links en de juridische onderbalk.
+ * Donkere footer (design-pass): groot wit logo dat in beeld veert, slagzin,
+ * contact-link, kolommen met links en de juridische onderbalk. Props-only;
+ * `SiteFooter` (layout) vult 'm met i18n, flags en bedrijfsgegevens.
  */
-export function LandingFooter({ tagline, contactLabel, contactHref, columns, legal, copyright }: { tagline: string; contactLabel: string; contactHref: string; columns: FooterColumn[]; legal: { label: string; href: string }[]; copyright: string }) {
+export function FooterView({ tagline, contactLabel, contactHref, columns, legal, copyright, legalLine, aside }: { tagline: string; contactLabel: string; contactHref: string; columns: FooterColumn[]; legal: { label: string; href: string }[]; copyright: string; legalLine?: ReactNode; aside?: ReactNode }) {
   return (
     <footer className="px-0 pb-0 sm:px-5 lg:px-6">
       <div className="rounded-t-[20px] bg-[var(--cc-ink)] px-5 pb-10 pt-16 text-white sm:px-8 lg:px-12 lg:pt-20">
@@ -56,13 +58,19 @@ export function LandingFooter({ tagline, contactLabel, contactHref, columns, leg
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/15 pt-6 text-sm text-white/65">
-            <span>{copyright}</span>
-            {legal.map((l) => (
-              <Link key={l.href} href={l.href} className="no-underline hover:text-white">
-                {l.label}
-              </Link>
-            ))}
+          <div className="flex flex-col gap-4 border-t border-white/15 pt-6 text-sm text-white/65 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-col gap-3">
+              {legalLine && <div className="text-xs leading-relaxed text-white/55">{legalLine}</div>}
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <span>{copyright}</span>
+                {legal.map((l) => (
+                  <Link key={l.href} href={l.href} className="no-underline hover:text-white">
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            {aside && <div className="shrink-0">{aside}</div>}
           </div>
         </div>
       </div>

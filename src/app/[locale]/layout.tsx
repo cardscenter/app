@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { bodyFont, displayFont, monoFont } from "@/app/fonts";
 import { routing } from "@/i18n/routing";
 import { SiteNav } from "@/components/layout/site-nav";
-import { Footer } from "@/components/layout/footer";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { FeatureFlagsProvider } from "@/components/providers/feature-flags-provider";
@@ -57,7 +57,7 @@ export default async function LocaleLayout({
               <RealtimeProvider isAuthenticated={!!session?.user?.id}>
                 <SiteNav initialViewer={session?.user ? { name: session.user.name ?? "", image: session.user.image ?? null } : null} />
                 <main className="flex-1 pt-[var(--site-nav-offset)]">{children}</main>
-                <Footer />
+                <SiteFooter loggedIn={!!session?.user?.id} features={features} />
                 <ResponsiveToaster />
                 {/* Prestatie-toasts tonen Ember; die horen bij het saldo-model. */}
                 {features.FEATURE_WALLET && features.FEATURE_XP && (

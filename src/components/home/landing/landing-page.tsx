@@ -11,7 +11,6 @@ import { EventsPanel, type EventCardData } from "./events-panel";
 import { PlatformSection } from "./platform-section";
 import { AudienceAccordion } from "@/components/ploy/audience-accordion";
 import { CtaSection } from "./cta-section";
-import { LandingFooter } from "./landing-footer";
 
 const TZ = "Europe/Amsterdam";
 
@@ -45,7 +44,6 @@ function datePart(d: Date, locale: string, opts: Intl.DateTimeFormatOptions) {
 export async function LandingPage({ locale, viewer }: { locale: string; viewer: { id: string; name: string; image: string | null } | null }) {
   const [t, data] = await Promise.all([getTranslations("home.landing"), getLandingData(viewer?.id ?? null)]);
   const { events, news, games, season, standings, settings, counts } = data;
-  const year = new Date().getFullYear();
   const address = formatShopAddress();
   const leader = standings[0] ?? null;
   const nextEvent = events[0] ?? null;
@@ -157,8 +155,6 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
 
   return (
     <div className="cc-landing overflow-clip" style={{ colorScheme: "light" }}>
-      {/* De oude site-footer (en zijn ZDivider-strook) verdwijnt in Fase A5; tot dan hier verborgen. */}
-      <style>{`body > footer, main + div { display: none !important; }`}</style>
       <LandingHero
         eyebrow={t("heroEyebrow", { address })}
         title={viewer ? t("heroTitleLoggedIn", { name: viewer.name.split(" ")[0] ?? viewer.name }) : t("heroTitle")}
@@ -214,56 +210,6 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
         reassurance={t("ctaReassurance")}
         loggedIn={!!viewer}
         dashboardLabel={t("ctaDashboard")}
-      />
-      <LandingFooter
-        tagline={t("footerTagline", { address })}
-        contactLabel={PLATFORM.supportEmail}
-        contactHref={`mailto:${PLATFORM.supportEmail}`}
-        columns={[
-          {
-            title: t("colShop"),
-            links: [
-              { label: t("linkEvents"), href: "/evenementen" },
-              { label: t("linkOrder"), href: "/bestellen?modus=bar" },
-              { label: t("linkSell"), href: "/verkopen" },
-              { label: t("linkInfo"), href: "/info" },
-            ],
-          },
-          {
-            title: t("colCommunity"),
-            links: [
-              { label: t("linkLeague"), href: "/league" },
-              { label: t("linkNews"), href: "/nieuws" },
-              { label: t("linkCards"), href: "/kaarten" },
-            ],
-          },
-          {
-            title: t("colAccount"),
-            links: viewer
-              ? [
-                  { label: t("linkDashboard"), href: "/dashboard" },
-                  { label: t("linkTickets"), href: "/dashboard/tickets" },
-                  { label: t("linkMyLeague"), href: "/dashboard/league" },
-                ]
-              : [
-                  { label: t("linkLogin"), href: "/login" },
-                  { label: t("linkRegister"), href: "/register" },
-                ],
-          },
-          {
-            title: t("colAbout"),
-            links: [
-              { label: t("linkSupport"), href: "/support" },
-              { label: t("linkPrivacy"), href: "/privacy" },
-              { label: t("linkTerms"), href: "/voorwaarden" },
-            ],
-          },
-        ]}
-        legal={[
-          { label: t("linkPrivacy"), href: "/privacy" },
-          { label: t("linkTerms"), href: "/voorwaarden" },
-        ]}
-        copyright={t("copyright", { year })}
       />
     </div>
   );

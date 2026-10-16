@@ -625,14 +625,6 @@
     "hubHouseRules": "House rules",
     "hubHouseRulesDesc": "Respect for each other and the cards, no outside food or drinks, under 12 with an adult. Read all rules on the info page.",
     "landing": {
-      "navEvents": "Events",
-      "navLeague": "League",
-      "navNews": "News",
-      "navCards": "Cards",
-      "navSell": "Sell",
-      "navInfo": "Info",
-      "navCta": "Create account",
-      "navClose": "Close menu",
       "heroEyebrow": "{address} · opening summer 2027",
       "heroTitle": "Play. Eat. Collect. All under one roof.",
       "heroTitleLoggedIn": "Welcome back, {name}.",
@@ -758,28 +750,7 @@
       "ctaPlaceholder": "you@example.com",
       "ctaButton": "Create account",
       "ctaReassurance": "Free account · Tickets, food and points in one place",
-      "ctaDashboard": "Go to your dashboard",
-      "footerTagline": "Cards Center, {address}. The shop, play floor and community for trading card games in Zeeuws-Vlaanderen.",
-      "colShop": "Shop",
-      "colCommunity": "Community",
-      "colAccount": "Account",
-      "colAbout": "About",
-      "linkEvents": "Events",
-      "linkOrder": "Order food",
-      "linkSell": "Sell to us",
-      "linkInfo": "Info and house rules",
-      "linkLeague": "League",
-      "linkNews": "News",
-      "linkCards": "Card database",
-      "linkDashboard": "Dashboard",
-      "linkTickets": "My tickets",
-      "linkMyLeague": "My league",
-      "linkLogin": "Log in",
-      "linkRegister": "Create account",
-      "linkSupport": "Contact",
-      "linkPrivacy": "Privacy",
-      "linkTerms": "Terms",
-      "copyright": "© {year} Cards Center"
+      "ctaDashboard": "Go to your dashboard"
     }
   },
   "auction": {
@@ -2674,7 +2645,7 @@
     "cancel": "Cancel"
   },
   "footer": {
-    "tagline": "Buy, sell and auction Pokémon trading cards in one place.",
+    "tagline": "Cards Center, {address}. The shop, play floor and community for trading card games in Zeeuws-Vlaanderen.",
     "navigation": "Navigation",
     "legal": "Legal",
     "privacyPolicy": "Privacy Policy",
@@ -2682,7 +2653,18 @@
     "contact": "Contact",
     "kvk": "Chamber of Commerce",
     "vat": "VAT ID",
-    "copyright": "© {year} Cards Center. All rights reserved."
+    "copyright": "© {year} Cards Center",
+    "colShop": "Shop",
+    "colCommunity": "Community",
+    "colAccount": "Account",
+    "colAbout": "About",
+    "order": "Order food",
+    "sellToUs": "Sell to us",
+    "infoRules": "Info and house rules",
+    "cardsDb": "Card database",
+    "tickets": "My tickets",
+    "myLeague": "My league",
+    "createAccount": "Create account"
   },
   "cart": {
     "title": "Shopping Cart",
