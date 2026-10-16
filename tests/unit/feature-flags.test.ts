@@ -49,9 +49,10 @@ describe("isFeatureEnabled", () => {
 });
 
 describe("isFeatureVisibleFor", () => {
-  it("admin ziet alles, ook bij flag uit", () => {
-    expect(isFeatureVisibleFor("FEATURE_AUCTIONS", "ADMIN", {})).toBe(true);
-    expect(isFeatureVisibleFor("FEATURE_WALLET", "ADMIN", {})).toBe(true);
+  it("flag uit = ook voor admins uit (besluit 2026-10-16)", () => {
+    expect(isFeatureVisibleFor("FEATURE_AUCTIONS", "ADMIN", {})).toBe(false);
+    expect(isFeatureVisibleFor("FEATURE_WALLET", "ADMIN", {})).toBe(false);
+    expect(isFeatureVisibleFor("FEATURE_WALLET", "ADMIN", { FEATURE_WALLET: "true" })).toBe(true);
   });
 
   it("een flag zonder admin-bypass blijft ook voor admins uit", () => {
@@ -81,10 +82,10 @@ describe("snapshots", () => {
     expect(snap.FEATURE_AUCTIONS).toBe(false);
   });
 
-  it("admin-snapshot is overal true, behalve flags zonder admin-bypass", () => {
+  it("admin-snapshot volgt de flags, alleen expliciete admin-bypass wijkt af", () => {
     const snap = getFeatureSnapshot("ADMIN", {});
     for (const flag of FEATURE_FLAG_KEYS) {
-      expect(snap[flag]).toBe(FEATURE_FLAGS[flag].adminBypass !== false);
+      expect(snap[flag]).toBe(FEATURE_FLAGS[flag].adminBypass === true);
     }
     expect(snap.FEATURE_XP).toBe(false);
   });
@@ -95,7 +96,7 @@ describe("snapshots", () => {
 
   it("anyTradeFeatureVisible", () => {
     expect(anyTradeFeatureVisible("FREE", {})).toBe(false);
-    expect(anyTradeFeatureVisible("ADMIN", {})).toBe(true);
+    expect(anyTradeFeatureVisible("ADMIN", {})).toBe(false);
     expect(
       anyTradeFeatureVisible("FREE", { FEATURE_WALLET: "true", FEATURE_MARKETPLACE: "true" }),
     ).toBe(true);

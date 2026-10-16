@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
 import { BETA_COOKIE, betaToken } from "./lib/beta-gate";
 import { getToken } from "next-auth/jwt";
-import { isFeatureEnabled } from "./lib/feature-flags";
+import { isFeatureEnabled, isFeatureVisibleFor } from "./lib/feature-flags";
 import { featureForPath } from "./lib/feature-routes";
 
 const intlMiddleware = createMiddleware(routing);
@@ -102,7 +102,7 @@ export default async function middleware(request: NextRequest) {
     const flag = featureForPath(request.nextUrl.pathname);
     if (flag && !isFeatureEnabled(flag)) {
       const accountType = await accountTypeFromJwt(request);
-      if (accountType !== "ADMIN") {
+      if (!isFeatureVisibleFor(flag, accountType)) {
         const localeMatch = request.nextUrl.pathname.match(/^\/(nl|en)(?:\/|$)/);
         const url = request.nextUrl.clone();
         url.pathname = `/${localeMatch ? localeMatch[1] : routing.defaultLocale}`;

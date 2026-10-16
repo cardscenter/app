@@ -9,8 +9,9 @@
  * - `requireFeaturePage`    → page/layout, redirect naar de homepage.
  * - `assertFeatureForRoute` → route handlers, 404 (bestaan niet adverteren).
  *
- * Admins (`accountType === "ADMIN"`) komen overal door, zodat de verborgen
- * functies getest kunnen worden zonder de flag voor iedereen om te zetten.
+ * Flag uit = uit voor iedereen, ook admins (besluit 2026-10-16); een flag
+ * met `adminBypass: true` laat admins wel door. Alles loopt via
+ * `isFeatureVisibleFor` zodat de regel op één plek staat.
  */
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
@@ -36,7 +37,7 @@ export async function requireFeature(
 ): Promise<{ ok: true } | { error: string }> {
   if (isFeatureEnabled(flag)) return { ok: true };
   const type = await resolveAccountType(accountType);
-  if (type === "ADMIN") return { ok: true };
+  if (isFeatureVisibleFor(flag, type)) return { ok: true };
   return { error: FEATURE_DISABLED_ERROR };
 }
 
@@ -57,7 +58,7 @@ export async function assertFeatureForRoute(
 ): Promise<NextResponse | null> {
   if (isFeatureEnabled(flag)) return null;
   const type = await resolveAccountType(accountType);
-  if (type === "ADMIN") return null;
+  if (isFeatureVisibleFor(flag, type)) return null;
   return NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 

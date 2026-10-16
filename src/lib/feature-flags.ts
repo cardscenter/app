@@ -34,8 +34,9 @@ export interface FeatureFlagMeta {
   /** Flags die óók aan moeten staan voordat deze flag effectief aan is. */
   requires?: readonly FeatureFlag[];
   /**
-   * Zien admins de functie ook als de flag uit staat? Default true (testen
-   * zonder de flag om te zetten). `false` = voor iedereen verborgen.
+   * Zien admins de functie ook als de flag uit staat? Default **false**
+   * (besluit Youri 2026-10-16: uit = voor iedereen uit, ook admins; pas aan
+   * zodra de handel echt terugkomt). `true` = admins mogen alvast testen.
    */
   adminBypass?: boolean;
 }
@@ -69,8 +70,7 @@ export const FEATURE_FLAGS: Record<FeatureFlag, FeatureFlagMeta> = {
   FEATURE_XP: {
     label: "Rang en XP",
     description:
-      "Levels, XP-voortgang, prestaties en level-badges (/dashboard/level, voortgangsbalk in de zijbalk, badge op het spelersprofiel). Geparkeerd tot de league in Fase 5; ook voor admins verborgen.",
-    adminBypass: false,
+      "Levels, XP-voortgang, prestaties en level-badges (/dashboard/level, voortgangsbalk in de zijbalk, badge op het spelersprofiel). Geparkeerd tot de league in Fase 5.",
   },
 };
 
@@ -100,7 +100,8 @@ export function isFeatureEnabled(flag: FeatureFlag, env: FlagEnv = process.env):
 
 /**
  * Mag deze bezoeker de functie zien/gebruiken? Aan voor iedereen zodra de
- * flag aan staat; anders alleen voor admins (testen zonder de flag om te zetten).
+ * flag aan staat; anders uit, ook voor admins, tenzij de flag expliciet
+ * `adminBypass: true` heeft (geen enkele flag op dit moment).
  */
 export function isFeatureVisibleFor(
   flag: FeatureFlag,
@@ -108,7 +109,7 @@ export function isFeatureVisibleFor(
   env: FlagEnv = process.env,
 ): boolean {
   if (isFeatureEnabled(flag, env)) return true;
-  if (FEATURE_FLAGS[flag].adminBypass === false) return false;
+  if (FEATURE_FLAGS[flag].adminBypass !== true) return false;
   return accountType === "ADMIN";
 }
 

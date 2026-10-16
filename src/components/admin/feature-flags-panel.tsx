@@ -23,7 +23,7 @@ export function FeatureFlagsPanel() {
   return (
     <DashboardSection
       title="Feature-flags"
-      description="Omgevingsvariabelen van de service (niet hier te wijzigen). Uit = verborgen voor gebruikers; admins zien de functies altijd. Wijzigen: Railway-service Variables (of lokaal .env) en herstarten."
+      description="Omgevingsvariabelen van de service (niet hier te wijzigen). Uit = verborgen voor iedereen, ook voor admins. Wijzigen: Railway-service Variables (of lokaal .env) en herstarten."
       icon={<Flag className="size-4" />}
     >
       <div className="overflow-x-auto">
