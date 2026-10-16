@@ -162,7 +162,7 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
     <div className={`cc-landing ${landingDisplay.variable} ${landingBody.variable} overflow-clip`} style={{ colorScheme: "light" }}>
       {/* De site-header en -footer horen niet bij dit ontwerp: pil-nav en eigen footer. */}
       {/* html relative: framer-motion meet scroll-offsets t.o.v. de container. */}
-      <style>{`body > header, body > footer { display: none !important; } html, body { background: #f4f4f4 !important; } html { position: relative; }`}</style>
+      <style>{`body > header, body > footer, main + div { display: none !important; } html, body { background: #f4f4f4 !important; } html { position: relative; }`}</style>
       <LandingNav viewer={viewer ? { name: viewer.name, image: viewer.image } : null} />
       <LandingHero
         eyebrow={t("heroEyebrow", { address })}
@@ -184,7 +184,9 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
       <StatsPanel titleLine1={t("statsTitle1")} titleLine2={t("statsTitle2")} description={t("statsDesc")} cards={statCards} color="pink" balloon="red" />
       <ActivityPanel titleTop={t("activityTop")} titleBottom={t("activityBottom")} items={feed} />
       <EventsPanel
-        titleParts={[t("eventsTitle1"), t("eventsTitle2"), t("eventsTitle3")]}
+        titleParts={[t("eventsTitle1"), `${t("eventsTitle2")} ${t("eventsTitle3")}`]}
+        highlightWord={PLATFORM.shop.city}
+        illustration={{ src: "/images/sections/basiliek.webp" }}
         description={t("eventsDesc")}
         events={eventCards}
         cardCta={t("eventsCardCta")}
