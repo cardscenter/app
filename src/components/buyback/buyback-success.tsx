@@ -13,15 +13,15 @@ export function BuybackSuccess({ requestId }: BuybackSuccessProps) {
   const t = useTranslations("buyback");
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-10">
       {/* Success header */}
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 text-center dark:border-emerald-800/50 dark:bg-emerald-950/20">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
-          <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+      <div className="flex flex-col items-center gap-3 rounded-[16px] bg-[var(--pastel-green)] p-8 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--foreground)]">
+          <CheckCircle2 className="h-8 w-8 text-[var(--pastel-green)]" />
         </div>
-        <h2 className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{t("successTitle")}</h2>
-        <p className="max-w-xl text-sm text-emerald-900/80 dark:text-emerald-100/80">{t("successDesc")}</p>
-        <p className="mt-2 text-xs text-emerald-800/70 dark:text-emerald-200/70">
+        <h2 className="cc-display text-4xl text-[var(--foreground)]">{t("successTitle")}</h2>
+        <p className="cc-prose max-w-xl text-base">{t("successDesc")}</p>
+        <p className="mt-2 text-xs text-[var(--foreground)]/60">
           {t("referenceLabel")}: <span className="font-mono font-semibold">{requestId}</span>
         </p>
       </div>
@@ -33,13 +33,13 @@ export function BuybackSuccess({ requestId }: BuybackSuccessProps) {
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
           href={`/dashboard/inkoop/${requestId}`}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+          className="flex flex-1 items-center justify-center gap-2 cc-pill bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
         >
           {t("viewMyRequest")} <ArrowRight className="h-4 w-4" />
         </Link>
         <Link
           href="/verkopen"
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-input px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/50"
+          className="flex flex-1 items-center justify-center gap-2 cc-pill border border-[var(--border)] bg-white px-6 py-4 text-sm font-semibold leading-none text-[var(--foreground)] transition-colors hover:bg-[var(--background)]"
         >
           {t("createNew")}
         </Link>

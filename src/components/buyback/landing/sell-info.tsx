@@ -1,23 +1,20 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
-import {
-  ArrowRight,
-  Banknote,
-  CheckCircle2,
-  FileText,
-  Layers,
-  Mail,
-  MapPin,
-  Package,
-  Truck,
-  Wallet,
-} from "lucide-react";
+import { MapPin } from "lucide-react";
 import { RETURN_FEE_EUR } from "@/lib/buyback-status";
 import { formatCurrency } from "@/lib/format";
 import { PLATFORM } from "@/lib/platform-config";
+import { FeatureRows } from "@/components/ploy/feature-rows";
+import { Panel } from "@/components/ploy/panel";
+import { Pill } from "@/components/ploy/pill";
+import { PunchCard } from "@/components/ploy/punch-card";
+import { DisplayHeading } from "@/components/ploy/display-heading";
+import { CtaButton } from "@/components/ploy/cta-button";
+import { TileQuad } from "@/components/ploy/tile-quad";
+import { ClosingCta } from "@/components/ploy/closing-cta";
 import { currencyLocale } from "./sell-hero";
 
-// Voorwaarden-checklist, verzenden & verpakken, uitbetaling en afsluitende CTA.
+// Voorwaarden als genummerde rijen, verzenden & verpakken als groen paneel,
+// uitbetaling als tegels en het slotpaneel.
 
 export async function SellConditions() {
   const t = await getTranslations("buyback");
@@ -34,74 +31,53 @@ export async function SellConditions() {
     t("conditionPayout"),
   ];
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8">
-      <h2 className="text-2xl font-bold text-foreground">{t("conditions")}</h2>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("landing.conditionsSubtitle")}</p>
-      <ul className="mt-6 grid gap-2.5 md:grid-cols-2">
-        {conditions.map((c) => (
-          <li key={c} className="flex items-start gap-2 text-sm text-foreground">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-            <span>{c}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Link
-          href="/verkopen/voorwaarden-losse-kaarten"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          <FileText className="size-4" />
-          {t("landing.termsSinglesLink")}
-        </Link>
-        <Link
-          href="/verkopen/voorwaarden-bulk"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          <FileText className="size-4" />
-          {t("landing.termsBulkLink")}
-        </Link>
-      </div>
-    </section>
+    <>
+      <FeatureRows id="voorwaarden" title={t("conditions")} intro={t("landing.conditionsSubtitle")} rows={conditions.map((c, i) => ({ number: String(i + 1).padStart(2, "0"), text: c }))} className="pb-6 lg:pb-8" />
+      <section className="flex justify-center px-4 pb-12 sm:px-5 lg:px-6 lg:pb-16">
+        <div className="flex w-full max-w-6xl flex-wrap gap-3">
+          <CtaButton href="/verkopen/voorwaarden-losse-kaarten" variant="light">
+            {t("landing.termsSinglesLink")}
+          </CtaButton>
+          <CtaButton href="/verkopen/voorwaarden-bulk" variant="light">
+            {t("landing.termsBulkLink")}
+          </CtaButton>
+        </div>
+      </section>
+    </>
   );
 }
 
 export async function SellShipping() {
   const t = await getTranslations("buyback");
-  const bullets = [
-    t("landing.shippingBullet1"),
-    t("landing.shippingBullet2"),
-    t("landing.shippingBullet3"),
-    t("landing.shippingBullet4"),
-    t("landing.shippingBullet5"),
-  ];
+  const bullets = [t("landing.shippingBullet1"), t("landing.shippingBullet2"), t("landing.shippingBullet3"), t("landing.shippingBullet4"), t("landing.shippingBullet5")];
   const a = PLATFORM.address;
   return (
-    <section>
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
-          <Truck className="size-5" />
-        </span>
-        <h2 className="text-2xl font-bold text-foreground">{t("landing.shippingTitle")}</h2>
-      </div>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("landing.shippingIntro")}</p>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-5">
-        <ol className="space-y-3 lg:col-span-3">
-          {bullets.map((b, i) => (
-            <li key={b} className="flex items-start gap-3 text-sm text-foreground">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground">
-                {i + 1}
-              </span>
-              <span className="pt-0.5">{b}</span>
-            </li>
-          ))}
-        </ol>
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-card lg:col-span-2">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <Panel color="green" id="verzenden">
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+        <div>
+          <Pill color="green">{t("landing.shippingTitle")}</Pill>
+          <DisplayHeading tag="h2" size={3} text={t("landing.shippingHeading")} className="mt-5 max-w-[26rem]" />
+          <p className="cc-prose mt-5 max-w-[30rem] text-base">{t("landing.shippingIntro")}</p>
+          <ol className="mt-6 space-y-3">
+            {bullets.map((b, i) => (
+              <li key={b} className="flex items-start gap-3 text-base text-[var(--foreground)]">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--foreground)] text-xs font-bold text-white">{i + 1}</span>
+                <span className="pt-0.5">{b}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-7">
+            <CtaButton href="/verkopen/verpakken" variant="dark">
+              {t("landing.shippingFullGuide")}
+            </CtaButton>
+          </div>
+        </div>
+        <PunchCard className="self-start bg-white p-6 sm:p-8" dot="var(--border)">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--foreground)]/50">
             <MapPin className="size-3.5" />
             {t("landing.shippingAddressLabel")}
           </div>
-          <address className="mt-2 not-italic text-sm leading-relaxed text-foreground">
+          <address className="mt-4 not-italic text-lg leading-snug text-[var(--foreground)]">
             <p className="font-semibold">{PLATFORM.legalName}</p>
             <p>
               {a.street} {a.houseNumber}
@@ -111,17 +87,10 @@ export async function SellShipping() {
             </p>
             <p>{a.country}</p>
           </address>
-          <p className="mt-3 text-xs text-muted-foreground">{t("landing.shippingCostNote")}</p>
-          <Link
-            href="/verkopen/verpakken"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-          >
-            {t("landing.shippingFullGuide")}
-            <ArrowRight className="size-4" />
-          </Link>
-        </div>
+          <p className="cc-prose mt-5 text-sm">{t("landing.shippingCostNote")}</p>
+        </PunchCard>
       </div>
-    </section>
+    </Panel>
   );
 }
 
@@ -129,71 +98,38 @@ export async function SellPayout() {
   const t = await getTranslations("buyback");
   const locale = await getLocale();
   const fmt = (n: number) => formatCurrency(n, currencyLocale(locale));
-
   return (
-    <section>
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-          <Wallet className="size-5" />
-        </span>
-        <h2 className="text-2xl font-bold text-foreground">{t("landing.payoutTitle")}</h2>
-      </div>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("landing.payoutIntro")}</p>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <div className="flex items-center gap-2">
-            <Banknote className="size-5 text-foreground" />
-            <h3 className="text-base font-semibold text-foreground">{t("landing.payoutBankTitle")}</h3>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">{t("landing.payoutBankDesc")}</p>
+    <>
+      <section className="flex justify-center px-4 pb-6 pt-12 sm:px-5 lg:px-6 lg:pt-16" id="uitbetaling">
+        <div className="w-full max-w-6xl">
+          <DisplayHeading tag="h2" size={3} text={t("landing.payoutTitle")} className="max-w-[30rem]" />
+          <p className="cc-prose mt-4 max-w-[36rem] text-base">{t("landing.payoutIntro")}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <div className="flex items-center gap-2">
-            <Wallet className="size-5 text-foreground" />
-            <h3 className="text-base font-semibold text-foreground">{t("landing.payoutReturnTitle")}</h3>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">{t("landing.payoutReturnDesc", { fee: fmt(RETURN_FEE_EUR) })}</p>
-        </div>
-      </div>
-      <p className="mt-4 text-xs text-muted-foreground">{t("landing.payoutTiming")}</p>
-    </section>
+      </section>
+      <TileQuad
+        items={[
+          { title: t("landing.payoutBankTitle"), text: t("landing.payoutBankDesc"), color: "green", animation: "waves" },
+          { title: t("landing.payoutReturnTitle"), text: t("landing.payoutReturnDesc", { fee: fmt(RETURN_FEE_EUR) }), color: "ink", animation: "pulse" },
+        ]}
+        className="pb-4"
+      />
+      <section className="flex justify-center px-4 pb-12 sm:px-5 lg:px-6 lg:pb-16">
+        <p className="cc-prose w-full max-w-6xl text-sm">{t("landing.payoutTiming")}</p>
+      </section>
+    </>
   );
 }
 
 export async function SellCtaBand() {
   const t = await getTranslations("buyback");
   return (
-    <section className="rounded-3xl bg-slate-950 px-6 py-10 text-center text-white shadow-card sm:px-10">
-      <h2 className="text-2xl font-bold sm:text-3xl">{t("landing.ctaBandTitle")}</h2>
-      <p className="mx-auto mt-2 max-w-xl text-sm text-slate-300">{t("landing.ctaBandDesc")}</p>
-      <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Link
-          href="/verkopen/losse-kaarten"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-slate-100 sm:w-auto"
-        >
-          <Layers className="size-4" />
-          {t("landing.ctaSingles")}
-        </Link>
-        <Link
-          href="/verkopen/bulk"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-amber-400 sm:w-auto"
-        >
-          <Package className="size-4" />
-          {t("landing.ctaBulk")}
-        </Link>
-      </div>
-      <p className="mt-6 inline-flex items-center gap-1.5 text-xs text-slate-400">
-        <Mail className="size-3.5" />
-        {t.rich("landing.questions", {
-          email: PLATFORM.supportEmail,
-          link: (chunks) => (
-            <a href={`mailto:${PLATFORM.supportEmail}`} className="font-medium text-slate-200 hover:underline">
-              {chunks}
-            </a>
-          ),
-        })}
-      </p>
-    </section>
+    <ClosingCta color="yellow" title={t("landing.ctaBandTitle")} text={t("landing.ctaBandDesc")}>
+      <CtaButton href="/verkopen/losse-kaarten" variant="red">
+        {t("landing.ctaSingles")}
+      </CtaButton>
+      <CtaButton href="/verkopen/bulk" variant="dark">
+        {t("landing.ctaBulk")}
+      </CtaButton>
+    </ClosingCta>
   );
 }

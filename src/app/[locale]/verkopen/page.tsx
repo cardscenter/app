@@ -1,21 +1,13 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { PageContainer } from "@/components/layout/page-container";
-import { SellHero, RATE_LABEL, BONUS_LABEL } from "@/components/buyback/landing/sell-hero";
-import {
-  SellHowItWorks,
-  SellSinglesPricing,
-  SellBulkPricing,
-} from "@/components/buyback/landing/sell-pricing";
-import {
-  SellConditions,
-  SellShipping,
-  SellPayout,
-  SellCtaBand,
-} from "@/components/buyback/landing/sell-info";
-import { BuybackFaq } from "@/components/buyback/buyback-faq";
+import { SellHero, SellPaths, RATE_LABEL, BONUS_LABEL } from "@/components/buyback/landing/sell-hero";
+import { SellHowItWorks, SellPricingCards } from "@/components/buyback/landing/sell-pricing";
+import { SellConditions, SellShipping, SellPayout, SellCtaBand } from "@/components/buyback/landing/sell-info";
+import { FaqSection } from "@/components/ploy/faq-section";
+import { BannerPromo } from "@/components/ploy/banner-promo";
 import { BULK_FAQ_ITEMS } from "@/components/buyback/bulk-faq";
 import { COLLECTION_FAQ_ITEMS } from "@/components/buyback/collection-faq-items";
+import { PLATFORM } from "@/lib/platform-config";
 
 // Publieke landingspagina van de inkoopservice: verkopen AAN Cards Center
 // (losse kaarten via de collectie-calculator, bulk via vaste tarieven).
@@ -23,6 +15,9 @@ import { COLLECTION_FAQ_ITEMS } from "@/components/buyback/collection-faq-items"
 // De calculators zelf (/verkopen/losse-kaarten, /verkopen/bulk) zijn
 // login-gated; deze pagina is bewust volledig openbaar zodat bezoekers de
 // tarieven en spelregels kennen vóór ze een account aanmaken.
+// Design-pass Fase D: hero met veegstreep, keuzetegels, stappenladder,
+// datakaarten met tarieven, genummerde voorwaarden, groen verzendpaneel,
+// uitbetaal-tegels, twee vragenlijsten en een geel slotpaneel.
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -39,27 +34,32 @@ export default async function VerkopenPage() {
   const t = await getTranslations("buyback");
 
   return (
-    <PageContainer width="default" className="py-10 lg:py-14">
-      <div className="space-y-16 lg:space-y-20">
-        <SellHero />
-        <SellHowItWorks />
-        <SellSinglesPricing />
-        <SellBulkPricing />
-        <SellConditions />
-        <SellShipping />
-        <SellPayout />
+    <div className="cc-landing overflow-clip">
+      <SellHero />
+      <SellPaths />
+      <SellHowItWorks />
+      <SellPricingCards />
+      <SellConditions />
+      <SellShipping />
+      <SellPayout />
 
-        {/* FAQ — bewust hardcoded NL (support-copy), ook op /en. */}
-        <section>
-          <h2 className="text-2xl font-bold text-foreground">{t("landing.faqTitle")}</h2>
-          <div className="mt-6 grid gap-8 lg:grid-cols-2">
-            <BuybackFaq title={t("landing.faqSingles")} items={COLLECTION_FAQ_ITEMS} headingLevel="h3" />
-            <BuybackFaq title={t("landing.faqBulk")} items={BULK_FAQ_ITEMS} headingLevel="h3" />
-          </div>
-        </section>
+      {/* FAQ — bewust hardcoded NL (support-copy), ook op /en. */}
+      <FaqSection eyebrow={t("landing.faqSingles")} eyebrowColor="pink" title={t("landing.faqTitleSingles")} items={COLLECTION_FAQ_ITEMS} />
+      <FaqSection eyebrow={t("landing.faqBulk")} eyebrowColor="yellow" title={t("landing.faqTitleBulk")} items={BULK_FAQ_ITEMS} defaultOpen={null} />
 
-        <SellCtaBand />
-      </div>
-    </PageContainer>
+      <BannerPromo
+        eyebrow={t("landing.questionsEyebrow")}
+        title={t("landing.questionsTitle")}
+        text={t("landing.questionsText")}
+        note={PLATFORM.supportEmail}
+        action={
+          <a href={`mailto:${PLATFORM.supportEmail}`} className="cc-pill inline-flex items-center justify-center bg-white px-6 py-4 text-sm font-semibold leading-none text-[var(--foreground)] no-underline transition-colors hover:bg-[var(--background)]">
+            {t("landing.questionsCta")}
+          </a>
+        }
+      />
+
+      <SellCtaBand />
+    </div>
   );
 }

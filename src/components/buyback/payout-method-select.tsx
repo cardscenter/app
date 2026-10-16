@@ -23,7 +23,7 @@ export function PayoutMethodSelect({ iban, onIbanChange, accountHolder, onAccoun
   return (
     <div className="space-y-4">
       <h3 className="font-semibold">{t("payoutMethod")}</h3>
-      <div className="flex items-start gap-3 rounded-xl border-2 border-primary bg-primary/5 p-4">
+      <div className="flex items-start gap-3 rounded-[12px] bg-[var(--pastel-yellow)] p-4">
         <Banknote className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div>
           <p className="font-medium">{t("payoutBank")}</p>

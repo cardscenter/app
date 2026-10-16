@@ -4,15 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { decryptIban } from "@/lib/iban-crypto";
 import { formatIbanForDisplay } from "@/lib/validations/iban";
 import { redirect } from "next/navigation";
-import { CollectionCalculator } from "@/components/buyback/collection-calculator";
 import { AlertTriangle } from "lucide-react";
-import { PageContainer } from "@/components/layout/page-container";
+import { CollectionCalculator } from "@/components/buyback/collection-calculator";
+import { CenteredHero } from "@/components/ploy/centered-hero";
 
-export default async function CollectionCalculatorPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+/** Collectie-calculator (design-pass Fase D): compacte hero + gele disclaimer boven de stappen. */
+export default async function CollectionCalculatorPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const session = await auth();
 
@@ -25,23 +22,22 @@ export default async function CollectionCalculatorPage({
   const plainIban = decryptIban(user?.iban);
 
   return (
-    <PageContainer width="default" className="py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">{t("collectionTitle")}</h1>
-        <p className="text-sm text-muted-foreground">{t("collectionDesc")}</p>
-      </div>
-
-      {/* Pricing disclaimer — onze Marktprijs-berekening is geautomatiseerd
-          maar niet bindend; admins controleren prijzen na ontvangst. */}
-      <div className="mb-6 flex items-start gap-3 rounded-xl border-l-4 border-amber-400 bg-amber-50/70 p-4 text-sm dark:border-amber-500 dark:bg-amber-950/30">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
-        <div className="text-amber-900 dark:text-amber-100">
-          <p className="font-medium">{t("pricingDisclaimerTitle")}</p>
-          <p className="mt-1 text-amber-800/90 dark:text-amber-200/90">{t("pricingDisclaimerBody")}</p>
+    <div className="cc-landing overflow-clip">
+      <CenteredHero eyebrow={t("landing.singlesCardTitle")} eyebrowColor="pink" title={t("collectionTitle")} description={t("collectionDesc")} size={3} className="pb-8 lg:pb-10" />
+      <section className="flex justify-center px-4 pb-16 sm:px-5 lg:px-6 lg:pb-24">
+        <div className="w-full max-w-6xl">
+          {/* Pricing disclaimer — onze Marktprijs-berekening is geautomatiseerd
+              maar niet bindend; admins controleren prijzen na ontvangst. */}
+          <div className="mb-6 flex items-start gap-3 rounded-[12px] bg-[var(--pastel-yellow)] p-4 text-sm text-[var(--foreground)]">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+            <div>
+              <p className="font-semibold">{t("pricingDisclaimerTitle")}</p>
+              <p className="mt-1 text-[var(--foreground)]/75">{t("pricingDisclaimerBody")}</p>
+            </div>
+          </div>
+          <CollectionCalculator defaultIban={plainIban ? formatIbanForDisplay(plainIban) : ""} defaultAccountHolder={user?.accountHolderName ?? ""} />
         </div>
-      </div>
-
-      <CollectionCalculator defaultIban={plainIban ? formatIbanForDisplay(plainIban) : ""} defaultAccountHolder={user?.accountHolderName ?? ""} />
-    </PageContainer>
+      </section>
+    </div>
   );
 }

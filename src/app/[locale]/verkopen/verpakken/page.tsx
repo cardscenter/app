@@ -1,34 +1,35 @@
 import type { Metadata } from "next";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { PackingInstructions } from "@/components/buyback/packing-instructions";
-import { PageContainer } from "@/components/layout/page-container";
+import { CenteredHero } from "@/components/ploy/centered-hero";
+import { CtaButton } from "@/components/ploy/cta-button";
+import { ClosingCta } from "@/components/ploy/closing-cta";
 
 export const metadata: Metadata = {
   title: "Verpakkingsinstructies — Cards Center",
-  description:
-    "Stap-voor-stap uitleg over hoe je je bulk Pokémon-kaarten veilig verpakt en verzendt naar Cards Center, inclusief verzendadres en vervoerders-overzicht.",
+  description: "Stap-voor-stap uitleg over hoe je je bulk Pokémon-kaarten veilig verpakt en verzendt naar Cards Center, inclusief verzendadres en vervoerders-overzicht.",
 };
 
+/** Verpakinstructies (design-pass Fase D): hero, adreskaarten, verhaalrijen, tips, vervoerders, waarschuwingen, slot. Hardcoded NL. */
 export default function VerpakkenPage() {
   return (
-    <PageContainer width="narrow" className="py-8">
-      <Breadcrumbs
-        items={[
-          { label: "Verkopen", href: "/verkopen" },
-          { label: "Verpakkingsinstructies" },
-        ]}
-      />
-
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Zo verpak je je bulk
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Volg dit stappenplan om er zeker van te zijn dat je kaarten veilig en in goede staat bij ons aankomen. Bewaar deze pagina &mdash; je kunt hem altijd terugvinden via je dashboard.
-        </p>
-      </header>
-
+    <div className="cc-landing overflow-clip">
+      <CenteredHero eyebrow="Verkopen aan ons" eyebrowColor="yellow" title="Zo verpak je je bulk" highlightWord="bulk" highlightColor="yellow" description="Volg dit stappenplan en je kaarten komen veilig en in goede staat bij ons aan. Je vindt deze pagina altijd terug via je dashboard.">
+        <CtaButton href="/verkopen/bulk" variant="red">
+          Naar de bulk-calculator
+        </CtaButton>
+        <CtaButton href="/verkopen" variant="light">
+          Alles over verkopen
+        </CtaButton>
+      </CenteredHero>
       <PackingInstructions />
-    </PageContainer>
+      <ClosingCta color="blue" title="Doos dicht? Dan is het aan ons" text="Zodra je pakket binnen is, tellen we alles na en zie je de definitieve berekening in je dashboard.">
+        <CtaButton href="/dashboard/inkoop" variant="red">
+          Mijn inkoopaanvragen
+        </CtaButton>
+        <CtaButton href="/verkopen" variant="light">
+          Terug naar verkopen
+        </CtaButton>
+      </ClosingCta>
+    </div>
   );
 }

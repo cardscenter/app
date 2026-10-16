@@ -130,7 +130,7 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          className="w-full rounded-xl border border-input bg-background py-3 pl-10 pr-4 text-base sm:text-sm"
+          className="glass-input w-full rounded-full py-3 pl-10 pr-4 text-base sm:text-sm"
         />
         {loading && (
           <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -139,7 +139,7 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
 
       {/* Results */}
       {results.length > 0 && (
-        <div className="max-h-[500px] space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-input p-2">
+        <div className="max-h-[500px] space-y-1 overflow-x-hidden overflow-y-auto rounded-[12px] border border-[var(--border)] bg-white p-2">
           {results.map((card) => {
             const variants = getAvailableVariants(card);
             if (variants.length === 0) {

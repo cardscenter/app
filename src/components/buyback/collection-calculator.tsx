@@ -161,7 +161,7 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                  className="mt-4 flex w-full items-center justify-center gap-2 cc-pill bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
                 >
                   {t("nextStep")} <ArrowRight className="h-4 w-4" />
                 </button>
@@ -173,7 +173,7 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
               )}
               <Link
                 href="/verkopen/bulk"
-                className="mt-4 flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+                className="mt-4 flex items-center gap-3 rounded-[12px] bg-[var(--pastel-yellow)] p-4 transition-opacity hover:opacity-90"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200">
                   <Package className="h-5 w-5" />
@@ -204,7 +204,7 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
             <ArrowLeft className="h-4 w-4" /> {t("previousStep")}
           </button>
 
-          <h2 className="text-xl font-bold">{t("confirmation")}</h2>
+          <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{t("confirmation")}</h2>
 
           <BuybackCart
             items={items}
@@ -276,7 +276,7 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
               !iban ||
               !accountHolder
             }
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 cc-pill bg-[var(--foreground)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--foreground)]/85 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckSquare className="h-4 w-4" />
             {isPending ? t("submitting") : t("submitRequest")}

@@ -27,7 +27,7 @@ export function BuybackCart({ items, onUpdateQuantity, onUpdateCondition, onRemo
 
   if (items.length === 0) {
     return (
-      <div className="glass flex flex-col items-center gap-3 rounded-xl p-8 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-8 text-center">
         <ShoppingBag className="h-10 w-10 text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">{t("emptyCart")}</p>
       </div>
@@ -37,7 +37,7 @@ export function BuybackCart({ items, onUpdateQuantity, onUpdateCondition, onRemo
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="glass rounded-xl">
+    <div className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)]">
       <div className="border-b border-border/50 p-4">
         <h3 className="font-semibold">{t("yourSelection")}</h3>
         <p className="text-xs text-muted-foreground">
@@ -144,7 +144,7 @@ export function BuybackCart({ items, onUpdateQuantity, onUpdateCondition, onRemo
       <div className="border-t border-border/50 p-4">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">{t("estimatedPayout")}</span>
-          <span className="text-lg font-bold text-emerald-600">
+          <span className="cc-display text-2xl text-[var(--foreground)]">
             €{total.toFixed(2)}
           </span>
         </div>

@@ -216,14 +216,14 @@ export function BulkCalculator({ pricing, defaultIban = "", defaultAccountHolder
                   )}
                   <div>
                     <p className="text-muted-foreground">{t("estimatedPayout")}</p>
-                    <p className="text-xl font-bold tabular-nums text-emerald-600">€{total.toFixed(2)}</p>
+                    <p className="cc-display text-3xl tabular-nums text-[var(--foreground)]">€{total.toFixed(2)}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setStep(2)}
                   disabled={!hasAny || !minimumMet}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                  className="flex items-center gap-2 cc-pill bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:bg-[var(--muted)] disabled:text-[var(--foreground)]/45"
                 >
                   {t("nextStep")} <ArrowRight className="h-4 w-4" />
                 </button>
@@ -244,7 +244,7 @@ export function BulkCalculator({ pricing, defaultIban = "", defaultAccountHolder
             <ArrowLeft className="h-4 w-4" /> {t("previousStep")}
           </button>
 
-          <h2 className="text-xl font-bold">{t("confirmation")}</h2>
+          <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{t("confirmation")}</h2>
 
           {pokemonCategories.some((c) => c.quantity > 0) && (
             <SummaryTable
@@ -266,9 +266,9 @@ export function BulkCalculator({ pricing, defaultIban = "", defaultAccountHolder
             />
           )}
 
-          <div className="flex items-center justify-between rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 dark:border-emerald-700/50 dark:bg-emerald-900/20">
+          <div className="flex items-center justify-between rounded-[12px] bg-[var(--pastel-green)] px-5 py-4">
             <span className="text-sm font-semibold">{t("total")}</span>
-            <span className="text-xl font-bold tabular-nums text-emerald-600">€{total.toFixed(2)}</span>
+            <span className="cc-display text-3xl tabular-nums text-[var(--foreground)]">€{total.toFixed(2)}</span>
           </div>
 
           <PayoutMethodSelect
@@ -342,7 +342,7 @@ export function BulkCalculator({ pricing, defaultIban = "", defaultAccountHolder
               !iban ||
               !accountHolder
             }
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 cc-pill bg-[var(--foreground)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--foreground)]/85 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckSquare className="h-4 w-4" />
             {isPending ? t("submitting") : t("submitRequest")}
@@ -393,7 +393,7 @@ function UnifiedCategoryTable({ sections, onChange }: UnifiedCategoryTableProps)
 
   return (
     <section>
-      <div className="glass overflow-hidden rounded-xl">
+      <div className="overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)]">
         <table className="w-full table-fixed">
           {/* Vaste kolombreedtes zorgen dat Aantal en Subtotaal in elke
               groep op precies dezelfde positie staan. */}
@@ -531,14 +531,14 @@ function ShippingAdvice({ totalWeightKg, packagesNeeded, weightPerPackageKg, fil
   const extraTiles = Math.max(0, packagesNeeded - MAX_INLINE_TILES);
 
   return (
-    <section className="rounded-2xl border-2 border-dashed border-sky-300 bg-sky-50/70 p-5 dark:border-sky-700/60 dark:bg-sky-950/20">
+    <section className="rounded-[16px] bg-[var(--pastel-blue)] p-5 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-200 text-sky-800 dark:bg-sky-800 dark:text-sky-200">
               <Package2 className="h-4 w-4" />
             </div>
-            <h2 className="text-lg font-bold text-sky-900 dark:text-sky-100">{t("shippingAdviceTitle")}</h2>
+            <h2 className="text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">{t("shippingAdviceTitle")}</h2>
             <span className="rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-800 dark:bg-sky-800 dark:text-sky-200">
               {t("shippingAdviceBadge")}
             </span>
@@ -554,25 +554,25 @@ function ShippingAdvice({ totalWeightKg, packagesNeeded, weightPerPackageKg, fil
 
       {/* Summary numbers */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-white/60 p-3 dark:border-sky-800/50 dark:bg-sky-950/40">
+        <div className="flex items-center gap-3 rounded-[12px] bg-white/70 p-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300">
             <Weight className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <p className="text-xs text-sky-800/70 dark:text-sky-300/70">{t("shippingTotalWeight")}</p>
-            <p className="text-xl font-bold tabular-nums text-sky-900 dark:text-sky-100">
+            <p className="cc-display text-3xl tabular-nums text-[var(--foreground)]">
               {formatKg(totalWeightKg)} kg
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-white/60 p-3 dark:border-sky-800/50 dark:bg-sky-950/40">
+        <div className="flex items-center gap-3 rounded-[12px] bg-white/70 p-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300">
             <Package2 className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <p className="text-xs text-sky-800/70 dark:text-sky-300/70">{t("shippingPackages")}</p>
-            <p className="text-xl font-bold tabular-nums text-sky-900 dark:text-sky-100">
+            <p className="cc-display text-3xl tabular-nums text-[var(--foreground)]">
               {packagesNeeded.toLocaleString("nl-NL")}
             </p>
           </div>
@@ -599,7 +599,7 @@ function ShippingAdvice({ totalWeightKg, packagesNeeded, weightPerPackageKg, fil
               />
             ))}
             {extraTiles > 0 && (
-              <div className="flex min-h-[96px] min-w-[88px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-sky-300 bg-white/40 px-3 text-center text-xs font-semibold text-sky-700 dark:border-sky-700/60 dark:bg-sky-950/40 dark:text-sky-300">
+              <div className="flex min-h-[96px] min-w-[88px] flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-[var(--foreground)]/25 bg-white/40 px-3 text-center text-xs font-semibold text-[var(--foreground)]/70">
                 +{extraTiles} {t("shippingMorePackages")}
               </div>
             )}
@@ -620,7 +620,7 @@ interface PackageTileProps {
 function PackageTile({ index, weightKg, fillPct, weightLabel }: PackageTileProps) {
   const nearFull = fillPct > 95;
   return (
-    <div className="flex min-w-[88px] flex-col items-center gap-1.5 rounded-xl border border-sky-200 bg-white p-3 shadow-sm dark:border-sky-800/50 dark:bg-sky-950/50">
+    <div className="flex min-w-[88px] flex-col items-center gap-1.5 rounded-[12px] bg-white p-3">
       <div className="relative flex h-14 w-14 items-end justify-center overflow-hidden rounded-lg bg-sky-100 dark:bg-sky-900/60">
         {/* Fill level as a rising background */}
         <div
@@ -635,7 +635,7 @@ function PackageTile({ index, weightKg, fillPct, weightLabel }: PackageTileProps
       <p className="text-[10px] font-medium uppercase tracking-wider text-sky-700/70 dark:text-sky-300/70">
         Pakket {index}
       </p>
-      <p className="text-sm font-bold tabular-nums text-sky-900 dark:text-sky-100">
+      <p className="text-sm font-bold tabular-nums text-[var(--foreground)]">
         {weightLabel} kg
       </p>
       <p className="text-[10px] tabular-nums text-sky-700/70 dark:text-sky-300/70">
@@ -655,7 +655,7 @@ interface SummaryTableProps {
 
 function SummaryTable({ title, rows, totalLabel, totalQty, totalValue }: SummaryTableProps) {
   return (
-    <div className="glass overflow-hidden rounded-xl">
+    <div className="overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)]">
       <div className="border-b border-border/40 bg-muted/30 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {title}
       </div>
