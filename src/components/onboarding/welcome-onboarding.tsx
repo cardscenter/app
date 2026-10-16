@@ -76,7 +76,7 @@ export function WelcomeOnboarding({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
+    <div className="flex min-h-[calc(100vh-var(--site-nav-offset))] items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl space-y-8">
         {/* Header */}
         <div className="space-y-3 text-center">

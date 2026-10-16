@@ -65,17 +65,12 @@ export function DashboardShell({ nav, children }: Props) {
     // Buitenste wrapper: volle breedte met een navy vulling voor de linkerhelft,
     // zodat op ultrawide-schermen de sidebar binnen de 1880px-frame kan staan
     // maar de ruimte links ervan tóch in sidebar-kleur doorloopt.
-    // De strook onder de shell (top-full, 108px = mt-16 + ZDivider van de
-    // site-footer) loopt met negatieve z-index dóór tot achter de schuine
-    // footer-rand, precies ter breedte van viewport-rand → sidebar-rechterrand
-    // (frame-offset max(0, 50% − 940px) + 248px + gutter), zodat de navy kolom
-    // niet ophoudt boven de footer en de divider er gewoon overheen tekent.
+    // Sinds de design-pass (2026-10) zweeft de site-navigatie als pil boven
+    // de pagina (offset in --site-nav-offset, al als padding op <main>); de
+    // zijbalk plakt daar direct onder. Geen strook onder de shell meer: de
+    // nieuwe footer heeft geen ZDivider.
     <div className="relative w-full">
       <div aria-hidden className="absolute inset-y-0 left-0 hidden w-1/2 bg-sidebar md:block" />
-      <div
-        aria-hidden
-        className="absolute left-0 top-full -z-10 hidden h-[108px] w-[calc(max(0px,50%_-_940px)+248px+clamp(1rem,3vw,4rem))] bg-sidebar md:block"
-      />
       <div className="relative mx-auto flex w-full max-w-[1880px] md:flex-row">
       {/* Backdrop — alleen mobiel */}
       <button
@@ -97,7 +92,7 @@ export function DashboardShell({ nav, children }: Props) {
         aria-label={t("navLabel")}
         className={`dark fixed inset-y-0 left-0 z-[70] flex w-[272px] max-w-[85vw] flex-col overflow-y-auto overscroll-contain scrollbar-none bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out motion-reduce:transition-none ${
           open ? "translate-x-0" : "-translate-x-full"
-        } md:sticky md:top-16 md:bottom-auto md:left-auto md:z-auto md:h-[calc(100dvh-4rem)] md:w-full md:max-w-none md:translate-x-0 md:transition-none xl:top-[72px] xl:h-[calc(100dvh-72px)]`}
+        } md:sticky md:top-[var(--site-nav-offset)] md:bottom-auto md:left-auto md:z-auto md:h-[calc(100dvh-var(--site-nav-offset))] md:w-full md:max-w-none md:translate-x-0 md:transition-none`}
       >
         <div className="flex items-center justify-end px-3 pt-3 md:hidden">
           <button
@@ -116,7 +111,7 @@ export function DashboardShell({ nav, children }: Props) {
 
       <div className="min-w-0 flex-1 bg-background">
         {/* Hamburger-balk — sticky onder de site-header, alleen mobiel */}
-        <div className="sticky top-16 z-40 flex items-center gap-2 border-b border-border bg-background/95 px-4 py-2 backdrop-blur md:hidden">
+        <div className="sticky top-[var(--site-nav-offset)] z-30 flex items-center gap-2 border-b border-border bg-background/95 px-4 py-2 backdrop-blur md:hidden">
           <button
             ref={openButtonRef}
             type="button"
