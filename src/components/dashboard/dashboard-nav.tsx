@@ -10,7 +10,7 @@ import { useRealtime } from "@/components/providers/realtime-provider";
 import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
 import type { FeatureFlag } from "@/lib/feature-flags";
 import { NAV_ROW, NAV_ROW_ACTIVE, NAV_ROW_IDLE, NAV_ICON_IDLE, NAV_GROUP_LABEL } from "./nav-styles";
-import { Ticket, ScanLine, UtensilsCrossed, ChefHat } from "lucide-react";
+import { Ticket, ScanLine, UtensilsCrossed, ChefHat, Trophy, Stamp } from "lucide-react";
 import {
   LayoutDashboard,
   BarChart3,
@@ -196,6 +196,7 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
         items: [
           { href: "/dashboard", labelKey: "title", icon: LayoutDashboard },
           { href: "/dashboard/tickets", labelKey: "myTickets", icon: Ticket },
+          { href: "/dashboard/league", labelKey: "myLeague", icon: Trophy },
           { href: "/dashboard/bestellingen", labelKey: "myFoodOrders", icon: UtensilsCrossed },
           { href: "/dashboard/statistieken", labelKey: "myStatistics", icon: BarChart3, flag: "FEATURE_WALLET" },
           {
@@ -268,6 +269,8 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
               labelKey: "sectionStaff",
               items: [
                 { href: "/dashboard/staff/check-in", labelKey: "staffCheckIn", icon: ScanLine },
+                { href: "/dashboard/staff/league", labelKey: "staffLeague", icon: Trophy },
+                { href: "/dashboard/staff/spaarkaart", labelKey: "staffLoyalty", icon: Stamp },
                 { href: "/keuken", labelKey: "staffKitchen", icon: ChefHat },
               ],
             } as NavGroup,

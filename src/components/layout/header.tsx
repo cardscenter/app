@@ -146,8 +146,11 @@ function HeaderContent() {
     { href: "/claimsales" as const, label: t("claimsales"), accent: "amber" as const, group: "left" as const, show: features.FEATURE_CLAIMSALES },
     { href: "/marktplaats" as const, label: t("marketplace"), accent: "emerald" as const, group: "left" as const, show: features.FEATURE_MARKETPLACE },
     { href: "/evenementen" as const, label: t("events"), accent: null, group: "right" as const, show: true },
+    { href: "/league" as const, label: t("league"), accent: null, group: "right" as const, show: true },
+    { href: "/nieuws" as const, label: t("news"), accent: null, group: "right" as const, show: true },
     { href: "/kaarten" as const, label: t("cards"), accent: null, group: "right" as const, show: true },
     { href: "/verkopen" as const, label: t("sell"), accent: null, group: "right" as const, show: true },
+    { href: "/info" as const, label: t("info"), accent: null, group: "right" as const, show: true },
   ].filter((l) => l.show);
   // Zonder handelslinks (Community Hub) staan alle links links tegen het logo
   // en schuiven de acties met ml-auto naar rechts; mét handelslinks splitst de

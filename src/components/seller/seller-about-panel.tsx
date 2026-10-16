@@ -10,6 +10,8 @@ import { TrustBadges } from "@/components/ui/trust-badges";
 import { TierPill } from "@/components/ui/tier-pill";
 import type { SellerProfileData } from "@/lib/seller-profile-data";
 import type { FeatureSnapshot } from "@/lib/feature-flags";
+import { getPublicBadges } from "@/lib/community/league";
+import { LeagueBadgePill } from "@/components/community/league-badge-pill";
 
 /**
  * "Over"-tab van het verkopersprofiel (redesign sept 2026): bio, feiten
@@ -28,7 +30,10 @@ export async function SellerAboutPanel({
   features: FeatureSnapshot;
 }) {
   const t = await getTranslations("sellerProfile");
+  const tc = await getTranslations("community");
   const { user, stats } = profile;
+  // Fase 5: league-badges (poorten van Hulst) op het publieke profiel.
+  const badges = await getPublicBadges(user.id);
   const isBusiness = user.accountKind === "BUSINESS";
   const level = getLevel(stats.xp);
   const next = getNextLevel(stats.xp);
@@ -128,6 +133,17 @@ export async function SellerAboutPanel({
             <p className="mt-3 text-sm text-muted-foreground">{t("noBio")}</p>
           )}
         </section>
+
+        {badges.length > 0 && (
+          <section className="dash-card p-5 sm:p-6">
+            <h3 className="text-[15px] font-semibold text-foreground">{tc("profileBadges")}</h3>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {badges.map((b) => (
+                <LeagueBadgePill key={b.key} name={b.name} color={b.color} description={b.description} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {(websiteHost || socialLinks.length > 0) && (
           <section className="dash-card p-5 sm:p-6">

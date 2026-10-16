@@ -63,8 +63,11 @@ export function Footer() {
               {features.FEATURE_CLAIMSALES && <Link href="/claimsales" className={FOOTER_LINK_CLASS}>{tc("claimsales")}</Link>}
               {features.FEATURE_MARKETPLACE && <Link href="/marktplaats" className={FOOTER_LINK_CLASS}>{tc("marketplace")}</Link>}
               <Link href="/evenementen" className={FOOTER_LINK_CLASS}>{tc("events")}</Link>
+              <Link href="/league" className={FOOTER_LINK_CLASS}>{tc("league")}</Link>
+              <Link href="/nieuws" className={FOOTER_LINK_CLASS}>{tc("news")}</Link>
               <Link href="/kaarten" className={FOOTER_LINK_CLASS}>{tc("cards")}</Link>
               <Link href="/verkopen" className={FOOTER_LINK_CLASS}>{tc("sell")}</Link>
+              <Link href="/info" className={FOOTER_LINK_CLASS}>{tc("info")}</Link>
             </div>
           </div>
 

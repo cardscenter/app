@@ -189,24 +189,26 @@ export async function getPublicBadges(userId: string) {
 }
 
 /** Deelnemers van een event met hun bestaande uitslag (voor het staff-scherm). */
-export async function getEventResultSheet(eventId: string, seasonId: string) {
+export async function getEventResultSheet(eventId: string | null, seasonId: string) {
   const [regs, results] = await Promise.all([
-    prisma.eventRegistration.findMany({
-      where: { eventId, status: { in: ["CONFIRMED", "CHECKED_IN"] } },
-      include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
-      orderBy: { user: { displayName: "asc" } },
-    }),
-    prisma.leagueResult.findMany({ where: { eventId, seasonId } }),
+    eventId
+      ? prisma.eventRegistration.findMany({
+          where: { eventId, status: { in: ["CONFIRMED", "CHECKED_IN"] } },
+          include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
+          orderBy: { user: { displayName: "asc" } },
+        })
+      : Promise.resolve([]),
+    prisma.leagueResult.findMany({ where: { eventId, seasonId }, include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } }),
   ]);
   const byUser = new Map(results.map((r) => [r.userId, r]));
-  return regs.map((r) => {
+  const toResult = (res: (typeof results)[number]) => ({ id: res.id, wins: res.wins, losses: res.losses, draws: res.draws, bonusPoints: res.bonusPoints, points: res.points, note: res.note });
+  const rows = regs.map((r) => {
     const res = byUser.get(r.userId);
-    return {
-      userId: r.userId,
-      displayName: r.user.displayName,
-      avatarUrl: r.user.avatarUrl,
-      checkedIn: r.status === "CHECKED_IN",
-      result: res ? { id: res.id, wins: res.wins, losses: res.losses, draws: res.draws, bonusPoints: res.bonusPoints, points: res.points, note: res.note } : null,
-    };
+    return { userId: r.userId, displayName: r.user.displayName, avatarUrl: r.user.avatarUrl, checkedIn: r.status === "CHECKED_IN", result: res ? toResult(res) : null };
   });
+  // Uitslagen van spelers zonder inschrijving (toegevoegd door staff) ook tonen.
+  for (const res of results) {
+    if (!rows.some((r) => r.userId === res.userId)) rows.push({ userId: res.userId, displayName: res.user.displayName, avatarUrl: res.user.avatarUrl, checkedIn: false, result: toResult(res) });
+  }
+  return rows;
 }

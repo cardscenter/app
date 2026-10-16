@@ -6,6 +6,7 @@ import { ShieldCheck, Ban, AlertCircle, Inbox } from "lucide-react";
 import { isUserSuspended } from "@/lib/suspension";
 import { maskIban, formatIbanForDisplay } from "@/lib/validations/iban";
 import { UserActionBar } from "@/components/admin/user-action-bar";
+import { InternalNoteForm } from "@/components/admin/internal-note-form";
 import { BidDepositExemptionToggle } from "@/components/admin/bid-deposit-exemption-toggle";
 import { ReserveBreakdownCard } from "@/components/admin/reserve-breakdown-card";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
@@ -28,7 +29,7 @@ const USER_DETAIL_SELECT = {
   balance: true, heldBalance: true, reservedBalance: true,
   emberBalance: true, bonusXP: true, loginStreak: true,
   bankTransferReference: true, iban: true, accountHolderName: true,
-  lastIbanChange: true, lastUsernameChange: true, fullNameLockedAt: true,
+  lastIbanChange: true, lastUsernameChange: true, fullNameLockedAt: true, internalNote: true,
   suspendedUntil: true, suspensionType: true, suspensionReason: true, suspensionAdminId: true,
   street: true, houseNumber: true, postalCode: true, city: true, country: true,
   sellingCountries: true, maxRunnerUpAttempts: true,
@@ -130,6 +131,9 @@ export default async function AdminUserDetailPage({
           )}
         </div>
       </div>
+
+      {/* Fase 5: interne notitie (moderatie) */}
+      <InternalNoteForm userId={user.id} initial={user.internalNote} />
 
       {/* Tab nav */}
       <nav className="inline-flex flex-wrap gap-1 dash-card p-1">
