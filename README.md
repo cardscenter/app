@@ -28,6 +28,7 @@ Schema wijzigen: pas `prisma/schema.prisma` aan, stop de dev server, en draai `n
 | `npm run test:int` | Integratietests op `dev.db` (`tests/integration/`) |
 | `npx tsx scripts/seed-shop-events-demo.ts` | Demo-events (dev-only) |
 | `npx tsx scripts/seed-community-demo.ts` | Demo-league, stempels en nieuws (dev-only) |
+| `npx tsx scripts/encrypt-ibans.ts [--apply] [libsql-url]` | Bestaande IBANs versleutelen (dry-run standaard) |
 | `npm run lint` | ESLint |
 | `npx tsc --noEmit` | Typecheck (Turbopack typecheckt niet volledig, dus draai dit vóór een push) |
 
@@ -91,6 +92,13 @@ Zie `.env.example` voor de volledige lijst met uitleg. Verplicht lokaal: `DATABA
 - **Info** (`/info`): adres, openingstijden, bereikbaarheid en huisregels; teksten in `/dashboard/admin/hub-settings`.
 - **Moderatie**: interne notitie per gebruiker (alleen admins) op de admin-gebruikerspagina; schorsen bestond al.
 - **Homepage**: zolang geen handel-flag aan staat toont `/` de hub-startpagina (events, nieuws, league-top-5, praktische info).
+
+## Bulk-inkoop (verkopen aan Cards Center)
+
+- `/verkopen`: landingspagina met de actuele tarieftabel; `/verkopen/bulk` (vaste prijs per categorie, minimum €30) en `/verkopen/losse-kaarten` (85% van de marktprijs). Alleen Engelstalige Near Mint-kaarten; de opgegeven aantallen zijn bindend.
+- **Uitbetaling alleen per bankoverschrijving.** Het IBAN wordt versleuteld opgeslagen (AES-256-GCM, sleutel `IBAN_ENCRYPTION_KEY`), vooraf ingevuld vanuit het profiel en alleen gemaskeerd getoond; admins zien het volledige nummer op de aanvraag voor de overboeking. Bestaande IBANs versleutel je eenmalig met `npx tsx scripts/encrypt-ibans.ts --apply` (ook op Turso, met de productiesleutel in `.env`).
+- **Statussen**: aangevraagd → ontvangen → wordt gecontroleerd → gecontroleerd (klopt) of aangepaste berekening of afgekeurd → uitbetaald. Bij een aangepaste berekening of afkeur kiest de verkoper binnen 14 dagen: akkoord (uitbetalen) of retour van de afgekeurde kaarten voor €10,95, vooraf betaald via Mollie (zonder key: simulatiepagina). Na betaling: "retour betaald" → staff vult Track & Trace in → "retour verzonden" → eventueel uitbetaling van het goedgekeurde deel. Zonder keuze: uitbetaling van het aangepaste bedrag, afgekeurde kaarten blijven in de winkel.
+- **Tarieven** beheer je op `/dashboard/admin/buyback-pricing` (prijs, naam nl/en, toelichting, gewicht, volgorde, aan/uit). Een ingediende aanvraag houdt de prijs van dat moment.
 
 ## Mapstructuur
 
