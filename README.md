@@ -24,13 +24,16 @@ Schema wijzigen: pas `prisma/schema.prisma` aan, stop de dev server, en draai `n
 |---|---|
 | `npm run dev` | Dev server |
 | `npm run build` / `npm start` | Productie-build en -start |
-| `npm test` | Unit-tests (vitest, map `tests/`) |
+| `npm test` | Unit-tests (vitest, `tests/unit/`) |
+| `npm run test:int` | Integratietests op `dev.db` (`tests/integration/`) |
+| `npx tsx scripts/seed-shop-events-demo.ts` | Demo-events (dev-only) |
+| `npx tsx scripts/seed-community-demo.ts` | Demo-league, stempels en nieuws (dev-only) |
 | `npm run lint` | ESLint |
 | `npx tsc --noEmit` | Typecheck (Turbopack typecheckt niet volledig, dus draai dit vóór een push) |
 
 ## Feature-flags
 
-De handelsfuncties zijn verborgen achter server-side flags. Ze staan **standaard uit**; alleen de waarde `true` (of `1`/`on`) zet ze aan. Admins zien de functies altijd, zodat er getest kan worden zonder ze voor iedereen aan te zetten.
+De handelsfuncties zijn verborgen achter server-side flags. Ze staan **standaard uit**; alleen de waarde `true` (of `1`/`on`) zet ze aan. Uit is uit voor iedereen, ook voor admins (besluit 2026-10-16); zet een flag tijdelijk aan in `.env` om te testen.
 
 | Variabele | Verbergt |
 |---|---|
@@ -40,7 +43,7 @@ De handelsfuncties zijn verborgen achter server-side flags. Ze staan **standaard
 | `FEATURE_MARKETPLACE` | Marktplaats, voorstellen, bundel-aanbod (vereist `FEATURE_WALLET`) |
 | `FEATURE_COMMUNITY_EVENTS` | Door leden ingediende beurzen in heel Europa; uit = alleen winkel-events |
 
-Bij een flag die uit staat: de links verdwijnen uit navigatie, homepage, zoeken, sitemap en meldingen; de pagina's sturen door naar de homepage; de API-routes en server actions weigeren niet-admins; de bijbehorende crons en realtime-kanalen draaien niet. Het overzicht staat op `/dashboard/admin/config`. Code: `src/lib/feature-flags.ts`, `src/lib/feature-routes.ts`, `src/lib/cron-job-flags.ts`.
+Bij een flag die uit staat: de links verdwijnen uit navigatie, homepage, zoeken, sitemap en meldingen; de pagina's sturen door naar de homepage; de API-routes en server actions weigeren; de bijbehorende crons en realtime-kanalen draaien niet. Het overzicht staat op `/dashboard/admin/config`. Code: `src/lib/feature-flags.ts`, `src/lib/feature-routes.ts`, `src/lib/cron-job-flags.ts`.
 
 ## Omgevingsvariabelen
 
@@ -78,6 +81,16 @@ Zie `.env.example` voor de volledige lijst met uitleg. Verplicht lokaal: `DATABA
 - Betalen: online bestellingen komen pas in de keuken als de betaling binnen is (webhook of simulatie); barbestellingen komen direct binnen en starten na "Markeer betaald". Onbetaalde online bestellingen vervallen na 30 minuten.
 - Keuken & bar: `/keuken` (alleen staff/admin), tablet-scherm met kolommen Nieuw, In bereiding, Klaar; wachttijd voor gasten (15 tot 60 min), uitverkocht per product, geluid bij een nieuwe bestelling, scherm aan houden, dagoverzicht. Pollt elke 5 seconden.
 - Admin: `/dashboard/admin/menu` (prijzen, aan/uit, uitverkocht, teksten, kortingscodes) en `/dashboard/admin/qr-codes` (printbare tafelkaartjes). Menu en codes worden bij de eerste start geseed uit `src/lib/food/menu-data.ts`.
+
+## League, stempelkaart, spaarpunten, nieuws en info
+
+- **League** (`/league`): admin maakt een seizoen aan met puntenregels (winst/gelijk/verlies plus een bonus per gespeeld event); één seizoen tegelijk actief. Staff voert na elk event per deelnemer winst/verlies/gelijk in op `/dashboard/staff/league` (deelnemers met ticket staan er al, anderen voeg je toe). De ranglijst is de som per seizoen; spelers met "toon mij op ranglijsten" uit staan niet publiek maar zien zichzelf wel in `/dashboard/league`.
+- **Badges** ("poorten van Hulst", placeholder-namen): drempels per criterium (punten/events/winst in een seizoen, events of stempels totaal), beheer op `/dashboard/admin/league`. Automatisch toegekend bij een uitslag of stempel, met melding; zichtbaar op het spelersprofiel.
+- **Stempelkaart en spaarpunten**: elke check-in op een event met "telt mee voor de stempelkaart" geeft een stempel en spaarpunten (aantallen in de winkel-instellingen). Volle kaart = beloning aan de bar plus bonuspunten. Staff geeft handmatig stempels/punten of wisselt punten in op `/dashboard/staff/spaarkaart`. Nooit geld; saldo kan niet onder nul.
+- **Nieuws** (`/nieuws`): admin schrijft berichten (concept/gepubliceerd, vastpinnen, omslagfoto) op `/dashboard/admin/news` en stuurt een gepubliceerd bericht één keer als nieuwsbrief naar leden met opt-in en geverifieerd e-mailadres (afmeldlink in elke mail).
+- **Info** (`/info`): adres, openingstijden, bereikbaarheid en huisregels; teksten in `/dashboard/admin/hub-settings`.
+- **Moderatie**: interne notitie per gebruiker (alleen admins) op de admin-gebruikerspagina; schorsen bestond al.
+- **Homepage**: zolang geen handel-flag aan staat toont `/` de hub-startpagina (events, nieuws, league-top-5, praktische info).
 
 ## Mapstructuur
 
