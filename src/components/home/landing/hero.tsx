@@ -5,9 +5,9 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, CalendarDays } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { DisplayHeading } from "./display-heading";
-import { CtaButton } from "./cta-button";
-import { Balloon, type BalloonColor, type BalloonShape } from "./balloon";
+import { DisplayHeading } from "@/components/ploy/display-heading";
+import { CtaButton } from "@/components/ploy/cta-button";
+import { Balloon, type BalloonColor, type BalloonShape } from "@/components/ploy/balloon";
 
 export interface HeroAnnouncement {
   kicker: string;

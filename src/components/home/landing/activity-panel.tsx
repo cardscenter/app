@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
 import { Link } from "@/i18n/navigation";
-import { DisplayHeading } from "./display-heading";
-import { FloatingBalloon } from "./balloon";
+import { DisplayHeading } from "@/components/ploy/display-heading";
+import { FloatingBalloon } from "@/components/ploy/balloon";
 
 export interface ActivityItem {
   id: string;

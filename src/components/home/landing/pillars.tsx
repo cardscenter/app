@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "@/i18n/navigation";
-import { DisplayHeading } from "./display-heading";
-import { Balloon } from "./balloon";
+import { DisplayHeading } from "@/components/ploy/display-heading";
+import { Balloon } from "@/components/ploy/balloon";
 
 /* Braille-animaties: een 4x8 raster van punten dat per frame een ander patroon
    toont (helix, regen, golven). Pure tekst in een mono-letter, zoals de

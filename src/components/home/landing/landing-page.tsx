@@ -4,13 +4,13 @@ import { formatEventDateShort, formatEventTime, formatPrice } from "@/lib/shop-e
 import { PLATFORM, formatShopAddress } from "@/lib/platform-config";
 import { LandingNav } from "./landing-nav";
 import { LandingHero } from "./hero";
-import { Marquee } from "./marquee";
+import { Marquee } from "@/components/ploy/marquee";
 import { Pillars } from "./pillars";
 import { StatsPanel, type StatCardData } from "./stats-panel";
 import { ActivityPanel, type ActivityItem } from "./activity-panel";
 import { EventsPanel, type EventCardData } from "./events-panel";
 import { PlatformSection } from "./platform-section";
-import { AudienceAccordion } from "./audience-accordion";
+import { AudienceAccordion } from "@/components/ploy/audience-accordion";
 import { CtaSection } from "./cta-section";
 import { LandingFooter } from "./landing-footer";
 

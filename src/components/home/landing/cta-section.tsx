@@ -2,8 +2,8 @@
 
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
-import { DisplayHeading } from "./display-heading";
-import { CtaButton } from "./cta-button";
+import { DisplayHeading } from "@/components/ploy/display-heading";
+import { CtaButton } from "@/components/ploy/cta-button";
 
 /**
  * Afsluitende oproep: enorme kop, korte zin en een witte punch-card met een

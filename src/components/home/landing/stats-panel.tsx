@@ -2,8 +2,8 @@
 
 import { useMemo, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { RollingNumber } from "./rolling-number";
-import { Balloon, type BalloonColor } from "./balloon";
+import { RollingNumber } from "@/components/ploy/rolling-number";
+import { Balloon, type BalloonColor } from "@/components/ploy/balloon";
 
 export interface StatCardData {
   badge: string;

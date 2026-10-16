@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Menu, X } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { CtaButton } from "./cta-button";
+import { CtaButton } from "@/components/ploy/cta-button";
 
 export interface NavViewer {
   name: string;

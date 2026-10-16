@@ -2,8 +2,8 @@
 
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { DisplayHeading } from "./display-heading";
-import { Balloon } from "./balloon";
+import { DisplayHeading } from "@/components/ploy/display-heading";
+import { Balloon } from "@/components/ploy/balloon";
 
 export interface PlatformColumn {
   badge: string;
