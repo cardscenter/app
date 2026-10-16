@@ -12,6 +12,7 @@ import { ZDivider } from "@/components/ui/z-divider";
 
 import { MarketingHeroV2 } from "@/components/home/marketing-hero-v2";
 import { HubHomepage } from "@/components/home/hub-homepage";
+import { LandingPage } from "@/components/home/landing/landing-page";
 import { LoggedInHeroV2 } from "@/components/home/logged-in-hero-v2";
 import { SponsoredSpotlight } from "@/components/home/sponsored-spotlight";
 import { HowItWorksThreePaths } from "@/components/home/how-it-works-three-paths";
@@ -71,7 +72,12 @@ async function HomePageContent({
   // homepage (events, nieuws, league, info). De marketing-homepage hieronder
   // blijft bestaan voor als de handel terugkomt.
   if (!anyTrade && !features.FEATURE_WALLET) {
-    return <HubHomepage locale={locale} viewer={session?.user?.id ? { id: session.user.id, name: session.user.name ?? "" } : null} />;
+    // Design-pass (2026-10): nieuwe homepage in Ploy-stijl. HOMEPAGE_LEGACY=true
+    // zet de vorige hub-homepage terug (backup, ongewijzigd).
+    if (process.env.HOMEPAGE_LEGACY === "true") {
+      return <HubHomepage locale={locale} viewer={session?.user?.id ? { id: session.user.id, name: session.user.name ?? "" } : null} />;
+    }
+    return <LandingPage locale={locale} viewer={session?.user?.id ? { id: session.user.id, name: session.user.name ?? "", image: session.user.image ?? null } : null} />;
   }
 
   // Fase 37: action-items voor de "Sinds je vorige bezoek"-strip op de hero.
