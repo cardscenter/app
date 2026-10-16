@@ -63,6 +63,16 @@ export type AdminAction =
   | "UPDATE_MENU_ITEM"
   | "SAVE_DISCOUNT_CODE"
   | "CLEAR_FOOD_ORDERS"
+  // Community Hub (Fase 5): league, loyaliteit, nieuws, moderatie
+  | "SAVE_LEAGUE_SEASON"
+  | "SET_LEAGUE_SEASON_STATUS"
+  | "DELETE_LEAGUE_SEASON"
+  | "SAVE_LEAGUE_BADGE"
+  | "DELETE_LEAGUE_BADGE"
+  | "SAVE_NEWS_POST"
+  | "DELETE_NEWS_POST"
+  | "SEND_NEWSLETTER"
+  | "SET_INTERNAL_NOTE"
   // Fase 45 — tier-beheer door admin
   | "GRANT_TIER"
   | "REVOKE_TIER";
@@ -93,7 +103,10 @@ export type AdminTargetType =
   | "HUB_SETTINGS"
   | "MENU_ITEM"
   | "DISCOUNT_CODE"
-  | "FOOD_ORDER";
+  | "FOOD_ORDER"
+  | "LEAGUE_SEASON"
+  | "LEAGUE_BADGE"
+  | "NEWS_POST";
 
 /**
  * Log an admin or system action.

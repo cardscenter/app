@@ -115,6 +115,10 @@ export function notificationTypeToCategory(type: string): EmailCategory | null {
   // Nieuwe volger: alleen in de bel, geen mail (zou spam worden).
   if (type === "NEW_FOLLOWER") return null;
 
+  // Community Hub (Fase 5): badges, volle stempelkaart, ingewisselde punten
+  // vallen onder de (uitzetbare) events-categorie.
+  if (type === "LEAGUE_BADGE" || type === "LOYALTY_FULL_CARD" || type === "LOYALTY_REDEEMED") return "events";
+
   if (type === "OUTBID") return "bids";
   if (type.startsWith("DISPUTE_")) return "disputes";
   if (type.startsWith("EVENT_")) return "events";

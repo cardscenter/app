@@ -174,6 +174,12 @@ export const hubSettingsSchema = z.object({
   openingHours: z.string().trim().max(2000),
   cancellationPolicy: z.string().trim().max(2000),
   eventInfo: z.string().trim().max(2000),
+  houseRules: z.string().trim().max(5000),
+  directions: z.string().trim().max(5000),
+  stampsPerCard: z.coerce.number().int().min(1).max(100),
+  pointsPerCheckIn: z.coerce.number().int().min(0).max(1000),
+  pointsPerFullCard: z.coerce.number().int().min(0).max(1000),
+  stampReward: z.string().trim().min(1).max(500),
 });
 
 /** FormData → plain object (checkboxes die ontbreken worden "false"). */

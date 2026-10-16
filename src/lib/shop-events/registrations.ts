@@ -8,6 +8,7 @@ import { getMaxOccupancy } from "@/lib/app-config";
 import { createProviderPayment, fetchProviderPayment, refundProviderPayment } from "@/lib/mollie";
 import { newQrSecret, verifyTicketSignature } from "./tickets";
 import { onFoodOrderPaymentStatus } from "@/lib/food/orders";
+import { onCheckIn } from "@/lib/community/loyalty";
 import {
   ACTIVE_TICKET_STATUSES,
   DEFAULT_EVENT_TYPES,
@@ -811,7 +812,7 @@ export async function checkInByCode(args: {
   const now = new Date();
   const reg = await prisma.eventRegistration.findUnique({
     where: { ticketCode: args.ticketCode },
-    include: { event: { select: { id: true, title: true, startsAt: true, endsAt: true, status: true } }, user: { select: { displayName: true } } },
+    include: { event: { select: { id: true, title: true, startsAt: true, endsAt: true, status: true, countsForStampCard: true } }, user: { select: { displayName: true } } },
   });
   if (!reg) return { error: "Onbekende ticketcode", code: "not-found" };
   if (args.signature && !verifyTicketSignature(reg.ticketCode, reg.qrSecret, args.signature)) {
@@ -841,6 +842,8 @@ export async function checkInByCode(args: {
     data: { status: "CHECKED_IN", checkedInAt: now, checkedInById: args.staffUserId },
   });
   if (r.count !== 1) return { ok: true, already: true, registration: summary };
+  // Fase 5: stempel + spaarpunten bij de eerste check-in (faalt nooit hard).
+  await onCheckIn({ userId: reg.userId, eventId: reg.eventId, eventTitle: reg.event.title, countsForStampCard: reg.event.countsForStampCard, staffId: args.staffUserId });
   return { ok: true, already: false, registration: summary };
 }
 

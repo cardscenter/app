@@ -14,6 +14,13 @@ export const HUB_SETTING_KEYS = {
   openingHours: "hub.openingHours",
   cancellationPolicy: "hub.cancellationPolicy",
   eventInfo: "hub.eventInfo",
+  // Fase 5: info-pagina + loyaliteit
+  houseRules: "hub.houseRules",
+  directions: "hub.directions",
+  stampsPerCard: "hub.stampsPerCard",
+  pointsPerCheckIn: "hub.pointsPerCheckIn",
+  pointsPerFullCard: "hub.pointsPerFullCard",
+  stampReward: "hub.stampReward",
 } as const;
 
 export interface HubSettings {
@@ -25,6 +32,18 @@ export interface HubSettings {
   cancellationPolicy: string;
   /** Algemene info die onder elk event staat (bereikbaarheid, parkeren, ...). */
   eventInfo: string;
+  /** Huisregels (info-pagina), lege regel = nieuwe alinea. */
+  houseRules: string;
+  /** Bereikbaarheid en parkeren (info-pagina). */
+  directions: string;
+  /** Stempels per volle kaart. */
+  stampsPerCard: number;
+  /** Spaarpunten per check-in (0 = uit). */
+  pointsPerCheckIn: number;
+  /** Bonuspunten bij een volle stempelkaart (0 = uit). */
+  pointsPerFullCard: number;
+  /** Wat je krijgt bij een volle kaart (tekst, bv. "een gratis drankje aan de bar"). */
+  stampReward: string;
 }
 
 export const DEFAULT_HUB_SETTINGS: HubSettings = {
@@ -34,6 +53,27 @@ export const DEFAULT_HUB_SETTINGS: HubSettings = {
     "Annuleren kan tot 24 uur voor de start van het event. Je krijgt dan het volledige bedrag terug op de rekening waarmee je betaald hebt. Daarna is terugbetaling niet meer mogelijk, tenzij het event door ons wordt geannuleerd.",
   eventInfo:
     "Cards Center, Dubbele Poort 7, Hulst. Kom op tijd: inchecken kan tot de start. Onder de 12 jaar alleen met begeleiding van een volwassene.",
+  houseRules: [
+    "Respect voor elkaar, voor de kaarten en voor de ruimte. Iedereen is welkom, ongeacht niveau of leeftijd.",
+    "Eigen eten en drinken is niet toegestaan. Aan de bar bestel je via de QR-code op je tafel.",
+    "Speeltafels zijn voor spelers. Pak je spullen op als je klaar bent, zodat de volgende kan spelen.",
+    "Geen alcohol en niet roken in het pand. Buiten roken alleen op de aangewezen plek.",
+    "Handel tussen leden regel je onderling. Cards Center is geen partij bij ruilen of verkopen op de vloer.",
+    "Verlies, diefstal of beschadiging van eigen kaarten is voor eigen risico. Laat niets onbeheerd achter.",
+    "Onder de 12 jaar alleen onder begeleiding van een volwassene. Ouders van spelers onder de 16 geven vooraf toestemming via het account.",
+    "Staff heeft het laatste woord. Wie de sfeer verpest kan gevraagd worden te vertrekken; bij herhaling kan het account geschorst worden.",
+  ].join("\n\n"),
+  directions: [
+    "Cards Center zit op Dubbele Poort 7 in het centrum van Hulst, op loopafstand van de Grote Markt.",
+    "Auto: parkeren kan op de parkeerplaatsen rond de vestingwal (betaald) of op de Grote Markt. In de straat zelf is weinig ruimte.",
+    "Fiets: er is een fietsenrek voor de deur.",
+    "Openbaar vervoer: lijnbussen stoppen op het busstation van Hulst, vanaf daar is het een paar minuten lopen.",
+    "Vanuit België: Hulst ligt vlak over de grens bij Sint-Gillis-Waas en Kieldrecht, ongeveer een halfuur rijden vanaf Antwerpen.",
+  ].join("\n\n"),
+  stampsPerCard: 10,
+  pointsPerCheckIn: 10,
+  pointsPerFullCard: 25,
+  stampReward: "Bij een volle kaart krijg je een gratis drankje aan de bar.",
 };
 
 const TTL_MS = 30_000;
@@ -61,6 +101,12 @@ export async function getHubSettings(): Promise<HubSettings> {
     openingHours: parseJson<string>(byKey[HUB_SETTING_KEYS.openingHours], DEFAULT_HUB_SETTINGS.openingHours),
     cancellationPolicy: parseJson<string>(byKey[HUB_SETTING_KEYS.cancellationPolicy], DEFAULT_HUB_SETTINGS.cancellationPolicy),
     eventInfo: parseJson<string>(byKey[HUB_SETTING_KEYS.eventInfo], DEFAULT_HUB_SETTINGS.eventInfo),
+    houseRules: parseJson<string>(byKey[HUB_SETTING_KEYS.houseRules], DEFAULT_HUB_SETTINGS.houseRules),
+    directions: parseJson<string>(byKey[HUB_SETTING_KEYS.directions], DEFAULT_HUB_SETTINGS.directions),
+    stampsPerCard: parseJson<number>(byKey[HUB_SETTING_KEYS.stampsPerCard], DEFAULT_HUB_SETTINGS.stampsPerCard),
+    pointsPerCheckIn: parseJson<number>(byKey[HUB_SETTING_KEYS.pointsPerCheckIn], DEFAULT_HUB_SETTINGS.pointsPerCheckIn),
+    pointsPerFullCard: parseJson<number>(byKey[HUB_SETTING_KEYS.pointsPerFullCard], DEFAULT_HUB_SETTINGS.pointsPerFullCard),
+    stampReward: parseJson<string>(byKey[HUB_SETTING_KEYS.stampReward], DEFAULT_HUB_SETTINGS.stampReward),
   };
   cache = { at: Date.now(), value };
   return value;
