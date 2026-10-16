@@ -16,7 +16,7 @@ export const HEADER_PILL_SHADOW = "shadow-[0_8px_30px_-12px_rgba(32,32,32,0.35)]
 
 /** Rode pil-knop (primaire actie, "Account aanmaken"). */
 export const HEADER_PILL_LIGHT =
-  `inline-flex h-12 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[var(--primary)] px-6 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/35 ${HEADER_PILL_SHADOW}`;
+  `inline-flex h-12 shrink-0 items-center justify-center whitespace-nowrap rounded-full cc-grad px-6 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/35 ${HEADER_PILL_SHADOW}`;
 
 const HEADER_PILL_GHOST_BASE =
   `inline-flex h-12 shrink-0 items-center gap-2 whitespace-nowrap bg-white text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--background)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/35 ${HEADER_PILL_SHADOW}`;

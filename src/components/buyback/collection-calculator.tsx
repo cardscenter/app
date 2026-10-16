@@ -161,7 +161,7 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="mt-4 flex w-full items-center justify-center gap-2 cc-pill bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
+                  className="mt-4 flex w-full items-center justify-center gap-2 cc-pill cc-grad px-6 py-4 text-sm font-semibold leading-none text-white"
                 >
                   {t("nextStep")} <ArrowRight className="h-4 w-4" />
                 </button>

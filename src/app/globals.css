@@ -14,9 +14,9 @@
   --popover-foreground: #202020;
 
   /* Brand: Cards Center logo-rood (#8C1420; het felle #F2202B uit het verloop alleen nog in de ballonnen) */
-  --primary: #8c1420;
+  --primary: #a3172a;
   --primary-foreground: #ffffff;
-  --primary-hover: #6f0f19;
+  --primary-hover: #8c1420;
   --primary-light: #fce9e8;
 
   /* Secondary & Accent */
@@ -34,7 +34,7 @@
   /* Borders & Rings */
   --border: #e3e3e3;
   --input: #e3e3e3;
-  --ring: #8c1420;
+  --ring: #a3172a;
   --radius: 0.5rem;
 
   /* Status */
@@ -797,6 +797,18 @@ body {
 /* Afgeronde knoppen en pillen */
 .cc-pill {
   border-radius: 100rem;
+}
+
+/* Primaire knop: verloop van logo-rood naar helderder rood (besluit Youri:
+   het effen felle rood paste niet, het effen donkere was te donker). */
+.cc-grad {
+  background-color: #a3172a;
+  background-image: linear-gradient(100deg, #8c1420 0%, #b8192a 50%, #e2232f 100%);
+  color: #fff;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+.cc-grad:hover {
+  filter: brightness(1.08);
 }
 
 /* Hero-intro: tekst en knoppen schuiven zacht omhoog (zoals Ploy). */

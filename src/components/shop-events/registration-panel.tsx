@@ -102,7 +102,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
             {mine.amount > 0 ? (mine.refundOnCancel ? t("cancelConfirmRefund", { hours: event.cancellationHours }) : t("cancelConfirmNoRefund")) : t("cancelConfirmFree")}
           </p>
           <div className="flex gap-2">
-            <button type="button" onClick={cancel} disabled={pending} className="cc-pill bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-hover)] disabled:opacity-60">
+            <button type="button" onClick={cancel} disabled={pending} className="cc-pill cc-grad px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
               {t("cancelYes")}
             </button>
             <button type="button" onClick={() => setConfirmCancel(false)} className="cc-pill px-3 py-2 text-sm font-semibold text-[var(--foreground)]/60 hover:text-[var(--foreground)]">
@@ -129,7 +129,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
               </p>
             </div>
           </div>
-          <Link href={`/dashboard/tickets/${mine.ticketCode}`} className="cc-pill mt-4 inline-flex w-full items-center justify-center gap-2 bg-[var(--primary)] px-5 py-3.5 text-sm font-semibold text-white no-underline hover:bg-[var(--primary-hover)]">
+          <Link href={`/dashboard/tickets/${mine.ticketCode}`} className="cc-pill mt-4 inline-flex w-full items-center justify-center gap-2 cc-grad px-5 py-3.5 text-sm font-semibold text-white no-underline">
             <Ticket className="size-4" /> {t("viewTicket")}
           </Link>
           {cancelBlock}
@@ -218,7 +218,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
           <span className="cc-display text-4xl text-[var(--foreground)]">{price}</span>
           <span className="text-sm text-muted-foreground">{spotsLabel(t, a)}</span>
         </div>
-        <Link href={`/login?callbackUrl=/evenementen/${event.id}`} className="cc-pill mt-4 inline-flex w-full items-center justify-center bg-[var(--primary)] px-5 py-3.5 text-sm font-semibold text-white no-underline hover:bg-[var(--primary-hover)]">
+        <Link href={`/login?callbackUrl=/evenementen/${event.id}`} className="cc-pill mt-4 inline-flex w-full items-center justify-center cc-grad px-5 py-3.5 text-sm font-semibold text-white no-underline">
           {t("loginToRegister")}
         </Link>
         <p className="mt-2 text-center text-xs text-muted-foreground">
@@ -301,7 +301,7 @@ function Primary({ onClick, children, disabled, pending }: { onClick: () => void
       type="button"
       onClick={onClick}
       disabled={pending || disabled}
-      className="cc-pill inline-flex w-full items-center justify-center gap-2 bg-[var(--primary)] px-5 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
+      className="cc-pill inline-flex w-full items-center justify-center gap-2 cc-grad px-5 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
     >
       {children}
     </button>

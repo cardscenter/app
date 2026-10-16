@@ -4,7 +4,7 @@
  * Client-importable (alleen strings).
  */
 export const AUTH_BTN_PRIMARY =
-  "cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60";
+  "cc-pill cc-grad inline-flex w-full items-center justify-center gap-1.5 px-6 py-4 text-sm font-semibold leading-none text-white disabled:cursor-not-allowed disabled:opacity-60";
 export const AUTH_BTN_SECONDARY =
   "cc-pill inline-flex w-full items-center justify-center gap-1.5 border border-[var(--border)] bg-white px-6 py-4 text-sm font-semibold leading-none text-[var(--foreground)] transition-colors hover:bg-[var(--background)] disabled:opacity-60";
 export const AUTH_BTN_GHOST = "inline-flex items-center gap-1 text-xs font-semibold text-[var(--foreground)]/55 transition-colors hover:text-[var(--foreground)]";

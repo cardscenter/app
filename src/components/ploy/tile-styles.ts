@@ -14,7 +14,7 @@ export const TILE_IMG = "relative aspect-[5/7] bg-[var(--muted)]";
 /** Sorteer-/filterknop als witte pil. */
 export const PILL_BTN = "cc-pill inline-flex items-center gap-2 border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--background)]";
 /** Rode actie-pil. */
-export const PILL_RED = "cc-pill inline-flex items-center justify-center gap-1.5 bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)]";
+export const PILL_RED = "cc-pill cc-grad inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white";
 /** Zwarte actie-pil. */
 export const PILL_INK = "cc-pill inline-flex items-center justify-center gap-1.5 bg-[var(--foreground)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--foreground)]/85";
 /** Uitklapmenu. */

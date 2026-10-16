@@ -658,7 +658,7 @@ function AdvancedPanel({
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="cc-pill inline-flex items-center justify-center gap-1.5 bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="cc-pill inline-flex items-center justify-center gap-1.5 cc-grad px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Search className="size-3.5" />
           Zoeken

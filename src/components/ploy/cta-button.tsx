@@ -9,7 +9,7 @@ const WIGGLE_COLORS = ["#ffc4ce", "#fff26b", "#c9dcff", "#d4f58f"];
 const BASE =
   "cc-pill relative inline-flex items-center justify-center gap-1.5 overflow-hidden px-6 py-4 text-sm font-semibold leading-none tracking-[-0.01em] no-underline will-change-transform select-none";
 const VARIANTS = {
-  red: "bg-[var(--cc-red)] text-white",
+  red: "cc-grad text-white",
   dark: "bg-[var(--cc-ink)] text-white",
   light: "bg-white text-[var(--cc-ink)]",
   ghost: "bg-white/10 text-white ring-1 ring-inset ring-white/80 backdrop-blur-sm hover:bg-white/15",

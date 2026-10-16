@@ -12,7 +12,7 @@ import { BADGE_CRITERIA, BADGE_CRITERION_LABEL } from "@/lib/community/config";
 import { LeagueBadgePill } from "@/components/community/league-badge-pill";
 
 const INPUT = "glass-input w-full rounded-lg px-3 py-2 text-sm";
-const BTN = "inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60";
+const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60";
 const BTN_OUTLINE = "inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-60";
 
 export interface SeasonRow {

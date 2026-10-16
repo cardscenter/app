@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { TicketCard } from "@/components/shop-events/ticket-card";
 import { formatShopAddress, PLATFORM } from "@/lib/platform-config";
 
-const BTN = "inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover";
+const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground";
 const BTN_OUTLINE = "inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted";
 
 export const dynamic = "force-dynamic";

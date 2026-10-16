@@ -191,7 +191,7 @@ export function EventTypeCard({ row, games, startOpen = false }: { row: EventTyp
             </div>
           </FieldRow>
           <div className="flex justify-end border-t border-border pt-3">
-            <button type="submit" disabled={pending} className="inline-flex items-center gap-2 cc-pill bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
+            <button type="submit" disabled={pending} className="inline-flex items-center gap-2 cc-pill cc-grad px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60">
               <Save className="size-4" /> Opslaan
             </button>
           </div>

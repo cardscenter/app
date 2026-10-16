@@ -170,7 +170,7 @@ export function WelcomeOnboarding({
               <button
                 type="button"
                 onClick={next}
-                className="cc-pill inline-flex items-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
+                className="cc-pill cc-grad inline-flex items-center gap-1.5 px-6 py-4 text-sm font-semibold leading-none text-white"
               >
                 {t("onboardingScopeConfirm")}
                 <ArrowRight className="h-4 w-4" />
@@ -211,7 +211,7 @@ export function WelcomeOnboarding({
             <div className="mt-5 flex items-center justify-center gap-3">
               <Link
                 href="/dashboard/profiel"
-                className="cc-pill inline-flex items-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
+                className="cc-pill cc-grad inline-flex items-center gap-1.5 px-6 py-4 text-sm font-semibold leading-none text-white"
               >
                 {t("onboarding2faCta")}
               </Link>
@@ -309,7 +309,7 @@ function DiscoverCards({ features }: { features: FeatureSnapshot }) {
       <div className="text-center">
         <Link
           href="/"
-          className="cc-pill inline-flex items-center gap-2 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
+          className="cc-pill cc-grad inline-flex items-center gap-2 px-6 py-4 text-sm font-semibold leading-none text-white"
         >
           {t("welcomeStart")}
           <ArrowRight className="h-4 w-4" />

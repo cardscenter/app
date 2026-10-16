@@ -31,7 +31,7 @@ export function ForgotPasswordForm() {
         </p>
         <Link
           href="/login"
-          className="mt-6 cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
+          className="mt-6 cc-pill cc-grad inline-flex w-full items-center justify-center gap-1.5 px-6 py-4 text-sm font-semibold leading-none text-white"
         >
           Terug naar inloggen
         </Link>
@@ -79,7 +79,7 @@ export function ForgotPasswordForm() {
         <button
           type="submit"
           disabled={pending}
-          className="cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="cc-pill cc-grad inline-flex w-full items-center justify-center gap-1.5 px-6 py-4 text-sm font-semibold leading-none text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? "Versturen…" : "Stuur reset-link"}
           {!pending && <ArrowRight className="size-4" />}

@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 
 export const dynamic = "force-dynamic";
 
-const BTN = "inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover";
+const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground";
 
 /** Admin: nieuwsberichten (concept/gepubliceerd) + nieuwsbrief-status. */
 export default async function AdminNewsPage() {

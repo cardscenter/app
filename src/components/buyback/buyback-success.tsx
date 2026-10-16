@@ -33,7 +33,7 @@ export function BuybackSuccess({ requestId }: BuybackSuccessProps) {
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
           href={`/dashboard/inkoop/${requestId}`}
-          className="flex flex-1 items-center justify-center gap-2 cc-pill bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
+          className="flex flex-1 items-center justify-center gap-2 cc-pill cc-grad px-6 py-4 text-sm font-semibold leading-none text-white"
         >
           {t("viewMyRequest")} <ArrowRight className="h-4 w-4" />
         </Link>

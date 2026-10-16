@@ -273,7 +273,7 @@ function MultiStepRegisterForm({ games }: { games: GameDefinition[] }) {
               <button
                 type="button"
                 onClick={goNext}
-                className="cc-pill inline-flex items-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
+                className="cc-pill cc-grad inline-flex items-center gap-1.5 px-6 py-4 text-sm font-semibold leading-none text-white"
               >
                 {t("next")}
                 <ChevronRight className="size-4" />
@@ -283,7 +283,7 @@ function MultiStepRegisterForm({ games }: { games: GameDefinition[] }) {
                 type="button"
                 onClick={handleSubmit}
                 disabled={pending}
-                className="cc-pill inline-flex items-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
+                className="cc-pill cc-grad inline-flex items-center gap-1.5 px-6 py-4 text-sm font-semibold leading-none text-white disabled:opacity-50"
               >
                 {pending ? "..." : t("createAccount")}
                 {!pending && <Check className="size-4" />}

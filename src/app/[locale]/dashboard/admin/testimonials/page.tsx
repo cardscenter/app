@@ -10,7 +10,7 @@ import { TestimonialFlagToggle } from "@/components/admin/testimonial-flag-toggl
 
 export const dynamic = "force-dynamic";
 
-const BTN = "inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover";
+const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground";
 
 const SOURCE_LABEL: Record<string, string> = { GOOGLE: "Google", INSTAGRAM: "Instagram", DISCORD: "Discord", IN_STORE: "In de winkel", EMAIL: "E-mail", OTHER: "Overig" };
 

@@ -550,7 +550,7 @@ export function MessageThread({
             <button
               type="submit"
               disabled={loading || uploading}
-              className="cc-pill flex h-9 shrink-0 items-center gap-1.5 bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
+              className="cc-pill cc-grad flex h-9 shrink-0 items-center gap-1.5 px-4 text-sm font-semibold text-primary-foreground transition-colors disabled:opacity-50"
             >
               <Send className="size-4" />
               <span className="hidden sm:inline">{t("send")}</span>

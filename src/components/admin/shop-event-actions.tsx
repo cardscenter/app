@@ -36,7 +36,7 @@ export function ShopEventActions({ eventId, status, endsAtIso }: { eventId: stri
           <ExternalLink className="size-4" /> Bekijk pagina
         </Link>
         {status === "DRAFT" && (
-          <button type="button" disabled={pending} onClick={() => run(() => publishShopEvent(eventId, true), "Gepubliceerd")} className="inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
+          <button type="button" disabled={pending} onClick={() => run(() => publishShopEvent(eventId, true), "Gepubliceerd")} className="inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">
             <Globe className="size-4" /> Publiceren
           </button>
         )}

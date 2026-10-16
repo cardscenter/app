@@ -223,7 +223,7 @@ export function BulkCalculator({ pricing, defaultIban = "", defaultAccountHolder
                   type="button"
                   onClick={() => setStep(2)}
                   disabled={!hasAny || !minimumMet}
-                  className="flex items-center gap-2 cc-pill bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:bg-[var(--muted)] disabled:text-[var(--foreground)]/45"
+                  className="flex items-center gap-2 cc-pill cc-grad px-6 py-4 text-sm font-semibold leading-none text-white disabled:cursor-not-allowed disabled:bg-[var(--muted)] disabled:text-[var(--foreground)]/45"
                 >
                   {t("nextStep")} <ArrowRight className="h-4 w-4" />
                 </button>

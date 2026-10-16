@@ -11,7 +11,7 @@ import { ensureEventTypes } from "@/lib/shop-events/registrations";
 import { SHOP_EVENT_STATUS_LABEL, type ShopEventStatus } from "@/lib/shop-events/config";
 import { formatEventDateShort, formatEventTime, formatPrice } from "@/lib/shop-events/format";
 
-const BTN = "inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover";
+const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground";
 
 export const dynamic = "force-dynamic";
 
