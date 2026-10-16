@@ -22,8 +22,8 @@ export interface NewsEditorRow {
 }
 
 const INPUT = "glass-input w-full rounded-lg px-3 py-2 text-sm";
-const BTN = "inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60";
-const BTN_OUTLINE = "inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-60";
+const BTN = "inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60";
+const BTN_OUTLINE = "inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-60";
 
 export function NewsEditor({ row, optInCount }: { row: NewsEditorRow | null; optInCount: number }) {
   const router = useRouter();

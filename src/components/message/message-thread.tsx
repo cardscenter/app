@@ -545,12 +545,12 @@ export function MessageThread({
               placeholder={t("messagePlaceholder")}
               onChange={handleTextareaInput}
               onKeyDown={handleKeyDown}
-              className="min-h-9 flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="min-h-9 flex-1 resize-none rounded-[14px] border border-border bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-foreground focus:bg-white focus:outline-none"
             />
             <button
               type="submit"
               disabled={loading || uploading}
-              className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
+              className="cc-pill flex h-9 shrink-0 items-center gap-1.5 bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
             >
               <Send className="size-4" />
               <span className="hidden sm:inline">{t("send")}</span>

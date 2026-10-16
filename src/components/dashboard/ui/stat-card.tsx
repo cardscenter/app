@@ -24,7 +24,7 @@ export function StatCard({ label, value, icon: Icon, iconClassName, href, hint }
       {Icon && (
         <div
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
             iconClassName ?? "bg-primary/10 text-primary"
           )}
         >
@@ -33,17 +33,17 @@ export function StatCard({ label, value, icon: Icon, iconClassName, href, hint }
       )}
       <div className="min-w-0">
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <p className="mt-0.5 truncate text-xl font-bold tabular-nums text-foreground">{value}</p>
+        <p className="cc-display mt-1 truncate text-3xl tabular-nums text-foreground">{value}</p>
         {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       </div>
     </div>
   );
 
-  const shell = "block dash-card p-4";
+  const shell = "block dash-card p-5";
 
   if (href) {
     return (
-      <Link href={href} className={cn(shell, "transition-colors hover:bg-muted/40")}>
+      <Link href={href} className={cn(shell, "transition-transform hover:-translate-y-0.5")}>
         {inner}
       </Link>
     );

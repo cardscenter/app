@@ -23,7 +23,7 @@ export interface TestimonialEditorRow {
 }
 
 const INPUT = "glass-input w-full rounded-lg px-3 py-2 text-sm";
-const BTN = "inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60";
+const BTN = "inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60";
 
 const SOURCES: Array<{ value: string; label: string }> = [
   { value: "GOOGLE", label: "Google-review" },

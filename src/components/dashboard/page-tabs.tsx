@@ -44,7 +44,7 @@ export function PageTabs({ tabs }: PageTabsProps) {
   }, null);
 
   return (
-    <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1">
+    <div className="flex flex-wrap gap-2">
       {tabs.map((tab) => {
         const active = tab.href === activeHref;
         if (tab.hideUnlessActive && !active) return null;
@@ -53,18 +53,18 @@ export function PageTabs({ tabs }: PageTabsProps) {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+              "cc-pill inline-flex h-9 shrink-0 items-center gap-2 px-4 text-sm font-semibold whitespace-nowrap transition-colors",
               active
-                ? "bg-card text-foreground shadow-card"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-foreground text-white"
+                : "bg-white text-foreground/70 hover:text-foreground"
             )}
           >
             {tab.label}
             {typeof tab.badge === "number" && tab.badge > 0 && (
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
-                  active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                  "cc-pill px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums",
+                  active ? "bg-white/20 text-white" : "bg-background text-foreground/60"
                 )}
               >
                 {tab.badge}

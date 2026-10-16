@@ -21,6 +21,7 @@ import { HomeKpiCard } from "@/components/dashboard/home/home-kpi-card";
 import { RecentOrdersTable } from "@/components/dashboard/home/recent-orders-table";
 import { ActionItemsWidget } from "@/components/dashboard/home/action-items-widget";
 import { ActiveActivityWidget } from "@/components/dashboard/home/active-activity-widget";
+import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 
 // Dashboard-home in TailAdmin-stijl (sept 2026): saldo-band → KPI-rij →
 // cash flow + actie-nodig → recente orders + lopend aanbod.
@@ -71,10 +72,7 @@ export default async function DashboardPage({
   if (!walletOn) {
     return (
       <div className="space-y-4">
-        <header>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{th("greeting", { name: user.displayName })}</p>
-        </header>
+        <DashboardPageHeader title={t("title")} subtitle={th("greeting", { name: user.displayName })} />
 
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="xl:col-span-2">
@@ -104,11 +102,11 @@ export default async function DashboardPage({
       {/* Kop: titel + periode rechts (datumbereik-pill + dropdown) */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{th("greeting", { name: user.displayName })}</p>
+          <h1 className="cc-display text-[32px] text-foreground lg:text-[40px]">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{th("greeting", { name: user.displayName })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground">
+          <span className="cc-pill inline-flex items-center gap-2 bg-white px-4 py-2 text-sm font-semibold text-foreground">
             <CalendarDays className="size-4 text-muted-foreground" />
             {rangeLabel}
           </span>

@@ -30,13 +30,13 @@ export function DashboardPageHeader({
         {backHref && backLabel && (
           <Link
             href={backHref}
-            className="mb-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
             {backLabel}
           </Link>
         )}
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+        <h1 className="cc-display text-[32px] text-foreground lg:text-[40px]">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}

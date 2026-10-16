@@ -118,7 +118,7 @@ export function DashboardShell({ nav, children }: Props) {
             onClick={openMenu}
             aria-expanded={open}
             aria-controls="dashboard-sidebar"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            className="cc-pill inline-flex items-center gap-2 border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-background"
           >
             <Menu className="size-4" />
             {t("openMenu")}

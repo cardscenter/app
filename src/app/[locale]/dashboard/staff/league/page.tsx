@@ -39,7 +39,7 @@ export default async function StaffLeaguePage({ params, searchParams }: { params
         title="Uitslagen invoeren"
         subtitle={season ? `Seizoen ${season.name}: winst ${season.pointsWin}, gelijk ${season.pointsDraw}, verlies ${season.pointsLoss}, meedoen ${season.pointsParticipation} punten.` : "Er is geen actief seizoen. Een admin maakt er een aan onder Community > League."}
         action={
-          <Link href="/league" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">
+          <Link href="/league" className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background">
             <Trophy className="size-4" /> Ranglijst
           </Link>
         }

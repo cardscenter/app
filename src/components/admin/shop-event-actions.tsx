@@ -27,7 +27,7 @@ export function ShopEventActions({ eventId, status, endsAtIso }: { eventId: stri
       router.refresh();
     });
 
-  const btn = "inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-60";
+  const btn = "inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-60";
 
   return (
     <div className="space-y-3">
@@ -36,7 +36,7 @@ export function ShopEventActions({ eventId, status, endsAtIso }: { eventId: stri
           <ExternalLink className="size-4" /> Bekijk pagina
         </Link>
         {status === "DRAFT" && (
-          <button type="button" disabled={pending} onClick={() => run(() => publishShopEvent(eventId, true), "Gepubliceerd")} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
+          <button type="button" disabled={pending} onClick={() => run(() => publishShopEvent(eventId, true), "Gepubliceerd")} className="inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
             <Globe className="size-4" /> Publiceren
           </button>
         )}

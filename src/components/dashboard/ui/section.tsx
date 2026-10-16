@@ -37,7 +37,7 @@ export function DashboardSection({
     return (
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-[-0.03em] text-foreground">
             {icon && <span className="text-muted-foreground">{icon}</span>}
             {title}
           </h2>
@@ -53,11 +53,11 @@ export function DashboardSection({
 
   return (
     <section className="overflow-hidden dash-card">
-      <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+      <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             {icon && <span className="text-muted-foreground">{icon}</span>}
-            <h2 className="text-[15px] font-semibold text-foreground">{title}</h2>
+            <h2 className="text-base font-semibold tracking-[-0.02em] text-foreground">{title}</h2>
           </div>
           {description && (
             <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
@@ -65,7 +65,7 @@ export function DashboardSection({
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      <div className={cn("p-4", contentClassName)}>{children}</div>
+      <div className={cn("p-5", contentClassName)}>{children}</div>
     </section>
   );
 }

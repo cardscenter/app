@@ -33,7 +33,7 @@ export default async function AdminLeaguePage() {
         title="League"
         subtitle="Seizoenen met hun puntenregels en de badges die spelers kunnen verdienen. Uitslagen voert staff in via Uitslagen invoeren."
         action={
-          <Link href="/dashboard/staff/league" className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
+          <Link href="/dashboard/staff/league" className="inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
             <Trophy className="size-4" /> Uitslagen invoeren
           </Link>
         }

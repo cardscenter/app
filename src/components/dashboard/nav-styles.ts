@@ -6,7 +6,7 @@
 
 /** Compacte rij ≈32px: icoon 16px, tekst 13px. */
 export const NAV_ROW =
-  "group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-5 transition-colors";
+  "group flex items-center gap-2.5 rounded-full px-3 py-1.5 text-[13px] font-medium leading-5 transition-colors";
 export const NAV_ROW_ACTIVE = "bg-sidebar-accent text-sidebar-accent-foreground";
 export const NAV_ROW_IDLE = "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-white";
 /** Icoon-tint op een idle-rij (actieve rij erft de witte tekstkleur). */

@@ -239,7 +239,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={() => setRevokeOpen(true)}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-50"
           >
             <CircleMinus className="h-4 w-4" /> Tier intrekken
           </button>
@@ -247,7 +247,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
 
         <Link
           href={`/dashboard/admin/bank-transfers?q=${encodeURIComponent(userName)}`}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted"
+          className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background"
         >
           <CreditCard className="h-4 w-4" /> Bevestig storting
         </Link>
@@ -255,7 +255,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
         <button
           onClick={() => setNameOpen(true)}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-50"
         >
           <IdCard className="h-4 w-4" /> Naam wijzigen
         </button>
@@ -264,7 +264,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={handleResetIban}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-50"
           >
             <RotateCcw className="h-4 w-4" /> Reset IBAN-cooldown
           </button>
@@ -274,7 +274,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={handleResetUsername}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-50"
           >
             <UserCog className="h-4 w-4" /> Geef naamswijziging terug
           </button>

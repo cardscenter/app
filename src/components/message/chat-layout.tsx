@@ -142,7 +142,7 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
         : t("emptyActive");
 
   return (
-    <section className="flex min-h-0 flex-1 overflow-hidden border-x border-t border-border bg-card">
+    <section className="mx-4 flex min-h-0 flex-1 overflow-hidden rounded-t-[20px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] sm:mx-5 lg:mx-6">
       {/* Links: gesprekslijst. Mobiel full-width als er geen gesprek open is. */}
       <aside
         className={`${activeConversationId ? "hidden md:flex" : "flex"} w-full shrink-0 flex-col border-border md:w-80 md:border-r lg:w-[22rem]`}
@@ -155,10 +155,10 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
               placeholder={t("search")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-md border border-border bg-muted/40 py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="cc-pill w-full border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-foreground focus:bg-white focus:outline-none"
             />
           </div>
-          <div className="grid grid-cols-3 gap-0.5 rounded-md bg-muted p-0.5">
+          <div className="grid grid-cols-3 gap-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.key;
@@ -169,8 +169,8 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   aria-pressed={active}
-                  className={`flex items-center justify-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-                    active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  className={`cc-pill flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-semibold transition-colors ${
+                    active ? "bg-foreground text-white" : "bg-background text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Icon className="size-3.5 shrink-0" />
@@ -188,7 +188,7 @@ export function ChatLayout({ conversations: initialConversations, activeConversa
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {activeTab === "archived" && (
-            <p className="mx-3 mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+            <p className="mx-3 mt-3 rounded-[10px] bg-[var(--pastel-yellow)] px-3 py-2 text-[11px] text-foreground">
               {t("archiveAutoDeleteNotice")}
             </p>
           )}

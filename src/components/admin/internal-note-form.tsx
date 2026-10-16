@@ -31,7 +31,7 @@ export function InternalNoteForm({ userId, initial }: { userId: string; initial:
               router.refresh();
             })
           }
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 cc-pill bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
         >
           <Save className="size-4" /> Opslaan
         </button>
