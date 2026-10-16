@@ -51,10 +51,10 @@ export function LandingHero({
   const reduced = useReducedMotion();
 
   return (
-    <section className="relative px-4 pb-4 pt-20 sm:px-5 sm:pt-[88px] lg:px-6" aria-labelledby="landing-hero-title">
+    <section className="relative px-4 pb-4 pt-0 sm:px-5 sm:pt-1 lg:px-6" aria-labelledby="landing-hero-title">
       <div
         ref={panel}
-        className="relative mx-auto flex h-[calc(100svh-7rem)] max-h-[1000px] min-h-[640px] w-full max-w-[2400px] items-center justify-center overflow-hidden rounded-[20px] bg-[var(--cc-dark)] text-white"
+        className="relative mx-auto flex h-[calc(100svh-var(--site-nav-offset)-1.5rem)] max-h-[1000px] min-h-[640px] w-full max-w-[2400px] items-center justify-center overflow-hidden rounded-[20px] bg-[var(--cc-dark)] text-white"
       >
         {/* Achtergrond: rode gloed uit de huisstijl, later eventueel video. */}
         {videoSrc ? (

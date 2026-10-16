@@ -13,7 +13,7 @@ export default function MessagesLayout({
       <style>{`
         html, body { height: 100%; overflow: hidden; }
         body > div, main { min-height: 0; }
-        main { display: flex; flex-direction: column; padding: 0 !important; }
+        main { display: flex; flex-direction: column; padding-bottom: 0 !important; }
         /* Footer én de ZDivider-strook die de Footer-component ervóór rendert */
         footer, main + div { display: none !important; }
       `}</style>

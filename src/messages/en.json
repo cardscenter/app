@@ -24,7 +24,7 @@
     "contactSeller": "Contact seller",
     "marketplace": "Marketplace",
     "events": "Events",
-    "cards": "Database",
+    "cards": "Cards",
     "sell": "Sell",
     "customization": "Customization",
     "orderDetail": {
@@ -3955,5 +3955,12 @@
     "losses": "Losses",
     "draws": "Draws",
     "profileBadges": "Badges"
+  },
+  "nav": {
+    "cta": "Create account",
+    "menu": "Menu",
+    "close": "Close menu",
+    "mainMenu": "Main menu",
+    "language": "Language"
   }
 }

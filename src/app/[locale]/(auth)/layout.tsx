@@ -16,7 +16,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         html, body { height: 100vh; overflow: hidden; }
         body footer { display: none !important; }
       `}</style>
-      <div className="grid h-[calc(100vh-4rem)] grid-cols-1 overflow-hidden lg:grid-cols-2">
+      <div className="grid h-[calc(100vh-var(--site-nav-offset))] grid-cols-1 overflow-hidden lg:grid-cols-2">
         {children}
       </div>
     </>

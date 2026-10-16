@@ -4,7 +4,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { bodyFont, displayFont, monoFont } from "@/app/fonts";
 import { routing } from "@/i18n/routing";
-import { Header } from "@/components/layout/header";
+import { SiteNav } from "@/components/layout/site-nav";
 import { Footer } from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { RealtimeProvider } from "@/components/providers/realtime-provider";
@@ -55,8 +55,8 @@ export default async function LocaleLayout({
           <NextIntlClientProvider messages={messages}>
             <FeatureFlagsProvider value={features}>
               <RealtimeProvider isAuthenticated={!!session?.user?.id}>
-                <Header />
-                <main className="flex-1">{children}</main>
+                <SiteNav initialViewer={session?.user ? { name: session.user.name ?? "", image: session.user.image ?? null } : null} />
+                <main className="flex-1 pt-[var(--site-nav-offset)]">{children}</main>
                 <Footer />
                 <ResponsiveToaster />
                 {/* Prestatie-toasts tonen Ember; die horen bij het saldo-model. */}

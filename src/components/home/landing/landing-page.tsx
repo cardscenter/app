@@ -2,7 +2,6 @@ import { getTranslations } from "next-intl/server";
 import { getLandingData } from "@/lib/landing-data";
 import { formatEventDateShort, formatEventTime, formatPrice } from "@/lib/shop-events/format";
 import { PLATFORM, formatShopAddress } from "@/lib/platform-config";
-import { LandingNav } from "./landing-nav";
 import { LandingHero } from "./hero";
 import { Marquee } from "@/components/ploy/marquee";
 import { Pillars } from "./pillars";
@@ -158,10 +157,8 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
 
   return (
     <div className="cc-landing overflow-clip" style={{ colorScheme: "light" }}>
-      {/* De site-header en -footer horen niet bij dit ontwerp: pil-nav en eigen footer. */}
-      {/* html relative: framer-motion meet scroll-offsets t.o.v. de container. */}
-      <style>{`body > header, body > footer, main + div { display: none !important; } html, body { background: #f4f4f4 !important; } html { position: relative; }`}</style>
-      <LandingNav viewer={viewer ? { name: viewer.name, image: viewer.image } : null} />
+      {/* De oude site-footer (en zijn ZDivider-strook) verdwijnt in Fase A5; tot dan hier verborgen. */}
+      <style>{`body > footer, main + div { display: none !important; }`}</style>
       <LandingHero
         eyebrow={t("heroEyebrow", { address })}
         title={viewer ? t("heroTitleLoggedIn", { name: viewer.name.split(" ")[0] ?? viewer.name }) : t("heroTitle")}
