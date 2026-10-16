@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { PLATFORM, formatPlatformAddress, hasKvk, hasVat } from "@/lib/platform-config";
+import { PLATFORM, formatPlatformAddress, formatShopAddress, hasKvk, hasVat } from "@/lib/platform-config";
 import type { FeatureSnapshot } from "@/lib/feature-flags";
 import { FooterView, type FooterColumn } from "@/components/ploy/footer-view";
 import { LanguageSwitcher } from "./language-switcher";
@@ -14,7 +14,8 @@ import { LanguageSwitcher } from "./language-switcher";
 export async function SiteFooter({ loggedIn, features }: { loggedIn: boolean; features: FeatureSnapshot }) {
   const [t, tc] = await Promise.all([getTranslations("footer"), getTranslations("common")]);
   const year = new Date().getFullYear();
-  const address = formatPlatformAddress();
+  const shopAddress = formatShopAddress();
+  const legalAddress = formatPlatformAddress();
 
   const columns: FooterColumn[] = [
     {
@@ -63,7 +64,7 @@ export async function SiteFooter({ loggedIn, features }: { loggedIn: boolean; fe
 
   return (
     <FooterView
-      tagline={t("tagline", { address })}
+      tagline={t("tagline", { address: shopAddress })}
       contactLabel={PLATFORM.supportEmail}
       contactHref={`mailto:${PLATFORM.supportEmail}`}
       columns={columns}
@@ -76,7 +77,7 @@ export async function SiteFooter({ loggedIn, features }: { loggedIn: boolean; fe
         <address className="not-italic">
           <span className="font-medium text-white/85">{PLATFORM.legalName}</span>
           {" · "}
-          {address}
+          {legalAddress}
           {hasKvk() && <>{" · "}{t("kvk")}: {PLATFORM.kvkNumber}</>}
           {hasVat() && <>{" · "}{t("vat")}: {PLATFORM.vatId}</>}
         </address>
