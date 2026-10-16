@@ -2,15 +2,13 @@ import { cn } from "@/lib/utils";
 
 type Width = "narrow" | "default" | "wide";
 
-// Community Hub (besluit Youri 2026-10-16): elke pagina gebruikt de volledige
-// header-breedte (1880px + gutter clamp(1rem, 3vw, 4rem)), ook de voorheen
-// smallere "narrow" (768px) en "default" (1560px) tiers. De prop blijft
-// bestaan zodat een later design per tier weer kan verschillen; tot die tijd
-// zijn alle drie gelijk aan de header/footer/homepage-secties.
+// Design-pass 2026-10 (Ploy-stijl): inhoud op 72rem (1152px) zoals de
+// referentie; "wide" voor grids en de navigatie-breedte (1400px), "narrow"
+// voor leesteksten. Gutter clamp(1rem, 3vw, 4rem).
 const WIDTH_CLASSES: Record<Width, string> = {
-  narrow: "max-w-[1880px]",
-  default: "max-w-[1880px]",
-  wide: "max-w-[1880px]",
+  narrow: "max-w-3xl",
+  default: "max-w-6xl",
+  wide: "max-w-[1400px]",
 };
 
 export function PageContainer({

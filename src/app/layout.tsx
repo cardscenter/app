@@ -1,8 +1,3 @@
-import { Geist } from "next/font/google";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-
 // Root layout - delegates to [locale]/layout.tsx
 // This file is required by Next.js but the actual layout is in [locale]/layout.tsx
 export default function RootLayout({

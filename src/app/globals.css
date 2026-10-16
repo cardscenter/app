@@ -6,35 +6,35 @@
 
 :root {
   /* Core — Fase 26: page-bg lichtgrijs, card blijft wit voor surface-hiërarchie */
-  --background: #f5f6f8;
-  --foreground: #0f172a;
+  --background: #f4f4f4;
+  --foreground: #202020;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #202020;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --popover-foreground: #202020;
 
-  /* Brand — Blue */
-  --primary: #2563eb;
+  /* Brand — Cards Center rood (logo-verloop #8C1420 → #F2202B) */
+  --primary: #f2202b;
   --primary-foreground: #ffffff;
-  --primary-hover: #1d4ed8;
-  --primary-light: #eff6ff;
+  --primary-hover: #c51a25;
+  --primary-light: #fce9e8;
 
   /* Secondary & Accent */
-  --secondary: #e8eaee;
-  --secondary-foreground: #0f172a;
-  --accent: #e8eaee;
-  --accent-foreground: #0f172a;
+  --secondary: #ebebeb;
+  --secondary-foreground: #202020;
+  --accent: #ebebeb;
+  --accent-foreground: #202020;
 
   /* Utility */
-  --muted: #eef0f3;
-  --muted-foreground: #64748b;
-  --destructive: #ef4444;
+  --muted: #ebebeb;
+  --muted-foreground: #555555;
+  --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
 
   /* Borders & Rings */
-  --border: #e1e4ea;
-  --input: #e1e4ea;
-  --ring: #2563eb;
+  --border: #e3e3e3;
+  --input: #e3e3e3;
+  --ring: #f2202b;
   --radius: 0.5rem;
 
   /* Status */
@@ -46,11 +46,11 @@
   --error-light: #fef2f2;
 
   /* Charts */
-  --chart-1: #2563eb;
-  --chart-2: #3b82f6;
-  --chart-3: #60a5fa;
-  --chart-4: #f59e0b;
-  --chart-5: #64748b;
+  --chart-1: #f2202b;
+  --chart-2: #c51a25;
+  --chart-3: #8c1420;
+  --chart-4: #fff26b;
+  --chart-5: #555555;
 
   /* Sidebar — dashboard-sidebar in TailAdmin-navy, bewust identiek in light
      én dark (de aside draagt zelf class="dark"; zie dashboard-shell.tsx) */
@@ -66,6 +66,45 @@
   /* Card-elevation shadows (Fase 26) */
   --shadow-card:       0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.05);
   --shadow-card-hover: 0 4px 8px -2px rgb(15 23 42 / 0.06), 0 2px 4px -1px rgb(15 23 42 / 0.04);
+
+  /* ── Design-pass 2026-10 (Ploy-stijl) ──
+     Pastels voor panelen/pillen + inkt-tinten voor tekst op die pastels. */
+  --pastel-pink: #ffc4ce;
+  --pastel-pink-ink: #7a0f1e;
+  --pastel-yellow: #fff26b;
+  --pastel-yellow-ink: #3f2a08;
+  --pastel-blue: #c9dcff;
+  --pastel-blue-light: #e9f1ff;
+  --pastel-blue-ink: #0d1b3f;
+  --pastel-green: #d4f58f;
+  --pastel-green-ink: #253611;
+  /* Afgeronde full-bleed panelen en de hoogte van de zwevende pil-navigatie. */
+  --radius-panel: 20px;
+  --site-nav-offset: 5rem;
+  /* Aliassen voor de landing-componenten (src/components/home/landing, ploy). */
+  --cc-red: var(--primary);
+  --cc-red-mid: var(--primary-hover);
+  --cc-red-dark: #8c1420;
+  --cc-red-soft: var(--primary-light);
+  --cc-grad: linear-gradient(100deg, var(--cc-red-dark) 0%, var(--cc-red-mid) 55%, var(--cc-red) 100%);
+  --cc-ink: var(--foreground);
+  --cc-ink-2: var(--muted-foreground);
+  --cc-ink-faded: rgba(32, 32, 32, 0.22);
+  --cc-bg: var(--background);
+  --cc-surface: var(--card);
+  --cc-surface-2: #f5f5f5;
+  --cc-border: var(--border);
+  --cc-border-subtle: rgba(32, 32, 32, 0.08);
+  --cc-pink: var(--pastel-pink);
+  --cc-pink-ink: var(--pastel-pink-ink);
+  --cc-yellow: var(--pastel-yellow);
+  --cc-yellow-ink: var(--pastel-yellow-ink);
+  --cc-blue: var(--pastel-blue);
+  --cc-blue-light: var(--pastel-blue-light);
+  --cc-blue-ink: var(--pastel-blue-ink);
+  --cc-green: var(--pastel-green);
+  --cc-green-ink: var(--pastel-green-ink);
+  --cc-dark: #16090b;
 }
 
 .dark {
@@ -184,11 +223,23 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Fonts */
-  --font-sans: var(--font-poppins), Poppins, sans-serif;
-  --font-mono: var(--font-ibm-plex-mono), IBM Plex Mono, monospace;
-  --font-serif: var(--font-libre-baskerville), Libre Baskerville, serif;
-  --font-heading: var(--font-poppins), Poppins, sans-serif;
+  /* Fonts (design-pass 2026-10): Geist voor tekst, Anton voor display-koppen (opt-in via .cc-display / font-display) */
+  --font-sans: var(--font-geist), Geist, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), Geist Mono, ui-monospace, monospace;
+  --font-display: var(--font-anton), Anton, "Arial Narrow", Impact, sans-serif;
+  --font-heading: var(--font-geist), Geist, ui-sans-serif, system-ui, sans-serif;
+
+  /* Pastels als utilities: bg-pastel-pink, text-pastel-pink-ink, ... */
+  --color-pastel-pink: var(--pastel-pink);
+  --color-pastel-pink-ink: var(--pastel-pink-ink);
+  --color-pastel-yellow: var(--pastel-yellow);
+  --color-pastel-yellow-ink: var(--pastel-yellow-ink);
+  --color-pastel-blue: var(--pastel-blue);
+  --color-pastel-blue-light: var(--pastel-blue-light);
+  --color-pastel-blue-ink: var(--pastel-blue-ink);
+  --color-pastel-green: var(--pastel-green);
+  --color-pastel-green-ink: var(--pastel-green-ink);
+  --radius-panel: var(--radius-panel);
 
   /* Radius */
   --radius-sm: calc(var(--radius) * 0.6);
@@ -354,9 +405,18 @@ body {
   }
   html {
     @apply font-sans;
-    /* Compenseer de sticky header (h-16 = 4rem) zodat hash-/anchor-navigatie en
-       Next's scrollIntoView de content niet achter de header verstoppen. */
-    scroll-padding-top: 5rem;
+    /* Licht-only (design-pass 2026-10). position: relative zodat framer-motion
+       scroll-offsets t.o.v. de container kan meten. scroll-padding compenseert de
+       zwevende pil-navigatie bij hash-/anchor-navigatie. */
+    color-scheme: light;
+    position: relative;
+    scroll-padding-top: calc(var(--site-nav-offset) + 1rem);
+    -webkit-font-smoothing: antialiased;
+  }
+  @media (min-width: 768px) {
+    :root {
+      --site-nav-offset: 6rem;
+    }
   }
 }
 
@@ -483,7 +543,7 @@ body {
 .glass-input:focus {
   background: var(--card);
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(242, 32, 43, 0.12);
 }
 
 .dark .glass-input {
@@ -501,7 +561,7 @@ body {
 
 /* Gradient section backgrounds — Fase 26: neutrale grey i.p.v. blauw-tinted */
 .section-gradient {
-  background: linear-gradient(135deg, #f5f6f8 0%, #fafbfc 50%, #f5f6f8 100%);
+  background: linear-gradient(135deg, #f4f4f4 0%, #fafafa 50%, #f4f4f4 100%);
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
 }
@@ -513,7 +573,7 @@ body {
 }
 
 .section-gradient-alt {
-  background: linear-gradient(135deg, #fafbfc 0%, #f5f6f8 50%, #fafbfc 100%);
+  background: linear-gradient(135deg, #fafafa 0%, #f4f4f4 50%, #fafafa 100%);
   background-size: 200% 200%;
   animation: gradient-shift 12s ease infinite;
 }
@@ -709,4 +769,175 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .holo-overlay { animation: none; background-position: 50% 50%; }
+}
+
+/* ── Ploy-primitives (design-pass 2026-10) ──
+   Gedeelde stijllaag voor de landing en de bouwstenen in src/components/ploy.
+   .cc-landing = wrapper van de homepage; de rest zijn losse utilities. */
+.cc-landing {
+  background: var(--cc-bg);
+  color: var(--cc-ink);
+  letter-spacing: -0.02em;
+  line-height: 1.5;
+}
+
+.cc-display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  line-height: 0.88;
+  letter-spacing: 0;
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+.cc-prose {
+  color: var(--cc-ink);
+  opacity: 0.68;
+}
+
+/* Afgeronde knoppen en pillen */
+.cc-pill {
+  border-radius: 100rem;
+}
+
+/* Hero-intro: tekst en knoppen schuiven zacht omhoog (zoals Ploy). */
+@keyframes ccIntroIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.cc-intro {
+  animation: ccIntroIn 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--cc-intro-delay, 0s);
+}
+
+/* Scroll-fill voor koppen: per woord een verloop dat van links vult. */
+.cc-word {
+  --p: 0%;
+  color: transparent;
+  background-image: linear-gradient(90deg, var(--cc-fill, var(--cc-ink)) 0, var(--cc-fill, var(--cc-ink)) var(--p), var(--cc-fill-faded, var(--cc-ink-faded)) var(--p));
+  -webkit-background-clip: text;
+  background-clip: text;
+  display: inline-block;
+  padding: 0.08em 0;
+  margin: -0.08em 0;
+}
+
+/* Digit-roller voor tellende cijfers. */
+.cc-digit {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+}
+.cc-digit-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 900ms cubic-bezier(0.22, 0.68, 0, 1);
+}
+.cc-digit-inner span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+/* Status-bolletje (stats-kaarten). */
+@keyframes ccRing {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.38;
+    transform: scale(1.18);
+  }
+}
+@keyframes ccPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.72);
+  }
+}
+.cc-ring {
+  animation: ccRing 2.8s ease-in-out infinite;
+}
+.cc-pulse {
+  animation: ccPulse 2.8s ease-in-out infinite;
+}
+
+/* Punch-card: kaart met vier stippen in de hoeken (accordeon, CTA-box). */
+.cc-punch {
+  position: relative;
+}
+.cc-punch::before,
+.cc-punch::after,
+.cc-punch > .cc-punch-dots::before,
+.cc-punch > .cc-punch-dots::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cc-dot, var(--cc-ink));
+}
+.cc-punch::before {
+  top: 12px;
+  left: 12px;
+}
+.cc-punch::after {
+  top: 12px;
+  right: 12px;
+}
+.cc-punch > .cc-punch-dots::before {
+  bottom: 12px;
+  left: 12px;
+}
+.cc-punch > .cc-punch-dots::after {
+  bottom: 12px;
+  right: 12px;
+}
+
+/* Accordeon-inhoud via grid-rows (zachte hoogte-animatie zonder JS-meting). */
+.cc-acc-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.6s cubic-bezier(0.625, 0.05, 0, 1);
+}
+.cc-acc-body[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+/* Scrollbare kaartenrij zonder zichtbare scrollbar. */
+.cc-noscroll {
+  scrollbar-width: none;
+}
+.cc-noscroll::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-intro {
+    animation: none;
+  }
+  .cc-word {
+    --p: 100%;
+  }
+  .cc-ring,
+  .cc-pulse {
+    animation: none;
+  }
 }

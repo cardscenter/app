@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { Poppins, IBM_Plex_Mono, Libre_Baskerville } from "next/font/google";
+import { bodyFont, displayFont, monoFont } from "@/app/fonts";
 import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -14,24 +14,6 @@ import { ResponsiveToaster } from "@/components/ui/responsive-toaster";
 import { auth } from "@/lib/auth";
 import { getFeatureSnapshot } from "@/lib/feature-flags";
 import "../globals.css";
-
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-ibm-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
-
-const libreBaskerville = Libre_Baskerville({
-  variable: "--font-libre-baskerville",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
 
 export const metadata: Metadata = {
   title: "Cards Center",
@@ -65,7 +47,7 @@ export default async function LocaleLayout({
   return (
     <html
       lang={locale}
-      className={`${poppins.variable} ${ibmPlexMono.variable} ${libreBaskerville.variable} h-full antialiased`}
+      className={`${bodyFont.variable} ${monoFont.variable} ${displayFont.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">

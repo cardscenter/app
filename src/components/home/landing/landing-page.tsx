@@ -2,7 +2,6 @@ import { getTranslations } from "next-intl/server";
 import { getLandingData } from "@/lib/landing-data";
 import { formatEventDateShort, formatEventTime, formatPrice } from "@/lib/shop-events/format";
 import { PLATFORM, formatShopAddress } from "@/lib/platform-config";
-import { landingBody, landingDisplay } from "./fonts";
 import { LandingNav } from "./landing-nav";
 import { LandingHero } from "./hero";
 import { Marquee } from "./marquee";
@@ -14,7 +13,6 @@ import { PlatformSection } from "./platform-section";
 import { AudienceAccordion } from "./audience-accordion";
 import { CtaSection } from "./cta-section";
 import { LandingFooter } from "./landing-footer";
-import "./landing.css";
 
 const TZ = "Europe/Amsterdam";
 
@@ -159,7 +157,7 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
   });
 
   return (
-    <div className={`cc-landing ${landingDisplay.variable} ${landingBody.variable} overflow-clip`} style={{ colorScheme: "light" }}>
+    <div className="cc-landing overflow-clip" style={{ colorScheme: "light" }}>
       {/* De site-header en -footer horen niet bij dit ontwerp: pil-nav en eigen footer. */}
       {/* html relative: framer-motion meet scroll-offsets t.o.v. de container. */}
       <style>{`body > header, body > footer, main + div { display: none !important; } html, body { background: #f4f4f4 !important; } html { position: relative; }`}</style>
