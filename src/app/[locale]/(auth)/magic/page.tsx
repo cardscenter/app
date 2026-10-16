@@ -1,5 +1,5 @@
 import { setRequestLocale } from "next-intl/server";
-import { AuthMarketingAside } from "@/components/auth/auth-marketing-aside";
+import { AuthFrame } from "@/components/ploy/auth-frame";
 import { MagicLogin } from "./magic-login";
 
 /**
@@ -19,9 +19,8 @@ export default async function MagicPage({
   setRequestLocale(locale);
 
   return (
-    <>
+    <AuthFrame>
       <MagicLogin locale={locale} token={token ?? null} />
-      <AuthMarketingAside variant="login" />
-    </>
+    </AuthFrame>
   );
 }

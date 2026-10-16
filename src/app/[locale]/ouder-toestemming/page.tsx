@@ -1,9 +1,8 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { PageContainer } from "@/components/layout/page-container";
 import { Link } from "@/i18n/navigation";
 import { applyGuardianConsent } from "@/lib/guardian-consent-server";
-import { buttonVariants } from "@/components/ui/button-variants";
+import { AuthFrame } from "@/components/ploy/auth-frame";
 
 export const dynamic = "force-dynamic";
 
@@ -27,12 +26,12 @@ export default async function GuardianConsentPage({
   const result = await applyGuardianConsent(token);
 
   return (
-    <PageContainer width="narrow" className="py-16">
-      <div className="mx-auto max-w-lg rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+    <AuthFrame>
+      <div className="w-full text-center">
         {result.ok ? (
           <>
-            <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
-            <h1 className="mt-4 text-2xl font-bold text-foreground">
+            <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-[var(--pastel-green)]"><CheckCircle2 className="size-7 text-[var(--foreground)]" /></span>
+            <h1 className="cc-display mt-5 text-[36px] text-[var(--foreground)] sm:text-[44px]">
               {result.alreadyGiven ? t("alreadyTitle") : t("successTitle")}
             </h1>
             <p className="mt-3 text-sm text-muted-foreground">
@@ -42,17 +41,17 @@ export default async function GuardianConsentPage({
           </>
         ) : (
           <>
-            <XCircle className="mx-auto size-12 text-rose-500" />
-            <h1 className="mt-4 text-2xl font-bold text-foreground">{t("invalidTitle")}</h1>
+            <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-[var(--pastel-pink)]"><XCircle className="size-7 text-[var(--foreground)]" /></span>
+            <h1 className="cc-display mt-5 text-[36px] text-[var(--foreground)] sm:text-[44px]">{t("invalidTitle")}</h1>
             <p className="mt-3 text-sm text-muted-foreground">
               {result.reason === "expired" ? t("expiredBody") : t("invalidBody")}
             </p>
           </>
         )}
-        <Link href="/" className={`${buttonVariants({ variant: "outline" })} mt-6`}>
+        <Link href="/" className="mt-8 cc-pill inline-flex w-full items-center justify-center gap-1.5 border border-[var(--border)] bg-white px-6 py-4 text-sm font-semibold leading-none text-[var(--foreground)] transition-colors hover:bg-[var(--background)]">
           {t("toHome")}
         </Link>
       </div>
-    </PageContainer>
+    </AuthFrame>
   );
 }

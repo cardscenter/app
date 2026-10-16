@@ -2,6 +2,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { verifyEmail } from "@/actions/auth";
 import { auth } from "@/lib/auth";
+import { AuthFrame } from "@/components/ploy/auth-frame";
 
 /**
  * E-mailverificatie-pagina (Fase 42, onboarding-landing sinds Fase 43).
@@ -23,13 +24,13 @@ export default async function VerifyEmailPage({
   const isOwnSession = ok && session?.user?.id === result.userId;
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 text-center shadow-card">
+    <AuthFrame width="sm">
+      <div className="w-full text-center">
         <div
           className={`mx-auto mb-4 flex size-12 items-center justify-center rounded-full ${
             ok
-              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-              : "bg-red-500/10 text-red-600 dark:text-red-400"
+              ? "bg-[var(--pastel-green)] text-[var(--foreground)]"
+              : "bg-[var(--pastel-pink)] text-[var(--foreground)]"
           }`}
         >
           {ok ? (
@@ -38,7 +39,7 @@ export default async function VerifyEmailPage({
             <XCircle className="size-6" />
           )}
         </div>
-        <h1 className="text-xl font-bold text-foreground">
+        <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">
           {ok ? "E-mailadres bevestigd" : "Verificatie mislukt"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -58,7 +59,7 @@ export default async function VerifyEmailPage({
                 : "/login?callbackUrl=/welkom"
               : "/login"
           }
-          className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          className="mt-6 cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
         >
           {ok
             ? isOwnSession
@@ -69,12 +70,12 @@ export default async function VerifyEmailPage({
         {ok && isOwnSession && (
           <Link
             href="/dashboard"
-            className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            className="mt-3 cc-pill inline-flex w-full items-center justify-center gap-1.5 border border-[var(--border)] bg-white px-6 py-4 text-sm font-semibold leading-none text-[var(--foreground)] transition-colors hover:bg-[var(--background)]"
           >
             Overslaan — naar je dashboard
           </Link>
         )}
       </div>
-    </div>
+    </AuthFrame>
   );
 }

@@ -19,14 +19,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   if (!token) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
-        <h1 className="text-xl font-bold text-foreground">Ongeldige link</h1>
+      <div className="text-center">
+        <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">Ongeldige link</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Deze reset-link is onvolledig. Vraag een nieuwe aan.
         </p>
         <Link
           href="/forgot-password"
-          className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          className="mt-6 cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
         >
           Nieuwe link aanvragen
         </Link>
@@ -36,11 +36,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   if (state?.done) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
-        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-[var(--pastel-green)] text-[var(--foreground)]">
           <CheckCircle2 className="size-6" />
         </div>
-        <h1 className="text-xl font-bold text-foreground">
+        <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">
           Wachtwoord gewijzigd
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -48,7 +48,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </p>
         <Link
           href="/login"
-          className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          className="mt-6 cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
         >
           Naar inloggen
         </Link>
@@ -57,9 +57,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
+    <div className="">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">
           Nieuw wachtwoord instellen
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -71,7 +71,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <input type="hidden" name="token" value={token} />
 
         {state?.error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          <p className="rounded-[12px] bg-[var(--pastel-pink)] p-3 text-sm text-[var(--foreground)]">
             {state.error}
           </p>
         )}
@@ -108,7 +108,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? "Opslaan…" : "Wachtwoord opslaan"}
           {!pending && <ArrowRight className="size-4" />}

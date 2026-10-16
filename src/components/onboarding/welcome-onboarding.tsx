@@ -20,6 +20,7 @@ import { AddressForm } from "@/components/dashboard/address-form";
 import { SellingScopeToggle } from "@/components/dashboard/selling-scope-toggle";
 import type { SellingScope } from "@/lib/shipping/static-methods";
 import type { FeatureSnapshot } from "@/lib/feature-flags";
+import { AuthFrame } from "@/components/ploy/auth-frame";
 
 type StepKey = "address" | "scope" | "twofa" | "discover";
 
@@ -76,16 +77,16 @@ export function WelcomeOnboarding({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-var(--site-nav-offset))] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-2xl space-y-8">
+    <AuthFrame width="xl">
+      <div className="w-full space-y-8">
         {/* Header */}
         <div className="space-y-3 text-center">
           <div className="flex justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <PartyPopper className="h-8 w-8 text-primary" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--pastel-yellow)]">
+              <PartyPopper className="h-8 w-8 text-[var(--foreground)]" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">{t("welcomeTitle")}</h1>
+          <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">{t("welcomeTitle")}</h1>
           <p className="text-muted-foreground">{t("onboardingSubtitle")}</p>
         </div>
 
@@ -98,12 +99,12 @@ export function WelcomeOnboarding({
               return (
                 <div key={key} className="flex items-center gap-2">
                   <div
-                    className={`flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                    className={`cc-pill flex h-8 items-center gap-1.5 border px-3 text-xs font-semibold transition-colors ${
                       isDone
-                        ? "bg-primary/10 text-primary"
+                        ? "border-transparent bg-[var(--pastel-green)] text-[var(--foreground)]"
                         : isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
+                          ? "border-[var(--foreground)] bg-[var(--foreground)] text-white"
+                          : "border-[var(--border)] bg-white text-[var(--foreground)]/55"
                     }`}
                   >
                     {isDone && <Check className="size-3" />}
@@ -117,7 +118,7 @@ export function WelcomeOnboarding({
 
         {/* Step: adres-vangnet (alleen incomplete adressen — pre-Fase-43) */}
         {step === "address" && (
-          <div className="glass rounded-2xl p-6">
+          <div className="rounded-[16px] bg-[var(--background)] p-6">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
                 <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -146,7 +147,7 @@ export function WelcomeOnboarding({
 
         {/* Step: verzendgebied bevestigen */}
         {step === "scope" && originCountry && (
-          <div className="glass rounded-2xl p-6">
+          <div className="rounded-[16px] bg-[var(--background)] p-6">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/10">
                 <Truck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
@@ -169,7 +170,7 @@ export function WelcomeOnboarding({
               <button
                 type="button"
                 onClick={next}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover"
+                className="cc-pill inline-flex items-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
               >
                 {t("onboardingScopeConfirm")}
                 <ArrowRight className="h-4 w-4" />
@@ -180,7 +181,7 @@ export function WelcomeOnboarding({
 
         {/* Step: 2FA-nudge (optioneel) */}
         {step === "twofa" && (
-          <div className="glass rounded-2xl p-6">
+          <div className="rounded-[16px] bg-[var(--background)] p-6">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
                 <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -210,14 +211,14 @@ export function WelcomeOnboarding({
             <div className="mt-5 flex items-center justify-center gap-3">
               <Link
                 href="/dashboard/profiel"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover"
+                className="cc-pill inline-flex items-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
               >
                 {t("onboarding2faCta")}
               </Link>
               <button
                 type="button"
                 onClick={next}
-                className="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="px-4 py-2.5 text-sm font-semibold text-[var(--foreground)]/55 transition-colors hover:text-[var(--foreground)]"
               >
                 {t("onboarding2faLater")}
               </button>
@@ -228,7 +229,7 @@ export function WelcomeOnboarding({
         {/* Step: ontdekken (de oorspronkelijke /welkom-kaartjes) */}
         {step === "discover" && <DiscoverCards features={features} />}
       </div>
-    </div>
+    </AuthFrame>
   );
 }
 
@@ -285,7 +286,7 @@ function DiscoverCards({ features }: { features: FeatureSnapshot }) {
           <Link
             key={href}
             href={href}
-            className="group glass rounded-xl p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg"
+            className="group rounded-[16px] bg-[var(--background)] p-5 transition-transform hover:-translate-y-0.5"
           >
             <div className="flex items-start gap-4">
               <div
@@ -294,7 +295,7 @@ function DiscoverCards({ features }: { features: FeatureSnapshot }) {
                 <Icon className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-semibold text-foreground transition-colors group-hover:text-primary">
+                <h3 className="text-sm font-semibold text-[var(--foreground)] transition-colors group-hover:text-[var(--primary)]">
                   {title}
                 </h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
@@ -308,7 +309,7 @@ function DiscoverCards({ features }: { features: FeatureSnapshot }) {
       <div className="text-center">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary-hover hover:shadow-lg"
+          className="cc-pill inline-flex items-center gap-2 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
         >
           {t("welcomeStart")}
           <ArrowRight className="h-4 w-4" />

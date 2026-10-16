@@ -19,11 +19,11 @@ export function ForgotPasswordForm() {
 
   if (state?.sent) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
-        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-[var(--pastel-green)] text-[var(--foreground)]">
           <CheckCircle2 className="size-6" />
         </div>
-        <h1 className="text-xl font-bold text-foreground">Check je inbox</h1>
+        <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">Check je inbox</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Als er een account bij dit e-mailadres hoort, hebben we een link
           gestuurd om je wachtwoord opnieuw in te stellen. De link is 1 uur
@@ -31,7 +31,7 @@ export function ForgotPasswordForm() {
         </p>
         <Link
           href="/login"
-          className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          className="mt-6 cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
         >
           Terug naar inloggen
         </Link>
@@ -40,9 +40,9 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
+    <div className="">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">
           Wachtwoord vergeten?
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -53,7 +53,7 @@ export function ForgotPasswordForm() {
 
       <form action={formAction} className="space-y-5">
         {state?.error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          <p className="rounded-[12px] bg-[var(--pastel-pink)] p-3 text-sm text-[var(--foreground)]">
             {state.error}
           </p>
         )}
@@ -79,7 +79,7 @@ export function ForgotPasswordForm() {
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? "Versturen…" : "Stuur reset-link"}
           {!pending && <ArrowRight className="size-4" />}

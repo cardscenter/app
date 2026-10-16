@@ -194,9 +194,9 @@ function MultiStepRegisterForm({ games }: { games: GameDefinition[] }) {
   ];
 
   return (
-    <div className="w-full max-w-xl space-y-5">
+    <div className="w-full space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("registerTitle")}</h1>
+        <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">{t("registerTitle")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("step", { current: currentStep, total: TOTAL_STEPS })}</p>
       </div>
 
@@ -213,12 +213,12 @@ function MultiStepRegisterForm({ games }: { games: GameDefinition[] }) {
                 type="button"
                 onClick={() => isDone && goTo(n)}
                 disabled={!isDone}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                className={`cc-pill inline-flex h-8 items-center gap-1.5 border px-3 text-xs font-semibold transition-colors ${
                   isActive
-                    ? "border-primary bg-primary text-primary-foreground"
+                    ? "border-[var(--foreground)] bg-[var(--foreground)] text-white"
                     : isDone
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400"
-                      : "border-border bg-card text-muted-foreground"
+                      ? "border-transparent bg-[var(--pastel-green)] text-[var(--foreground)] hover:opacity-90"
+                      : "border-[var(--border)] bg-white text-[var(--foreground)]/55"
                 } disabled:cursor-default`}
               >
                 {isDone ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
@@ -231,9 +231,9 @@ function MultiStepRegisterForm({ games }: { games: GameDefinition[] }) {
       </ol>
 
       {/* Form-kaart */}
-      <div className="rounded-xl border border-border bg-card p-6 shadow-card sm:p-8">
+      <div className="pt-2">
         {serverState?.error && (
-          <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="mb-6 rounded-[12px] bg-[var(--pastel-pink)] p-3 text-sm text-[var(--foreground)]">
             {serverState.error}
           </div>
         )}
@@ -273,7 +273,7 @@ function MultiStepRegisterForm({ games }: { games: GameDefinition[] }) {
               <button
                 type="button"
                 onClick={goNext}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary-hover"
+                className="cc-pill inline-flex items-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)]"
               >
                 {t("next")}
                 <ChevronRight className="size-4" />
@@ -283,7 +283,7 @@ function MultiStepRegisterForm({ games }: { games: GameDefinition[] }) {
                 type="button"
                 onClick={handleSubmit}
                 disabled={pending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary-hover disabled:opacity-50"
+                className="cc-pill inline-flex items-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
               >
                 {pending ? "..." : t("createAccount")}
                 {!pending && <Check className="size-4" />}
@@ -325,7 +325,7 @@ function FieldError({ error }: { error?: string }) {
 function StepHeading({ title, description }: { title: string; description?: string }) {
   return (
     <div className="mb-5">
-      <h2 className="text-xl font-bold text-foreground">{title}</h2>
+      <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{title}</h2>
       {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
     </div>
   );

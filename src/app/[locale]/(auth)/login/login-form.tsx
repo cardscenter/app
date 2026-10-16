@@ -94,11 +94,10 @@ export function LoginForm({ locale }: LoginFormProps) {
   }
 
   return (
-    <div className="flex h-full items-start justify-center overflow-y-auto bg-background px-4 pb-12 pt-16 sm:px-8 lg:px-12 lg:pt-[12vh]">
-      <div className="w-full max-w-md">
+    <div className="w-full">
         {/* Header */}
-        <div className="mb-8 text-center lg:text-left">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <div className="mb-8 text-center">
+          <h1 className="cc-display text-[40px] text-[var(--foreground)] sm:text-[48px]">
             {step === "totp"
               ? "Nog één stap"
               : step === "magic"
@@ -125,7 +124,7 @@ export function LoginForm({ locale }: LoginFormProps) {
 
         {step === "magic-sent" ? (
           <div className="space-y-5">
-            <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+            <div className="flex items-start gap-3 rounded-[12px] bg-[var(--pastel-green)] p-4 text-sm text-[var(--foreground)]">
               <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
               <span>{t("magicSentBody")}</span>
             </div>
@@ -144,7 +143,7 @@ export function LoginForm({ locale }: LoginFormProps) {
         ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+            <div className="flex items-start gap-2 rounded-[12px] bg-[var(--pastel-pink)] p-3 text-sm text-[var(--foreground)]">
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <span>{error}</span>
             </div>
@@ -219,7 +218,7 @@ export function LoginForm({ locale }: LoginFormProps) {
             </>
           ) : (
             <div className="space-y-4">
-              <div className="space-y-1.5 rounded-lg border border-primary/30 bg-primary/5 p-4">
+              <div className="space-y-1.5 rounded-[12px] bg-[var(--pastel-yellow)] p-4">
                 <div className="flex items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -277,7 +276,7 @@ export function LoginForm({ locale }: LoginFormProps) {
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-card transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="cc-pill inline-flex w-full items-center justify-center gap-1.5 bg-[var(--primary)] px-6 py-4 text-sm font-semibold leading-none text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending
               ? t("loginPending")
@@ -296,7 +295,7 @@ export function LoginForm({ locale }: LoginFormProps) {
                 setStep(step === "magic" ? "credentials" : "magic");
                 setError(null);
               }}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className="cc-pill inline-flex w-full items-center justify-center gap-1.5 border border-[var(--border)] bg-white px-6 py-4 text-sm font-semibold leading-none text-[var(--foreground)] transition-colors hover:bg-[var(--background)]"
             >
               <Sparkles className="size-4 text-primary" />
               {step === "magic" ? t("magicUsePassword") : t("magicUseLink")}
@@ -306,10 +305,7 @@ export function LoginForm({ locale }: LoginFormProps) {
         )}
 
         {/* Trust footer (mobile-only — desktop heeft de aside) */}
-        <p className="mt-8 text-center text-xs text-muted-foreground lg:hidden">
-          {t("mobileTrustFooter")}
-        </p>
-      </div>
+        <p className="mt-8 text-center text-xs text-[var(--foreground)]/55">{t("mobileTrustFooter")}</p>
     </div>
   );
 }
