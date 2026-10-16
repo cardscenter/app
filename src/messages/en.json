@@ -1481,8 +1481,6 @@
     "subtitle": "Manage your preferences for display, notifications and trading.",
     "sectionDisplay": "Display",
     "sectionDisplayDesc": "How Cards Center looks on this device.",
-    "theme": "Theme",
-    "themeDesc": "Choose between light and dark.",
     "language": "Language",
     "languageDesc": "The language of the website.",
     "sectionEmail": "Email preferences",

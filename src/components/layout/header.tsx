@@ -11,7 +11,6 @@ import { NotificationBell } from "@/components/ui/notification-bell";
 import { MessageIcon } from "@/components/ui/message-icon";
 import { CartIcon } from "@/components/ui/cart-icon";
 import { AdminShield } from "@/components/layout/admin-shield";
-import { ThemeIconButton } from "@/components/layout/theme-icon-button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { getUnreadCount } from "@/actions/notification";
 import { getUnreadConversationCount } from "@/actions/message";
@@ -217,9 +216,6 @@ function HeaderContent() {
         {/* Acties */}
         <div className={`ml-auto flex shrink-0 items-center gap-1 2xl:gap-1.5 ${hasLeftGroup ? "xl:ml-2 2xl:ml-3" : ""}`}>
           <GlobalSearch variant="desktop" />
-          <span className="hidden xl:block">
-            <ThemeIconButton />
-          </span>
 
           {session?.user ? (
             <>
@@ -347,10 +343,6 @@ function HeaderContent() {
             })}
           </nav>
 
-          <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-4">
-            <span className="text-xs font-medium text-white/50">Thema</span>
-            <ThemeIconButton />
-          </div>
 
           {!session?.user && (
             <div className="mt-3 flex gap-2">

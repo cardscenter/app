@@ -7,7 +7,6 @@ import { Palette, Mail, Gavel, EyeOff, Bell, Ban } from "lucide-react";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { SettingsRow } from "@/components/dashboard/ui/settings-row";
-import { ThemeToggle } from "@/components/toggle-theme";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { EmailPreferenceRows } from "@/components/dashboard/settings/email-preference-rows";
 import { LocalPrefToggle } from "@/components/dashboard/settings/local-pref-toggle";
@@ -72,9 +71,6 @@ export default async function SettingsPage({
         description={t("sectionDisplayDesc")}
         contentClassName={rowsClass}
       >
-        <SettingsRow label={t("theme")} description={t("themeDesc")}>
-          <ThemeToggle />
-        </SettingsRow>
         <SettingsRow label={t("language")} description={t("languageDesc")}>
           <LanguageSwitcher />
         </SettingsRow>

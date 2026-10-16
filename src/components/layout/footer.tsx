@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
-import { ThemeToggle } from "@/components/toggle-theme";
 import { LanguageSwitcher } from "./language-switcher";
 import { PageContainer } from "@/components/layout/page-container";
 import { ZDivider } from "@/components/ui/z-divider";
@@ -86,7 +85,6 @@ export function Footer() {
           {/* Settings: theme/language toggles, anchored bottom-right */}
           <div className="flex flex-col items-end justify-end gap-2">
             <div className="flex items-center gap-4">
-              <ThemeToggle />
               <LanguageSwitcher />
             </div>
           </div>
