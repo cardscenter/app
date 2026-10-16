@@ -17,7 +17,7 @@ import { getBulkPricing } from "@/lib/buyback-pricing-db";
 import { getServerMarketPrice } from "@/lib/buyback-pricing-server";
 import { submitCollectionBuybackSchema, submitBulkBuybackSchema } from "@/lib/validations/buyback";
 import { getCardImageUrl } from "@/lib/card-image";
-import { encryptIban } from "@/lib/iban-crypto";
+import { encryptIban, decryptIban, maskStoredIban } from "@/lib/iban-crypto";
 import { ADMIN_TRANSITIONS, canMarkPaid, canAcceptAdjusted, canRequestReturn, decisionDeadlineFrom, RETURN_FEE_EUR } from "@/lib/buyback-status";
 import { createProviderPayment } from "@/lib/mollie";
 
@@ -311,7 +311,7 @@ export async function getBuybackRequests() {
   const session = await auth();
   if (!session?.user?.id) return [];
 
-  return prisma.buybackRequest.findMany({
+  const rows = await prisma.buybackRequest.findMany({
     where: { userId: session.user.id },
     include: {
       items: true,
@@ -319,6 +319,8 @@ export async function getBuybackRequests() {
     },
     orderBy: { createdAt: "desc" },
   });
+  // Fase 6: IBAN alleen gemaskeerd naar buiten.
+  return rows.map((r) => ({ ...r, iban: maskStoredIban(r.iban) }));
 }
 
 export async function getBuybackRequestDetail(requestId: string) {
@@ -344,7 +346,8 @@ export async function getBuybackRequestDetail(requestId: string) {
 
   if (request.userId !== session.user.id && !isAdmin) return null;
 
-  return request;
+  // Fase 6: admin ziet het volledige IBAN, de verkoper alleen gemaskeerd.
+  return { ...request, iban: isAdmin ? decryptIban(request.iban) : maskStoredIban(request.iban) };
 }
 
 // ── Verkoper-keuze na controle (Fase 6) ─────────────────────────────────────

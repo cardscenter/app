@@ -37,7 +37,8 @@ export default async function DashboardInkoopPage({
           </Link>
         }
       />
-      <BuybackDashboard requests={JSON.parse(JSON.stringify(requests))} />
+      {/* Fase 6: versleuteld IBAN niet naar de client sturen; de lijst toont het niet. */}
+      <BuybackDashboard requests={JSON.parse(JSON.stringify(requests.map((r) => ({ ...r, iban: null }))))} />
     </div>
   );
 }

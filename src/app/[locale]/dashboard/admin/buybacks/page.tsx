@@ -18,7 +18,8 @@ export default async function AdminBuybackPage() {
   return (
     <div className="space-y-6">
       <DashboardPageHeader title={t("adminTitle")} />
-      <AdminBuybackList requests={JSON.parse(JSON.stringify(requests))} />
+      {/* Fase 6: versleuteld IBAN niet naar de client sturen; de lijst toont het niet. */}
+      <AdminBuybackList requests={JSON.parse(JSON.stringify(requests.map((r) => ({ ...r, iban: null }))))} />
     </div>
   );
 }
