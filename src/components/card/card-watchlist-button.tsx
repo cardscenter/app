@@ -33,8 +33,8 @@ export function CardWatchlistButton({ cardId, initialWatching }: Props) {
       onClick={handleClick}
       disabled={pending}
       className={cn(
-        "glass-subtle group flex w-full items-center justify-between gap-3 rounded-xl p-4 text-left transition-all hover:ring-2 hover:ring-red-500/30 disabled:opacity-50",
-        watching && "ring-2 ring-red-500/40 bg-red-500/5"
+        "rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] group flex w-full items-center justify-between gap-3 p-4 text-left transition-shadow hover:ring-2 hover:ring-[var(--primary)]/30 disabled:opacity-50",
+        watching && "ring-2 ring-[var(--primary)]/40 bg-[var(--pastel-pink)]/40"
       )}
     >
       <div>
@@ -50,7 +50,7 @@ export function CardWatchlistButton({ cardId, initialWatching }: Props) {
       <Heart
         className={cn(
           "size-6 shrink-0 transition-all",
-          watching ? "fill-red-500 text-red-500" : "text-muted-foreground group-hover:text-red-500"
+          watching ? "fill-[var(--primary)] text-[var(--primary)]" : "text-[var(--foreground)]/45 group-hover:text-[var(--primary)]"
         )}
       />
     </button>

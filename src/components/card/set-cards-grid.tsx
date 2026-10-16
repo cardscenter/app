@@ -90,21 +90,21 @@ export function SetCardsGrid({ cards, setSlug }: Props) {
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
             onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/40"
+            className="cc-pill inline-flex items-center gap-2 border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--background)]"
           >
             Sorteren: <span className="text-muted-foreground">{SORT_LABELS[sort]}</span>
             <ChevronDown className={cn("size-4 transition-transform", menuOpen && "rotate-180")} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+            <div className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-[12px] border border-[var(--border)] bg-white shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)]">
               {(Object.keys(SORT_LABELS) as Sort[]).map((key) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => { setSort(key); setMenuOpen(false); }}
                   className={cn(
-                    "flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60",
-                    sort === key && "bg-primary/10 font-semibold text-primary"
+                    "flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--background)]",
+                    sort === key && "bg-[var(--pastel-yellow)] font-semibold text-[var(--foreground)]"
                   )}
                 >
                   {SORT_LABELS[key]}
@@ -123,9 +123,9 @@ export function SetCardsGrid({ cards, setSlug }: Props) {
             <Link
               key={card.id}
               href={`/kaarten/${setSlug}/${cardSlug(card.name, card.localId)}`}
-              className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:scale-[1.02] hover:shadow-lg"
+              className="group flex flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)]"
             >
-              <div className="relative aspect-[5/7] bg-muted">
+              <div className="relative aspect-[5/7] bg-[var(--muted)]">
                 {imgSrc ? (
                   <Image
                     src={imgSrc}
@@ -153,12 +153,12 @@ export function SetCardsGrid({ cards, setSlug }: Props) {
                 </div>
                 <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
                   {price !== null && (
-                    <span className="text-sm font-bold text-foreground tabular-nums">
+                    <span className="text-sm font-semibold text-[var(--foreground)] tabular-nums">
                       €{price.toFixed(2)}
                     </span>
                   )}
                   {card.marktprijsRH !== null && !isFoilRarity(card.rarity) && (
-                    <span className="inline-flex items-center gap-0.5 text-xs tabular-nums text-purple-600 dark:text-purple-400">
+                    <span className="inline-flex items-center gap-0.5 text-xs tabular-nums text-[var(--pastel-blue-ink)]">
                       <span className="font-medium">{card.rhLabel ?? "Reverse"}</span> €{card.marktprijsRH.toFixed(2)}
                     </span>
                   )}

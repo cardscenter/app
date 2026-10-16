@@ -14,7 +14,7 @@ export function UserResultCard({ user }: { user: UserHit }) {
   return (
     <Link
       href={user.href}
-      className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card transition-all hover:shadow-card-hover"
+      className="group flex flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)] flex-row items-center gap-3 p-4"
     >
       <div className="relative size-12 shrink-0 overflow-hidden rounded-[22%] bg-muted">
         {user.avatarUrl ? (

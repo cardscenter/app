@@ -25,7 +25,7 @@ export function SearchPriceFilter() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+    <div className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-4">
       <h2 className="mb-1 text-sm font-semibold text-foreground">{t("filters")}</h2>
       <FilterSection
         title={t("priceRange")}
@@ -44,7 +44,7 @@ export function SearchPriceFilter() {
               if (e.key === "Enter")
                 update("minPrice", (e.target as HTMLInputElement).value);
             }}
-            className="w-full min-w-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            className="w-full rounded-[10px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none min-w-0 px-2.5 py-1.5"
           />
           <span className="text-muted-foreground">–</span>
           <input
@@ -58,7 +58,7 @@ export function SearchPriceFilter() {
               if (e.key === "Enter")
                 update("maxPrice", (e.target as HTMLInputElement).value);
             }}
-            className="w-full min-w-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            className="w-full rounded-[10px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none min-w-0 px-2.5 py-1.5"
           />
         </div>
       </FilterSection>

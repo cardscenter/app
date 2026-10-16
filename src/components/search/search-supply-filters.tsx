@@ -63,14 +63,14 @@ export function SearchSupplyFilters() {
         : t("typeListing");
 
   const panel = (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+    <div className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-4">
       <div className="mb-1 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground">{t("filters")}</h2>
         {activeCount > 0 && (
           <button
             type="button"
             onClick={clearFilters}
-            className="text-xs font-medium text-primary hover:underline"
+            className="text-xs font-semibold text-[var(--primary)] hover:underline"
           >
             {t("clearFilters")}
           </button>
@@ -122,7 +122,7 @@ export function SearchSupplyFilters() {
               if (e.key === "Enter")
                 updateFilters({ minPrice: (e.target as HTMLInputElement).value });
             }}
-            className="w-full min-w-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            className="w-full rounded-[10px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none min-w-0 px-2.5 py-1.5"
           />
           <span className="text-muted-foreground">–</span>
           <input
@@ -136,7 +136,7 @@ export function SearchSupplyFilters() {
               if (e.key === "Enter")
                 updateFilters({ maxPrice: (e.target as HTMLInputElement).value });
             }}
-            className="w-full min-w-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            className="w-full rounded-[10px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none min-w-0 px-2.5 py-1.5"
           />
         </div>
       </FilterSection>
@@ -150,12 +150,12 @@ export function SearchSupplyFilters() {
         <button
           type="button"
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground"
+          className="cc-pill inline-flex items-center gap-2 border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--background)]"
         >
           {mobileOpen ? <X className="size-4" /> : <SlidersHorizontal className="size-4" />}
           {mobileOpen ? t("hideFilters") : t("showFilters")}
           {activeCount > 0 && (
-            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+            <span className="cc-pill bg-[var(--pastel-yellow)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--foreground)]">
               {activeCount}
             </span>
           )}

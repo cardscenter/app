@@ -36,7 +36,7 @@ function EvolutionNode({
   return (
     <Link
       href={`/pokedex/${pokedexSlug(node.species.name, dexId)}`}
-      className="group flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-muted/60"
+      className="group flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-[var(--background)]"
     >
       <div className="relative size-16 sm:size-20">
         <Image
@@ -121,8 +121,8 @@ export async function PokedexEvolutionChain({ chain }: Props) {
   const allBranchesAreLeaves = branches.every((b) => b.evolves_to.length === 0);
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="mb-4 text-lg font-bold text-foreground">{t("evolution")}</h2>
+    <section className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-5">
+      <h2 className="mb-4 text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">{t("evolution")}</h2>
       {!hasAnyEvolution ? (
         <p className="text-sm text-muted-foreground">{t("noEvolution")}</p>
       ) : branches.length === 0 ? (

@@ -1,5 +1,4 @@
 import { Link } from "@/i18n/navigation";
-import { cn } from "@/lib/utils";
 
 export interface SearchTab {
   key: string;
@@ -11,11 +10,11 @@ export interface SearchTab {
 /**
  * Categorie-tabs voor /zoeken (Alles · Kaarten · Pokémon · Aanbod ·
  * Gebruikers). Query-param-gedreven (?tab=), dus geen PageTabs-hergebruik —
- * die matcht op pathname. Styling volgt wel dezelfde pill-bar-taal.
+ * die matcht op pathname. Design-pass: pillen zoals de catalogusfilters.
  */
 export function SearchTabs({ tabs, active }: { tabs: SearchTab[]; active: string }) {
   return (
-    <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-muted/40 p-1">
+    <div className="flex flex-wrap items-center gap-2">
       {tabs.map((tab) => {
         const isActive = tab.key === active;
         return (
@@ -23,26 +22,11 @@ export function SearchTabs({ tabs, active }: { tabs: SearchTab[]; active: string
             key={tab.key}
             href={tab.href}
             scroll={false}
-            className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-              isActive
-                ? "bg-card text-foreground shadow-card"
-                : "text-muted-foreground hover:text-foreground"
-            )}
+            aria-current={isActive ? "true" : undefined}
+            className={`cc-pill inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap px-4 text-sm font-semibold no-underline transition-colors ${isActive ? "bg-[var(--foreground)] text-white" : "bg-white text-[var(--foreground)]/75 hover:text-[var(--foreground)]"}`}
           >
             {tab.label}
-            {tab.count !== null && (
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
-                  isActive
-                    ? "bg-primary/15 text-primary"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                {tab.count > 999 ? "999+" : tab.count}
-              </span>
-            )}
+            {tab.count !== null && <span className={`cc-pill px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums ${isActive ? "bg-white/20 text-white" : "bg-[var(--background)] text-[var(--foreground)]/60"}`}>{tab.count > 999 ? "999+" : tab.count}</span>}
           </Link>
         );
       })}

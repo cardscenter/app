@@ -8,9 +8,9 @@ export function CardResultTile({ card }: { card: CardHit }) {
   return (
     <Link
       href={card.href}
-      className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:scale-[1.02] hover:shadow-lg"
+      className="group flex flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)]"
     >
-      <div className="relative aspect-[5/7] bg-muted">
+      <div className="relative aspect-[5/7] bg-[var(--muted)]">
         {card.imageUrl ? (
           <Image
             src={card.imageUrl}
@@ -34,7 +34,7 @@ export function CardResultTile({ card }: { card: CardHit }) {
           </p>
         </div>
         {card.price !== null && (
-          <p className="text-sm font-bold text-foreground tabular-nums">
+          <p className="text-sm font-semibold text-[var(--foreground)] tabular-nums">
             €{card.price.toFixed(2)}
           </p>
         )}

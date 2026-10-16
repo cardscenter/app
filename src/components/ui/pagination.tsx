@@ -39,13 +39,13 @@ export function Pagination({ currentPage, totalPages, baseUrl, locale, extraPara
       {currentPage > 1 ? (
         <Link
           href={pageUrl(currentPage - 1)}
-          className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+          className="cc-pill flex items-center gap-1 px-3.5 py-2 text-sm font-semibold text-[var(--foreground)]/60 transition-colors hover:bg-white hover:text-[var(--foreground)]"
         >
           <ChevronLeft className="h-4 w-4" />
           {t("previousPage")}
         </Link>
       ) : (
-        <span className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/40">
+        <span className="cc-pill flex items-center gap-1 px-3.5 py-2 text-sm font-semibold text-[var(--foreground)]/30">
           <ChevronLeft className="h-4 w-4" />
           {t("previousPage")}
         </span>
@@ -60,10 +60,10 @@ export function Pagination({ currentPage, totalPages, baseUrl, locale, extraPara
           <Link
             key={page}
             href={pageUrl(page)}
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            className={`cc-pill px-3.5 py-2 text-sm font-semibold transition-colors ${
               page === currentPage
-                ? "bg-primary text-white"
-                : "text-muted-foreground hover:bg-muted"
+                ? "bg-[var(--foreground)] text-white"
+                : "text-[var(--foreground)]/60 hover:bg-white hover:text-[var(--foreground)]"
             }`}
           >
             {page}
@@ -74,13 +74,13 @@ export function Pagination({ currentPage, totalPages, baseUrl, locale, extraPara
       {currentPage < totalPages ? (
         <Link
           href={pageUrl(currentPage + 1)}
-          className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+          className="cc-pill flex items-center gap-1 px-3.5 py-2 text-sm font-semibold text-[var(--foreground)]/60 transition-colors hover:bg-white hover:text-[var(--foreground)]"
         >
           {t("nextPage")}
           <ChevronRight className="h-4 w-4" />
         </Link>
       ) : (
-        <span className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/40">
+        <span className="cc-pill flex items-center gap-1 px-3.5 py-2 text-sm font-semibold text-[var(--foreground)]/30">
           {t("nextPage")}
           <ChevronRight className="h-4 w-4" />
         </span>

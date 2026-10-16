@@ -296,7 +296,7 @@ export function KaartenSearch({ children, rarityOptions, seriesOptions }: Props)
             <button
               type="button"
               onClick={() => setAdvancedOpen(true)}
-              className="mb-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/60 md:hidden"
+              className="mb-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-[var(--background)] md:hidden"
             >
               <SlidersHorizontal className="size-4" />
               Geavanceerd zoeken
@@ -309,7 +309,7 @@ export function KaartenSearch({ children, rarityOptions, seriesOptions }: Props)
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder='Zoek op naam, set of nummer (bv. "Charizard", "Base Set", "4")'
                 className={cn(
-                  "w-full rounded-xl border border-border bg-card py-3 pl-12 text-base text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary",
+                  "cc-pill w-full border border-[var(--border)] bg-white py-3.5 text-base text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none pl-12",
                   // Mobile: alleen ruimte voor het kruisje (pr-12). Desktop: ruimte
                   // voor de inline "Geavanceerd zoeken" knop wanneer die getoond wordt.
                   "pr-12",
@@ -333,7 +333,7 @@ export function KaartenSearch({ children, rarityOptions, seriesOptions }: Props)
                 <button
                   type="button"
                   onClick={() => setAdvancedOpen(true)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-muted/60 md:inline-flex"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 hidden items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-[var(--background)] md:inline-flex"
                 >
                   <SlidersHorizontal className="size-3.5" />
                   Geavanceerd zoeken
@@ -436,11 +436,11 @@ function AdvancedPanel({
   return (
     <div
       ref={panelRef}
-      className="glass-subtle rounded-2xl border border-border p-5 shadow-sm"
+      className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-5 sm:p-6"
     >
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal className="size-4 text-primary" />
+          <SlidersHorizontal className="size-4 text-[var(--foreground)]" />
           <h3 className="text-base font-semibold text-foreground">Geavanceerd zoeken</h3>
         </div>
         <button
@@ -461,7 +461,7 @@ function AdvancedPanel({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder='Zoek op naam, set of nummer (bv. "Charizard", "Base Set", "4")'
-          className="w-full rounded-xl border border-border bg-card py-3 pl-12 pr-10 text-base text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="cc-pill w-full border border-[var(--border)] bg-white py-3.5 text-base text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none pl-12 pr-10"
         />
         {query && (
           <button
@@ -532,7 +532,7 @@ function AdvancedPanel({
           <select
             value={draft.seriesId}
             onChange={(e) => onSeriesChange(e.target.value)}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full rounded-[10px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none"
           >
             <option value="">Alle series</option>
             {seriesOptions.map((s) => (
@@ -548,7 +548,7 @@ function AdvancedPanel({
           <select
             value={draft.setId}
             onChange={(e) => setField("setId", e.target.value)}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full rounded-[10px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none"
           >
             <option value="">Alle sets</option>
             {availableSets
@@ -576,7 +576,7 @@ function AdvancedPanel({
             value={draft.illustrator}
             onChange={(e) => setField("illustrator", e.target.value)}
             placeholder="bv. Mitsuhiro Arita"
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full rounded-[10px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none"
           />
         </FieldGroup>
 
@@ -649,7 +649,7 @@ function AdvancedPanel({
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-[var(--background)]"
         >
           <RotateCcw className="size-3.5" />
           Resetten
@@ -658,7 +658,7 @@ function AdvancedPanel({
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="cc-pill inline-flex items-center justify-center gap-1.5 bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Search className="size-3.5" />
           Zoeken
@@ -740,7 +740,7 @@ function NumberInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+      className="w-full rounded-[10px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--foreground)]/45 focus:border-[var(--foreground)] focus:outline-none"
     />
   );
 }
@@ -762,7 +762,7 @@ function Chip({
         "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
         active
           ? "border-primary bg-primary text-primary-foreground shadow-sm"
-          : "border-border bg-card text-foreground hover:bg-muted/60"
+          : "border-border bg-card text-foreground hover:bg-[var(--background)]"
       )}
     >
       {label}
@@ -824,15 +824,15 @@ function SearchResults({
   // Ask the user to narrow their query rather than dumping a huge grid.
   if (!loading && totalCount > RESULT_CAP) {
     return (
-      <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
-        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div className="flex items-start gap-3 rounded-[12px] bg-[var(--pastel-yellow)] p-5 text-[var(--foreground)]">
+        <AlertTriangle className="mt-0.5 size-5 shrink-0" />
         <div className="space-y-1">
           <p className="font-semibold">
             Te veel resultaten ({totalCount.toLocaleString("nl-NL")} kaarten)
           </p>
-          <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
-            Verfijn je zoekopdracht — bv. een specifiekere naam, een serie of set,
-            een prijs- of jaarbereik — om resultaten te zien.
+          <p className="text-sm text-[var(--foreground)]/75">
+            Verfijn je zoekopdracht, bijvoorbeeld een specifiekere naam, een serie of set,
+            een prijs- of jaarbereik, om resultaten te zien.
           </p>
         </div>
       </div>
@@ -845,7 +845,7 @@ function SearchResults({
         ? "met deze filters"
         : "";
     return (
-      <div className="glass-subtle rounded-2xl p-12 text-center text-muted-foreground">
+      <div className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-12 text-center text-[var(--foreground)]/60">
         Geen kaarten gevonden {desc}.
       </div>
     );
@@ -861,21 +861,21 @@ function SearchResults({
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
             onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/40"
+            className="cc-pill inline-flex items-center gap-2 border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--background)]"
           >
             Sorteren: <span className="text-muted-foreground">{SORT_LABELS[sort]}</span>
             <ChevronDown className={cn("size-4 transition-transform", menuOpen && "rotate-180")} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+            <div className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-[12px] border border-[var(--border)] bg-white shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)]">
               {(Object.keys(SORT_LABELS) as Sort[]).map((key) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => { setSort(key); setMenuOpen(false); }}
                   className={cn(
-                    "flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60",
-                    sort === key && "bg-primary/10 font-semibold text-primary"
+                    "flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--background)]",
+                    sort === key && "bg-[var(--pastel-yellow)] font-semibold text-[var(--foreground)]"
                   )}
                 >
                   {SORT_LABELS[key]}
@@ -892,9 +892,9 @@ function SearchResults({
             <Link
               key={card.id}
               href={`/kaarten/${card.setSlug}/${cardSlug(card.name, card.localId)}`}
-              className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:scale-[1.02] hover:shadow-lg"
+              className="group flex flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)]"
             >
-              <div className="relative aspect-[5/7] bg-muted">
+              <div className="relative aspect-[5/7] bg-[var(--muted)]">
                 {card.imageUrl ? (
                   <Image
                     src={card.imageUrl}
@@ -919,7 +919,7 @@ function SearchResults({
                 </div>
                 <div className="flex flex-wrap gap-x-2.5 gap-y-0.5">
                   {price !== null && (
-                    <span className="text-sm font-bold text-foreground tabular-nums">
+                    <span className="text-sm font-semibold text-[var(--foreground)] tabular-nums">
                       €{price.toFixed(2)}
                     </span>
                   )}
@@ -929,7 +929,7 @@ function SearchResults({
                     const rh = getMarktprijsReverseHolo(card);
                     if (rh === null) return null;
                     return (
-                      <span className="inline-flex items-center gap-0.5 text-xs tabular-nums text-purple-600 dark:text-purple-400">
+                      <span className="inline-flex items-center gap-0.5 text-xs tabular-nums text-[var(--pastel-blue-ink)]">
                         <span className="font-medium">Reverse</span> €{rh.toFixed(2)}
                       </span>
                     );

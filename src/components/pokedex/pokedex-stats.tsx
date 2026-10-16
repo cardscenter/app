@@ -40,8 +40,8 @@ export async function PokedexStats({ stats }: Props) {
   const total = sorted.reduce((sum, s) => sum + s.base_stat, 0);
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
-      <h2 className="mb-4 text-lg font-bold text-foreground">{t("baseStats")}</h2>
+    <section className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-5">
+      <h2 className="mb-4 text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">{t("baseStats")}</h2>
       <div className="space-y-2">
         {sorted.map((s) => {
           const i18nKey = STAT_I18N_KEYS[s.stat.name];
@@ -66,7 +66,7 @@ export async function PokedexStats({ stats }: Props) {
       </div>
       <div className="mt-3 border-t border-border pt-3 text-sm">
         <span className="text-muted-foreground">{t("total")}:</span>{" "}
-        <span className="font-bold text-foreground">{total}</span>
+        <span className="font-semibold text-[var(--foreground)]">{total}</span>
       </div>
     </section>
   );

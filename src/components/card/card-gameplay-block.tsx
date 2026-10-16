@@ -67,7 +67,7 @@ export function CardGameplayBlock({
       {isPokemon && (stageLabel || evolveFrom || (dexId && dexId.length > 0)) && (
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           {stageLabel && (
-            <span className="rounded-full bg-muted/60 px-3 py-1 text-xs font-semibold text-foreground">
+            <span className="cc-pill bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
               {stageLabel}
             </span>
           )}
@@ -85,7 +85,7 @@ export function CardGameplayBlock({
           {pokedexHref && (
             <Link
               href={pokedexHref}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+              className="cc-pill inline-flex items-center gap-1.5 bg-[var(--foreground)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--foreground)]/85"
             >
               <BookOpen className="size-3.5" />
               Pokédex Entry Bekijken
@@ -96,7 +96,7 @@ export function CardGameplayBlock({
 
       {/* Trainer / Energy type + effect */}
       {(trainerType || energyType) && (
-        <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {trainerType ? `Trainer · ${trainerType}` : `Energy · ${energyType}`}
           </p>
@@ -110,13 +110,13 @@ export function CardGameplayBlock({
       {abilities && abilities.length > 0 && (
         <div className="space-y-2">
           {abilities.map((ab, i) => (
-            <div key={i} className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <div key={i} className="rounded-[12px] bg-[var(--pastel-yellow)] p-4">
               <div className="flex items-center gap-2">
-                <Zap className="size-4 text-primary" />
-                <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+                <Zap className="size-4 text-[var(--foreground)]" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--foreground)]/60">
                   {ab.type ?? "Ability"}
                 </span>
-                <span className="font-bold text-foreground">{ab.name}</span>
+                <span className="font-semibold text-[var(--foreground)]">{ab.name}</span>
               </div>
               {ab.effect && (
                 <p className="mt-1.5 text-sm text-foreground whitespace-pre-wrap">{ab.effect}</p>
@@ -130,7 +130,7 @@ export function CardGameplayBlock({
       {attacks && attacks.length > 0 && (
         <div className="space-y-2">
           {attacks.map((atk, i) => (
-            <div key={i} className="rounded-2xl border border-border bg-card p-4">
+            <div key={i} className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-0.5">
@@ -138,7 +138,7 @@ export function CardGameplayBlock({
                       <TypeIcon key={j} type={c} size={22} />
                     ))}
                   </span>
-                  <span className="font-bold text-foreground">{atk.name}</span>
+                  <span className="font-semibold text-[var(--foreground)]">{atk.name}</span>
                 </div>
                 {atk.damage !== undefined && atk.damage !== null && (
                   <span className="text-xl font-extrabold text-foreground">
@@ -212,7 +212,7 @@ export function CardGameplayBlock({
 
 function StatBox({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-muted/40 p-3">
+    <div className="rounded-[10px] bg-[var(--background)] p-3">
       <div className="flex items-center gap-1.5">
         {icon}
         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>

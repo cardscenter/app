@@ -8,7 +8,7 @@ export function PokemonResultTile({ pokemon }: { pokemon: PokemonHit }) {
   return (
     <Link
       href={pokemon.href}
-      className="group flex flex-col items-center rounded-xl border border-border bg-card p-3 transition-all hover:scale-[1.03] hover:shadow-md"
+      className="group flex flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)] items-center p-3"
     >
       <div className="relative size-20 sm:size-24">
         <Image

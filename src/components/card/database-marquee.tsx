@@ -35,7 +35,7 @@ function Tile({ card, draggingRef }: { card: MarqueeCard; draggingRef: React.Mut
         }
       }}
     >
-      <div className="relative aspect-[5/7] w-[190px] overflow-hidden rounded-xl bg-muted shadow-md transition-transform group-hover:-translate-y-1 group-hover:shadow-xl">
+      <div className="relative aspect-[5/7] w-[190px] overflow-hidden rounded-[12px] bg-[var(--muted)] shadow-[0_2px_8px_0_var(--cc-border-subtle)] transition-[transform,box-shadow] group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)]">
         {card.imageUrl && (
           <Image
             src={card.imageUrl}
@@ -49,7 +49,7 @@ function Tile({ card, draggingRef }: { card: MarqueeCard; draggingRef: React.Mut
         )}
       </div>
       {card.priceAvg != null && (
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-bold text-foreground shadow">
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-semibold text-[var(--foreground)] shadow">
           €{card.priceAvg.toFixed(2)}
         </div>
       )}

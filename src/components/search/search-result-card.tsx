@@ -47,10 +47,10 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
   return (
     <Link
       href={href}
-      className="group glass overflow-hidden rounded-2xl transition-all hover:shadow-lg hover:scale-[1.01]"
+      className="group flex flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)]"
     >
       {/* Image area */}
-      <div className="relative h-36 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+      <div className="relative flex h-36 items-center justify-center bg-[var(--muted)]">
         {firstImage ? (
           <Image src={firstImage} alt={result.title} fill className="object-cover" />
         ) : (
@@ -87,7 +87,7 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
 
       {/* Body */}
       <div className="p-4">
-        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+        <h3 className="line-clamp-2 font-semibold text-[var(--foreground)]">
           {result.title}
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">{result.sellerName}</p>
@@ -98,7 +98,7 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">{ta("currentBid")}</p>
-                <p className="text-lg font-bold text-foreground">
+                <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">
                   &euro;{(result.currentBid ?? result.startingBid ?? 0).toFixed(2)}
                 </p>
               </div>
@@ -111,7 +111,7 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
           )}
 
           {result.type === "claimsale" && result.priceRange && (
-            <p className="text-lg font-bold text-foreground">
+            <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">
               {result.priceRange.min === result.priceRange.max
                 ? `\u20AC${result.priceRange.min.toFixed(2)}`
                 : `\u20AC${result.priceRange.min.toFixed(2)} \u2014 \u20AC${result.priceRange.max.toFixed(2)}`}
@@ -120,7 +120,7 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
 
           {result.type === "listing" && (
             <div className="flex items-center justify-between">
-              <p className="text-lg font-bold text-foreground">
+              <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">
                 {result.pricingType === "FIXED" && result.price
                   ? `\u20AC${result.price.toFixed(2)}`
                   : "Bieden"}

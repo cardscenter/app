@@ -37,7 +37,7 @@ export function SearchSortBar({ resultCount, query }: SearchSortBarProps) {
         <select
           value={currentSort}
           onChange={(e) => handleSortChange(e.target.value)}
-          className="rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+          className="rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-sm text-[var(--foreground)]"
         >
           <option value="newest">{t("sortNewest")}</option>
           <option value="price_asc">{t("sortPriceLow")}</option>

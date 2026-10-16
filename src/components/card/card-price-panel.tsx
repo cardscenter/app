@@ -194,16 +194,16 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
   const subtleTrendLine = effectivePeriodDays < 30;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] p-5">
       {hasRealHistory && (
-        <div className="mb-4 grid grid-cols-6 gap-1 rounded-xl border border-border bg-muted/40 p-1 text-xs font-medium">
+        <div className="mb-4 grid grid-cols-6 gap-1 rounded-full bg-[var(--background)] p-1 text-xs font-semibold">
           {PERIODS.map((p) => {
             if (isLocked(p.pro)) {
               return (
                 <Link
                   key={p.days}
                   href="/dashboard/abonnement"
-                  className="flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-muted-foreground/50 transition-colors hover:bg-background/60 hover:text-foreground"
+                  className="flex items-center justify-center gap-1 rounded-full px-2.5 py-1.5 text-[var(--foreground)]/40 transition-colors hover:text-[var(--foreground)]"
                 >
                   <Lock className="size-3" />
                   {p.label}
@@ -219,9 +219,9 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
                 disabled={redundant}
                 onClick={() => setPeriodDays(p.days)}
                 className={cn(
-                  "rounded-lg px-2.5 py-1.5 text-center transition-colors",
+                  "rounded-full px-2.5 py-1.5 text-center transition-colors",
                   isActive
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-[var(--foreground)] text-white"
                     : "text-muted-foreground hover:text-foreground",
                   redundant && "cursor-not-allowed opacity-40 hover:text-muted-foreground",
                 )}
@@ -236,7 +236,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground">Marktwaarde</h3>
-          <p className="mt-1 text-3xl font-bold text-foreground">{formatEur(active.avg)}</p>
+          <p className="mt-1 text-3xl font-semibold text-[var(--foreground)]">{formatEur(active.avg)}</p>
           <div className={cn("mt-1 flex items-center gap-1 text-sm font-medium", trendColor)}>
             {trendIcon}
             {activeDelta !== null
@@ -246,16 +246,16 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
         </div>
 
         {variants.length > 1 && (
-          <div className="flex shrink-0 rounded-lg border border-border bg-muted/40 p-0.5 text-xs">
+          <div className="flex shrink-0 rounded-full bg-[var(--background)] p-0.5 text-xs font-semibold">
             {variants.map((v) => (
               <button
                 key={v.key}
                 type="button"
                 onClick={() => setActiveKey(v.key)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 font-medium transition-colors",
+                  "rounded-full px-3 py-1.5 font-semibold transition-colors",
                   activeKey === v.key
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-[var(--foreground)] text-white"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -373,7 +373,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
             </ResponsiveContainer>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Dagelijkse historie wordt nog verzameld — kom morgen terug voor een lijngrafiek.
+            Dagelijkse historie wordt nog verzameld. Kom morgen terug voor een lijngrafiek.
           </p>
         </>
       )}
@@ -398,19 +398,19 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
             {extraVariants.map((v) => (
               <div
                 key={v.key}
-                className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 dark:border-purple-900/40 dark:bg-purple-950/30"
+                className="flex items-center justify-between rounded-[10px] bg-[var(--pastel-blue)] px-3 py-2"
               >
-                <span className="text-sm font-medium text-purple-900 dark:text-purple-200">
+                <span className="text-sm font-medium text-[var(--foreground)]">
                   {v.label}
                 </span>
-                <span className="text-sm font-bold tabular-nums text-purple-900 dark:text-purple-200">
+                <span className="text-sm font-bold tabular-nums text-[var(--foreground)]">
                   €{v.priceEur.toFixed(2)}
                 </span>
               </div>
             ))}
           </div>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Prijzen via TCGPlayer Holofoil — omgerekend naar EUR met EU/US tier-correctie
+            Prijzen via TCGPlayer Holofoil, omgerekend naar EUR met EU/US tier-correctie
           </p>
         </div>
       )}
@@ -426,7 +426,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg bg-muted/40 p-2.5">
+    <div className="rounded-[10px] bg-[var(--background)] p-2.5">
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 font-semibold text-foreground">{value}</p>
       {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}

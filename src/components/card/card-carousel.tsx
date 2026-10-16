@@ -35,20 +35,20 @@ export function CardCarousel({ title, items }: Props) {
   }
 
   return (
-    <section className="mt-12 border-t border-border pt-8">
+    <section className="mt-12">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-foreground">{title}</h2>
+        <h2 className="text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">{title}</h2>
         <div className="flex gap-1">
           <button
             onClick={() => scroll("left")}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="cc-pill border border-[var(--border)] bg-white p-2 text-[var(--foreground)]/60 transition-colors hover:text-[var(--foreground)]"
             aria-label="Vorige"
           >
             <ChevronLeft className="size-5" />
           </button>
           <button
             onClick={() => scroll("right")}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="cc-pill border border-[var(--border)] bg-white p-2 text-[var(--foreground)]/60 transition-colors hover:text-[var(--foreground)]"
             aria-label="Volgende"
           >
             <ChevronRight className="size-5" />
@@ -64,9 +64,9 @@ export function CardCarousel({ title, items }: Props) {
           <Link
             key={c.id}
             href={`/kaarten/${c.setSlug}/${cardSlug(c.name, c.localId)}`}
-            className="group flex w-36 shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:scale-[1.03] hover:shadow-lg sm:w-40"
+            className="group flex flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_2px_8px_0_var(--cc-border-subtle)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(32,32,32,0.35)] w-36 shrink-0 snap-start sm:w-40"
           >
-            <div className="relative aspect-[5/7] bg-muted">
+            <div className="relative aspect-[5/7] bg-[var(--muted)]">
               {c.imageUrl ? (
                 <Image
                   src={c.imageUrl}
