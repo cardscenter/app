@@ -117,7 +117,7 @@ export default async function PokedexIndexPage({ searchParams }: Props) {
   return (
     <div className="cc-landing overflow-clip">
       <ScrollToTop />
-      <CenteredHero eyebrow="Pokédex" eyebrowColor="blue" title="Elke Pokémon, elke kaart" highlightWord="Pokémon" highlightColor="blue" description={description} className="pb-6 lg:pb-8">
+      <CenteredHero title="Elke Pokémon, elke kaart" highlightWord="Pokémon" highlightColor="blue" description={description} className="pb-6 lg:pb-8">
         <form method="get" action={`/${locale}/pokedex`} className="flex w-full max-w-xl items-center gap-2">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[var(--foreground)]/45" />

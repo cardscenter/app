@@ -23,7 +23,7 @@ export default async function CollectionCalculatorPage({ params }: { params: Pro
 
   return (
     <div className="cc-landing overflow-clip">
-      <CenteredHero eyebrow={t("landing.singlesCardTitle")} eyebrowColor="pink" title={t("collectionTitle")} description={t("collectionDesc")} size={3} className="pb-8 lg:pb-10" />
+      <CenteredHero title={t("collectionTitle")} description={t("collectionDesc")} size={3} className="pb-8 lg:pb-10" />
       <section className="flex justify-center px-4 pb-16 sm:px-5 lg:px-6 lg:pb-24">
         <div className="w-full max-w-6xl">
           {/* Pricing disclaimer — onze Marktprijs-berekening is geautomatiseerd

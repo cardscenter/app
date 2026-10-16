@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function VerpakkenPage() {
   return (
     <div className="cc-landing overflow-clip">
-      <CenteredHero eyebrow="Verkopen aan ons" eyebrowColor="yellow" title="Zo verpak je je bulk" highlightWord="bulk" highlightColor="yellow" description="Volg dit stappenplan en je kaarten komen veilig en in goede staat bij ons aan. Je vindt deze pagina altijd terug via je dashboard.">
+      <CenteredHero title="Zo verpak je je bulk" highlightWord="bulk" highlightColor="yellow" description="Volg dit stappenplan en je kaarten komen veilig en in goede staat bij ons aan. Je vindt deze pagina altijd terug via je dashboard.">
         <CtaButton href="/verkopen/bulk" variant="red">
           Naar de bulk-calculator
         </CtaButton>

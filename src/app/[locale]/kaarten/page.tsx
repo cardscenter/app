@@ -347,7 +347,7 @@ export default async function CardsOverviewPage() {
   return (
     <div className="cc-landing overflow-clip">
       <ScrollToTop />
-      <CenteredHero eyebrow="Kaartendatabase" eyebrowColor="blue" title="Alle Pokémon-kaarten, met prijs" highlightWord="prijs" highlightColor="blue" description="Bekijk alle kaarten per set, vergelijk marktprijzen en zie wat er nu te koop is." className="pb-6 lg:pb-8">
+      <CenteredHero title="Alle Pokémon-kaarten, met prijs" highlightWord="prijs" highlightColor="blue" description="Bekijk alle kaarten per set, vergelijk marktprijzen en zie wat er nu te koop is." className="pb-6 lg:pb-8">
         <Pill tone="white">{totalCards.toLocaleString("nl-NL")} kaarten</Pill>
         <Pill tone="white">{totalSets.toLocaleString("nl-NL")} sets</Pill>
         {latestSetName && latestSetSlug && (

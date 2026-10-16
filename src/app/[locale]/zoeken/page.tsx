@@ -67,7 +67,7 @@ export default async function ZoekenPage({ searchParams }: Props) {
 
   // Zoekform in de hero (GET, geen client-JS nodig; behoudt actieve tab).
   const hero = (
-    <CenteredHero eyebrow={t("title")} eyebrowColor="yellow" title={q ? t("heroTitleQuery") : t("heroTitle")} highlightWord={t("heroWord")} highlightColor="yellow" size={3} className="pb-6 lg:pb-8">
+    <CenteredHero title={q ? t("heroTitleQuery") : t("heroTitle")} highlightWord={t("heroWord")} highlightColor="yellow" size={3} className="pb-6 lg:pb-8">
       <form method="get" action={`/${locale}/zoeken`} className="flex w-full max-w-2xl items-center gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[var(--foreground)]/45" />

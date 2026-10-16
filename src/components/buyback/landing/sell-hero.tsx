@@ -30,7 +30,7 @@ export async function SellHero() {
   const t = await getTranslations("buyback");
   const stats = [t("landing.statRate", { rate: RATE_LABEL }), t("landing.statPayout"), t("landing.statBankOnly")];
   return (
-    <CenteredHero eyebrow={t("landing.eyebrow")} eyebrowColor="yellow" title={t("landing.heroTitle")} highlightWord={t("landing.heroWord")} highlightColor="yellow" description={t("landing.heroSubtitle", { rate: RATE_LABEL })}>
+    <CenteredHero title={t("landing.heroTitle")} highlightWord={t("landing.heroWord")} highlightColor="yellow" description={t("landing.heroSubtitle", { rate: RATE_LABEL })}>
       <CtaButton href="/verkopen/losse-kaarten" variant="red">
         {t("landing.ctaSingles")}
       </CtaButton>

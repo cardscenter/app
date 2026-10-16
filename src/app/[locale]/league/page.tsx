@@ -85,8 +85,6 @@ export default async function LeaguePage({ params }: { params: Promise<{ locale:
   return (
     <div className="cc-landing overflow-clip">
       <CenteredHero
-        eyebrow={t("leagueEyebrow")}
-        eyebrowColor="green"
         title={t("leagueHeroTitle")}
         highlightWord={t("leagueHeroWord")}
         highlightColor="green"

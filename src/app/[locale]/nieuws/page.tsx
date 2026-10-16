@@ -33,7 +33,7 @@ export default async function NewsPage({ params }: { params: Promise<{ locale: s
 
   return (
     <div className="cc-landing overflow-clip">
-      <CenteredHero eyebrow={t("newsEyebrow")} eyebrowColor="pink" title={t("newsHeroTitle")} highlightWord={t("newsHeroWord")} highlightColor="pink" description={t("newsIntro")} />
+      <CenteredHero title={t("newsHeroTitle")} highlightWord={t("newsHeroWord")} highlightColor="pink" description={t("newsIntro")} />
 
       {first && (
         <section className="flex justify-center px-4 pb-4 sm:px-5 lg:px-6">

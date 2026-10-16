@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function VoorwaardenPage() {
   return (
     <div className="cc-landing overflow-clip">
-      <ArticleLayout meta={<><Pill tone="white">Juridisch</Pill><Pill tone="pastel" color="blue">Laatst bijgewerkt: 6 september 2026</Pill></>} title="Algemene voorwaarden" lead={<>Welkom bij Cards Center, een online marktplaats voor Pokémon-kaarten met veilingen, claimsales en directe verkoop. Door een account aan te maken of het platform te gebruiken, ga je akkoord met deze voorwaarden.</>}>
+      <ArticleLayout meta={<Pill tone="pastel" color="blue">Laatst bijgewerkt: 6 september 2026</Pill>} title="Algemene voorwaarden" lead={<>Welkom bij Cards Center, een online marktplaats voor Pokémon-kaarten met veilingen, claimsales en directe verkoop. Door een account aan te maken of het platform te gebruiken, ga je akkoord met deze voorwaarden.</>}>
 
         <CompanyIdentity heading="Identiteit van de ondernemer" />
 

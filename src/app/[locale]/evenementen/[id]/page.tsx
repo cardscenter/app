@@ -101,8 +101,6 @@ export default async function ShopEventDetailPage({ params }: { params: Params }
       {event.status === "DRAFT" && isAdmin && <Notice tone="yellow">{t("draftBanner")}</Notice>}
 
       <CenteredHero
-        eyebrow={`${event.typeName}${event.gameName ? ` · ${event.gameName}` : ""}`}
-        eyebrowColor={pastel}
         title={event.title}
         size={2}
         description={`${formatEventDate(start, locale)} · ${formatEventTime(start, locale)} ${locale === "en" ? "to" : "tot"} ${formatEventTime(end, locale)}`}

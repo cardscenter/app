@@ -26,7 +26,7 @@ export default async function BulkCalculatorPage({ params }: { params: Promise<{
 
   return (
     <div className="cc-landing overflow-clip">
-      <CenteredHero eyebrow={t("landing.bulkCardTitle")} eyebrowColor="yellow" title={t("bulkTitle")} description={t("bulkDesc")} size={3} className="pb-8 lg:pb-10" />
+      <CenteredHero title={t("bulkTitle")} description={t("bulkDesc")} size={3} className="pb-8 lg:pb-10" />
       <section className="flex justify-center px-4 pb-16 sm:px-5 lg:px-6 lg:pb-24">
         <div className="w-full max-w-6xl">
           <BulkCalculator

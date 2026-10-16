@@ -34,7 +34,7 @@ export default async function InfoPage({ params }: { params: Promise<{ locale: s
 
   return (
     <div className="cc-landing overflow-clip">
-      <CenteredHero eyebrow={`${PLATFORM.shop.name} · ${PLATFORM.shop.city}`} eyebrowColor="green" title={t("infoHeroTitle")} highlightWord={PLATFORM.shop.city} highlightColor="green" description={t("infoIntro")} />
+      <CenteredHero title={t("infoHeroTitle")} highlightWord={PLATFORM.shop.city} highlightColor="green" description={t("infoIntro")} />
 
       <TileQuad
         items={[

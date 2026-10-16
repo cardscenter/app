@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <div className="cc-landing overflow-clip">
-      <ArticleLayout meta={<><Pill tone="white">Privacy</Pill><Pill tone="pastel" color="blue">Laatst bijgewerkt: 6 september 2026</Pill></>} title="Privacybeleid" lead={<>Cards Center respecteert je privacy. In dit beleid leggen we uit welke persoonsgegevens we verwerken, waarom, en welke rechten je hebt. We verwerken gegevens conform de Algemene Verordening Gegevensbescherming (AVG/GDPR).</>}>
+      <ArticleLayout meta={<Pill tone="pastel" color="blue">Laatst bijgewerkt: 6 september 2026</Pill>} title="Privacybeleid" lead={<>Cards Center respecteert je privacy. In dit beleid leggen we uit welke persoonsgegevens we verwerken, waarom, en welke rechten je hebt. We verwerken gegevens conform de Algemene Verordening Gegevensbescherming (AVG/GDPR).</>}>
 
         <CompanyIdentity heading="Verwerkingsverantwoordelijke" />
 

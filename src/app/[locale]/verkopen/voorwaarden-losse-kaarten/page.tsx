@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ArticleLayout } from "@/components/ploy/article-layout";
-import { Pill } from "@/components/ploy/pill";
 
 export const metadata: Metadata = {
   title: "Verkoopvoorwaarden Collectie — Cards Center",
@@ -14,7 +13,7 @@ export const metadata: Metadata = {
 export default function VoorwaardenCollectiePage() {
   return (
     <div className="cc-landing overflow-clip">
-      <ArticleLayout back={{ href: "/verkopen", label: "Verkopen" }} meta={<Pill tone="white">Verkoopovereenkomst collectie</Pill>} title="Verkoopovereenkomst Collectie Pokémon-kaarten" lead={<>Deze overeenkomst is van toepassing op iedere collectieverkoop (losse kaarten) aan Cards Center via de Collectie Calculator. Door het indienen van het verkoopformulier en het verzenden van de kaarten ga je akkoord met deze voorwaarden.</>}>
+      <ArticleLayout back={{ href: "/verkopen", label: "Verkopen" }} title="Verkoopovereenkomst Collectie Pokémon-kaarten" lead={<>Deze overeenkomst is van toepassing op iedere collectieverkoop (losse kaarten) aan Cards Center via de Collectie Calculator. Door het indienen van het verkoopformulier en het verzenden van de kaarten ga je akkoord met deze voorwaarden.</>}>
       <div className="space-y-10 text-[17px] leading-[1.65] text-[var(--foreground)]/85">
         <section>
           <h2 className="mb-3 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">Partijen</h2>

@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureEventTypes } from "@/lib/shop-events/registrations";
 import { getHubSettings } from "@/lib/app-config";
 import { formatMonthHeading } from "@/lib/shop-events/format";
-import { formatShopAddress, PLATFORM } from "@/lib/platform-config";
+import { PLATFORM } from "@/lib/platform-config";
 import { CenteredHero, CatalogGrid, PhaseLadder, BannerPromo, FaqSection, ClosingCta, CtaButton, DisplayHeading } from "@/components/ploy";
 import type { CatalogFilter } from "@/components/ploy";
 import { EventCatalogCard } from "@/components/shop-events/event-catalog-card";
@@ -79,7 +79,7 @@ export default async function ShopEventsPage({ params, searchParams }: { params:
 
   return (
     <div className="cc-landing overflow-clip pb-0">
-      <CenteredHero eyebrow={`${PLATFORM.shop.name} · ${formatShopAddress()}`} eyebrowColor="blue" title={t("heroTitle")} highlightWord={t("heroWord")} highlightColor="green" description={t("intro")} />
+      <CenteredHero title={t("heroTitle")} highlightWord={t("heroWord")} highlightColor="green" description={t("intro")} />
 
       <CatalogGrid filters={filters} toolbar={toolbar} grid={false} empty={<EmptyState title={t("emptyTitle")} body={t("emptyBody")} />}>
         {view === "calendar" ? (

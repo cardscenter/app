@@ -42,7 +42,7 @@ export default async function ExperiencesPage({ params }: { params: Promise<{ lo
 
   return (
     <div className="cc-landing overflow-clip">
-      <CenteredHero eyebrow={t("expEyebrow")} eyebrowColor="pink" title={t("expHeroTitle")} highlightWord={t("expHeroWord")} highlightColor="pink" description={t("expIntro", { city: PLATFORM.shop.city })}>
+      <CenteredHero title={t("expHeroTitle")} highlightWord={t("expHeroWord")} highlightColor="pink" description={t("expIntro", { city: PLATFORM.shop.city })}>
         <CtaButton href="/evenementen" variant="red">
           {t("expCtaEvents")}
         </CtaButton>

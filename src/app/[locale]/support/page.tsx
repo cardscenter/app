@@ -101,7 +101,7 @@ export default async function SupportPage() {
 
   return (
     <div className="cc-landing overflow-clip">
-      <CenteredHero eyebrow="Support" eyebrowColor="blue" title="Hulp nodig? We helpen je graag" highlightWord="graag" highlightColor="blue" description="Een vraag over een ticket, een inkoop of je account? Kies hieronder de snelste weg." />
+      <CenteredHero title="Hulp nodig? We helpen je graag" highlightWord="graag" highlightColor="blue" description="Een vraag over een ticket, een inkoop of je account? Kies hieronder de snelste weg." />
       <TileQuad items={tiles} />
       {priority && priorityMailto && (
         <BannerPromo
