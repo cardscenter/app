@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { CalendarDays, List, CalendarRange } from "lucide-react";
+import { CalendarDays, CalendarRange, List } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { PageContainer } from "@/components/layout/page-container";
+import { auth } from "@/lib/auth";
 import { listShopEvents } from "@/lib/shop-events/queries";
 import { listEnabledGames } from "@/lib/games-server";
 import { prisma } from "@/lib/prisma";
 import { ensureEventTypes } from "@/lib/shop-events/registrations";
+import { getHubSettings } from "@/lib/app-config";
 import { formatMonthHeading } from "@/lib/shop-events/format";
-import { ShopEventRow } from "@/components/shop-events/shop-event-row";
-import { ShopEventsCalendar } from "@/components/shop-events/shop-events-calendar";
 import { formatShopAddress, PLATFORM } from "@/lib/platform-config";
+import { CenteredHero, CatalogGrid, PhaseLadder, BannerPromo, FaqSection, ClosingCta, CtaButton, DisplayHeading } from "@/components/ploy";
+import type { CatalogFilter } from "@/components/ploy";
+import { EventCatalogCard } from "@/components/shop-events/event-catalog-card";
+import { ShopEventsCalendar } from "@/components/shop-events/shop-events-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -23,28 +26,26 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 type Search = { view?: string; game?: string; type?: string };
 
 /**
- * Winkel-events (Community Hub, Fase 3): alle gepubliceerde events in de
- * winkel in Hulst, als lijst per maand of als maandkalender. Filters op spel
- * en type via query-params (deelbare links).
+ * Winkel-events (design-pass, Ploy-stijl): hero met veegstreep op "Hulst",
+ * catalogus van punch-cards per maand (of de maandkalender), stappenladder
+ * "zo werkt het", vragen en een slotpaneel. Filters op spel en type via
+ * query-params (deelbare links).
  */
-export default async function ShopEventsPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ locale: string }>;
-  searchParams: Promise<Search>;
-}) {
+export default async function ShopEventsPage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams: Promise<Search> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const sp = await searchParams;
   const t = await getTranslations("shopEvents");
   await ensureEventTypes();
 
-  const [events, games, types] = await Promise.all([
+  const [events, games, types, settings, session] = await Promise.all([
     listShopEvents({ game: sp.game || null, type: sp.type || null }),
     listEnabledGames(),
     prisma.eventType.findMany({ where: { enabled: true }, orderBy: { sortOrder: "asc" }, select: { key: true, name: true } }),
+    getHubSettings(),
+    auth(),
   ]);
+  const loggedIn = !!session?.user?.id;
   const view = sp.view === "kalender" ? "calendar" : "list";
 
   const byMonth = new Map<string, typeof events>();
@@ -57,77 +58,101 @@ export default async function ShopEventsPage({
     const s = q.toString();
     return `/evenementen${s ? `?${s}` : ""}`;
   };
-  const chip = (active: boolean) =>
-    `inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-      active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:bg-muted"
-    }`;
+  const filters: CatalogFilter[][] = [
+    [{ label: t("filterAll"), href: hrefWith({ game: undefined, type: undefined }), active: !sp.game && !sp.type }],
+    games.map((g) => ({ label: g.name, href: hrefWith({ game: sp.game === g.key ? undefined : g.key }), active: sp.game === g.key })),
+    types.map((ty) => ({ label: ty.name, href: hrefWith({ type: sp.type === ty.key ? undefined : ty.key }), active: sp.type === ty.key })),
+  ].filter((g) => g.length > 0);
+
+  const toggle = (active: boolean) =>
+    `inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold no-underline transition-colors ${active ? "bg-[var(--foreground)] text-white" : "text-[var(--foreground)]/65 hover:text-[var(--foreground)]"}`;
+  const toolbar = (
+    <div className="inline-flex rounded-full bg-white p-1">
+      <Link href={hrefWith({ view: undefined })} className={toggle(view === "list")}>
+        <List className="size-4" /> {t("viewList")}
+      </Link>
+      <Link href={hrefWith({ view: "kalender" })} className={toggle(view === "calendar")}>
+        <CalendarRange className="size-4" /> {t("viewCalendar")}
+      </Link>
+    </div>
+  );
 
   return (
-    <PageContainer width="default" className="py-8 sm:py-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
-            <CalendarDays className="size-3.5" />
-            {PLATFORM.shop.name} · {formatShopAddress()}
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{t("title")}</h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">{t("intro")}</p>
-        </div>
-        <div className="inline-flex shrink-0 rounded-full border border-border bg-card p-1">
-          <Link href={hrefWith({ view: undefined })} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ${view === "list" ? "bg-foreground text-background" : "text-muted-foreground"}`}>
-            <List className="size-4" /> {t("viewList")}
-          </Link>
-          <Link href={hrefWith({ view: "kalender" })} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ${view === "calendar" ? "bg-foreground text-background" : "text-muted-foreground"}`}>
-            <CalendarRange className="size-4" /> {t("viewCalendar")}
-          </Link>
-        </div>
-      </div>
+    <div className="cc-landing overflow-clip pb-0">
+      <CenteredHero eyebrow={`${PLATFORM.shop.name} · ${formatShopAddress()}`} eyebrowColor="blue" title={t("heroTitle")} highlightWord={t("heroWord")} highlightColor="green" description={t("intro")} />
 
-      {(games.length > 1 || types.length > 1) && (
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Link href={hrefWith({ game: undefined, type: undefined })} className={chip(!sp.game && !sp.type)}>
-            {t("filterAll")}
-          </Link>
-          {games.map((g) => (
-            <Link key={g.key} href={hrefWith({ game: sp.game === g.key ? undefined : g.key })} className={chip(sp.game === g.key)}>
-              {g.name}
-            </Link>
-          ))}
-          <span className="hidden w-px bg-border sm:block" />
-          {types.map((ty) => (
-            <Link key={ty.key} href={hrefWith({ type: sp.type === ty.key ? undefined : ty.key })} className={chip(sp.type === ty.key)}>
-              {ty.name}
-            </Link>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-8">
+      <CatalogGrid filters={filters} toolbar={toolbar} grid={false} empty={<EmptyState title={t("emptyTitle")} body={t("emptyBody")} />}>
         {view === "calendar" ? (
           <ShopEventsCalendar events={events} locale={locale} />
-        ) : events.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
-            <CalendarDays className="mx-auto size-8 text-muted-foreground" />
-            <h2 className="mt-3 text-lg font-semibold text-foreground">{t("emptyTitle")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t("emptyBody")}</p>
-          </div>
-        ) : (
-          <div className="space-y-8">
+        ) : events.length === 0 ? null : (
+          <div className="space-y-12">
             {[...byMonth.entries()].map(([key, list]) => (
               <section key={key}>
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  {formatMonthHeading(new Date(list[0].startsAt), locale)}
-                </h2>
-                <div className="space-y-3">
+                <DisplayHeading tag="h2" size={4} text={formatMonthHeading(new Date(list[0]!.startsAt), locale)} className="mb-5 text-[var(--foreground)]/35" />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {list.map((e) => (
-                    <ShopEventRow key={e.id} event={e} locale={locale} />
+                    <EventCatalogCard key={e.id} event={e} locale={locale} />
                   ))}
                 </div>
               </section>
             ))}
           </div>
         )}
-      </div>
-    </PageContainer>
+      </CatalogGrid>
+
+      <PhaseLadder
+        color="blue"
+        title={t("howTitle")}
+        intro={t("howIntro")}
+        steps={[
+          { title: t("step1Title"), text: t("step1Text") },
+          { title: t("step2Title"), text: t("step2Text") },
+          { title: t("step3Title"), text: t("step3Text") },
+          { title: t("step4Title"), text: t("step4Text") },
+        ]}
+      />
+
+      <BannerPromo
+        eyebrow={PLATFORM.shop.name}
+        title={loggedIn ? t("bannerLoggedTitle") : t("bannerTitle")}
+        text={loggedIn ? t("bannerLoggedText") : t("bannerText")}
+        action={
+          <CtaButton href={loggedIn ? "/dashboard/tickets" : "/register"} variant="light">
+            {loggedIn ? t("bannerLoggedCta") : t("bannerCta")}
+          </CtaButton>
+        }
+        note={loggedIn ? undefined : t("bannerNote")}
+      />
+
+      <FaqSection
+        eyebrow={t("faqEyebrow")}
+        title={t("faqTitle")}
+        items={[
+          { q: t("faq1Q"), a: t("faq1A") },
+          { q: t("faq2Q"), a: settings.cancellationPolicy },
+          { q: t("faq3Q"), a: t("faq3A") },
+          { q: t("faq4Q"), a: t("faq4A") },
+        ]}
+      />
+
+      <ClosingCta color="yellow" title={t("closingTitle")} text={t("closingText")}>
+        <CtaButton href={loggedIn ? "/dashboard/tickets" : "/register"} variant="dark">
+          {loggedIn ? t("bannerLoggedCta") : t("bannerCta")}
+        </CtaButton>
+        <CtaButton href="/info" variant="light">
+          {t("closingSecondary")}
+        </CtaButton>
+      </ClosingCta>
+    </div>
+  );
+}
+
+function EmptyState({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-[12px] bg-white p-10 text-center">
+      <CalendarDays className="mx-auto size-8 text-[var(--foreground)]/40" />
+      <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{title}</h2>
+      <p className="cc-prose mx-auto mt-2 max-w-[28rem] text-sm">{body}</p>
+    </div>
   );
 }

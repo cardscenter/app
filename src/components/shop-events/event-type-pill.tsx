@@ -1,12 +1,25 @@
-import { eventColorClasses } from "@/lib/shop-events/config";
+import { Pill, type PastelColor } from "@/components/ploy/pill";
 
-/** Klein label met de type-kleur (League-avond, Toernooi, ...). */
+/** Type-kleur (blue/amber/emerald/violet/rose/slate) → pastel van de design-pass. */
+export function typePastel(color: string | null | undefined): PastelColor {
+  switch (color) {
+    case "amber":
+      return "yellow";
+    case "emerald":
+      return "green";
+    case "violet":
+    case "rose":
+      return "pink";
+    default:
+      return "blue";
+  }
+}
+
+/** Klein pastel-label met de type-naam (League-avond, Toernooi, ...). */
 export function EventTypePill({ name, color, className = "" }: { name: string; color: string; className?: string }) {
-  const c = eventColorClasses(color);
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${c.pill} ${className}`}>
-      <span aria-hidden className={`size-1.5 rounded-full ${c.dot}`} />
+    <Pill tone="pastel" color={typePastel(color)} className={className}>
       {name}
-    </span>
+    </Pill>
   );
 }

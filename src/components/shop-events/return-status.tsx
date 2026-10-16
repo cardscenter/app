@@ -2,10 +2,15 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
-import { CheckCircle2, Hourglass, XCircle, Ticket, RefreshCw } from "lucide-react";
+import { useRouter } from "@/i18n/navigation";
+import { Hourglass } from "lucide-react";
 import { toast } from "sonner";
 import { refreshRegistrationStatus, payForRegistration } from "@/actions/shop-events";
+import { DisplayHeading } from "@/components/ploy/display-heading";
+import { CtaButton } from "@/components/ploy/cta-button";
+import { PromptCard } from "@/components/ploy/prompt-card";
+import { PunchCard } from "@/components/ploy/punch-card";
+import { Balloon } from "@/components/ploy/balloon";
 
 interface Props {
   registrationId: string;
@@ -18,6 +23,8 @@ interface Props {
  * Na terugkeer van de checkout: status ophalen (synct bij Mollie), daarna
  * nog een paar keer pollen zolang de betaling "open/pending" is (iDEAL kan
  * een paar seconden nalopen). Daarna: ticket, opnieuw betalen, of mislukt.
+ * Design-pass: punch-card met display-kop en de ticketcode als donkere
+ * kopieerkaart.
  */
 export function ReturnStatus({ registrationId, eventId, eventTitle, locale }: Props) {
   const t = useTranslations("shopEvents");
@@ -54,58 +61,62 @@ export function ReturnStatus({ registrationId, eventId, eventTitle, locale }: Pr
     });
   }
 
-  const card = "rounded-2xl border border-border bg-card p-8 text-center shadow-card";
+  const Card = ({ balloon, children }: { balloon: "green" | "yellow" | "pink"; children: React.ReactNode }) => (
+    <PunchCard className="relative overflow-hidden bg-white px-6 py-12 text-center sm:px-12 sm:py-16" dot="var(--border)">
+      <Balloon color={balloon} shape="cloud" className="pointer-events-none absolute -right-10 -top-10 w-40 opacity-90" />
+      <div className="relative flex flex-col items-center gap-5">{children}</div>
+    </PunchCard>
+  );
 
   if (!state || ((state.status === "RESERVED" || state.status === "OFFERED") && attempts < 6 && state.paymentStatus !== "FAILED" && state.paymentStatus !== "CANCELED" && state.paymentStatus !== "EXPIRED")) {
     return (
-      <div className={card}>
-        <Hourglass className="mx-auto size-10 animate-pulse text-primary" />
-        <h1 className="mt-4 text-xl font-semibold text-foreground">{t("returnChecking")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t("returnCheckingBody")}</p>
-      </div>
+      <Card balloon="yellow">
+        <Hourglass className="size-10 animate-pulse text-[var(--primary)]" />
+        <DisplayHeading tag="h1" size={3} text={t("returnChecking")} className="text-center" />
+        <p className="cc-prose max-w-[28rem] text-base">{t("returnCheckingBody")}</p>
+      </Card>
     );
   }
 
   if (state.status === "CONFIRMED" || state.status === "CHECKED_IN") {
     return (
-      <div className={card}>
-        <CheckCircle2 className="mx-auto size-12 text-emerald-600" />
-        <h1 className="mt-4 text-2xl font-bold text-foreground">{t("returnSuccessTitle")}</h1>
-        <p className="mt-2 text-muted-foreground">{t("returnSuccessBody", { title: eventTitle })}</p>
-        <p className="mt-3 font-mono text-lg font-semibold text-foreground">{state.ticketCode}</p>
-        <Link href={`/dashboard/tickets/${state.ticketCode}`} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
-          <Ticket className="size-4" /> {t("viewTicket")}
-        </Link>
-      </div>
+      <Card balloon="green">
+        <DisplayHeading tag="h1" size={2} text={t("returnSuccessTitle")} className="text-center" />
+        <p className="cc-prose max-w-[28rem] text-base">{t("returnSuccessBody", { title: eventTitle })}</p>
+        <PromptCard tone="dark" label={t("ticketCodeLabel")} value={state.ticketCode} copyLabel={t("copyCode")} copiedLabel={t("copiedCode")} className="w-full max-w-sm text-left">
+          <code className="block text-center font-mono text-3xl font-semibold tracking-[0.08em]">{state.ticketCode}</code>
+        </PromptCard>
+        <CtaButton href={`/dashboard/tickets/${state.ticketCode}`} variant="red">
+          {t("viewTicket")}
+        </CtaButton>
+      </Card>
     );
   }
 
   if (state.status === "RESERVED" || state.status === "OFFERED") {
     return (
-      <div className={card}>
-        <XCircle className="mx-auto size-12 text-amber-600" />
-        <h1 className="mt-4 text-2xl font-bold text-foreground">{t("returnNotPaidTitle")}</h1>
-        <p className="mt-2 text-muted-foreground">{t("returnNotPaidBody")}</p>
-        <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
-          <button type="button" onClick={retry} disabled={pending} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
-            <RefreshCw className="size-4" /> {t("payAgain")}
-          </button>
-          <Link href={`/evenementen/${eventId}`} className="inline-flex items-center justify-center rounded-xl border border-border px-6 py-3 text-sm font-medium hover:bg-muted">
+      <Card balloon="yellow">
+        <DisplayHeading tag="h1" size={2} text={t("returnNotPaidTitle")} className="text-center" />
+        <p className="cc-prose max-w-[28rem] text-base">{t("returnNotPaidBody")}</p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <CtaButton onClick={retry} variant="red" className={pending ? "pointer-events-none opacity-60" : ""}>
+            {t("payAgain")}
+          </CtaButton>
+          <CtaButton href={`/evenementen/${eventId}`} variant="light">
             {t("backToEvent")}
-          </Link>
+          </CtaButton>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className={card}>
-      <XCircle className="mx-auto size-12 text-rose-600" />
-      <h1 className="mt-4 text-2xl font-bold text-foreground">{t("returnFailedTitle")}</h1>
-      <p className="mt-2 text-muted-foreground">{state.status === "REFUNDED" ? t("returnRefundedBody") : t("returnFailedBody")}</p>
-      <Link href={`/evenementen/${eventId}`} className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
+    <Card balloon="pink">
+      <DisplayHeading tag="h1" size={2} text={t("returnFailedTitle")} className="text-center" />
+      <p className="cc-prose max-w-[28rem] text-base">{state.status === "REFUNDED" ? t("returnRefundedBody") : t("returnFailedBody")}</p>
+      <CtaButton href={`/evenementen/${eventId}`} variant="dark">
         {t("backToEvent")}
-      </Link>
-    </div>
+      </CtaButton>
+    </Card>
   );
 }

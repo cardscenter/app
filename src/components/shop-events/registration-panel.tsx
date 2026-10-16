@@ -91,14 +91,14 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
   }
 
   const Box = ({ children }: { children: React.ReactNode }) => (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-card sm:p-6">{children}</div>
+    <div className="rounded-[12px] bg-white p-6 shadow-[0_2px_8px_0_var(--cc-border-subtle)] sm:p-7">{children}</div>
   );
   const Primary = ({ onClick, children, disabled }: { onClick: () => void; children: React.ReactNode; disabled?: boolean }) => (
     <button
       type="button"
       onClick={onClick}
       disabled={pending || disabled}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-colors hover:bg-primary-hover disabled:opacity-60"
+      className="cc-pill inline-flex w-full items-center justify-center gap-2 bg-[var(--primary)] px-5 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
     >
       {children}
     </button>
@@ -108,28 +108,28 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
       type="button"
       onClick={onClick}
       disabled={pending}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+      className="cc-pill inline-flex w-full items-center justify-center gap-2 border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--background)] disabled:opacity-60"
     >
       {children}
     </button>
   );
 
   const cancelBlock = mine?.canCancel ? (
-    <div className="mt-4 border-t border-border pt-4">
+    <div className="mt-4 border-t border-[var(--border)] pt-4">
       {!confirmCancel ? (
         <button type="button" onClick={() => setConfirmCancel(true)} className="text-sm text-muted-foreground underline-offset-2 hover:underline">
           {t("cancelRegistration")}
         </button>
       ) : (
-        <div className="space-y-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
+        <div className="space-y-2 rounded-[10px] bg-[var(--pastel-pink)] p-3">
           <p className="text-sm text-foreground">
             {mine.amount > 0 ? (mine.refundOnCancel ? t("cancelConfirmRefund", { hours: event.cancellationHours }) : t("cancelConfirmNoRefund")) : t("cancelConfirmFree")}
           </p>
           <div className="flex gap-2">
-            <button type="button" onClick={cancel} disabled={pending} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60">
+            <button type="button" onClick={cancel} disabled={pending} className="cc-pill bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-hover)] disabled:opacity-60">
               {t("cancelYes")}
             </button>
-            <button type="button" onClick={() => setConfirmCancel(false)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={() => setConfirmCancel(false)} className="cc-pill px-3 py-2 text-sm font-semibold text-[var(--foreground)]/60 hover:text-[var(--foreground)]">
               {t("cancelNo")}
             </button>
           </div>
@@ -153,7 +153,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
               </p>
             </div>
           </div>
-          <Link href={`/dashboard/tickets/${mine.ticketCode}`} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
+          <Link href={`/dashboard/tickets/${mine.ticketCode}`} className="cc-pill mt-4 inline-flex w-full items-center justify-center gap-2 bg-[var(--primary)] px-5 py-3.5 text-sm font-semibold text-white no-underline hover:bg-[var(--primary-hover)]">
             <Ticket className="size-4" /> {t("viewTicket")}
           </Link>
           {cancelBlock}
@@ -230,7 +230,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
               : t("windowUnavailable");
     return (
       <Box>
-        <p className="text-sm text-muted-foreground">{msg}</p>
+        <p className="cc-prose text-sm">{msg}</p>
       </Box>
     );
   }
@@ -239,10 +239,10 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
     return (
       <Box>
         <div className="flex items-baseline justify-between">
-          <span className="text-2xl font-bold text-foreground">{price}</span>
+          <span className="cc-display text-4xl text-[var(--foreground)]">{price}</span>
           <span className="text-sm text-muted-foreground">{spotsLabel(t, a)}</span>
         </div>
-        <Link href={`/login?callbackUrl=/evenementen/${event.id}`} className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
+        <Link href={`/login?callbackUrl=/evenementen/${event.id}`} className="cc-pill mt-4 inline-flex w-full items-center justify-center bg-[var(--primary)] px-5 py-3.5 text-sm font-semibold text-white no-underline hover:bg-[var(--primary-hover)]">
           {t("loginToRegister")}
         </Link>
         <p className="mt-2 text-center text-xs text-muted-foreground">
@@ -265,7 +265,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
             <p className="mt-1 text-sm text-muted-foreground">{viewer.eligibility.reason}</p>
           </div>
         </div>
-        <Link href="/dashboard/profiel" className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-border px-5 py-2.5 text-sm font-medium hover:bg-muted">
+        <Link href="/dashboard/profiel" className="cc-pill mt-4 inline-flex w-full items-center justify-center border border-[var(--border)] px-5 py-3 text-sm font-semibold no-underline hover:bg-[var(--background)]">
           {t("goToProfile")}
         </Link>
       </Box>
@@ -275,11 +275,11 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
   return (
     <Box>
       <div className="flex items-baseline justify-between">
-        <span className="text-2xl font-bold text-foreground">{price}</span>
-        <span className={`text-sm ${a.full ? "font-medium text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>{spotsLabel(t, a)}</span>
+        <span className="cc-display text-4xl text-[var(--foreground)]">{price}</span>
+        <span className={`text-sm ${a.full ? "font-medium text-[var(--primary)]" : "text-muted-foreground"}`}>{spotsLabel(t, a)}</span>
       </div>
       {viewer.needsSupervision && event.underTwelveWithAdult && (
-        <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-muted/40 p-3 text-sm">
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-[10px] bg-[var(--background)] p-3 text-sm">
           <input type="checkbox" checked={supervised} onChange={(e) => setSupervised(e.target.checked)} className="mt-0.5 size-4 accent-primary" />
           <span className="text-foreground">{t("supervisionCheckbox")}</span>
         </label>
@@ -294,7 +294,7 @@ export function RegistrationPanel({ event, locale, viewer }: Props) {
               <p className="text-center text-xs text-muted-foreground">{t("waitlistExplain")}</p>
             </>
           ) : (
-            <p className="text-center text-sm font-medium text-amber-600 dark:text-amber-400">{t("full")}</p>
+            <p className="text-center text-sm font-medium text-[var(--primary)]">{t("full")}</p>
           )
         ) : (
           <>
