@@ -1,23 +1,29 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { requireFeature } from "@/lib/feature-flags-server";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
+import { requireAdmin as requireAdminStrict } from "@/lib/admin";
 import {
   getBuybackPrice,
-  getStoreCreditBonus,
   checkBuybackEligibility,
-  BULK_PRICING,
   MINIMUM_COLLECTION_VALUE,
   MINIMUM_BULK_VALUE,
   MAX_BUYBACK_MARKTPRIJS,
-  type BulkCategoryKey,
 } from "@/lib/buyback-pricing";
+import { getBulkPricing } from "@/lib/buyback-pricing-db";
 import { getServerMarketPrice } from "@/lib/buyback-pricing-server";
 import { submitCollectionBuybackSchema, submitBulkBuybackSchema } from "@/lib/validations/buyback";
 import { getCardImageUrl } from "@/lib/card-image";
+import { encryptIban } from "@/lib/iban-crypto";
+import { ADMIN_TRANSITIONS, canMarkPaid, canAcceptAdjusted, canRequestReturn, decisionDeadlineFrom, RETURN_FEE_EUR } from "@/lib/buyback-status";
+import { createProviderPayment } from "@/lib/mollie";
+
+// Community Hub (Fase 6): uitbetaling alleen nog naar een bankrekening. Het
+// IBAN gaat versleuteld de database in (`encryptIban`); lezen via
+// `decryptIban`/`maskStoredIban` in de pages.
 
 // ── User actions ─────────────────────────────────────────────────────────────
 
@@ -40,15 +46,7 @@ export async function submitCollectionBuyback(formData: FormData) {
     return { error: firstError };
   }
 
-  const { payoutMethod, iban, accountHolder } = parsed.data;
-  // Community Hub (Fase 1/6): uitbetaling naar tegoed hoort bij het saldo-model.
-  // Zonder FEATURE_WALLET (geen admin) alleen nog naar een bankrekening.
-  if (payoutMethod === "STORE_CREDIT") {
-    const feat = await requireFeature("FEATURE_WALLET");
-    if ("error" in feat) {
-      return { error: "Uitbetaling naar tegoed is niet meer mogelijk. Kies uitbetaling naar je bankrekening." };
-    }
-  }
+  const { iban, accountHolder } = parsed.data;
   const items: Array<{ cardId: string; quantity: number; isReverse?: boolean }> = JSON.parse(parsed.data.items);
 
   // Re-fetch prices server-side to prevent manipulation
@@ -111,8 +109,6 @@ export async function submitCollectionBuyback(formData: FormData) {
     return { error: `Minimale inkoopwaarde is €${MINIMUM_COLLECTION_VALUE.toFixed(2)}` };
   }
 
-  const storeCreditBonus = payoutMethod === "STORE_CREDIT" ? getStoreCreditBonus(roundedPayout) : null;
-
   // Verkoper moet binnen 5 dagen verzenden — anders kan de huidige Marktprijs-
   // gebaseerde calculatie zijn verlopen en moet de aanvraag opnieuw worden ingediend.
   const shippingDeadline = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
@@ -121,12 +117,12 @@ export async function submitCollectionBuyback(formData: FormData) {
     data: {
       userId: session.user.id,
       type: "COLLECTION",
-      payoutMethod,
-      iban: payoutMethod === "BANK" ? iban?.replace(/\s/g, "").toUpperCase() : null,
-      accountHolder: payoutMethod === "BANK" ? accountHolder?.trim() : null,
+      payoutMethod: "BANK",
+      iban: encryptIban(iban!),
+      accountHolder: accountHolder?.trim(),
       totalItems,
       estimatedPayout: roundedPayout,
-      storeCreditBonus,
+      storeCreditBonus: null,
       shippingDeadline,
       items: {
         create: itemsWithPrices.map((i) => ({
@@ -167,6 +163,7 @@ export async function submitBulkBuyback(formData: FormData) {
     accountHolder: (formData.get("accountHolder") as string) || undefined,
     confirmNearMint: formData.get("confirmNearMint") === "true",
     confirmSorted: formData.get("confirmSorted") === "true",
+    confirmBinding: formData.get("confirmBinding") === "true",
   };
 
   const parsed = submitBulkBuybackSchema.safeParse(raw);
@@ -175,16 +172,12 @@ export async function submitBulkBuyback(formData: FormData) {
     return { error: firstError };
   }
 
-  const { payoutMethod, iban, accountHolder } = parsed.data;
-  // Community Hub (Fase 1/6): uitbetaling naar tegoed hoort bij het saldo-model.
-  // Zonder FEATURE_WALLET (geen admin) alleen nog naar een bankrekening.
-  if (payoutMethod === "STORE_CREDIT") {
-    const feat = await requireFeature("FEATURE_WALLET");
-    if ("error" in feat) {
-      return { error: "Uitbetaling naar tegoed is niet meer mogelijk. Kies uitbetaling naar je bankrekening." };
-    }
-  }
+  const { iban, accountHolder } = parsed.data;
   const bulkItems: Array<{ category: string; quantity: number }> = JSON.parse(parsed.data.bulkItems);
+
+  // Prijzen altijd server-side uit de beheerbare tarieftabel (Fase 6).
+  const pricing = await getBulkPricing();
+  const priceByKey = new Map(pricing.map((p) => [p.key, p]));
 
   // Validate categories and compute totals
   const validItems = [];
@@ -193,7 +186,7 @@ export async function submitBulkBuyback(formData: FormData) {
 
   for (const item of bulkItems) {
     if (item.quantity <= 0) continue;
-    const config = BULK_PRICING[item.category as BulkCategoryKey];
+    const config = priceByKey.get(item.category);
     if (!config) return { error: `Onbekende categorie: ${item.category}` };
 
     const subtotal = Math.round(item.quantity * config.price * 100) / 100;
@@ -217,19 +210,18 @@ export async function submitBulkBuyback(formData: FormData) {
     return { error: `Minimale inkoopwaarde is €${MINIMUM_BULK_VALUE.toFixed(2)}` };
   }
 
-  const storeCreditBonus = payoutMethod === "STORE_CREDIT" ? getStoreCreditBonus(estimatedPayout) : null;
   const shippingDeadline = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
 
   const request = await prisma.buybackRequest.create({
     data: {
       userId: session.user.id,
       type: "BULK",
-      payoutMethod,
-      iban: payoutMethod === "BANK" ? iban?.replace(/\s/g, "").toUpperCase() : null,
-      accountHolder: payoutMethod === "BANK" ? accountHolder?.trim() : null,
+      payoutMethod: "BANK",
+      iban: encryptIban(iban!),
+      accountHolder: accountHolder?.trim(),
       totalItems,
       estimatedPayout,
-      storeCreditBonus,
+      storeCreditBonus: null,
       shippingDeadline,
       bulkItems: {
         create: validItems,
@@ -355,66 +347,139 @@ export async function getBuybackRequestDetail(requestId: string) {
   return request;
 }
 
-// ── Admin actions ────────────────────────────────────────��───────────────────
+// ── Verkoper-keuze na controle (Fase 6) ─────────────────────────────────────
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  PENDING: ["RECEIVED", "CANCELLED"],
-  RECEIVED: ["INSPECTING"],
-  INSPECTING: ["APPROVED", "PARTIALLY_APPROVED", "REJECTED"],
-  APPROVED: ["PAID"],
-  PARTIALLY_APPROVED: ["PAID"],
-};
+/** Akkoord met de aangepaste berekening: de winkel mag uitbetalen. */
+export async function acceptAdjustedBuyback(requestId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+  const request = await prisma.buybackRequest.findUnique({ where: { id: requestId }, select: { userId: true, status: true, userDecision: true, finalPayout: true } });
+  if (!request || request.userId !== session.user.id) return { error: "Aanvraag niet gevonden" };
+  if (!canAcceptAdjusted(request)) return { error: "Er valt niets meer te bevestigen voor deze aanvraag" };
+  const r = await prisma.buybackRequest.updateMany({
+    where: { id: requestId, status: "PARTIALLY_APPROVED", userDecision: null },
+    data: { userDecision: "ACCEPT", userDecidedAt: new Date() },
+  });
+  if (r.count !== 1) return { error: "Keuze is al vastgelegd" };
+  await notifyAdmins("Verkoper akkoord met aangepaste berekening", `Inkoopaanvraag kan uitbetaald worden: €${(request.finalPayout ?? 0).toFixed(2)}.`, `/dashboard/admin/buybacks/${requestId}`);
+  revalidatePath(`/dashboard/inkoop/${requestId}`);
+  return { success: true };
+}
+
+/**
+ * Retour aanvragen: maakt een betaling van RETURN_FEE_EUR aan (Mollie of
+ * simulatie) en geeft de checkout-URL terug. De status flipt pas naar
+ * RETURN_REQUESTED zodra de betaling binnen is (`onBuybackReturnPaymentStatus`).
+ */
+export async function requestBuybackReturn(requestId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Niet ingelogd" };
+  const request = await prisma.buybackRequest.findUnique({
+    where: { id: requestId },
+    select: { userId: true, status: true, userDecision: true, returnPaymentId: true, returnPayment: { select: { id: true, status: true, checkoutUrl: true } } },
+  });
+  if (!request || request.userId !== session.user.id) return { error: "Aanvraag niet gevonden" };
+  if (!canRequestReturn(request)) return { error: "Retour aanvragen kan niet meer voor deze aanvraag" };
+  // Bestaande open betaling hergebruiken.
+  if (request.returnPayment && (request.returnPayment.status === "OPEN" || request.returnPayment.status === "PENDING") && request.returnPayment.checkoutUrl) {
+    return { success: true, checkoutUrl: request.returnPayment.checkoutUrl };
+  }
+  const locale = "nl";
+  const payment = await prisma.payment.create({
+    data: {
+      provider: "FAKE",
+      purpose: "BUYBACK_RETURN",
+      status: "OPEN",
+      amount: RETURN_FEE_EUR,
+      description: `Retourkosten inkoopaanvraag ${requestId.slice(-6).toUpperCase()}`,
+      userId: session.user.id,
+      metadata: JSON.stringify({ buybackRequestId: requestId, returnPath: `/${locale}/dashboard/inkoop/${requestId}` }),
+    },
+  });
+  const created = await createProviderPayment({
+    paymentId: payment.id,
+    amount: RETURN_FEE_EUR,
+    description: payment.description,
+    redirectPath: `/${locale}/dashboard/inkoop/${requestId}?retour=1`,
+    metadata: { buybackRequestId: requestId },
+    locale,
+  });
+  await prisma.payment.update({ where: { id: payment.id }, data: { provider: created.provider, providerPaymentId: created.providerPaymentId, checkoutUrl: created.checkoutUrl } });
+  await prisma.buybackRequest.update({ where: { id: requestId }, data: { returnPaymentId: payment.id } });
+  return { success: true, checkoutUrl: created.checkoutUrl };
+}
+
+async function notifyAdmins(title: string, body: string, link: string) {
+  const admins = await prisma.user.findMany({ where: { accountType: "ADMIN" }, select: { id: true } });
+  for (const a of admins) await createNotification(a.id, "ADMIN_TASK", title, body, link);
+}
+
+// ── Admin actions ────────────────────────────────────────────────────────────
 
 interface NotificationContext {
   payout?: number;
-  bonus?: number;
-  payoutMethod?: string;
 }
 
 const STATUS_NOTIFICATIONS: Record<string, { title: string; body: (ctx: NotificationContext) => string }> = {
   RECEIVED: {
     title: "Kaarten ontvangen",
-    body: () => "We hebben je kaarten ontvangen. De inspectie kan tot 3 werkdagen duren — je krijgt een melding zodra we starten.",
+    body: () => "We hebben je kaarten ontvangen. De controle kan tot 3 werkdagen duren. Je krijgt een melding zodra we starten.",
   },
   INSPECTING: {
-    title: "Inspectie gestart",
-    body: () => "Je kaarten worden nu gecontroleerd op conditie en kwaliteit.",
+    title: "Controle gestart",
+    body: () => "Je kaarten worden nu gecontroleerd op aantallen, conditie en echtheid.",
   },
   APPROVED: {
-    title: "Kaarten goedgekeurd",
-    body: ({ payout }) => `Alle kaarten zijn goedgekeurd! Uitbetaling van €${payout?.toFixed(2)} wordt verwerkt.`,
+    title: "Kaarten gecontroleerd",
+    body: ({ payout }) => `Alles klopt. Uitbetaling van €${payout?.toFixed(2)} wordt overgemaakt naar je bankrekening.`,
   },
   PARTIALLY_APPROVED: {
-    title: "Gedeeltelijk goedgekeurd",
-    body: ({ payout }) => `Een deel van je kaarten is goedgekeurd. Uitbetaling van €${payout?.toFixed(2)} wordt verwerkt.`,
+    title: "Aangepaste berekening",
+    body: ({ payout }) => `De controle wijkt af van je opgave. Nieuwe uitbetaling: €${payout?.toFixed(2)}. Ga akkoord of vraag je afgekeurde kaarten retour (€${RETURN_FEE_EUR.toFixed(2)}).`,
   },
   REJECTED: {
     title: "Kaarten afgekeurd",
-    body: () => "Helaas zijn je kaarten afgekeurd. Bekijk de details voor meer informatie.",
+    body: () => `Helaas zijn je kaarten afgekeurd. Bekijk de reden en vraag ze eventueel retour (€${RETURN_FEE_EUR.toFixed(2)}).`,
+  },
+  RETURNED: {
+    title: "Retour verzonden",
+    body: () => "Je kaarten zijn naar je teruggestuurd. De Track & Trace staat bij je aanvraag.",
   },
   PAID: {
     title: "Uitbetaling verwerkt",
-    body: ({ payout, bonus, payoutMethod }) => {
-      if (payoutMethod === "STORE_CREDIT") {
-        const total = (payout ?? 0) + (bonus ?? 0);
-        const bonusNote = bonus && bonus > 0 ? ` (incl. €${bonus.toFixed(2)} bonus)` : "";
-        return `€${total.toFixed(2)}${bonusNote} is bijgeschreven op je saldo.`;
-      }
-      return `Je uitbetaling van €${payout?.toFixed(2)} is overgemaakt naar je bankrekening.`;
-    },
+    body: ({ payout }) => `Je uitbetaling van €${payout?.toFixed(2)} is overgemaakt naar je bankrekening.`,
   },
 };
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
+/** Admin-check in de `{ error }`-shape van de rest van dit bestand (requireAdmin uit lib/admin werpt). */
+async function requireAdmin(): Promise<string | null> {
+  try {
+    return (await requireAdminStrict()).adminId;
+  } catch {
+    return null;
+  }
+}
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { accountType: true },
+/** Retour verzonden: staff vult vervoerder + Track & Trace in. */
+export async function markBuybackReturned(requestId: string, carrier: string, trackingNumber: string) {
+  const adminId = await requireAdmin();
+  if (!adminId) return { error: "Niet geautoriseerd" };
+  const tracking = trackingNumber.trim();
+  if (tracking.length < 4 || tracking.length > 100) return { error: "Vul een geldige Track & Trace-code in" };
+  if (!VALID_CARRIERS.includes(carrier as Carrier)) return { error: "Onbekende vervoerder" };
+  const request = await prisma.buybackRequest.findUnique({ where: { id: requestId }, select: { status: true, userId: true } });
+  if (!request) return { error: "Aanvraag niet gevonden" };
+  const r = await prisma.buybackRequest.updateMany({
+    where: { id: requestId, status: "RETURN_REQUESTED" },
+    data: { status: "RETURNED", returnCarrier: carrier, returnTrackingNumber: tracking, returnedAt: new Date() },
   });
-
-  return user?.accountType === "ADMIN" ? session.user.id : null;
+  if (r.count !== 1) return { error: `Retour kan alleen vanuit "Retour betaald" (nu: ${request.status})` };
+  const notif = STATUS_NOTIFICATIONS.RETURNED;
+  await createNotification(request.userId, "BUYBACK_RETURNED", notif.title, `${notif.body({})} ${carrier} ${tracking}`, `/dashboard/inkoop/${requestId}`);
+  await logAdminAction({ adminId, action: "MARK_BUYBACK_RETURNED", targetType: "BUYBACK", targetId: requestId, metadata: { carrier, trackingNumber: tracking } });
+  revalidatePath(`/dashboard/inkoop/${requestId}`);
+  revalidatePath(`/dashboard/admin/buybacks/${requestId}`);
+  return { success: true };
 }
 
 export async function updateBuybackStatus(
@@ -427,14 +492,19 @@ export async function updateBuybackStatus(
 
   const request = await prisma.buybackRequest.findUnique({
     where: { id: requestId },
-    select: { status: true, userId: true, estimatedPayout: true, finalPayout: true, storeCreditBonus: true, payoutMethod: true },
+    select: { status: true, userId: true, estimatedPayout: true, finalPayout: true, userDecision: true, decisionDeadline: true },
   });
 
   if (!request) return { error: "Aanvraag niet gevonden" };
 
-  const allowed = VALID_TRANSITIONS[request.status];
-  if (!allowed?.includes(newStatus)) {
+  const allowed = ADMIN_TRANSITIONS[request.status];
+  if (!allowed?.includes(newStatus as (typeof allowed)[number])) {
     return { error: `Ongeldige statusovergang: ${request.status} → ${newStatus}` };
+  }
+  if (newStatus === "RETURNED") return { error: "Gebruik 'Retour verzonden' met een Track & Trace-code" };
+  if (newStatus === "PAID") {
+    const gate = canMarkPaid(request);
+    if (!gate.ok) return { error: gate.reason ?? "Uitbetalen kan nog niet" };
   }
 
   const timestamps: Record<string, Date> = {};
@@ -442,8 +512,9 @@ export async function updateBuybackStatus(
   if (newStatus === "INSPECTING") timestamps.inspectedAt = new Date();
   if (newStatus === "PAID") timestamps.paidAt = new Date();
 
-  await prisma.buybackRequest.update({
-    where: { id: requestId },
+  // Race-safe: alleen flippen vanuit de status die we zojuist controleerden.
+  const flipped = await prisma.buybackRequest.updateMany({
+    where: { id: requestId, status: request.status },
     data: {
       status: newStatus,
       adminNotes: adminNotes || undefined,
@@ -451,46 +522,16 @@ export async function updateBuybackStatus(
       ...timestamps,
     },
   });
-
-  // If PAID and store credit, add to user balance
-  if (newStatus === "PAID" && request.payoutMethod === "STORE_CREDIT") {
-    const payout = request.finalPayout ?? request.estimatedPayout;
-    const bonus = request.storeCreditBonus ?? 0;
-    const totalCredit = payout + bonus;
-
-    await prisma.user.update({
-      where: { id: request.userId },
-      data: { balance: { increment: totalCredit } },
-    });
-
-    await prisma.transaction.create({
-      data: {
-        userId: request.userId,
-        type: "DEPOSIT",
-        amount: totalCredit,
-        balanceBefore: 0, // Will be approximate
-        balanceAfter: 0,
-        description: `Inkoop tegoed uitbetaling (€${payout.toFixed(2)} + €${bonus.toFixed(2)} bonus)`,
-      },
-    });
-  }
+  if (flipped.count !== 1) return { error: "Status is intussen gewijzigd; vernieuw de pagina" };
 
   // Send notification
   const notif = STATUS_NOTIFICATIONS[newStatus];
   if (notif) {
     const payout = request.finalPayout ?? request.estimatedPayout;
-    await createNotification(
-      request.userId,
-      `BUYBACK_${newStatus}`,
-      notif.title,
-      notif.body({
-        payout,
-        bonus: request.storeCreditBonus ?? 0,
-        payoutMethod: request.payoutMethod,
-      }),
-      `/dashboard/inkoop/${requestId}`
-    );
+    await createNotification(request.userId, `BUYBACK_${newStatus}`, notif.title, notif.body({ payout }), `/dashboard/inkoop/${requestId}`);
   }
+  revalidatePath(`/dashboard/inkoop/${requestId}`);
+  revalidatePath(`/dashboard/admin/buybacks/${requestId}`);
 
   await logAdminAction({
     adminId,
@@ -697,35 +738,33 @@ export async function finalizeBuybackInspection(requestId: string) {
     newStatus = "PARTIALLY_APPROVED";
   }
 
-  const storeCreditBonus =
-    request.payoutMethod === "STORE_CREDIT" ? getStoreCreditBonus(finalPayout) : null;
-
-  await prisma.buybackRequest.update({
-    where: { id: requestId },
+  const now = new Date();
+  // Fase 6: bij een aangepaste berekening of afkeur krijgt de verkoper
+  // DECISION_DAYS om akkoord te gaan of retour te vragen.
+  const needsDecision = newStatus === "PARTIALLY_APPROVED" || newStatus === "REJECTED";
+  const flipped = await prisma.buybackRequest.updateMany({
+    where: { id: requestId, status: "INSPECTING" },
     data: {
       status: newStatus,
       finalPayout,
-      storeCreditBonus,
-      inspectedAt: new Date(),
+      storeCreditBonus: null,
+      inspectedAt: now,
       inspectedById: adminId,
+      decisionDeadline: needsDecision ? decisionDeadlineFrom(now) : null,
+      userDecision: null,
+      userDecidedAt: null,
     },
   });
+  if (flipped.count !== 1) return { error: "Aanvraag is intussen gewijzigd; vernieuw de pagina" };
 
   // Send notification
   const notif = STATUS_NOTIFICATIONS[newStatus];
   if (notif) {
-    await createNotification(
-      request.userId,
-      `BUYBACK_${newStatus}`,
-      notif.title,
-      notif.body({
-        payout: finalPayout,
-        bonus: storeCreditBonus ?? 0,
-        payoutMethod: request.payoutMethod,
-      }),
-      `/dashboard/inkoop/${requestId}`
-    );
+    await createNotification(request.userId, `BUYBACK_${newStatus}`, notif.title, notif.body({ payout: finalPayout }), `/dashboard/inkoop/${requestId}`);
   }
+  await logAdminAction({ adminId, action: "UPDATE_BUYBACK_STATUS", targetType: "BUYBACK", targetId: requestId, metadata: { oldStatus: "INSPECTING", newStatus, finalPayout } });
+  revalidatePath(`/dashboard/inkoop/${requestId}`);
+  revalidatePath(`/dashboard/admin/buybacks/${requestId}`);
 
   return { success: true, status: newStatus, finalPayout };
 }

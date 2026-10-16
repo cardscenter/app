@@ -171,7 +171,8 @@ export type DisputeResolution = (typeof DISPUTE_RESOLUTIONS)[number];
 export const BUYBACK_TYPES = ["COLLECTION", "BULK"] as const;
 export type BuybackType = (typeof BUYBACK_TYPES)[number];
 
-export const PAYOUT_METHODS = ["BANK", "STORE_CREDIT"] as const;
+// Community Hub (Fase 6): alleen nog uitbetaling naar bank; "STORE_CREDIT" bestaat alleen nog op oude rijen.
+export const PAYOUT_METHODS = ["BANK"] as const;
 export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
 
 export const BUYBACK_STATUSES = [

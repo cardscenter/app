@@ -14,7 +14,7 @@ const bulkItemSchema = z.object({
 export const submitCollectionBuybackSchema = z
   .object({
     items: z.string(), // JSON array of collectionItemSchema
-    payoutMethod: z.enum(["BANK", "STORE_CREDIT"]),
+    payoutMethod: z.enum(["BANK"]).default("BANK"),
     iban: z.string().optional(),
     accountHolder: z.string().optional(),
     confirmNearMint: z.coerce.boolean(),
@@ -60,11 +60,12 @@ export const submitCollectionBuybackSchema = z
 export const submitBulkBuybackSchema = z
   .object({
     bulkItems: z.string(), // JSON array of bulkItemSchema
-    payoutMethod: z.enum(["BANK", "STORE_CREDIT"]),
+    payoutMethod: z.enum(["BANK"]).default("BANK"),
     iban: z.string().optional(),
     accountHolder: z.string().optional(),
     confirmNearMint: z.coerce.boolean(),
     confirmSorted: z.coerce.boolean(),
+    confirmBinding: z.coerce.boolean(),
   })
   .superRefine((data, ctx) => {
     // Validate bulk items JSON
@@ -105,5 +106,8 @@ export const submitBulkBuybackSchema = z
     }
     if (!data.confirmSorted) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Je moet bevestigen dat de kaarten gesorteerd zijn", path: ["confirmSorted"] });
+    }
+    if (!data.confirmBinding) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Je moet bevestigen dat de opgegeven aantallen bindend zijn", path: ["confirmBinding"] });
     }
   });

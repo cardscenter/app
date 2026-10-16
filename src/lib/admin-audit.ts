@@ -73,6 +73,9 @@ export type AdminAction =
   | "DELETE_NEWS_POST"
   | "SEND_NEWSLETTER"
   | "SET_INTERNAL_NOTE"
+  // Community Hub (Fase 6): inkoop
+  | "MARK_BUYBACK_RETURNED"
+  | "UPDATE_BULK_PRICE"
   // Fase 45 — tier-beheer door admin
   | "GRANT_TIER"
   | "REVOKE_TIER";
@@ -106,7 +109,8 @@ export type AdminTargetType =
   | "FOOD_ORDER"
   | "LEAGUE_SEASON"
   | "LEAGUE_BADGE"
-  | "NEWS_POST";
+  | "NEWS_POST"
+  | "BULK_PRICE";
 
 /**
  * Log an admin or system action.

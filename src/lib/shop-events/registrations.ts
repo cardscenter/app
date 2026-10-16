@@ -9,6 +9,7 @@ import { createProviderPayment, fetchProviderPayment, refundProviderPayment } fr
 import { newQrSecret, verifyTicketSignature } from "./tickets";
 import { onFoodOrderPaymentStatus } from "@/lib/food/orders";
 import { onCheckIn } from "@/lib/community/loyalty";
+import { onBuybackReturnPaymentStatus } from "@/lib/buyback/returns";
 import {
   ACTIVE_TICKET_STATUSES,
   DEFAULT_EVENT_TYPES,
@@ -499,6 +500,23 @@ export async function applyPaymentStatus(args: {
     }
     await prisma.payment.updateMany({ where: { id: payment.id, status: { in: ["OPEN", "PENDING"] } }, data: { status: next, failedAt: next === "PENDING" ? null : now } });
     await onFoodOrderPaymentStatus(payment.id, next, now);
+    return { ok: true, paymentStatus: next, registrationStatus: null };
+  }
+
+  // Retourkosten inkoop (Fase 6): zelfde idempotente betaalstatus, eigen vervolg.
+  if (payment.purpose === "BUYBACK_RETURN") {
+    if (payment.status === "PAID" || payment.status === "REFUNDED" || payment.status === "PARTIALLY_REFUNDED" || next === payment.status) {
+      return { ok: true, paymentStatus: payment.status, registrationStatus: null };
+    }
+    if (next === "PAID") {
+      const claimed = await prisma.payment.updateMany({
+        where: { id: payment.id, status: { in: ["OPEN", "PENDING", "FAILED", "CANCELED", "EXPIRED"] } },
+        data: { status: "PAID", paidAt: args.paidAt ?? now },
+      });
+      if (claimed.count === 1) await onBuybackReturnPaymentStatus(payment.id, "PAID", now);
+      return { ok: true, paymentStatus: "PAID", registrationStatus: null };
+    }
+    await prisma.payment.updateMany({ where: { id: payment.id, status: { in: ["OPEN", "PENDING"] } }, data: { status: next, failedAt: next === "PENDING" ? null : now } });
     return { ok: true, paymentStatus: next, registrationStatus: null };
   }
 

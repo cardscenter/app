@@ -8,6 +8,7 @@ import { publish, userChannel } from "@/lib/realtime";
 import { AUCTION_BUYER_PREMIUM_RATE } from "@/lib/auction/fees";
 import { createNotification } from "@/actions/notification";
 import { normalizeIban } from "@/lib/validations/iban";
+import { decryptIban } from "@/lib/iban-crypto";
 import { settlePendingFees, recordPendingFeeInTx } from "@/lib/pending-fees";
 
 const PREMIUM_RATE_LABEL = `${(AUCTION_BUYER_PREMIUM_RATE * 100).toFixed(1).replace(/\.0$/, "")}%`;
@@ -88,7 +89,7 @@ export async function confirmBankTransfer(
   // (hoofdletters, geen spaties).
   const ibanMatch =
     senderIban && user.iban
-      ? normalizeIban(senderIban) === normalizeIban(user.iban)
+      ? normalizeIban(senderIban) === normalizeIban(decryptIban(user.iban) ?? "")
       : false;
   const shouldFlipIbanVerified = ibanMatch && !user.isIbanVerified;
 

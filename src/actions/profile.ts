@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { saveUploadedFile } from "@/lib/upload";
 import { isValidIbanFormat, normalizeIban, IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
+import { decryptIban, encryptIban } from "@/lib/iban-crypto";
 import { EMAIL_PREF_CATEGORIES, parseEmailPreferences } from "@/lib/email/preferences-config";
 import { requireTotpStepUp } from "@/lib/two-factor";
 import { validateUsername, validateSlugTerms, RESERVED_EXACT } from "@/lib/username-policy";
@@ -397,8 +398,11 @@ export async function updateBankDetails(formData: FormData) {
   });
   if (!user) return { error: "Gebruiker niet gevonden" };
 
+  // Fase 6: IBAN staat versleuteld in de DB; vergelijken op de platte waarde.
+  const currentIban = decryptIban(user.iban);
+
   // No-op early return: nothing to save.
-  if (user.iban === iban && user.accountHolderName === accountHolderName) {
+  if (currentIban === iban && user.accountHolderName === accountHolderName) {
     return { success: true, unchanged: true };
   }
 
@@ -406,7 +410,7 @@ export async function updateBankDetails(formData: FormData) {
   // gate IBAN changes (not name-only edits) since the name doesn't change
   // where the money lands. If both fields change, we treat it as an IBAN
   // change for cooldown purposes.
-  const isIbanChange = user.iban !== null && user.iban !== iban;
+  const isIbanChange = currentIban !== null && currentIban !== iban;
   if (isIbanChange && user.lastIbanChange) {
     const daysSince = (Date.now() - user.lastIbanChange.getTime()) / (1000 * 60 * 60 * 24);
     if (daysSince < IBAN_COOLDOWN_DAYS) {
@@ -421,7 +425,7 @@ export async function updateBankDetails(formData: FormData) {
   await prisma.user.update({
     where: { id: session.user.id },
     data: {
-      iban,
+      iban: encryptIban(iban),
       accountHolderName,
       ...(isIbanChange ? { lastIbanChange: new Date() } : {}),
     },

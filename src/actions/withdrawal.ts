@@ -7,6 +7,7 @@ import { deductBalance, creditBalance } from "@/actions/wallet";
 import { createNotification } from "@/actions/notification";
 import { logAdminAction } from "@/lib/admin-audit";
 import { WITHDRAWAL_MIN_AMOUNT } from "@/lib/withdrawal-config";
+import { maskStoredIban } from "@/lib/iban-crypto";
 import { requireEmailVerified } from "@/lib/email-verification";
 import { requireTotpStepUp } from "@/lib/two-factor";
 import { publish, userChannel } from "@/lib/realtime";
@@ -109,7 +110,7 @@ export async function requestWithdrawal(formData: FormData) {
     data: {
       userId: session.user.id,
       amount,
-      iban: user.iban,
+      iban: user.iban, // al versleuteld (Fase 6); snapshot blijft versleuteld
       accountHolderName: user.accountHolderName,
       status: "PENDING",
     },
@@ -215,7 +216,7 @@ export async function markWithdrawalPaid(withdrawalId: string) {
     w.userId,
     "ITEM_SOLD",
     "Uitbetaling voltooid",
-    `Je uitbetaling van €${w.amount.toFixed(2)} is overgemaakt naar ${w.iban.slice(0, 4)} **** ${w.iban.slice(-4)}.`,
+    `Je uitbetaling van €${w.amount.toFixed(2)} is overgemaakt naar ${maskStoredIban(w.iban) ?? "je bankrekening"}.`,
     "/nl/dashboard/uitbetalingen"
   );
 
