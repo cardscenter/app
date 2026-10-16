@@ -1,76 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "@/i18n/navigation";
 import { DisplayHeading } from "@/components/ploy/display-heading";
 import { Balloon } from "@/components/ploy/balloon";
-
-/* Braille-animaties: een 4x8 raster van punten dat per frame een ander patroon
-   toont (helix, regen, golven). Pure tekst in een mono-letter, zoals de
-   feature-kaarten in de referentie. */
-const BITS = [
-  [1, 8],
-  [2, 16],
-  [4, 32],
-  [64, 128],
-];
-function cell(grid: boolean[][]): string {
-  const rows = grid.length;
-  const cols = grid[0]?.length ?? 0;
-  let out = "";
-  for (let c = 0; c < Math.ceil(cols / 2); c++) {
-    let code = 0x2800;
-    for (let r = 0; r < 4 && r < rows; r++)
-      for (let k = 0; k < 2; k++) {
-        const col = c * 2 + k;
-        if (col < cols && grid[r]?.[col]) code |= BITS[r]![k]!;
-      }
-    out += String.fromCodePoint(code);
-  }
-  return out;
-}
-const empty = (r: number, c: number) => Array.from({ length: r }, () => Array<boolean>(c).fill(false));
-function helix(): string[] {
-  const frames: string[] = [];
-  for (let n = 0; n < 16; n++) {
-    const g = empty(4, 8);
-    for (let x = 0; x < 8; x++) {
-      const a = (n + x) * (Math.PI / 4);
-      g[Math.round(((Math.sin(a) + 1) / 2) * 3)]![x] = true;
-      g[Math.round(((Math.sin(a + Math.PI) + 1) / 2) * 3)]![x] = true;
-    }
-    frames.push(cell(g));
-  }
-  return frames;
-}
-function rain(): string[] {
-  const frames: string[] = [];
-  const off = [0, 3, 1, 5, 2, 7, 4, 6];
-  for (let n = 0; n < 12; n++) {
-    const g = empty(4, 8);
-    for (let x = 0; x < 8; x++) {
-      const r = (n + off[x]!) % 6;
-      if (r < 4) g[r]![x] = true;
-    }
-    frames.push(cell(g));
-  }
-  return frames;
-}
-function waves(): string[] {
-  const frames: string[] = [];
-  for (let n = 0; n < 16; n++) {
-    const g = empty(4, 8);
-    for (let x = 0; x < 8; x++) {
-      const r = Math.round(((Math.sin((n - x * 0.5) * 0.8) + 1) / 2) * 3);
-      g[r]![x] = true;
-      if (r > 0) g[r - 1]![x] = (n + x) % 3 === 0;
-    }
-    frames.push(cell(g));
-  }
-  return frames;
-}
-const ANIMS = { helix: { frames: helix(), interval: 80 }, rain: { frames: rain(), interval: 100 }, waves: { frames: waves(), interval: 90 } };
+import { BrailleIcon, type BrailleAnimation } from "@/components/ploy/braille-icon";
 
 export interface PillarItem {
   title: string;
@@ -78,24 +13,10 @@ export interface PillarItem {
   href: string;
   linkLabel: string;
   color: "pink" | "yellow" | "blue" | "green";
-  animation: keyof typeof ANIMS;
+  animation: BrailleAnimation;
 }
 
 const COLOR: Record<PillarItem["color"], string> = { pink: "var(--cc-pink)", yellow: "var(--cc-yellow)", blue: "var(--cc-blue)", green: "var(--cc-green)" };
-
-function BrailleIcon({ animation, color }: { animation: keyof typeof ANIMS; color: string }) {
-  const [frame, setFrame] = useState(0);
-  useEffect(() => {
-    const a = ANIMS[animation];
-    const id = window.setInterval(() => setFrame((f) => (f + 1) % a.frames.length), a.interval);
-    return () => window.clearInterval(id);
-  }, [animation]);
-  return (
-    <div className="flex size-9 items-center justify-center overflow-hidden rounded-[8px] bg-[var(--cc-ink)] font-mono text-sm leading-none" style={{ color }} aria-hidden>
-      {ANIMS[animation].frames[frame]}
-    </div>
-  );
-}
 
 /**
  * "Drie pijlers"-sectie: grote kop die zich vult bij scrollen, een ballon die

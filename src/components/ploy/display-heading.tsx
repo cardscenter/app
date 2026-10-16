@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type CSSProperties } from "react";
+import { useRef, type CSSProperties, type ReactNode } from "react";
 import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
 
 const SIZES = {
@@ -25,8 +25,11 @@ export function DisplayHeading({
   className = "",
   id,
   style,
+  children,
 }: {
   text: string;
+  /** Alternatieve inhoud (bv. met een veegstreep op één woord); `text` blijft de aria-tekst. */
+  children?: ReactNode;
   size?: keyof typeof SIZES;
   tag?: Tag;
   scrollFill?: boolean;
@@ -42,8 +45,8 @@ export function DisplayHeading({
   // element, ook als er niets mee gedaan wordt.
   if (!scrollFill) {
     return (
-      <Comp id={id} ref={ref} className={cls} style={style}>
-        {text}
+      <Comp id={id} ref={ref} className={cls} style={style} aria-label={children ? text : undefined}>
+        {children ?? text}
       </Comp>
     );
   }

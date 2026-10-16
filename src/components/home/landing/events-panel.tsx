@@ -1,63 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-
-/**
- * Veegstreep achter een woord: een ruwe markeerstift-veeg (SVG met ongelijke
- * randen) die bij in-view van links naar rechts getrokken wordt. Optioneel
- * een illustratie (transparante PNG) schuin achter het woord, onder de veeg.
- */
-export function Highlight({ children, color = "var(--cc-green)", illustration }: { children: ReactNode; color?: string; illustration?: { src: string; alt?: string } }) {
-  return (
-    <span className="relative isolate inline-block whitespace-nowrap">
-      {illustration && (
-        <motion.img
-          src={illustration.src}
-          alt={illustration.alt ?? ""}
-          aria-hidden={!illustration.alt}
-          draggable={false}
-          className="pointer-events-none absolute bottom-[-1.85em] left-1/2 -z-20 h-[6.2em] w-auto max-w-none select-none drop-shadow-[0_18px_24px_rgba(13,27,63,0.28)]"
-          style={{ x: "-46%", rotate: 6, clipPath: "inset(0 0 37% 0)" }}
-          initial={{ opacity: 0, y: 24, scale: 0.92 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: true, margin: "-10% 0px" }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        />
-      )}
-      <motion.svg
-        aria-hidden
-        viewBox="0 0 100 30"
-        preserveAspectRatio="none"
-        className="absolute -inset-x-[0.25em] -top-[0.14em] -bottom-[0.1em] -z-10 h-[1.2em] w-[calc(100%+0.5em)] origin-left"
-        style={{ rotate: "-2deg" }}
-        initial={{ scaleX: 0, opacity: 0.6 }}
-        whileInView={{ scaleX: 1, opacity: 0.95 }}
-        viewport={{ once: true, margin: "-10% 0px" }}
-        transition={{ duration: 0.65, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <path d="M3 7 C 18 2, 42 5, 60 3 S 92 1, 99 5 L 100 23 C 84 28, 58 25, 38 27 S 8 29, 1 25 Z" fill={color} />
-      </motion.svg>
-      <span className="relative">{children}</span>
-    </span>
-  );
-}
-
-/** Vervangt `word` in `text` door een gemarkeerde versie (hoofdletterongevoelig). */
-function withHighlight(text: string, word: string | undefined, illustration?: { src: string; alt?: string }): ReactNode {
-  if (!word) return text;
-  const idx = text.toLowerCase().indexOf(word.toLowerCase());
-  if (idx < 0) return text;
-  return (
-    <>
-      {text.slice(0, idx)}
-      <Highlight illustration={illustration}>{text.slice(idx, idx + word.length)}</Highlight>
-      {text.slice(idx + word.length)}
-    </>
-  );
-}
+import { withHighlight } from "@/components/ploy/highlight";
 
 export interface EventCardData {
   id: string;
@@ -208,8 +154,8 @@ export function EventsPanel({
       <div className="relative w-full overflow-visible rounded-[20px] bg-[var(--cc-blue)] px-5 pb-14 pt-20 sm:px-8 lg:px-24 lg:pb-[76px] lg:pt-24">
         <div className="relative z-[1] mx-auto w-full max-w-6xl">
           <h2 className="cc-display mb-6 text-[44px] text-[var(--cc-ink)] md:text-[64px] lg:text-7xl">
-            <span className="block">{withHighlight(titleParts[0], highlightWord, illustration)}</span>
-            <span className="block">{withHighlight(titleParts[1], highlightWord, illustration)}</span>
+            <span className="block">{withHighlight(titleParts[0], highlightWord, { illustration })}</span>
+            <span className="block">{withHighlight(titleParts[1], highlightWord, { illustration })}</span>
           </h2>
           <div className="flex flex-row justify-start">
             <div className="w-full max-w-[30rem]">
