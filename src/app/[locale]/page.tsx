@@ -11,6 +11,7 @@ import { Tag, Store } from "lucide-react";
 import { ZDivider } from "@/components/ui/z-divider";
 
 import { MarketingHeroV2 } from "@/components/home/marketing-hero-v2";
+import { HubHomepage } from "@/components/home/hub-homepage";
 import { LoggedInHeroV2 } from "@/components/home/logged-in-hero-v2";
 import { SponsoredSpotlight } from "@/components/home/sponsored-spotlight";
 import { HowItWorksThreePaths } from "@/components/home/how-it-works-three-paths";
@@ -65,6 +66,13 @@ async function HomePageContent({
   // tiers, FAQ, concurrentie) hangen allemaal aan het saldo-model.
   const features = getFeatureSnapshot(accountType);
   const anyTrade = features.FEATURE_AUCTIONS || features.FEATURE_CLAIMSALES || features.FEATURE_MARKETPLACE;
+
+  // Community Hub (Fase 5): zonder handel en saldo is de hub-startpagina de
+  // homepage (events, nieuws, league, info). De marketing-homepage hieronder
+  // blijft bestaan voor als de handel terugkomt.
+  if (!anyTrade && !features.FEATURE_WALLET) {
+    return <HubHomepage locale={locale} viewer={session?.user?.id ? { id: session.user.id, name: session.user.name ?? "" } : null} />;
+  }
 
   // Fase 37: action-items voor de "Sinds je vorige bezoek"-strip op de hero.
   // Alleen voor logged-in users — anders skip de query.
