@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { MapPin, Clock, Car, ScrollText, ExternalLink, CalendarDays, UtensilsCrossed, Mail } from "lucide-react";
-import { Link } from "@/i18n/navigation";
-import { PageContainer } from "@/components/layout/page-container";
+import { ExternalLink, Mail, MapPin } from "lucide-react";
 import { getHubSettings } from "@/lib/app-config";
 import { toParagraphs } from "@/lib/community/config";
 import { formatShopAddress, PLATFORM } from "@/lib/platform-config";
+import { CenteredHero, TileQuad, FeatureRows, FaqSection, BannerPromo, ClosingCta, CtaButton } from "@/components/ploy";
 
 export const dynamic = "force-dynamic";
 
@@ -17,91 +16,117 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: `${t("infoTitle")} | Cards Center`, description: t("infoMeta") };
 }
 
-/** Info-pagina: adres, openingstijden, bereikbaarheid, huisregels (teksten uit de hub-instellingen). */
+/**
+ * Info-pagina (design-pass, Ploy-stijl): hero met veegstreep op "Hulst",
+ * vier tegels (adres, openingstijden, bereikbaarheid, contact), huisregels
+ * als genummerde rijen, een donkere strook naar events/league/bestellen,
+ * vragen en een slotpaneel. Teksten uit de hub-instellingen.
+ */
 export default async function InfoPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("community");
-  const s = await getHubSettings();
+  const [t, te, s] = await Promise.all([getTranslations("community"), getTranslations("shopEvents"), getHubSettings()]);
   const address = formatShopAddress();
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${PLATFORM.shop.name}, ${address}`)}`;
-
-  const Block = ({ icon: Icon, title, children, id }: { icon: typeof MapPin; title: string; children: React.ReactNode; id?: string }) => (
-    <section id={id} className="dash-card p-5 sm:p-6">
-      <h2 className="flex items-center gap-2 text-lg font-semibold">
-        <Icon className="size-5 text-primary" /> {title}
-      </h2>
-      <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-foreground/90">{children}</div>
-    </section>
-  );
+  const linkCls = "inline-flex items-center gap-1.5 text-sm font-semibold underline underline-offset-4";
+  const rules = toParagraphs(s.houseRules);
+  const directions = toParagraphs(s.directions);
 
   return (
-    <PageContainer width="default" className="py-8 sm:py-10">
-      <div className="max-w-2xl">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Cards Center Hulst</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{t("infoTitle")}</h1>
-        <p className="mt-2 text-muted-foreground">{t("infoIntro")}</p>
-      </div>
+    <div className="cc-landing overflow-clip">
+      <CenteredHero eyebrow={`${PLATFORM.shop.name} · ${PLATFORM.shop.city}`} eyebrowColor="green" title={t("infoHeroTitle")} highlightWord={PLATFORM.shop.city} highlightColor="green" description={t("infoIntro")} />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="space-y-6">
-          <Block icon={ScrollText} title={t("houseRules")} id="huisregels">
-            <ol className="list-decimal space-y-2 pl-5">
-              {toParagraphs(s.houseRules).map((p, i) => (
-                <li key={i}>{p}</li>
-              ))}
-            </ol>
-          </Block>
-          <Block icon={Car} title={t("directions")} id="bereikbaarheid">
-            {toParagraphs(s.directions).map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
-              <MapPin className="size-4" /> {t("planRoute")}
-            </a>
-          </Block>
-        </div>
-
-        <aside className="space-y-6">
-          <Block icon={MapPin} title={t("address")}>
-            <p>
-              <strong>{PLATFORM.shop.name}</strong>
-              <br />
-              {address}
-            </p>
-            <a href={WEBSITE} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
-              <ExternalLink className="size-4" /> cards-center.nl
-            </a>
-            <p className="text-sm text-muted-foreground">
-              <Mail className="mr-1 inline size-4 align-text-bottom" />
-              <a href={`mailto:${PLATFORM.supportEmail}`} className="hover:underline">
-                {PLATFORM.supportEmail}
+      <TileQuad
+        items={[
+          {
+            id: "adres",
+            title: t("address"),
+            color: "pink",
+            animation: "pulse",
+            text: (
+              <>
+                <strong className="text-[var(--foreground)]">{PLATFORM.shop.name}</strong>
+                <br />
+                {address}
+              </>
+            ),
+            action: (
+              <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className={`${linkCls} text-[var(--foreground)]`}>
+                <MapPin className="size-4" /> {t("planRoute")}
               </a>
-            </p>
-          </Block>
-          <Block icon={Clock} title={t("openingHours")}>
-            <p className="whitespace-pre-line">{s.openingHours}</p>
-          </Block>
-          <Block icon={CalendarDays} title={t("atTheShop")}>
-            <p className="text-sm text-muted-foreground">{t("atTheShopBody")}</p>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/evenementen" className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
-                <CalendarDays className="size-4" /> {t("toEvents")}
-              </Link>
-              <Link href="/league" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">
-                {t("leagueTitle")}
-              </Link>
-              <Link href="/bestellen?modus=bar" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-muted">
-                <UtensilsCrossed className="size-4" /> {t("orderFood")}
-              </Link>
-            </div>
-          </Block>
-          <section className="rounded-2xl border border-border bg-muted/40 p-5 text-sm text-muted-foreground">
-            <h2 className="font-semibold text-foreground">{t("cancellationPolicy")}</h2>
-            <p className="mt-2 whitespace-pre-line">{s.cancellationPolicy}</p>
-          </section>
-        </aside>
-      </div>
-    </PageContainer>
+            ),
+          },
+          { id: "openingstijden", title: t("openingHours"), color: "yellow", animation: "scan", text: <span className="whitespace-pre-line">{s.openingHours}</span> },
+          {
+            id: "bereikbaarheid",
+            title: t("directions"),
+            color: "blue",
+            animation: "waves",
+            text: directions.map((p, i) => (
+              <p key={i} className={i > 0 ? "mt-2" : ""}>
+                {p}
+              </p>
+            )),
+          },
+          {
+            id: "contact",
+            title: t("infoContact"),
+            color: "ink",
+            animation: "helix",
+            text: t("infoContactText"),
+            action: (
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                <a href={`mailto:${PLATFORM.supportEmail}`} className={`${linkCls} text-white`}>
+                  <Mail className="size-4" /> {PLATFORM.supportEmail}
+                </a>
+                <a href={WEBSITE} target="_blank" rel="noopener noreferrer" className={`${linkCls} text-white`}>
+                  <ExternalLink className="size-4" /> {t("infoWebsite")}
+                </a>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      <FeatureRows id="huisregels" title={t("houseRules")} intro={t("infoRulesIntro")} rows={rules.map((p, i) => ({ number: String(i + 1).padStart(2, "0"), text: p }))} />
+
+      <BannerPromo
+        eyebrow={t("atTheShop")}
+        title={t("atTheShopBody")}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <CtaButton href="/evenementen" variant="light">
+              {t("toEvents")}
+            </CtaButton>
+            <CtaButton href="/league" variant="ghost">
+              {t("leagueTitle")}
+            </CtaButton>
+            <CtaButton href="/bestellen?modus=bar" variant="ghost">
+              {t("orderFood")}
+            </CtaButton>
+          </div>
+        }
+      />
+
+      <FaqSection
+        eyebrow={te("faqEyebrow")}
+        title={t("infoFaqTitle")}
+        items={[
+          { q: t("infoFaq1Q"), a: s.cancellationPolicy },
+          { q: t("infoFaq2Q"), a: `${te("underTwelveLine")} ${te("guardianLine")}` },
+          { q: t("infoFaq3Q"), a: t("infoFaq3A") },
+          { q: t("infoFaq4Q"), a: t("infoFaq4A", { n: s.stampsPerCard, reward: s.stampReward || t("infoFaq4Fallback") }) },
+        ]}
+      />
+
+      <ClosingCta color="green" title={t("infoClosingTitle")} text={t("infoClosingText")}>
+        <CtaButton href="/evenementen" variant="dark">
+          {t("toEvents")}
+        </CtaButton>
+        <CtaButton href="/register" variant="light">
+          {te("bannerCta")}
+        </CtaButton>
+      </ClosingCta>
+    </div>
   );
 }
