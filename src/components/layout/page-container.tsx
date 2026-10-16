@@ -2,13 +2,14 @@ import { cn } from "@/lib/utils";
 
 type Width = "narrow" | "default" | "wide";
 
-// Full-width-gevoel met een maximum voor ultrawide (sept 2026): wide = 1880px,
-// default = 1560px, met een vloeiende gutter clamp(1rem, 3vw, 4rem) i.p.v. de
-// vaste px-4/6/8/10-ladder. Header, footer en homepage-secties gebruiken
-// dezelfde 1880px + gutter inline (ze zitten in <section>s met eigen bg).
+// Community Hub (besluit Youri 2026-10-16): elke pagina gebruikt de volledige
+// header-breedte (1880px + gutter clamp(1rem, 3vw, 4rem)), ook de voorheen
+// smallere "narrow" (768px) en "default" (1560px) tiers. De prop blijft
+// bestaan zodat een later design per tier weer kan verschillen; tot die tijd
+// zijn alle drie gelijk aan de header/footer/homepage-secties.
 const WIDTH_CLASSES: Record<Width, string> = {
-  narrow: "max-w-3xl",
-  default: "max-w-[1560px]",
+  narrow: "max-w-[1880px]",
+  default: "max-w-[1880px]",
   wide: "max-w-[1880px]",
 };
 
