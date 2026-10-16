@@ -827,16 +827,22 @@ body {
   animation-delay: var(--cc-intro-delay, 0s);
 }
 
-/* Scroll-fill voor koppen: per woord een verloop dat van links vult. */
+/* Scroll-fill voor koppen: per woord een gevulde kopie die van links
+   opengeknipt wordt (clip-path). Bewust geen background-clip: text meer:
+   Safari op iOS tekende de gradient-vulling niet betrouwbaar opnieuw bij
+   scrollen, waardoor de koppen grijs bleven (mobiel-fix 2026-10-17). */
 .cc-word {
   --p: 0%;
-  color: transparent;
-  background-image: linear-gradient(90deg, var(--cc-fill, var(--cc-ink)) 0, var(--cc-fill, var(--cc-ink)) var(--p), var(--cc-fill-faded, var(--cc-ink-faded)) var(--p));
-  -webkit-background-clip: text;
-  background-clip: text;
+  position: relative;
   display: inline-block;
-  padding: 0.08em 0;
-  margin: -0.08em 0;
+  color: var(--cc-fill-faded, var(--cc-ink-faded));
+}
+.cc-word-fill {
+  position: absolute;
+  inset: 0;
+  color: var(--cc-fill, var(--cc-ink));
+  clip-path: inset(0 calc(100% - var(--p)) 0 0);
+  pointer-events: none;
 }
 
 /* Digit-roller voor tellende cijfers. */

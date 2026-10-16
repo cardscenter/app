@@ -20,7 +20,7 @@ const PALETTE: Record<BalloonColor, { light: string; base: string; deep: string 
  * hier een transparante video in de plaats komen zonder de secties te
  * veranderen: zelfde props, zelfde maat.
  */
-export function Balloon({ color = "red", shape = "cloud", className = "", style }: { color?: BalloonColor; shape?: BalloonShape; className?: string; style?: CSSProperties }) {
+export function Balloon({ color = "red", shape = "cloud", className = "", style, shadow = true }: { color?: BalloonColor; shape?: BalloonShape; className?: string; style?: CSSProperties; /** SVG-slagschaduw; uit als de aanroeper al een CSS drop-shadow zet (scheelt rekenwerk op mobiel). */ shadow?: boolean }) {
   const id = useId().replace(/:/g, "");
   const p = PALETTE[color];
   const gradId = `g${id}`;
@@ -39,11 +39,13 @@ export function Balloon({ color = "red", shape = "cloud", className = "", style 
           <stop offset="0.45" stopColor="#fff" stopOpacity="0.18" />
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </radialGradient>
-        <filter id={shId} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor={p.deep} floodOpacity="0.35" />
-        </filter>
+        {shadow && (
+          <filter id={shId} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor={p.deep} floodOpacity="0.35" />
+          </filter>
+        )}
       </defs>
-      <g filter={`url(#${shId})`}>
+      <g filter={shadow ? `url(#${shId})` : undefined}>
         <g fill={`url(#${gradId})`} stroke={p.deep} strokeOpacity="0.28" strokeWidth="1.5">
           {shape === "cloud" && (
             <>

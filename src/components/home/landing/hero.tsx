@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, CalendarDays } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -49,6 +49,10 @@ export function LandingHero({
   const t = useTranslations("home.landing");
   const panel = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  // Op touch-schermen zijn de ballonnen niet sleepbaar: met drag aan blokkeert
+  // framer touch-action op de ballon, waardoor een veeg die op een ballon
+  // begint de pagina niet scrolt (mobiel-fix 2026-10-17).
+  const draggable = useFinePointer();
 
   return (
     <section className="relative px-4 pb-4 pt-0 sm:px-5 sm:pt-1 lg:px-6" aria-labelledby="landing-hero-title">
@@ -68,12 +72,12 @@ export function LandingHero({
           {BALLOONS.map((b, i) => (
             <motion.div
               key={b.color}
-              className="absolute cursor-grab touch-none active:cursor-grabbing"
+              className={`absolute ${draggable ? "cursor-grab touch-none active:cursor-grabbing" : "touch-pan-y"}`}
               style={{ left: b.x, top: b.y, width: `clamp(${Math.round(b.size * 0.45)}px, ${Math.round(b.size / 14)}vw, ${b.size}px)` }}
               initial={reduced ? false : { opacity: 0, y: 160, scale: 0.7 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: 0.25 + b.delay, duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-              drag
+              drag={draggable}
               dragConstraints={panel}
               dragElastic={0.18}
               dragMomentum
@@ -83,7 +87,8 @@ export function LandingHero({
                 animate={reduced ? undefined : { y: [0, -16, 0], rotate: [-4 + i, 4 + i, -4 + i] }}
                 transition={{ duration: b.dur, ease: "easeInOut", repeat: Infinity }}
               >
-                <Balloon color={b.color} shape={b.shape} className="h-auto w-full drop-shadow-[0_30px_40px_rgba(0,0,0,0.35)]" />
+                {/* Eén schaduw (CSS) in plaats van CSS + SVG-filter: scheelt rasterwerk op telefoons. */}
+                <Balloon color={b.color} shape={b.shape} shadow={false} className="h-auto w-full drop-shadow-[0_30px_40px_rgba(0,0,0,0.35)]" />
               </motion.div>
             </motion.div>
           ))}
@@ -123,7 +128,7 @@ export function LandingHero({
         {announcement && (
           <Link
             href={announcement.href}
-            className="group absolute bottom-4 left-4 z-20 flex w-[min(360px,calc(100%-2rem))] items-center gap-4 rounded-[10px] bg-white/95 p-3 pr-5 text-[var(--cc-ink)] no-underline shadow-[0_18px_50px_-12px_rgba(0,0,0,0.55)] backdrop-blur-md transition-[background-color,box-shadow] duration-300 hover:bg-white lg:bottom-6 lg:left-6"
+            className="group absolute bottom-4 left-4 z-20 flex w-[min(360px,calc(100%-2rem))] items-center gap-4 rounded-[10px] bg-white/95 p-3 pr-5 text-[var(--cc-ink)] no-underline shadow-[0_18px_50px_-12px_rgba(0,0,0,0.55)] transition-[background-color,box-shadow] duration-300 hover:bg-white lg:bottom-6 lg:left-6"
           >
             {announcement.image ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -146,4 +151,21 @@ export function LandingHero({
       </div>
     </section>
   );
+}
+
+/**
+ * True zodra het apparaat een fijne aanwijzer (muis/trackpad) heeft. Start op
+ * false zodat server en eerste client-render gelijk zijn; touch-apparaten
+ * blijven dus altijd op "niet sleepbaar".
+ */
+function useFinePointer(): boolean {
+  const [fine, setFine] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: fine)");
+    const update = () => setFine(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return fine;
 }

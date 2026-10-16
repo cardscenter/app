@@ -69,5 +69,14 @@ function Word({ word, index, total, progress }: { word: string; index: number; t
   const start = index / (total + 0.5);
   const end = (index + 1.5) / (total + 0.5);
   const p = useTransform(progress, [start, end], ["0%", "100%"], { clamp: true });
-  return <motion.span className="cc-word" style={{ "--p": p } as CSSProperties}>{word}</motion.span>;
+  // Vervaagd woord met daaroverheen een gevulde kopie die via clip-path
+  // opengaat (werkt ook op iOS Safari, anders dan background-clip: text).
+  return (
+    <motion.span className="cc-word" style={{ "--p": p } as CSSProperties}>
+      {word}
+      <span className="cc-word-fill" aria-hidden>
+        {word}
+      </span>
+    </motion.span>
+  );
 }

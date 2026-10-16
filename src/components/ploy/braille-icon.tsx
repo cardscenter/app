@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /* Braille-animaties: een 4x8 raster van punten dat per frame een ander patroon
    toont (helix, regen, golven, scan, puls). Pure tekst in een mono-letter. */
@@ -98,14 +98,27 @@ export type BrailleAnimation = keyof typeof ANIMS;
 
 /** Zwart blokje met een bewegend braille-patroon in een accentkleur. */
 export function BrailleIcon({ animation = "scan", color = "var(--pastel-yellow)", className = "" }: { animation?: BrailleAnimation; color?: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState(0);
+  // Zonder IntersectionObserver (oude browsers) gewoon altijd tikken.
+  const [visible, setVisible] = useState(() => typeof window !== "undefined" && typeof IntersectionObserver === "undefined");
+  // Alleen tikken zolang het icoon in beeld is: elke frame is een React-render,
+  // en op telefoons stapelden die zich op tijdens het scrollen (mobiel-fix 2026-10-17).
   useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setVisible(!!entry?.isIntersecting), { rootMargin: "80px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!visible) return;
     const a = ANIMS[animation];
     const id = window.setInterval(() => setFrame((f) => (f + 1) % a.frames.length), a.interval);
     return () => window.clearInterval(id);
-  }, [animation]);
+  }, [animation, visible]);
   return (
-    <div className={`flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-[var(--foreground)] font-mono text-sm leading-none ${className}`} style={{ color }} aria-hidden>
+    <div ref={ref} className={`flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-[var(--foreground)] font-mono text-sm leading-none ${className}`} style={{ color }} aria-hidden>
       {ANIMS[animation].frames[frame]}
     </div>
   );

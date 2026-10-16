@@ -12,7 +12,7 @@ const VARIANTS = {
   red: "cc-grad text-white",
   dark: "bg-[var(--cc-ink)] text-white",
   light: "bg-white text-[var(--cc-ink)]",
-  ghost: "bg-white/10 text-white ring-1 ring-inset ring-white/80 backdrop-blur-sm hover:bg-white/15",
+  ghost: "bg-white/10 text-white ring-1 ring-inset ring-white/80 hover:bg-white/15",
 } as const;
 
 function pickColor(prev: string | null) {
@@ -46,9 +46,14 @@ export function CtaButton({
   const lastColor = useRef<string | null>(null);
   const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const wiggle = () => {
+  // Op touch vuurt pointerenter bij elke tik, direct gevolgd door pointerleave
+  // en click: wiebel + terugveren + squash tegelijk zag er op telefoons
+  // rommelig uit. Daar blijft alleen de squash bij klik over (mobiel-fix 2026-10-17).
+  const isTouch = (e?: React.PointerEvent | React.FocusEvent) => e !== undefined && "pointerType" in e && e.pointerType === "touch";
+
+  const wiggle = (e?: React.PointerEvent | React.FocusEvent) => {
     const el = ref.current;
-    if (!el || reduced()) return;
+    if (!el || reduced() || isTouch(e)) return;
     const chars = Array.from(el.querySelectorAll<HTMLElement>("[data-char]"));
     const color = pickColor(lastColor.current);
     lastColor.current = color;
@@ -60,9 +65,9 @@ export function CtaButton({
     );
     animate(el, { scaleX: 1.05, scaleY: 1.08 }, { type: "spring", stiffness: 420, damping: 14 });
   };
-  const rest = () => {
+  const rest = (e?: React.PointerEvent | React.FocusEvent) => {
     const el = ref.current;
-    if (!el || reduced()) return;
+    if (!el || reduced() || isTouch(e)) return;
     animate(el, { scaleX: 1, scaleY: 1 }, { duration: 0.4, ease: "easeOut" });
   };
   const press = () => {
