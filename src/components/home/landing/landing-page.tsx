@@ -11,6 +11,9 @@ import { EventsPanel, type EventCardData } from "./events-panel";
 import { PlatformSection } from "./platform-section";
 import { AudienceAccordion } from "@/components/ploy/audience-accordion";
 import { CtaSection } from "./cta-section";
+import { SectionHead } from "@/components/ploy/section-head";
+import { CtaButton } from "@/components/ploy/cta-button";
+import { TestimonialWall, type TestimonialItem } from "@/components/ploy/testimonial-wall";
 
 const TZ = "Europe/Amsterdam";
 
@@ -42,8 +45,8 @@ function datePart(d: Date, locale: string, opts: Intl.DateTimeFormatOptions) {
  * de vorige homepage staat ongewijzigd in `hub-homepage.tsx` (HOMEPAGE_LEGACY=true).
  */
 export async function LandingPage({ locale, viewer }: { locale: string; viewer: { id: string; name: string; image: string | null } | null }) {
-  const [t, data] = await Promise.all([getTranslations("home.landing"), getLandingData(viewer?.id ?? null)]);
-  const { events, news, games, season, standings, settings, counts } = data;
+  const [t, tc, data] = await Promise.all([getTranslations("home.landing"), getTranslations("community"), getLandingData(viewer?.id ?? null)]);
+  const { events, news, games, season, standings, settings, counts, testimonials } = data;
   const address = formatShopAddress();
   const leader = standings[0] ?? null;
   const nextEvent = events[0] ?? null;
@@ -153,6 +156,18 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
     };
   });
 
+  // Ervaringen-rij (design-pass Fase C): alleen vanaf drie uitgelichte quotes.
+  const quotes: TestimonialItem[] = testimonials.map((r) => ({
+    id: r.id,
+    quote: r.quote,
+    authorName: r.authorName,
+    authorRole: r.authorRole,
+    sourceLabel: tc(`expSource_${r.source}`),
+    sourceUrl: r.sourceUrl,
+    avatarUrl: r.avatarUrl,
+    color: r.color,
+  }));
+
   return (
     <div className="cc-landing overflow-clip" style={{ colorScheme: "light" }}>
       <LandingHero
@@ -202,6 +217,24 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
           { title: t("audCollectorsTitle"), description: t("audCollectorsDesc"), color: "pink", bullets: [t("audCollectorsB1"), t("audCollectorsB2"), t("audCollectorsB3"), t("audCollectorsB4")], ctaLabel: t("audCollectorsCta"), ctaHref: "/verkopen" },
         ]}
       />
+      {quotes.length >= 3 && (
+        <section className="flex justify-center px-4 py-12 sm:px-5 lg:px-6 lg:py-16">
+          <div className="w-full max-w-6xl">
+            <SectionHead
+              eyebrow={t("testimonialsEyebrow")}
+              eyebrowColor="pink"
+              title={t("testimonialsTitle")}
+              intro={t("testimonialsIntro")}
+              action={
+                <CtaButton href="/ervaringen" variant="light">
+                  {t("testimonialsAll")}
+                </CtaButton>
+              }
+            />
+            <TestimonialWall items={quotes} columns={3} />
+          </div>
+        </section>
+      )}
       <CtaSection
         title={t("ctaTitle")}
         description={t("ctaDesc")}

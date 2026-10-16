@@ -6,6 +6,7 @@ import { getActiveSeason, getStandings, type StandingView } from "@/lib/communit
 import { getHubSettings, type HubSettings } from "@/lib/app-config";
 import { listEnabledGames } from "@/lib/games-server";
 import type { GameDefinition } from "@/lib/games";
+import { listApprovedTestimonials, type TestimonialView } from "@/lib/community/testimonials";
 
 export interface LandingData {
   events: ShopEventListItem[];
@@ -14,6 +15,8 @@ export interface LandingData {
   season: { id: string; name: string } | null;
   standings: StandingView[];
   settings: HubSettings;
+  /** Uitgelichte ervaringen (design-pass Fase C); de rij toont vanaf drie. */
+  testimonials: TestimonialView[];
   counts: {
     members: number;
     upcomingEvents: number;
@@ -27,13 +30,14 @@ export interface LandingData {
  * Alles is al publiek elders op de site; hier alleen gebundeld en gecapt.
  */
 export async function getLandingData(viewerId: string | null): Promise<LandingData> {
-  const [events, news, games, season, settings, members] = await Promise.all([
+  const [events, news, games, season, settings, members, testimonials] = await Promise.all([
     listShopEvents({}),
     listPublishedNews(6),
     listEnabledGames(),
     getActiveSeason(),
     getHubSettings(),
     prisma.user.count({ where: { deletedAt: null } }),
+    listApprovedTestimonials({ featuredOnly: true, take: 6 }),
   ]);
   const upcoming = events.filter((e) => e.status === "PUBLISHED");
   let standings: StandingView[] = [];
@@ -53,6 +57,7 @@ export async function getLandingData(viewerId: string | null): Promise<LandingDa
     season: season ? { id: season.id, name: season.name } : null,
     standings: standings.slice(0, 5),
     settings,
+    testimonials,
     counts: {
       members,
       upcomingEvents: upcoming.length,

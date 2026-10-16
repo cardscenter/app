@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { ChevronLeft } from "lucide-react";
-import { Link } from "@/i18n/navigation";
-import { PageContainer } from "@/components/layout/page-container";
-import { getPublishedNews } from "@/lib/community/news";
+import { Pin } from "lucide-react";
+import { getPublishedNews, listPublishedNews } from "@/lib/community/news";
 import { toParagraphs } from "@/lib/community/config";
 import { formatEventDate } from "@/lib/shop-events/format";
+import { ArticleLayout } from "@/components/ploy/article-layout";
+import { Pill } from "@/components/ploy/pill";
+import { SectionHead } from "@/components/ploy/section-head";
+import { CtaButton } from "@/components/ploy/cta-button";
+import { NewsCard } from "@/components/community/news-card";
 
 export const dynamic = "force-dynamic";
 
@@ -19,36 +22,52 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return { title: `${post.title} | Cards Center`, description: post.excerpt ?? post.body.slice(0, 160) };
 }
 
+/** Nieuwsbericht (design-pass Fase C): artikel-layout met verwante berichten eronder. */
 export default async function NewsPostPage({ params }: { params: Params }) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("community");
-  const post = await getPublishedNews(slug);
+  const [t, post] = await Promise.all([getTranslations("community"), getPublishedNews(slug)]);
   if (!post) notFound();
+  const related = (await listPublishedNews(4)).filter((p) => p.slug !== post.slug).slice(0, 3);
+  const labels = { pinned: t("pinned"), readMore: t("readMore") };
 
   return (
-    <PageContainer width="narrow" className="py-8 sm:py-10">
-      <Link href="/nieuws" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ChevronLeft className="size-4" /> {t("backToNews")}
-      </Link>
-      <article className="mt-4">
-        <p className="text-xs text-muted-foreground">
-          {post.publishedAt ? formatEventDate(post.publishedAt, locale) : ""} · {post.author.displayName}
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{post.title}</h1>
-        {post.excerpt && <p className="mt-3 text-lg text-muted-foreground">{post.excerpt}</p>}
-        {post.coverImage && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={post.coverImage} alt="" className="mt-6 w-full rounded-2xl border border-border object-cover" />
-        )}
-        <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-foreground/90">
-          {toParagraphs(post.body).map((p, i) => (
-            <p key={i} className="whitespace-pre-line">
-              {p}
-            </p>
-          ))}
-        </div>
-      </article>
-    </PageContainer>
+    <div className="cc-landing overflow-clip">
+      <ArticleLayout
+        back={{ href: "/nieuws", label: t("backToNews") }}
+        meta={
+          <>
+            {post.publishedAt && <Pill tone="white">{formatEventDate(post.publishedAt, locale)}</Pill>}
+            <Pill tone="white">{post.author.displayName}</Pill>
+            {post.pinned && (
+              <Pill color="yellow">
+                <Pin className="size-3" /> {t("pinned")}
+              </Pill>
+            )}
+          </>
+        }
+        title={post.title}
+        lead={post.excerpt}
+        cover={post.coverImage ? { src: post.coverImage } : null}
+        after={
+          related.length > 0 ? (
+            <>
+              <SectionHead eyebrow={t("newsEyebrow")} eyebrowColor="pink" title={t("moreNews")} action={<CtaButton href="/nieuws" variant="light">{t("allNews")}</CtaButton>} size={4} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {related.map((p, i) => (
+                  <NewsCard key={p.id} post={p} locale={locale} index={i} labels={labels} />
+                ))}
+              </div>
+            </>
+          ) : undefined
+        }
+      >
+        {toParagraphs(post.body).map((p, i) => (
+          <p key={i} className="whitespace-pre-line">
+            {p}
+          </p>
+        ))}
+      </ArticleLayout>
+    </div>
   );
 }

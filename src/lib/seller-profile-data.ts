@@ -19,6 +19,8 @@ export type SellerProfileUser = {
   lastName: string | null;
   avatarUrl: string | null;
   bio: string | null;
+  /** JSON string[] van spel-keys (Fase 2); design-pass toont ze als pillen op het profiel. */
+  favoriteGames: string | null;
   accountType: string;
   accountKind: string;
   companyName: string | null;
@@ -143,6 +145,7 @@ export const getSellerProfileData = cache(
           lastName: true,
           avatarUrl: true,
           bio: true,
+          favoriteGames: true,
           accountType: true,
           accountKind: true,
           companyName: true,

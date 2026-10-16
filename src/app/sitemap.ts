@@ -33,6 +33,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ? [{ url: `${BASE_URL}/nl/claimsales`, changeFrequency: "hourly" as const, priority: 0.8 }]
       : []),
     { url: `${BASE_URL}/nl/evenementen`, changeFrequency: "daily", priority: 0.7 },
+    { url: `${BASE_URL}/nl/league`, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${BASE_URL}/nl/nieuws`, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${BASE_URL}/nl/ervaringen`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE_URL}/nl/info`, changeFrequency: "monthly", priority: 0.6 },
     // Inkoopservice — de calculators zelf zijn login-gated en staan er niet in.
     { url: `${BASE_URL}/nl/verkopen`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/nl/verkopen/verpakken`, changeFrequency: "monthly", priority: 0.4 },
