@@ -12,15 +12,20 @@ import {
   inspectBulkBuybackItem,
   finalizeBuybackInspection,
   applyItemPriceCorrection,
+  markBuybackReturned,
 } from "@/actions/buyback";
-import { BULK_PRICING, type BulkCategoryKey, getBuybackPrice } from "@/lib/buyback-pricing";
-import { CheckCircle2, XCircle, Banknote, Wallet, AlertTriangle, Pencil, Clock, ChevronDown } from "lucide-react";
+import { getBuybackPrice } from "@/lib/buyback-pricing";
+import { canMarkPaid, RETURN_FEE_EUR } from "@/lib/buyback-status";
+import { CheckCircle2, XCircle, Banknote, AlertTriangle, Pencil, Clock, ChevronDown, Truck } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
 
-type RequestWithAll = BuybackRequest & {
+type RequestWithAll = Omit<BuybackRequest, "iban"> & {
+  /** Ontsleuteld door de page (admin ziet het volledige IBAN). */
+  iban: string | null;
   user: { displayName: string; email: string };
   items: BuybackItem[];
   bulkItems: BulkBuybackItem[];
+  returnPayment: { status: string; paidAt: string | null } | null;
 };
 
 const REJECTION_REASONS = [
@@ -31,11 +36,14 @@ const REJECTION_REASONS = [
   { key: "rejectionCounterfeit", value: "Counterfeit" },
 ];
 
-export function AdminBuybackDetail({ request }: { request: RequestWithAll }) {
+export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: RequestWithAll; categoryLabels?: Record<string, string> }) {
   const t = useTranslations("buyback");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [adminNotes, setAdminNotes] = useState(request.adminNotes ?? "");
+  const [returnCarrier, setReturnCarrier] = useState("PostNL");
+  const [returnTracking, setReturnTracking] = useState("");
+  const paidGate = canMarkPaid(request);
   const [bulkApproved, setBulkApproved] = useState<Record<string, number>>(
     Object.fromEntries(request.bulkItems.map((i) => [i.id, i.approvedQuantity ?? i.quantity]))
   );
@@ -90,15 +98,27 @@ export function AdminBuybackDetail({ request }: { request: RequestWithAll }) {
   }
 
   // Status action buttons
-  const statusActions = [];
+  const statusActions: Array<{ label: string; status: string; color: string; disabled?: boolean; hint?: string }> = [];
   if (request.status === "PENDING") {
     statusActions.push({ label: t("adminMarkReceived"), status: "RECEIVED", color: "bg-blue-600 hover:bg-blue-700" });
   }
   if (request.status === "RECEIVED") {
     statusActions.push({ label: t("adminStartInspection"), status: "INSPECTING", color: "bg-indigo-600 hover:bg-indigo-700" });
   }
-  if (request.status === "APPROVED" || request.status === "PARTIALLY_APPROVED") {
-    statusActions.push({ label: t("adminMarkPaid"), status: "PAID", color: "bg-emerald-600 hover:bg-emerald-700" });
+  if (request.status === "APPROVED" || request.status === "PARTIALLY_APPROVED" || request.status === "RETURNED") {
+    statusActions.push({ label: t("adminMarkPaid"), status: "PAID", color: "bg-emerald-600 hover:bg-emerald-700", disabled: !paidGate.ok, hint: paidGate.reason });
+  }
+
+  function handleReturned() {
+    startTransition(async () => {
+      const result = await markBuybackReturned(request.id, returnCarrier, returnTracking);
+      if (result?.success) {
+        toast.success("Retour vastgelegd");
+        router.refresh();
+      } else {
+        toast.error(result?.error ?? "Er ging iets mis");
+      }
+    });
   }
 
   return (
@@ -154,13 +174,7 @@ export function AdminBuybackDetail({ request }: { request: RequestWithAll }) {
         <div className="grid gap-3 text-sm md:grid-cols-3">
           <div>
             <p className="text-muted-foreground">{t("payoutMethod")}</p>
-            <p className="flex items-center gap-1 font-medium">
-              {request.payoutMethod === "BANK" ? (
-                <><Banknote className="h-4 w-4" /> {t("payoutBank")}</>
-              ) : (
-                <><Wallet className="h-4 w-4" /> {t("payoutStoreCredit")}</>
-              )}
-            </p>
+            <p className="flex items-center gap-1 font-medium"><Banknote className="h-4 w-4" /> {t("payoutBank")}</p>
           </div>
           <div>
             <p className="text-muted-foreground">{t("estimatedPayoutLabel")}</p>
@@ -215,10 +229,10 @@ export function AdminBuybackDetail({ request }: { request: RequestWithAll }) {
             </thead>
             <tbody className="divide-y divide-border/30">
               {request.bulkItems.map((item) => {
-                const config = BULK_PRICING[item.category as BulkCategoryKey];
+                const label = categoryLabels[item.category] ?? item.category;
                 return (
                   <tr key={item.id}>
-                    <td className="px-4 py-2 font-medium">{config ? t(config.labelKey) : item.category}</td>
+                    <td className="px-4 py-2 font-medium">{label}</td>
                     <td className="px-4 py-2 text-center">{item.quantity}</td>
                     <td className="px-4 py-2 text-center">
                       {request.status === "INSPECTING" ? (
@@ -279,12 +293,40 @@ export function AdminBuybackDetail({ request }: { request: RequestWithAll }) {
             key={action.status}
             type="button"
             onClick={() => handleStatusChange(action.status)}
-            disabled={isPending}
+            disabled={isPending || action.disabled}
+            title={action.hint}
             className={`rounded-xl px-6 py-2.5 text-sm font-medium text-white disabled:opacity-50 ${action.color}`}
           >
             {action.label}
           </button>
         ))}
+        {statusActions.some((a) => a.disabled && a.hint) && (
+          <p className="basis-full text-xs text-muted-foreground">{statusActions.find((a) => a.disabled)?.hint}</p>
+        )}
+        {(request.status === "PARTIALLY_APPROVED" || request.status === "REJECTED") && (
+          <p className="basis-full text-xs text-muted-foreground">
+            Keuze verkoper: {request.userDecision === "ACCEPT" ? "akkoord met de aangepaste berekening" : request.userDecision === "RETURN" ? "retour" : "nog geen keuze"}
+            {request.decisionDeadline ? ` (termijn tot ${new Date(request.decisionDeadline).toLocaleDateString("nl-NL")})` : ""}
+            {request.returnPayment ? ` · retourbetaling €${RETURN_FEE_EUR.toFixed(2)}: ${request.returnPayment.status}` : ""}
+          </p>
+        )}
+        {request.status === "RETURN_REQUESTED" && (
+          <div className="basis-full rounded-xl border border-violet-300 bg-violet-50/60 p-4 dark:border-violet-700/50 dark:bg-violet-950/20">
+            <p className="flex items-center gap-2 text-sm font-semibold"><Truck className="h-4 w-4" /> Retourkosten betaald: stuur de kaarten terug en vul de Track &amp; Trace in</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <select value={returnCarrier} onChange={(e) => setReturnCarrier(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                {["PostNL", "DPD", "DHL", "UPS", "OTHER"].map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <input value={returnTracking} onChange={(e) => setReturnTracking(e.target.value)} placeholder="Track &amp; Trace-code" className="min-w-[14rem] flex-1 rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm" />
+              <button type="button" onClick={handleReturned} disabled={isPending || returnTracking.trim().length < 4} className="rounded-xl bg-violet-600 px-5 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50">Retour verzonden</button>
+            </div>
+          </div>
+        )}
+        {request.returnedAt && (
+          <p className="basis-full text-xs text-muted-foreground">Retour verzonden op {new Date(request.returnedAt).toLocaleDateString("nl-NL")} via {request.returnCarrier} ({request.returnTrackingNumber}).</p>
+        )}
 
         {request.status === "INSPECTING" && (
           <button

@@ -9,31 +9,40 @@ import { PayoutMethodSelect } from "./payout-method-select";
 import { BuybackSuccess } from "./buyback-success";
 import { BulkFaq } from "./bulk-faq";
 import { submitBulkBuyback } from "@/actions/buyback";
-import {
-  BULK_PRICING,
-  BULK_CATEGORY_TOOLTIPS,
-  MINIMUM_BULK_VALUE,
-  MAX_SHIPPING_WEIGHT_KG,
-  getStoreCreditBonus,
-} from "@/lib/buyback-pricing";
-import type { PayoutMethod } from "@/types";
+import { MINIMUM_BULK_VALUE, MAX_SHIPPING_WEIGHT_KG } from "@/lib/buyback-pricing";
 
-export function BulkCalculator() {
+export interface BulkPricingOption {
+  key: string;
+  label: string;
+  tooltip: string | null;
+  price: number;
+  group: "pokemon" | "other";
+  weightGrams: number;
+}
+
+interface BulkCalculatorProps {
+  /** Tarieven uit de beheerbare tabel (Fase 6), al vertaald. */
+  pricing: BulkPricingOption[];
+  defaultIban?: string;
+  defaultAccountHolder?: string;
+}
+
+export function BulkCalculator({ pricing, defaultIban = "", defaultAccountHolder = "" }: BulkCalculatorProps) {
   const t = useTranslations("buyback");
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [quantities, setQuantities] = useState<Record<string, number>>(
-    Object.fromEntries(Object.keys(BULK_PRICING).map((k) => [k, 0]))
+    Object.fromEntries(pricing.map((p) => [p.key, 0]))
   );
 
-  // Payout
-  const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>("BANK");
-  const [iban, setIban] = useState("");
-  const [accountHolder, setAccountHolder] = useState("");
+  // Payout (alleen bank, Fase 6)
+  const [iban, setIban] = useState(defaultIban);
+  const [accountHolder, setAccountHolder] = useState(defaultAccountHolder);
 
   // Confirmation
   const [confirmNM, setConfirmNM] = useState(false);
   const [confirmSorted, setConfirmSorted] = useState(false);
+  const [confirmBinding, setConfirmBinding] = useState(false);
   const [confirmTerms, setConfirmTerms] = useState(false);
 
   const [successId, setSuccessId] = useState<string | null>(null);
@@ -65,12 +74,12 @@ export function BulkCalculator() {
   }, [step]);
 
   // Category rows — grouped by pokemon/other for display + semantics
-  const allCategories = Object.entries(BULK_PRICING).map(([key, config]) => {
-    const qty = quantities[key] || 0;
+  const allCategories = pricing.map((config) => {
+    const qty = quantities[config.key] || 0;
     return {
-      key,
-      label: t(config.labelKey),
-      tooltip: BULK_CATEGORY_TOOLTIPS[key as keyof typeof BULK_PRICING],
+      key: config.key,
+      label: config.label,
+      tooltip: config.tooltip ?? undefined,
       price: config.price,
       group: config.group,
       weightGrams: config.weightGrams,
@@ -90,7 +99,6 @@ export function BulkCalculator() {
   const totalOtherItems = otherCategories.reduce((s, c) => s + c.quantity, 0);
   const hasAny = totalCards + totalOtherItems > 0;
   const minimumMet = total >= MINIMUM_BULK_VALUE;
-  const bonusAmount = getStoreCreditBonus(total);
   const progressPct = Math.min(100, (total / MINIMUM_BULK_VALUE) * 100);
 
   // Shipping advice — totaal gewicht, aantal pakketten (max 22 kg elk), en
@@ -115,13 +123,12 @@ export function BulkCalculator() {
 
     const formData = new FormData();
     formData.set("bulkItems", JSON.stringify(bulkItems));
-    formData.set("payoutMethod", payoutMethod);
-    if (payoutMethod === "BANK") {
-      formData.set("iban", iban);
-      formData.set("accountHolder", accountHolder);
-    }
+    formData.set("payoutMethod", "BANK");
+    formData.set("iban", iban);
+    formData.set("accountHolder", accountHolder);
     formData.set("confirmNearMint", String(confirmNM));
     formData.set("confirmSorted", String(confirmSorted));
+    formData.set("confirmBinding", String(confirmBinding));
 
     startTransition(() => formAction(formData));
   }
@@ -265,14 +272,11 @@ export function BulkCalculator() {
           </div>
 
           <PayoutMethodSelect
-            value={payoutMethod}
-            onChange={setPayoutMethod}
             iban={iban}
             onIbanChange={setIban}
             accountHolder={accountHolder}
             onAccountHolderChange={setAccountHolder}
             estimatedPayout={total}
-            bonusAmount={bonusAmount}
           />
 
           <div className="space-y-3">
@@ -283,7 +287,7 @@ export function BulkCalculator() {
                 onChange={(e) => setConfirmNM(e.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-input"
               />
-              <span>{t("confirmNearMint")}</span>
+              <span>{t("confirmNearMintEnglish")}</span>
             </label>
             <label className="flex items-start gap-3 text-sm">
               <input
@@ -293,6 +297,15 @@ export function BulkCalculator() {
                 className="mt-0.5 h-4 w-4 rounded border-input"
               />
               <span>{t("confirmSorted")}</span>
+            </label>
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={confirmBinding}
+                onChange={(e) => setConfirmBinding(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-input"
+              />
+              <span>{t("confirmBinding")}</span>
             </label>
             <label className="flex items-start gap-3 text-sm">
               <input
@@ -323,9 +336,11 @@ export function BulkCalculator() {
               isPending ||
               !confirmNM ||
               !confirmSorted ||
+              !confirmBinding ||
               !confirmTerms ||
               !minimumMet ||
-              (payoutMethod === "BANK" && (!iban || !accountHolder))
+              !iban ||
+              !accountHolder
             }
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           >

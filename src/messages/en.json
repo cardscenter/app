@@ -3102,7 +3102,7 @@
       "shippingCostNote": "Shipping costs are on the sender. The parcel is your responsibility until it is delivered to us.",
       "shippingFullGuide": "See the full packing instructions",
       "payoutTitle": "How would you like to be paid?",
-      "payoutIntro": "You choose your payout when submitting your request.",
+      "payoutIntro": "By bank transfer only, to the IBAN you enter with your request.",
       "payoutBankTitle": "Bank transfer",
       "payoutBankDesc": "To your own IBAN, after we receive and inspect your cards.",
       "payoutCreditTitle": "Cards Center store credit",
@@ -3114,7 +3114,10 @@
       "faqBulk": "Bulk",
       "ctaBandTitle": "Ready to sell?",
       "ctaBandDesc": "Pick your route and see instantly what your cards are worth. An account is free.",
-      "questions": "Questions? Email us at <link>{email}</link>"
+      "questions": "Questions? Email us at <link>{email}</link>",
+      "statBankOnly": "Paid to your bank account",
+      "payoutReturnTitle": "Disagree with the inspection?",
+      "payoutReturnDesc": "Then you can have rejected cards returned for {fee}, paid in advance. Insured shipping with tracking."
     },
     "title": "Sell Calculator",
     "subtitle": "Sell your Pokémon cards to Cards Center",
@@ -3145,7 +3148,7 @@
     "conditionEra": "Only cards from the XY series (2014) and newer",
     "conditionMinCollection": "Minimum collection buyback value: €5.00",
     "conditionMinBulk": "Minimum bulk buyback value: €30.00",
-    "conditionPayout": "Payout via bank transfer or store credit (5% bonus)",
+    "conditionPayout": "Payout by bank transfer only, after inspection",
     "searchPlaceholder": "Search for a card by name or number...",
     "addCard": "Add",
     "quantity": "Quantity",
@@ -3278,7 +3281,15 @@
     "loginButton": "Log in",
     "backToOverview": "Back to overview",
     "nextStep": "Next step",
-    "previousStep": "Previous step"
+    "previousStep": "Previous step",
+    "payoutBankNote": "After inspection we transfer the amount. No store credit, no app balance.",
+    "ibanEncryptedNote": "Your IBAN is stored encrypted and only shown masked.",
+    "confirmNearMintEnglish": "I confirm all cards are English and in Near Mint condition",
+    "confirmBinding": "I understand the quantities I enter are binding: if the count differs, I get an adjusted calculation",
+    "statusReturnRequested": "Return paid",
+    "statusReturned": "Return shipped",
+    "conditionBinding": "Quantities entered are binding; differences lead to an adjusted calculation",
+    "conditionReturn": "Return of rejected cards: €10.95, paid in advance"
   },
   "admin": {
     "shieldTooltip": "Admin panel",
@@ -3350,7 +3361,8 @@
     "navNews": "News",
     "sectionCommunity": "Community",
     "navStaffLeague": "Enter results",
-    "navLoyalty": "Loyalty card and points"
+    "navLoyalty": "Loyalty card and points",
+    "navBuybackPricing": "Buyback prices"
   },
   "player": {
     "dateOfBirth": "Date of birth",

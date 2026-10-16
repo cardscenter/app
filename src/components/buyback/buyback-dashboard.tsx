@@ -21,8 +21,8 @@ type FilterTab = "all" | "pending" | "in_progress" | "completed";
 const TAB_STATUSES: Record<FilterTab, string[]> = {
   all: [],
   pending: ["PENDING"],
-  in_progress: ["RECEIVED", "INSPECTING"],
-  completed: ["APPROVED", "PARTIALLY_APPROVED", "REJECTED", "PAID", "CANCELLED"],
+  in_progress: ["RECEIVED", "INSPECTING", "PARTIALLY_APPROVED", "REJECTED", "RETURN_REQUESTED"],
+  completed: ["APPROVED", "RETURNED", "PAID", "CANCELLED"],
 };
 
 export function BuybackDashboard({ requests }: BuybackDashboardProps) {

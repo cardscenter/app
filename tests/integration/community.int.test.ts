@@ -42,6 +42,7 @@ describe("community: check-in → stempel + punten, uitslagen → ranglijst, bad
   let seasonId = "";
   let ticketA = "";
   let ticketB = "";
+  let pausedSeasonIds: string[] = [];
 
   beforeAll(async () => {
     await ensureLeagueDefaults();
@@ -63,6 +64,10 @@ describe("community: check-in → stempel + punten, uitslagen → ranglijst, bad
     };
     ticketA = await mk(alice);
     ticketB = await mk(bob);
+    // Andere actieve seizoenen (bv. demo-seed) tijdelijk sluiten: getActiveSeason pakt er één.
+    const active = await prisma.leagueSeason.findMany({ where: { status: "ACTIVE" }, select: { id: true } });
+    pausedSeasonIds = active.map((s) => s.id);
+    await prisma.leagueSeason.updateMany({ where: { id: { in: pausedSeasonIds } }, data: { status: "DRAFT" } });
     const season = await prisma.leagueSeason.create({ data: { name: `${TAG} seizoen`, startsAt: new Date(now - 30 * DAY), endsAt: new Date(now + 30 * DAY), status: "ACTIVE" } });
     seasonId = season.id;
   });
@@ -72,6 +77,7 @@ describe("community: check-in → stempel + punten, uitslagen → ranglijst, bad
     await prisma.userLeagueBadge.deleteMany({ where: { user: { email: { startsWith: TAG } } } });
     await prisma.leagueResult.deleteMany({ where: { seasonId } });
     await prisma.leagueSeason.deleteMany({ where: { id: seasonId } });
+    await prisma.leagueSeason.updateMany({ where: { id: { in: pausedSeasonIds } }, data: { status: "ACTIVE" } });
     await prisma.eventRegistration.deleteMany({ where: { eventId } });
     await prisma.shopEvent.deleteMany({ where: { id: eventId } });
     await prisma.eventType.deleteMany({ where: { id: typeId } });

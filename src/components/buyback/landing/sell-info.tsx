@@ -12,10 +12,10 @@ import {
   Truck,
   Wallet,
 } from "lucide-react";
-import { getStoreCreditBonus } from "@/lib/buyback-pricing";
+import { RETURN_FEE_EUR } from "@/lib/buyback-status";
 import { formatCurrency } from "@/lib/format";
 import { PLATFORM } from "@/lib/platform-config";
-import { BONUS_LABEL, currencyLocale } from "./sell-hero";
+import { currencyLocale } from "./sell-hero";
 
 // Voorwaarden-checklist, verzenden & verpakken, uitbetaling en afsluitende CTA.
 
@@ -129,8 +129,6 @@ export async function SellPayout() {
   const t = await getTranslations("buyback");
   const locale = await getLocale();
   const fmt = (n: number) => formatCurrency(n, currencyLocale(locale));
-  const base = 100;
-  const total = base + getStoreCreditBonus(base);
 
   return (
     <section>
@@ -150,20 +148,12 @@ export async function SellPayout() {
           </div>
           <p className="mt-2 text-sm text-muted-foreground">{t("landing.payoutBankDesc")}</p>
         </div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-card dark:border-emerald-800/50 dark:bg-emerald-950/20">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Wallet className="size-5 text-emerald-700 dark:text-emerald-300" />
-              <h3 className="text-base font-semibold text-foreground">{t("landing.payoutCreditTitle")}</h3>
-            </div>
-            <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-bold text-white">
-              +{BONUS_LABEL}
-            </span>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+          <div className="flex items-center gap-2">
+            <Wallet className="size-5 text-foreground" />
+            <h3 className="text-base font-semibold text-foreground">{t("landing.payoutReturnTitle")}</h3>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">{t("landing.payoutCreditDesc")}</p>
-          <p className="mt-3 text-sm font-medium text-emerald-800 dark:text-emerald-200">
-            {t("landing.payoutCreditExample", { base: fmt(base), total: fmt(total) })}
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{t("landing.payoutReturnDesc", { fee: fmt(RETURN_FEE_EUR) })}</p>
         </div>
       </div>
       <p className="mt-4 text-xs text-muted-foreground">{t("landing.payoutTiming")}</p>

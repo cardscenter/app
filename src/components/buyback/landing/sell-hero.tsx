@@ -37,7 +37,7 @@ export async function SellHero() {
   const stats = [
     { Icon: Sparkles, label: t("landing.statRate", { rate: RATE_LABEL }) },
     { Icon: Clock, label: t("landing.statPayout") },
-    { Icon: Banknote, label: t("landing.statCredit", { bonus: BONUS_LABEL }) },
+    { Icon: Banknote, label: t("landing.statBankOnly") },
   ];
 
   const singlesBullets = [

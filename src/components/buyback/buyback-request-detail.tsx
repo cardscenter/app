@@ -10,13 +10,16 @@ import { TrackingForm } from "./tracking-form";
 import { PriceCorrectionPrompt } from "./price-correction-prompt";
 import { BuybackOutcomeInfo, BuybackFAQ } from "./buyback-outcome-info";
 import { cancelBuybackRequest } from "@/actions/buyback";
-import { X, CheckCircle2, XCircle, Clock, CreditCard, Banknote, Wallet, Package, ExternalLink } from "lucide-react";
+import { X, CheckCircle2, XCircle, Clock, CreditCard, Banknote, Package, ExternalLink, Truck } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
-import { BULK_PRICING, type BulkCategoryKey } from "@/lib/buyback-pricing";
+import { BuybackDecision } from "./buyback-decision";
 
-type RequestWithItems = BuybackRequest & {
+type RequestWithItems = Omit<BuybackRequest, "iban"> & {
+  /** Gemaskeerd door de page (Fase 6: het IBAN staat versleuteld in de DB). */
+  iban: string | null;
   items: BuybackItem[];
   bulkItems: BulkBuybackItem[];
+  returnPayment: { status: string; checkoutUrl: string | null } | null;
 };
 
 const ITEM_STATUS_ICON: Record<string, typeof CheckCircle2> = {
@@ -31,7 +34,7 @@ const ITEM_STATUS_COLOR: Record<string, string> = {
   PENDING: "text-yellow-500",
 };
 
-export function BuybackRequestDetail({ request }: { request: RequestWithItems }) {
+export function BuybackRequestDetail({ request, categoryLabels = {} }: { request: RequestWithItems; categoryLabels?: Record<string, string> }) {
   const t = useTranslations("buyback");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -75,6 +78,16 @@ export function BuybackRequestDetail({ request }: { request: RequestWithItems })
           wat de verkoper moet doen, en wat de financiële gevolgen zijn. */}
       <BuybackOutcomeInfo request={request} />
 
+      {/* Fase 6: keuze na aangepaste berekening of afkeur */}
+      <BuybackDecision request={{ id: request.id, status: request.status, userDecision: request.userDecision, decisionDeadline: request.decisionDeadline ? new Date(request.decisionDeadline).toISOString() : null, finalPayout: request.finalPayout, returnPayment: request.returnPayment }} />
+
+      {(request.returnCarrier || request.returnTrackingNumber) && (
+        <div className="glass rounded-xl p-4 text-sm">
+          <p className="flex items-center gap-2 font-medium"><Truck className="h-4 w-4" /> Retourzending</p>
+          <p className="mt-1 text-muted-foreground">{request.returnCarrier} · <span className="font-mono">{request.returnTrackingNumber}</span>{request.returnedAt ? ` · verzonden op ${new Date(request.returnedAt).toLocaleDateString("nl-NL")}` : ""}</p>
+        </div>
+      )}
+
       {/* Status timeline */}
       <div className="glass rounded-xl p-4">
         <div className="flex items-center gap-2 text-sm">
@@ -83,20 +96,12 @@ export function BuybackRequestDetail({ request }: { request: RequestWithItems })
         </div>
         <div className="mt-2 flex items-center gap-2 text-sm">
           <span className="font-medium">{t("payoutMethod")}:</span>
-          <span className="flex items-center gap-1">
-            {request.payoutMethod === "BANK" ? (
-              <><Banknote className="h-4 w-4" /> {t("payoutBank")}</>
-            ) : (
-              <><Wallet className="h-4 w-4" /> {t("payoutStoreCredit")}</>
-            )}
-          </span>
+          <span className="flex items-center gap-1"><Banknote className="h-4 w-4" /> {t("payoutBank")}</span>
         </div>
         {request.payoutMethod === "BANK" && request.iban && (
           <div className="mt-2 flex items-center gap-2 text-sm">
             <span className="font-medium">{t("ibanLabel")}:</span>
-            <span className="font-mono">
-              {request.iban.slice(0, 4)}****{request.iban.slice(-4)}
-            </span>
+            <span className="font-mono">{request.iban}</span>
           </div>
         )}
       </div>
@@ -170,10 +175,10 @@ export function BuybackRequestDetail({ request }: { request: RequestWithItems })
             </thead>
             <tbody className="divide-y divide-border/30">
               {request.bulkItems.map((item) => {
-                const config = BULK_PRICING[item.category as BulkCategoryKey];
+                const label = categoryLabels[item.category] ?? item.category;
                 return (
                   <tr key={item.id}>
-                    <td className="px-4 py-2 font-medium">{config ? t(config.labelKey) : item.category}</td>
+                    <td className="px-4 py-2 font-medium">{label}</td>
                     <td className="px-4 py-2 text-center">{item.quantity}</td>
                     <td className="px-4 py-2 text-center">
                       {item.approvedQuantity !== null ? (
@@ -239,12 +244,6 @@ export function BuybackRequestDetail({ request }: { request: RequestWithItems })
             <span className="text-lg font-bold text-emerald-600">
               €{request.finalPayout.toFixed(2)}
             </span>
-          </div>
-        )}
-        {request.storeCreditBonus !== null && request.storeCreditBonus > 0 && (
-          <div className="mt-1 flex items-center justify-between text-emerald-600">
-            <span className="text-sm">{t("storeCreditBonus")}</span>
-            <span className="font-medium">+€{request.storeCreditBonus.toFixed(2)}</span>
           </div>
         )}
       </div>

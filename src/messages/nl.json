@@ -3102,7 +3102,7 @@
       "shippingCostNote": "Verzendkosten zijn voor de afzender. Het pakket is jouw verantwoordelijkheid tot het bij ons is afgeleverd.",
       "shippingFullGuide": "Bekijk de volledige verpakkingsinstructies",
       "payoutTitle": "Hoe wil je uitbetaald worden?",
-      "payoutIntro": "Je kiest je uitbetaling bij het indienen van je aanvraag.",
+      "payoutIntro": "Alleen per bankoverschrijving, op het IBAN dat je bij je aanvraag opgeeft.",
       "payoutBankTitle": "Bankoverschrijving",
       "payoutBankDesc": "Op je eigen IBAN, na ontvangst en controle van je kaarten.",
       "payoutCreditTitle": "Tegoed op Cards Center",
@@ -3114,7 +3114,10 @@
       "faqBulk": "Bulk",
       "ctaBandTitle": "Klaar om te verkopen?",
       "ctaBandDesc": "Kies je route en zie direct wat je kaarten opleveren. Een account is gratis.",
-      "questions": "Vragen? Mail ons op <link>{email}</link>"
+      "questions": "Vragen? Mail ons op <link>{email}</link>",
+      "statBankOnly": "Uitbetaling op je bankrekening",
+      "payoutReturnTitle": "Niet akkoord met de controle?",
+      "payoutReturnDesc": "Dan kun je je afgekeurde kaarten retour vragen voor {fee}, vooraf te betalen. Verzekerd verzonden met Track & Trace."
     },
     "title": "Verkoop Calculator",
     "subtitle": "Verkoop je Pokémon-kaarten aan Cards Center",
@@ -3145,7 +3148,7 @@
     "conditionEra": "Alleen kaarten vanaf de XY-serie (2014) en nieuwer",
     "conditionMinCollection": "Minimale inkoopwaarde collectie: €5,00",
     "conditionMinBulk": "Minimale inkoopwaarde bulk: €30,00",
-    "conditionPayout": "Uitbetaling via bankoverschrijving of tegoed (5% bonus)",
+    "conditionPayout": "Uitbetaling alleen per bankoverschrijving, na controle",
     "searchPlaceholder": "Zoek een kaart op naam of nummer...",
     "addCard": "Toevoegen",
     "quantity": "Aantal",
@@ -3278,7 +3281,15 @@
     "loginButton": "Inloggen",
     "backToOverview": "Terug naar overzicht",
     "nextStep": "Volgende stap",
-    "previousStep": "Vorige stap"
+    "previousStep": "Vorige stap",
+    "payoutBankNote": "Na controle maken we het bedrag over. Geen tegoed, geen app-saldo.",
+    "ibanEncryptedNote": "Je IBAN wordt versleuteld opgeslagen en alleen gemaskeerd getoond.",
+    "confirmNearMintEnglish": "Ik bevestig dat alle kaarten Engelstalig en in Near Mint conditie zijn",
+    "confirmBinding": "Ik begrijp dat de opgegeven aantallen bindend zijn: wijkt de telling af, dan krijg ik een aangepaste berekening",
+    "statusReturnRequested": "Retour betaald",
+    "statusReturned": "Retour verzonden",
+    "conditionBinding": "Opgegeven aantallen zijn bindend; afwijkingen leiden tot een aangepaste berekening",
+    "conditionReturn": "Retour van afgekeurde kaarten: €10,95, vooraf te betalen"
   },
   "admin": {
     "shieldTooltip": "Admin panel",
@@ -3350,7 +3361,8 @@
     "navNews": "Nieuws",
     "sectionCommunity": "Community",
     "navStaffLeague": "Uitslagen invoeren",
-    "navLoyalty": "Spaarkaart en punten"
+    "navLoyalty": "Spaarkaart en punten",
+    "navBuybackPricing": "Inkooptarieven"
   },
   "player": {
     "dateOfBirth": "Geboortedatum",

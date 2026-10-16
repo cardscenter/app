@@ -1,122 +1,63 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Banknote, Wallet } from "lucide-react";
-import type { PayoutMethod } from "@/types";
-import { useFeature } from "@/components/providers/feature-flags-provider";
+import { Banknote, Lock } from "lucide-react";
+import { formatIbanForDisplay } from "@/lib/validations/iban";
 
 interface PayoutMethodSelectProps {
-  value: PayoutMethod;
-  onChange: (method: PayoutMethod) => void;
   iban: string;
   onIbanChange: (v: string) => void;
   accountHolder: string;
   onAccountHolderChange: (v: string) => void;
   estimatedPayout: number;
-  bonusAmount: number;
 }
 
-export function PayoutMethodSelect({
-  value,
-  onChange,
-  iban,
-  onIbanChange,
-  accountHolder,
-  onAccountHolderChange,
-  estimatedPayout,
-  bonusAmount,
-}: PayoutMethodSelectProps) {
+/**
+ * Uitbetaling (Community Hub, Fase 6): alleen nog naar een bankrekening. Het
+ * IBAN wordt versleuteld opgeslagen en alleen gemaskeerd getoond; vooraf
+ * ingevuld uit het profiel als dat er is.
+ */
+export function PayoutMethodSelect({ iban, onIbanChange, accountHolder, onAccountHolderChange, estimatedPayout }: PayoutMethodSelectProps) {
   const t = useTranslations("buyback");
-  // Community Hub (Fase 1/6): tegoed hoort bij het saldo-model. Zonder
-  // FEATURE_WALLET is alleen uitbetaling naar een bankrekening mogelijk.
-  const storeCreditAvailable = useFeature("FEATURE_WALLET");
 
   return (
     <div className="space-y-4">
       <h3 className="font-semibold">{t("payoutMethod")}</h3>
-
-      <div className={`grid gap-3 ${storeCreditAvailable ? "md:grid-cols-2" : ""}`}>
-        {/* Bank transfer */}
-        <button
-          type="button"
-          onClick={() => onChange("BANK")}
-          className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
-            value === "BANK"
-              ? "border-primary bg-primary/5"
-              : "border-transparent bg-white/50 hover:border-muted dark:bg-white/5"
-          }`}
-        >
-          <Banknote className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <div>
-            <p className="font-medium">{t("payoutBank")}</p>
-            <p className="text-sm text-muted-foreground">
-              €{estimatedPayout.toFixed(2)}
-            </p>
-          </div>
-        </button>
-
-        {/* Store credit */}
-        {storeCreditAvailable && (
-        <button
-          type="button"
-          onClick={() => onChange("STORE_CREDIT")}
-          className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
-            value === "STORE_CREDIT"
-              ? "border-emerald-500 bg-emerald-500/5"
-              : "border-transparent bg-white/50 hover:border-muted dark:bg-white/5"
-          }`}
-        >
-          <Wallet className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-          <div>
-            <p className="flex items-center gap-2 font-medium">
-              {t("payoutStoreCredit")}
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600">
-                {t("storeCreditBonus")}
-              </span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {t("storeCreditBonusDesc")}
-            </p>
-            {bonusAmount > 0 && (
-              <div className="mt-1 text-sm">
-                <span className="text-muted-foreground">{t("bonusAmount")}: </span>
-                <span className="font-medium text-emerald-600">+€{bonusAmount.toFixed(2)}</span>
-                <span className="ml-2 text-muted-foreground">{t("totalWithBonus")}: </span>
-                <span className="font-bold text-emerald-600">
-                  €{(estimatedPayout + bonusAmount).toFixed(2)}
-                </span>
-              </div>
-            )}
-          </div>
-        </button>
-        )}
-      </div>
-
-      {/* IBAN fields (only for bank) */}
-      {value === "BANK" && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t("ibanLabel")}</label>
-            <input
-              type="text"
-              value={iban}
-              onChange={(e) => onIbanChange(e.target.value.toUpperCase())}
-              placeholder={t("ibanPlaceholder")}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t("accountHolderLabel")}</label>
-            <input
-              type="text"
-              value={accountHolder}
-              onChange={(e) => onAccountHolderChange(e.target.value)}
-              placeholder={t("accountHolderPlaceholder")}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-            />
-          </div>
+      <div className="flex items-start gap-3 rounded-xl border-2 border-primary bg-primary/5 p-4">
+        <Banknote className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <div>
+          <p className="font-medium">{t("payoutBank")}</p>
+          <p className="text-sm text-muted-foreground">€{estimatedPayout.toFixed(2)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("payoutBankNote")}</p>
         </div>
-      )}
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium">{t("ibanLabel")}</label>
+          <input
+            type="text"
+            value={iban}
+            onChange={(e) => onIbanChange(e.target.value.toUpperCase())}
+            onBlur={() => iban && onIbanChange(formatIbanForDisplay(iban.replace(/\s+/g, "")))}
+            placeholder={t("ibanPlaceholder")}
+            autoComplete="off"
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">{t("accountHolderLabel")}</label>
+          <input
+            type="text"
+            value={accountHolder}
+            onChange={(e) => onAccountHolderChange(e.target.value)}
+            placeholder={t("accountHolderPlaceholder")}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+          />
+        </div>
+      </div>
+      <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Lock className="size-3.5" /> {t("ibanEncryptedNote")}
+      </p>
     </div>
   );
 }

@@ -5,6 +5,10 @@ import { BuybackRequestDetail } from "@/components/buyback/buyback-request-detai
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
+import { maskStoredIban } from "@/lib/iban-crypto";
+import { getBulkPricing, bulkRowName } from "@/lib/buyback-pricing-db";
+
+export const dynamic = "force-dynamic";
 
 export default async function BuybackDetailPage({
   params,
@@ -21,12 +25,16 @@ export default async function BuybackDetailPage({
 
   const request = await prisma.buybackRequest.findUnique({
     where: { id },
-    include: { items: true, bulkItems: true },
+    include: { items: true, bulkItems: true, returnPayment: { select: { status: true, checkoutUrl: true } } },
   });
 
   if (!request || request.userId !== session.user.id) {
     notFound();
   }
+  // Fase 6: IBAN staat versleuteld in de DB; de verkoper ziet alleen de gemaskeerde vorm.
+  const safeRequest = { ...request, iban: maskStoredIban(request.iban) };
+  const pricing = await getBulkPricing({ includeDisabled: true });
+  const categoryLabels = Object.fromEntries(pricing.map((p) => [p.key, bulkRowName(p, locale)]));
 
   return (
     <div>
@@ -36,7 +44,7 @@ export default async function BuybackDetailPage({
       >
         <ArrowLeft className="h-4 w-4" /> {t("backToOverview")}
       </Link>
-      <BuybackRequestDetail request={JSON.parse(JSON.stringify(request))} />
+      <BuybackRequestDetail request={JSON.parse(JSON.stringify(safeRequest))} categoryLabels={categoryLabels} />
     </div>
   );
 }

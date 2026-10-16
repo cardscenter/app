@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { NAV_ROW, NAV_ROW_ACTIVE, NAV_ROW_IDLE, NAV_ICON_IDLE, NAV_GROUP_LABEL } from "@/components/dashboard/nav-styles";
-import { CalendarCheck, Tags, Settings2, ScanLine, UtensilsCrossed, ChefHat, QrCode, Trophy, ClipboardList, Stamp, Newspaper } from "lucide-react";
+import { CalendarCheck, Tags, Settings2, ScanLine, UtensilsCrossed, ChefHat, QrCode, Trophy, ClipboardList, Stamp, Newspaper, Coins } from "lucide-react";
 import {
   LayoutDashboard,
   Scale,
@@ -77,6 +77,7 @@ export function AdminNav({
         { href: "/dashboard/admin/withdrawals", labelKey: "navWithdrawals", icon: Wallet, badge: pendingCounts?.withdrawals },
         { href: "/dashboard/admin/bank-transfers", labelKey: "navBankTransfers", icon: CreditCard },
         { href: "/dashboard/admin/buybacks", labelKey: "navBuybacks", icon: ArrowDownToLine, badge: pendingCounts?.buybacks },
+        { href: "/dashboard/admin/buyback-pricing", labelKey: "navBuybackPricing", icon: Coins },
       ],
     },
     {

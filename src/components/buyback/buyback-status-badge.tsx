@@ -9,6 +9,8 @@ const STATUS_STYLES: Record<string, string> = {
   APPROVED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
   PARTIALLY_APPROVED: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
   REJECTED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  RETURN_REQUESTED: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300",
+  RETURNED: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300",
   PAID: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
   CANCELLED: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 };
@@ -20,6 +22,8 @@ const STATUS_KEYS: Record<string, string> = {
   APPROVED: "statusApproved",
   PARTIALLY_APPROVED: "statusPartiallyApproved",
   REJECTED: "statusRejected",
+  RETURN_REQUESTED: "statusReturnRequested",
+  RETURNED: "statusReturned",
   PAID: "statusPaid",
   CANCELLED: "statusCancelled",
 };

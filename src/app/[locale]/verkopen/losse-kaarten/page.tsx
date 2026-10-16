@@ -1,5 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { decryptIban } from "@/lib/iban-crypto";
+import { formatIbanForDisplay } from "@/lib/validations/iban";
 import { redirect } from "next/navigation";
 import { CollectionCalculator } from "@/components/buyback/collection-calculator";
 import { AlertTriangle } from "lucide-react";
@@ -18,6 +21,8 @@ export default async function CollectionCalculatorPage({
   }
 
   const t = await getTranslations("buyback");
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { iban: true, accountHolderName: true } });
+  const plainIban = decryptIban(user?.iban);
 
   return (
     <PageContainer width="default" className="py-8">
@@ -36,7 +41,7 @@ export default async function CollectionCalculatorPage({
         </div>
       </div>
 
-      <CollectionCalculator />
+      <CollectionCalculator defaultIban={plainIban ? formatIbanForDisplay(plainIban) : ""} defaultAccountHolder={user?.accountHolderName ?? ""} />
     </PageContainer>
   );
 }

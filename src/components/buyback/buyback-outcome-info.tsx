@@ -11,13 +11,13 @@ import {
 } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
 import { PLATFORM } from "@/lib/platform-config";
+import { RETURN_FEE_EUR, DECISION_DAYS } from "@/lib/buyback-status";
 
 type RequestWithItems = BuybackRequest & {
   items: BuybackItem[];
   bulkItems: BulkBuybackItem[];
 };
 
-const RETURN_FEE_EUR = 10.95;
 
 /**
  * Status- en uitkomst-bewuste uitleg voor de verkoper. Beantwoordt voor elke
@@ -38,6 +38,10 @@ export function BuybackOutcomeInfo({ request }: { request: RequestWithItems }) {
       return <PartiallyApprovedInfo request={request} />;
     case "REJECTED":
       return <RejectedInfo />;
+    case "RETURN_REQUESTED":
+      return <ReturnRequestedInfo />;
+    case "RETURNED":
+      return <ReturnedInfo request={request} />;
     case "PAID":
       return <PaidInfo />;
     case "CANCELLED":
@@ -123,9 +127,8 @@ function InspectingInfo({ request }: { request: RequestWithItems }) {
           afgerond als je op alle correcties hebt gereageerd.</strong>
         </p>
         <p>
-          Als je een correctie afwijst, wordt de betreffende kaart niet ingekocht en samen met andere afgekeurde kaarten
-          (als die er zijn) teruggestuurd. Retourkosten bedragen <strong>€{RETURN_FEE_EUR.toFixed(2)} per pakket</strong> en
-          worden afgetrokken van je uiteindelijke uitbetaling.
+          Als je een correctie afwijst, wordt de betreffende kaart niet ingekocht. Na de controle kies je of je de
+          afgekeurde kaarten retour wilt (<strong>€{RETURN_FEE_EUR.toFixed(2)}</strong>, vooraf te betalen) of ze bij ons laat.
         </p>
       </InfoCard>
     );
@@ -144,8 +147,8 @@ function ApprovedInfo() {
   return (
     <InfoCard variant="emerald" icon={<CheckCircle2 className="h-5 w-5" />} title="Alle kaarten goedgekeurd">
       <p>
-        Goed nieuws — al je ingestuurde kaarten zijn goedgekeurd. De uitbetaling wordt nu verwerkt; je ontvangt een
-        melding zodra het bedrag is overgemaakt naar je bankrekening of bijgeschreven op je saldo.
+        Goed nieuws: alles klopt met je opgave. De uitbetaling wordt nu verwerkt; je ontvangt een melding zodra het
+        bedrag is overgemaakt naar je bankrekening.
       </p>
     </InfoCard>
   );
@@ -179,12 +182,9 @@ function PartiallyApprovedInfo({ request }: { request: RequestWithItems }) {
         </li>
       </ul>
       <p>
-        <strong>Wat gebeurt er met afgekeurde kaarten?</strong> Deze worden in één pakket aan jou geretourneerd.
-        Retourkosten bedragen <strong>€{RETURN_FEE_EUR.toFixed(2)}</strong> en worden afgetrokken van de uitbetaling.
-        Je ontvangt het Track &amp; Trace-nummer van de retourzending per e-mail.
-      </p>
-      <p>
-        De uitbetaling wordt verwerkt zodra het retourpakket onderweg is.
+        <strong>Jij kiest:</strong> ga akkoord met de nieuwe berekening (dan betalen we dat bedrag uit en blijven de
+        afgekeurde kaarten bij ons), of vraag de afgekeurde kaarten retour voor <strong>€{RETURN_FEE_EUR.toFixed(2)}</strong>
+        (verzekerd, vooraf te betalen). Na je keuze of na {DECISION_DAYS} dagen betalen we het aangepaste bedrag uit.
       </p>
     </InfoCard>
   );
@@ -197,12 +197,12 @@ function RejectedInfo() {
         Helaas zijn alle ingestuurde kaarten afgekeurd. Bekijk de specifieke reden per kaart hieronder.
       </p>
       <p>
-        Je kaarten worden in één pakket aan je geretourneerd. Retourkosten bedragen{" "}
-        <strong>€{RETURN_FEE_EUR.toFixed(2)}</strong>. Omdat er geen uitbetaling plaatsvindt, ontvang je hiervoor
-        een factuur of wordt het bedrag van je saldo afgeschreven.
+        Wil je de kaarten terug? Vraag dan hieronder een retour aan; dat kost <strong>€{RETURN_FEE_EUR.toFixed(2)}</strong>
+        (verzekerde verzending), vooraf te betalen. Zonder retouraanvraag binnen {DECISION_DAYS} dagen blijven de kaarten
+        bij Cards Center.
       </p>
       <p>
-        Je ontvangt het Track &amp; Trace-nummer van de retourzending per e-mail. Heb je vragen? Mail ons via{" "}
+        Heb je vragen? Mail ons via{" "}
         <a className="underline underline-offset-2" href={`mailto:${PLATFORM.supportEmail}`}>
           {PLATFORM.supportEmail}
         </a>
@@ -216,13 +216,41 @@ function PaidInfo() {
   return (
     <InfoCard variant="emerald" icon={<Banknote className="h-5 w-5" />} title="Uitbetaling verwerkt">
       <p>
-        De uitbetaling is verwerkt. Bij overschrijving naar je bankrekening kan het tot enkele werkdagen duren voordat
-        het bedrag op je rekening staat. Bij saldo-uitbetaling is het bedrag direct beschikbaar in je Cards Center
-        wallet.
+        De uitbetaling is overgemaakt naar je bankrekening. Het kan tot enkele werkdagen duren voordat het bedrag op
+        je rekening staat.
       </p>
       <p>
         Bedankt voor je verkoop — we hopen je snel weer terug te zien!
       </p>
+    </InfoCard>
+  );
+}
+
+function ReturnRequestedInfo() {
+  return (
+    <InfoCard variant="purple" icon={<Truck className="h-5 w-5" />} title="Retourkosten ontvangen">
+      <p>
+        Bedankt, de retourkosten zijn binnen. We pakken je kaarten in en sturen ze binnen enkele werkdagen verzekerd
+        terug. Zodra het pakket onderweg is zie je hier de Track &amp; Trace en krijg je een melding.
+      </p>
+    </InfoCard>
+  );
+}
+
+function ReturnedInfo({ request }: { request: RequestWithItems }) {
+  const payout = request.finalPayout ?? 0;
+  return (
+    <InfoCard variant="sky" icon={<Package className="h-5 w-5" />} title="Je kaarten zijn onderweg terug">
+      <p>
+        Het retourpakket is verzonden{request.returnCarrier ? ` met ${request.returnCarrier}` : ""}. De Track &amp; Trace
+        staat hieronder.
+      </p>
+      {payout > 0 && (
+        <p>
+          Het goedgekeurde deel (<strong>€{payout.toFixed(2)}</strong>) wordt apart uitbetaald naar je bankrekening; je
+          krijgt een melding zodra dat gebeurd is.
+        </p>
+      )}
     </InfoCard>
   );
 }
@@ -259,19 +287,23 @@ export function BuybackFAQ({ type }: { type?: string }) {
       : []),
     {
       q: "Wat kost een retourzending?",
-      a: `€${RETURN_FEE_EUR.toFixed(2)} per pakket. Dit bedrag wordt afgetrokken van je uitbetaling, of in rekening gebracht als er geen uitbetaling plaatsvindt.`,
+      a: `€${RETURN_FEE_EUR.toFixed(2)} per pakket, verzekerd verzonden. Je betaalt dit vooraf via iDEAL; daarna sturen we de kaarten terug en zie je de Track & Trace bij je aanvraag.`,
     },
     {
       q: "Hoe lang duurt het hele proces?",
-      a: "Verzending door jou (binnen 5 dagen), inspectie door ons (binnen 3 werkdagen na ontvangst), uitbetaling (per bank: enkele werkdagen overschrijftijd; per saldo: direct).",
+      a: "Verzending door jou (binnen 5 dagen), controle door ons (binnen 3 werkdagen na ontvangst), uitbetaling per bank (enkele werkdagen overschrijftijd).",
     },
     {
       q: "Kan ik mijn aanvraag annuleren?",
-      a: "Alleen voordat je het pakket hebt verzonden (status: PENDING). Annuleren kan via de knop onderaan deze pagina. Zodra het pakket onderweg of binnen is, is de verkoop bindend.",
+      a: "Alleen voordat je het pakket hebt verzonden (status: Aangevraagd). Annuleren kan via de knop onderaan deze pagina. Zodra het pakket onderweg of binnen is, is de verkoop bindend.",
     },
     {
       q: "Wanneer is de verkoop bindend?",
-      a: "Op het moment dat het pakket bij ons ontvangen is. Vanaf dan zijn de feitelijk ontvangen kaarten leidend voor de definitieve calculatie.",
+      a: "Op het moment dat het pakket bij ons ontvangen is. Vanaf dan zijn de feitelijk ontvangen kaarten leidend voor de definitieve calculatie. De aantallen die je opgeeft zijn bindend: wijkt de telling af, dan krijg je een aangepaste berekening.",
+    },
+    {
+      q: "Wat als de telling afwijkt van mijn opgave?",
+      a: `Dan krijg je een aangepaste berekening. Je kiest zelf: akkoord (we betalen het nieuwe bedrag uit) of de afgekeurde kaarten retour voor €${RETURN_FEE_EUR.toFixed(2)}. Kies je niets binnen ${DECISION_DAYS} dagen, dan betalen we het aangepaste bedrag uit en blijven afgekeurde kaarten bij ons.`,
     },
   ];
   return (

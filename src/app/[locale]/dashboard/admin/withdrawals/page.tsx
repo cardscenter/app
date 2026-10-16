@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { decryptIban } from "@/lib/iban-crypto";
 import { AdminWithdrawalsList } from "@/components/dashboard/admin-withdrawals-list";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
@@ -36,7 +37,7 @@ export default async function AdminWithdrawalsPage() {
     return rows.map((r) => ({
       id: r.id,
       amount: r.amount,
-      iban: r.iban,
+      iban: decryptIban(r.iban) ?? "",
       accountHolderName: r.accountHolderName,
       status: r.status,
       adminNote: r.adminNote,

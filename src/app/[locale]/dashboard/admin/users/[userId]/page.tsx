@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { ShieldCheck, Ban, AlertCircle, Inbox } from "lucide-react";
 import { isUserSuspended } from "@/lib/suspension";
 import { maskIban, formatIbanForDisplay } from "@/lib/validations/iban";
+import { decryptIban } from "@/lib/iban-crypto";
 import { UserActionBar } from "@/components/admin/user-action-bar";
 import { InternalNoteForm } from "@/components/admin/internal-note-form";
 import { BidDepositExemptionToggle } from "@/components/admin/bid-deposit-exemption-toggle";
@@ -231,7 +232,7 @@ function ProfileTab({ user, subscription }: { user: UserDetailPayload; subscript
       <Field label="Bank reference" value={user.bankTransferReference ? <code className="text-xs">{user.bankTransferReference}</code> : null} />
       <Field
         label="IBAN"
-        value={user.iban ? formatIbanForDisplay(user.iban) + " (" + maskIban(user.iban) + ")" : null}
+        value={user.iban ? formatIbanForDisplay(decryptIban(user.iban)!) + " (" + maskIban(decryptIban(user.iban)!) + ")" : null}
       />
       <Field label="Op naam van" value={user.accountHolderName} />
       <Field label="Laatste IBAN-wijziging" value={user.lastIbanChange?.toLocaleString("nl-NL")} />
@@ -464,7 +465,7 @@ async function WithdrawalsTab({ userId }: { userId: string }) {
       title={`Withdrawals (${ws.length})`}
       items={ws.map((w) => ({
         id: w.id,
-        primary: `€${w.amount.toFixed(2)} naar ${maskIban(w.iban)}`,
+        primary: `€${w.amount.toFixed(2)} naar ${maskIban(decryptIban(w.iban) ?? "")}`,
         secondary: `${w.status}${w.rejectReason ? " · " + w.rejectReason : ""}`,
         when: w.createdAt,
       }))}

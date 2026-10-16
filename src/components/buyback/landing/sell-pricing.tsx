@@ -1,15 +1,14 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Banknote, ClipboardCheck, Search, Send, XCircle } from "lucide-react";
 import {
-  BULK_CATEGORY_TOOLTIPS,
   BULK_ONLY_RARITIES,
-  BULK_PRICING,
   MAX_BUYBACK_MARKTPRIJS,
   MINIMUM_BULK_VALUE,
   checkBuybackEligibility,
   getBuybackPrice,
   type BulkGroup,
 } from "@/lib/buyback-pricing";
+import { getBulkPricing, bulkRowName } from "@/lib/buyback-pricing-db";
 import { formatCurrency } from "@/lib/format";
 import { RATE_LABEL, currencyLocale } from "./sell-hero";
 
@@ -170,10 +169,8 @@ export async function SellBulkPricing() {
     { group: "pokemon", titleKey: "bulkSectionPokemon" },
     { group: "other", titleKey: "bulkSectionOther" },
   ];
-  const entries = Object.entries(BULK_PRICING) as [
-    keyof typeof BULK_PRICING,
-    (typeof BULK_PRICING)[keyof typeof BULK_PRICING],
-  ][];
+  // Fase 6: tarieven uit de beheerbare tabel (admin-panel), niet meer uit de code.
+  const rows = await getBulkPricing();
 
   return (
     <section className="rounded-2xl border border-amber-200/70 bg-card p-6 shadow-card dark:border-amber-800/40 sm:p-8">
@@ -191,15 +188,15 @@ export async function SellBulkPricing() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {entries
-                  .filter(([, v]) => v.group === group)
-                  .map(([key, v]) => (
-                    <tr key={key} className="bg-card">
+                {rows
+                  .filter((v) => v.group === group)
+                  .map((v) => (
+                    <tr key={v.key} className="bg-card">
                       <td className="px-4 py-2.5">
-                        <span className="font-medium text-foreground">{t(v.labelKey)}</span>
-                        {BULK_CATEGORY_TOOLTIPS[key] && (
+                        <span className="font-medium text-foreground">{bulkRowName(v, locale)}</span>
+                        {v.description && (
                           <span className="mt-0.5 block text-xs text-muted-foreground">
-                            {BULK_CATEGORY_TOOLTIPS[key]}
+                            {v.description}
                           </span>
                         )}
                       </td>

@@ -35,7 +35,7 @@ export function AdminBuybackList({ requests }: AdminBuybackListProps) {
     return true;
   });
 
-  const statuses = ["all", "PENDING", "RECEIVED", "INSPECTING", "APPROVED", "PARTIALLY_APPROVED", "REJECTED", "PAID"];
+  const statuses = ["all", "PENDING", "RECEIVED", "INSPECTING", "APPROVED", "PARTIALLY_APPROVED", "REJECTED", "RETURN_REQUESTED", "RETURNED", "PAID", "CANCELLED"];
 
   return (
     <div className="space-y-4">

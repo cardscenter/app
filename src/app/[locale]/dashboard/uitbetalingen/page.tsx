@@ -8,6 +8,7 @@ import { WithdrawalHistory } from "@/components/dashboard/withdrawal-history";
 import { FinanceTabs } from "@/components/dashboard/cluster-tabs";
 import { WITHDRAWAL_MIN_AMOUNT } from "@/lib/withdrawal-config";
 import { maskIban } from "@/lib/validations/iban";
+import { decryptIban } from "@/lib/iban-crypto";
 
 export default async function MyWithdrawalsPage({
   params,
@@ -53,7 +54,7 @@ export default async function MyWithdrawalsPage({
             <p className="text-xs text-muted-foreground">{t("ibanLabel")}</p>
             {hasBankDetails ? (
               <>
-                <p className="font-mono text-sm text-foreground">{maskIban(user.iban!)}</p>
+                <p className="font-mono text-sm text-foreground">{maskIban(decryptIban(user.iban)!)}</p>
                 <p className="text-xs text-muted-foreground">{user.accountHolderName}</p>
               </>
             ) : (
@@ -80,7 +81,7 @@ export default async function MyWithdrawalsPage({
           requests={requests.map((r) => ({
             id: r.id,
             amount: r.amount,
-            iban: r.iban,
+            iban: decryptIban(r.iban) ?? "",
             status: r.status,
             rejectReason: r.rejectReason,
             createdAt: r.createdAt.toISOString(),

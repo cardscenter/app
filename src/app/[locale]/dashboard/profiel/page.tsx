@@ -22,6 +22,7 @@ import { getSellerStats } from "@/actions/review";
 import { hasFeature } from "@/lib/subscription-tiers";
 import { parseSocialLinks } from "@/lib/events/socials";
 import { IBAN_COOLDOWN_DAYS } from "@/lib/validations/iban";
+import { decryptIban } from "@/lib/iban-crypto";
 import { formatDateShort } from "@/lib/format";
 import { USERNAME_CHANGE_FEE, getUsernameChangeState } from "@/lib/username-change-config";
 import { PlayerProfileForm } from "@/components/dashboard/player-profile-form";
@@ -283,7 +284,7 @@ export default async function ProfilePage({
       >
         <FieldRow label={tp("bankAccountLabel")} hint={tp("bankAccountHint")}>
           <BankDetailsForm
-            iban={user.iban}
+            iban={decryptIban(user.iban)}
             accountHolderName={user.accountHolderName}
             lastIbanChange={user.lastIbanChange?.toISOString() ?? null}
             cooldownDays={IBAN_COOLDOWN_DAYS}

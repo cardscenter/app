@@ -10,10 +10,9 @@ import { BuybackCart } from "./buyback-cart";
 import { PayoutMethodSelect } from "./payout-method-select";
 import { BuybackSuccess } from "./buyback-success";
 import { submitCollectionBuyback } from "@/actions/buyback";
-import { MINIMUM_COLLECTION_VALUE, getStoreCreditBonus } from "@/lib/buyback-pricing";
-import type { PayoutMethod } from "@/types";
+import { MINIMUM_COLLECTION_VALUE } from "@/lib/buyback-pricing";
 
-export function CollectionCalculator() {
+export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = "" }: { defaultIban?: string; defaultAccountHolder?: string }) {
   const t = useTranslations("buyback");
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -21,10 +20,9 @@ export function CollectionCalculator() {
   // Card selection state — keyed by cardId+variant
   const [items, setItems] = useState<SelectedCard[]>([]);
 
-  // Payout state
-  const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>("BANK");
-  const [iban, setIban] = useState("");
-  const [accountHolder, setAccountHolder] = useState("");
+  // Payout state (alleen bank, Fase 6)
+  const [iban, setIban] = useState(defaultIban);
+  const [accountHolder, setAccountHolder] = useState(defaultAccountHolder);
 
   // Confirmation checkboxes
   const [confirmNM, setConfirmNM] = useState(false);
@@ -67,7 +65,6 @@ export function CollectionCalculator() {
   const total = acceptedItems.reduce((sum, i) => sum + i.buybackPrice * i.quantity, 0);
   const roundedTotal = Math.round(total * 100) / 100;
   const minimumMet = roundedTotal >= MINIMUM_COLLECTION_VALUE;
-  const bonusAmount = getStoreCreditBonus(roundedTotal);
 
   // Track selected card+variant combos
   const selectedKeys = new Set(items.map((i) => cardVariantKey(i.cardId, i.isReverse)));
@@ -128,11 +125,9 @@ export function CollectionCalculator() {
         }))
       )
     );
-    formData.set("payoutMethod", payoutMethod);
-    if (payoutMethod === "BANK") {
-      formData.set("iban", iban);
-      formData.set("accountHolder", accountHolder);
-    }
+    formData.set("payoutMethod", "BANK");
+    formData.set("iban", iban);
+    formData.set("accountHolder", accountHolder);
     formData.set("confirmNearMint", String(confirmNM));
     formData.set("confirmNotOffCenter", String(confirmCenter));
 
@@ -221,14 +216,11 @@ export function CollectionCalculator() {
           />
 
           <PayoutMethodSelect
-            value={payoutMethod}
-            onChange={setPayoutMethod}
             iban={iban}
             onIbanChange={setIban}
             accountHolder={accountHolder}
             onAccountHolderChange={setAccountHolder}
             estimatedPayout={roundedTotal}
-            bonusAmount={bonusAmount}
           />
 
           <div className="space-y-3">
@@ -281,7 +273,8 @@ export function CollectionCalculator() {
               !confirmCenter ||
               !confirmTerms ||
               !minimumMet ||
-              (payoutMethod === "BANK" && (!iban || !accountHolder))
+              !iban ||
+              !accountHolder
             }
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
