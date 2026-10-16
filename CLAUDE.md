@@ -559,6 +559,7 @@ Optimalisatie-sessie n.a.v. trage laadtijden. **Belangrijkste les: de hele site 
   tail -50 <dev-server-log> | grep -iE "error|fail" | grep -v queryCommand | grep -v cz-shortcut
   ```
   (`queryCommandState` en `cz-shortcut-listen` zijn pre-existing browser-extensie noise — negeren)
+- **Testen op je telefoon:** open `http://<laptop-ip>:3000` (het Network-adres uit de `npm run dev`-output). Het IP moet onder `allowedDevOrigins` in `next.config.ts` vallen (nu `10.0.0.*`); anders weigert Next 16 de HMR-websocket, hydrateert React niet en lijkt de site dood (geen menu, geen animaties) zonder enige fout in de console. Reproduceren zonder telefoon: scratchpad `probe-ip.js <url>` (headless, laadt als telefoon, klikt het menu).
 - **Mod-97 IBAN sanity-test:** zie `src/lib/validations/iban.ts`; test met canonical NL91ABNA0417164300 + bewust-foute checksum NL91ABNA0417164301.
 
 ### Action guards in volgorde van toepassen
