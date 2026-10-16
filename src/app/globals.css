@@ -13,10 +13,10 @@
   --popover: #ffffff;
   --popover-foreground: #202020;
 
-  /* Brand — Cards Center rood (logo-verloop #8C1420 → #F2202B) */
-  --primary: #f2202b;
+  /* Brand: Cards Center logo-rood (#8C1420; het felle #F2202B uit het verloop alleen nog in de ballonnen) */
+  --primary: #8c1420;
   --primary-foreground: #ffffff;
-  --primary-hover: #c51a25;
+  --primary-hover: #6f0f19;
   --primary-light: #fce9e8;
 
   /* Secondary & Accent */
@@ -34,7 +34,7 @@
   /* Borders & Rings */
   --border: #e3e3e3;
   --input: #e3e3e3;
-  --ring: #f2202b;
+  --ring: #8c1420;
   --radius: 0.5rem;
 
   /* Status */
@@ -46,7 +46,7 @@
   --error-light: #fef2f2;
 
   /* Charts */
-  --chart-1: #f2202b;
+  --chart-1: #8c1420;
   --chart-2: #c51a25;
   --chart-3: #8c1420;
   --chart-4: #fff26b;
