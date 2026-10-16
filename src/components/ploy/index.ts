@@ -35,3 +35,7 @@ export type { DataTile } from "./data-card";
 export { PromptCard } from "./prompt-card";
 export { TileQuad } from "./tile-quad";
 export type { TileItem } from "./tile-quad";
+export { TestimonialWall, renderEmphasis } from "./testimonial-wall";
+export type { TestimonialItem, TestimonialCardColor } from "./testimonial-wall";
+export { ArticleLayout } from "./article-layout";
+export { SectionHead } from "./section-head";
