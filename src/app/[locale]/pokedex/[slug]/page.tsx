@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
+import { ChevronLeft, Layers } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/prisma";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { PokedexHeader } from "@/components/pokedex/pokedex-header";
 import { PokedexProfile } from "@/components/pokedex/pokedex-profile";
 import { PokedexStats } from "@/components/pokedex/pokedex-stats";
@@ -12,12 +13,11 @@ import { PokedexCardsGrid, type PokedexCard } from "@/components/pokedex/pokedex
 import { parsePokedexSlug } from "@/lib/pokeapi/slug";
 import { getPokemon, getSpecies, getEvolutionChain } from "@/lib/pokeapi/client";
 import { pickFlavorText } from "@/lib/pokeapi/flavor-text";
-import { PageContainer } from "@/components/layout/page-container";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { getCardImageUrl } from "@/lib/card-image";
 import { getMarktprijs, getMarktprijsReverseHolo } from "@/lib/display-price";
 import { hasReverseHoloSignal } from "@/lib/buyback-pricing";
-import { Layers } from "lucide-react";
+import { PunchCard } from "@/components/ploy/punch-card";
 
 export const revalidate = 86400; // 1d — species data is immutable upstream
 
@@ -27,10 +27,7 @@ interface Props {
 
 /** Find the best display name for a species for a given locale, falling
  * back through NL → EN → raw PokéAPI name. */
-function pickName(
-  species: Awaited<ReturnType<typeof getSpecies>>,
-  locale: "nl" | "en"
-): string {
+function pickName(species: Awaited<ReturnType<typeof getSpecies>>, locale: "nl" | "en"): string {
   if (!species) return "";
   const nl = species.names.find((n) => n.language.name === "nl");
   if (locale === "nl" && nl) return nl.name;
@@ -38,10 +35,7 @@ function pickName(
   return en?.name ?? species.name;
 }
 
-function pickGenus(
-  species: Awaited<ReturnType<typeof getSpecies>>,
-  locale: "nl" | "en"
-): string | null {
+function pickGenus(species: Awaited<ReturnType<typeof getSpecies>>, locale: "nl" | "en"): string | null {
   if (!species) return null;
   const nl = species.genera.find((g) => g.language.name === "nl");
   if (locale === "nl" && nl) return nl.genus;
@@ -67,6 +61,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+/** Pokédex-detail (design-pass Fase E): kop met artwork op pastel, pil-tabs, witte kaarten. */
 export default async function PokedexPage({ params }: Props) {
   const { slug } = await params;
   const parsed = parsePokedexSlug(slug);
@@ -77,17 +72,12 @@ export default async function PokedexPage({ params }: Props) {
   const tBc = await getTranslations("breadcrumbs");
 
   // Fetch Pokémon + species in parallel — both are 1-hop PokéAPI calls.
-  const [pokemon, species] = await Promise.all([
-    getPokemon(parsed.dexId),
-    getSpecies(parsed.dexId),
-  ]);
+  const [pokemon, species] = await Promise.all([getPokemon(parsed.dexId), getSpecies(parsed.dexId)]);
   if (!pokemon || !species) notFound();
 
   // Evolution chain is a second hop (URL from species). Fetch in parallel
   // with the DB query for related cards.
-  const displayName = pickName(species, locale);
-  const englishName =
-    species.names.find((n) => n.language.name === "en")?.name ?? species.name;
+  const englishName = species.names.find((n) => n.language.name === "en")?.name ?? species.name;
 
   const [evolutionChain, relatedCardsRaw] = await Promise.all([
     getEvolutionChain(species.evolution_chain.url),
@@ -132,10 +122,7 @@ export default async function PokedexPage({ params }: Props) {
 
   // Woordgrens-filter: "Mew" mag niet matchen op "Mewtwo", maar "Reshiram"
   // moet wel matchen op "Pikachu & Reshiram-GX".
-  const boundaryRe = new RegExp(
-    `(^|[^a-z])${escapeRegex(englishName)}([^a-z]|$)`,
-    "i"
-  );
+  const boundaryRe = new RegExp(`(^|[^a-z])${escapeRegex(englishName)}([^a-z]|$)`, "i");
 
   const relatedCards: PokedexCard[] = relatedCardsRaw
     .filter((c) => boundaryRe.test(c.name) && c.cardSet.tcgdexSetId)
@@ -150,27 +137,26 @@ export default async function PokedexPage({ params }: Props) {
       releaseDate: c.cardSet.releaseDate,
       marktprijs: getMarktprijs(c),
       // Alleen RH-prijs tonen als er een echt reverse-holo printing bestaat.
-      marktprijsRH: hasReverseHoloSignal({ ...c, releaseDate: c.cardSet.releaseDate })
-        ? getMarktprijsReverseHolo(c)
-        : null,
+      marktprijsRH: hasReverseHoloSignal({ ...c, releaseDate: c.cardSet.releaseDate }) ? getMarktprijsReverseHolo(c) : null,
     }));
 
   const flavorText = pickFlavorText(species.flavor_text_entries, locale);
   const genus = pickGenus(species, locale);
 
-  const cardsTab = relatedCards.length > 0 ? (
-    <PokedexCardsGrid cards={relatedCards} />
-  ) : (
-    <div className="rounded-2xl border border-border bg-muted/30 p-12 text-center text-sm text-muted-foreground">
-      <Layers className="mx-auto mb-3 size-8 text-muted-foreground/30" />
-      {t("noCardsYet")}
-    </div>
-  );
+  const cardsTab =
+    relatedCards.length > 0 ? (
+      <PokedexCardsGrid cards={relatedCards} />
+    ) : (
+      <PunchCard className="bg-white p-12 text-center text-sm text-[var(--foreground)]/60" dot="var(--border)">
+        <Layers className="mx-auto mb-3 size-8 text-[var(--foreground)]/30" />
+        {t("noCardsYet")}
+      </PunchCard>
+    );
 
   const infoTab = (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PokedexProfile pokemon={pokemon} species={species} flavorText={flavorText} />
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <PokedexStats stats={pokemon.stats} />
         {evolutionChain && <PokedexEvolutionChain chain={evolutionChain.chain} />}
       </div>
@@ -178,24 +164,17 @@ export default async function PokedexPage({ params }: Props) {
   );
 
   return (
-    <PageContainer width="wide" className="py-8">
+    <div className="cc-landing overflow-clip">
       <ScrollToTop />
-      <Breadcrumbs
-        items={[
-          { label: tBc("pokedex"), href: "/pokedex" },
-          { label: displayName },
-        ]}
-      />
-
-      <PokedexHeader pokemon={pokemon} species={species} genus={genus} />
-
-      <PokedexTabs
-        cardsLabel={t("tabCards", { count: relatedCards.length })}
-        infoLabel={t("tabInfo")}
-        cardsContent={cardsTab}
-        infoContent={infoTab}
-        defaultTab={relatedCards.length > 0 ? "cards" : "info"}
-      />
-    </PageContainer>
+      <section className="flex justify-center px-4 pb-16 pt-4 sm:px-5 lg:px-6 lg:pb-24 lg:pt-8">
+        <div className="w-full max-w-6xl">
+          <Link href="/pokedex" className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-[var(--foreground)]/55 no-underline transition-colors hover:text-[var(--foreground)]">
+            <ChevronLeft className="size-4" /> {tBc("pokedex")}
+          </Link>
+          <PokedexHeader pokemon={pokemon} species={species} genus={genus} />
+          <PokedexTabs cardsLabel={t("tabCards", { count: relatedCards.length })} infoLabel={t("tabInfo")} cardsContent={cardsTab} infoContent={infoTab} defaultTab={relatedCards.length > 0 ? "cards" : "info"} />
+        </div>
+      </section>
+    </div>
   );
 }

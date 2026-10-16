@@ -6,7 +6,6 @@ import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cardSlug, localIdFromSlug } from "@/lib/card-helpers";
 import { getCardImageUrl } from "@/lib/card-image";
 import { CardWatchlistButton } from "@/components/card/card-watchlist-button";
@@ -24,9 +23,12 @@ import { hasFeature } from "@/lib/subscription-tiers";
 import { TypeIconList } from "@/components/card/type-icon";
 import { CardGameplayBlock } from "@/components/card/card-gameplay-block";
 import { CardCarousel } from "@/components/card/card-carousel";
-import { ChevronLeft, ChevronRight, Tag, Hash, Palette, Calendar, Heart } from "lucide-react";
-import { PageContainer } from "@/components/layout/page-container";
+import { ChevronLeft, ChevronRight, Tag, Hash, Palette, Calendar, Heart, Banknote } from "lucide-react";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
+import { getFeatureSnapshot } from "@/lib/feature-flags";
+import { DisplayHeading } from "@/components/ploy/display-heading";
+import { Pill } from "@/components/ploy/pill";
+import { CARD, H2, PILL_BTN } from "@/components/ploy/tile-styles";
 
 export const revalidate = 1800; // re-render every 30min so prices stay fresh
 
@@ -673,274 +675,225 @@ export default async function CardDetailPage({ params }: Props) {
     }
   })();
 
+  // Handel-secties (te koop, recent verkocht) alleen als die functies zichtbaar zijn.
+  const features = getFeatureSnapshot(session?.user?.accountType);
+  const anyTrade = features.FEATURE_AUCTIONS || features.FEATURE_CLAIMSALES || features.FEATURE_MARKETPLACE;
+  const cleanStr = (v: string | null | undefined) => (!v || v === "None" || v === "" ? null : v);
+  const rarity = cleanStr(card.rarity);
+  const illustrator = cleanStr(card.illustrator);
+  const imgSrc = getCardImageUrl(card, "high");
+
   return (
-    <PageContainer width="default" className="py-8">
+    <div className="cc-landing overflow-clip">
       <ScrollToTop />
-      <Breadcrumbs
-        items={[
-          { label: "Kaarten", href: "/kaarten" },
-          { label: set.name, href: `/kaarten/${set.tcgdexSetId}` },
-          { label: card.name },
-        ]}
-      />
+      <section className="flex justify-center px-4 pb-16 pt-4 sm:px-5 lg:px-6 lg:pb-24 lg:pt-8">
+        <div className="w-full max-w-6xl">
+          <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[var(--foreground)]/55" aria-label="Breadcrumb">
+            <Link href="/kaarten" className="no-underline transition-colors hover:text-[var(--foreground)]">Kaarten</Link>
+            <ChevronRight className="size-3.5" />
+            <Link href={`/kaarten/${set.tcgdexSetId}`} className="no-underline transition-colors hover:text-[var(--foreground)]">{set.name}</Link>
+            <ChevronRight className="size-3.5" />
+            <span className="text-[var(--foreground)]">{card.name}</span>
+          </nav>
 
-      <div className="mt-4 grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left: Card image — sticky on desktop so it stays visible while
-            scrolling through listings and gameplay details. */}
-        <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-20 space-y-4">
-            <div className="relative aspect-[5/7] w-full overflow-hidden rounded-2xl bg-muted shadow-lg">
-              {(() => {
-                const imgSrc = getCardImageUrl(card, "high");
-                return imgSrc ? (
-                  <Image
-                    src={imgSrc}
-                    alt={card.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 33vw"
-                    priority
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center text-muted-foreground">
-                    Geen afbeelding beschikbaar
-                  </div>
-                );
-              })()}
-              <CardImageHoloOverlay />
+          <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* Links: kaartafbeelding, sticky op desktop. */}
+            <div className="lg:col-span-1">
+              <div className="space-y-4 lg:sticky lg:top-[calc(var(--site-nav-offset)+1rem)]">
+                <div className="relative aspect-[5/7] w-full overflow-hidden rounded-[20px] bg-[var(--muted)] shadow-[0_24px_60px_-30px_rgba(32,32,32,0.45)]">
+                  {imgSrc ? (
+                    <Image src={imgSrc} alt={card.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 33vw" priority unoptimized />
+                  ) : (
+                    <div className="flex size-full items-center justify-center text-[var(--foreground)]/50">Geen afbeelding beschikbaar</div>
+                  )}
+                  <CardImageHoloOverlay />
+                </div>
+                {session?.user?.id && <CardWatchlistButton cardId={card.id} initialWatching={!!isWatched} />}
+              </div>
             </div>
-            {session?.user?.id && (
-              <CardWatchlistButton cardId={card.id} initialWatching={!!isWatched} />
-            )}
-          </div>
-        </div>
 
-        {/* Right: Metadata + pricing + gameplay + listings */}
-        <div className="space-y-6 lg:col-span-2">
-          <header className="relative">
-            {spriteUrl && (
-              <img
-                src={spriteUrl}
-                alt=""
-                className="pointer-events-none absolute right-0 top-0 hidden lg:block"
-                style={{ imageRendering: "pixelated" }}
-              />
-            )}
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <Link href={`/kaarten/${set.tcgdexSetId}`} className="hover:text-foreground">
-                {set.series.name} · {set.name}
+            {/* Rechts: kop, prijs, speelgegevens, aanbod. */}
+            <div className="space-y-6 lg:col-span-2">
+              <header className="relative">
+                {spriteUrl && <img src={spriteUrl} alt="" className="pointer-events-none absolute right-0 top-0 hidden lg:block" style={{ imageRendering: "pixelated" }} />}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href={`/kaarten/${set.tcgdexSetId}`} className="no-underline">
+                    <Pill tone="white">
+                      {set.series.name} · {set.name}
+                    </Pill>
+                  </Link>
+                  {setWithDate?.releaseDate && (
+                    <Pill tone="pastel" color="blue">
+                      <Calendar className="size-3" />
+                      {new Date(setWithDate.releaseDate).toLocaleDateString("nl-NL", { year: "numeric", month: "long" })}
+                    </Pill>
+                  )}
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <DisplayHeading tag="h1" size={3} text={card.name} />
+                  {types.length > 0 && <TypeIconList types={types} size={30} />}
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Pill tone="white">
+                    <Hash className="size-3" />
+                    {card.localId}
+                  </Pill>
+                  {rarity && (
+                    <Pill tone="pastel" color="yellow">
+                      <Tag className="size-3" />
+                      {rarity}
+                    </Pill>
+                  )}
+                  {card.hp && (
+                    <Pill tone="pastel" color="pink">
+                      <Heart className="size-3" />
+                      {card.hp} HP
+                    </Pill>
+                  )}
+                  {illustrator && (
+                    <Pill tone="white" className="font-medium text-[var(--foreground)]/70">
+                      <Palette className="size-3" />
+                      {illustrator}
+                    </Pill>
+                  )}
+                </div>
+              </header>
+
+              {/* Prijs */}
+              {pricingVariants.length > 0 ? (
+                <CardPricePanel variants={pricingVariants} history={priceHistory} updated={cm?.updated ?? card.priceUpdatedAt?.toISOString() ?? null} extraVariants={extraVariants} canExtendedHistory={canExtendedHistory} />
+              ) : (
+                <div className={`${CARD} p-5`}>
+                  <h3 className="text-sm font-semibold text-[var(--foreground)]/55">Marktwaarde</h3>
+                  <p className="mt-2 text-sm text-[var(--foreground)]">Geen actuele prijsdata beschikbaar.</p>
+                  <p className="mt-1 text-xs text-[var(--foreground)]/55">Deze kaart wordt niet actief verhandeld op de Europese markt (komt vooral voor bij oudere promos en niet-Europese sets).</p>
+                </div>
+              )}
+
+              {/* Verkopen aan ons */}
+              <Link href="/verkopen/losse-kaarten" className="group flex items-center gap-4 rounded-[12px] p-4 no-underline transition-transform hover:-translate-y-0.5" style={{ background: "var(--pastel-yellow)" }}>
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--foreground)] text-[var(--pastel-yellow)]">
+                  <Banknote className="size-5" />
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">Verkoop deze kaart aan ons</p>
+                  <p className="text-xs text-[var(--foreground)]/65">Direct een eerlijke prijs via de collectie-calculator.</p>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-[var(--foreground)]/60 transition-transform group-hover:translate-x-0.5" />
               </Link>
-              {setWithDate?.releaseDate && (
-                <span className="inline-flex items-center gap-1 text-xs">
-                  <Calendar className="size-3" />
-                  {new Date(setWithDate.releaseDate).toLocaleDateString("nl-NL", { year: "numeric", month: "long" })}
-                </span>
+
+              {/* Speelgegevens */}
+              {gameplay && (
+                <section>
+                  <h2 className={`mb-3 ${H2}`}>Speelgegevens</h2>
+                  <CardGameplayBlock
+                    category={gameplay.category}
+                    stage={gameplay.stage}
+                    evolveFrom={gameplay.evolveFrom}
+                    dexId={gameplay.dexId}
+                    attacks={gameplay.attacks}
+                    abilities={gameplay.abilities}
+                    weaknesses={gameplay.weaknesses}
+                    resistances={gameplay.resistances}
+                    retreat={gameplay.retreat}
+                    trainerType={gameplay.trainerType}
+                    energyType={gameplay.energyType}
+                    effect={gameplay.effect}
+                    pokedexHref={gameplay.category === "Pokemon" && gameplay.dexId && gameplay.dexId.length > 0 ? `/pokedex/${pokedexSlug(baseName, gameplay.dexId[0])}` : null}
+                  />
+                </section>
               )}
-            </div>
-            <h1 className="mt-1 flex flex-wrap items-center gap-2 text-3xl font-bold text-foreground">
-              <span>{card.name}</span>
-              {types.length > 0 && <TypeIconList types={types} size={30} />}
-            </h1>
-            {/* Chips: localId, rarity, HP, illustrator. All from DB cache. */}
-            {(() => {
-              const cleanStr = (v: string | null | undefined) =>
-                !v || v === "None" || v === "" ? null : v;
-              const rarity = cleanStr(card.rarity);
-              const hp = card.hp;
-              const illustrator = cleanStr(card.illustrator);
-              return (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground">
-                <Hash className="size-3" />{card.localId}
-              </span>
-              {rarity && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground">
-                  <Tag className="size-3" />{rarity}
-                </span>
-              )}
-              {hp && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 dark:text-red-400">
-                  <Heart className="size-3" />{hp} HP
-                </span>
-              )}
-              {illustrator && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1 text-xs text-muted-foreground">
-                  <Palette className="size-3" />{illustrator}
-                </span>
-              )}
-            </div>
-              );
-            })()}
-          </header>
 
-          {/* Pricing */}
-          {pricingVariants.length > 0 ? (
-            <CardPricePanel
-              variants={pricingVariants}
-              history={priceHistory}
-              updated={cm?.updated ?? card.priceUpdatedAt?.toISOString() ?? null}
-              extraVariants={extraVariants}
-              canExtendedHistory={canExtendedHistory}
-            />
-          ) : (
-            <div className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="text-sm font-semibold text-muted-foreground">Marktwaarde</h3>
-              <p className="mt-2 text-sm text-foreground">Geen actuele prijsdata beschikbaar.</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Deze kaart wordt niet actief verhandeld op de Europese markt (komt vooral voor bij
-                oudere promos en niet-Europese sets). De prijs wordt bepaald door wat verkopers op
-                Cards Center vragen.
-              </p>
-            </div>
-          )}
-
-          {/* Sell to us CTA */}
-          <Link
-            href="/verkopen/losse-kaarten"
-            className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/50"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/><path d="M2 12h20"/></svg>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Verkoop deze kaart aan ons</p>
-              <p className="text-xs text-emerald-600/70 dark:text-emerald-500/70">Ontvang direct een eerlijke prijs via onze verkoop calculator</p>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-emerald-500"><path d="m9 18 6-6-6-6"/></svg>
-          </Link>
-
-          {/* Gameplay details (attacks, abilities, weakness, etc.) */}
-          {gameplay && (
-            <section>
-              <h2 className="mb-3 text-lg font-bold text-foreground">Speelgegevens</h2>
-              <CardGameplayBlock
-                category={gameplay.category}
-                stage={gameplay.stage}
-                evolveFrom={gameplay.evolveFrom}
-                dexId={gameplay.dexId}
-                attacks={gameplay.attacks}
-                abilities={gameplay.abilities}
-                weaknesses={gameplay.weaknesses}
-                resistances={gameplay.resistances}
-                retreat={gameplay.retreat}
-                trainerType={gameplay.trainerType}
-                energyType={gameplay.energyType}
-                effect={gameplay.effect}
-                pokedexHref={
-                  gameplay.category === "Pokemon" && gameplay.dexId && gameplay.dexId.length > 0
-                    ? `/pokedex/${pokedexSlug(baseName, gameplay.dexId[0])}`
-                    : null
-                }
-              />
-            </section>
-          )}
-
-          {/* Active marketplace items */}
-          <section>
-            <h2 className="mb-3 text-lg font-bold text-foreground">Nu te koop op Cards Center</h2>
-
-            {activeListings.length === 0 && activeAuctions.length === 0 && activeClaims.length === 0 ? (
-              <p className="rounded-xl border border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                Deze kaart wordt momenteel niet aangeboden.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {activeListings.map((l) => (
-                  <Link
-                    key={l.id}
-                    href={`/marktplaats/${l.id}`}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card p-3 transition-colors hover:bg-muted/40"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold">Marktplaats · {l.condition}</p>
-                      <p className="text-xs text-muted-foreground">{l.seller.displayName}</p>
+              {/* Aanbod (alleen met handel-flags) */}
+              {anyTrade && (
+                <section>
+                  <h2 className={`mb-3 ${H2}`}>Nu te koop op Cards Center</h2>
+                  {activeListings.length === 0 && activeAuctions.length === 0 && activeClaims.length === 0 ? (
+                    <p className={`${CARD} p-6 text-center text-sm text-[var(--foreground)]/60`}>Deze kaart wordt momenteel niet aangeboden.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {activeListings.map((l) => (
+                        <Link key={l.id} href={`/marktplaats/${l.id}`} className={`${CARD} flex items-center justify-between p-3 no-underline transition-colors hover:bg-[var(--background)]`}>
+                          <div>
+                            <p className="text-sm font-semibold">Marktplaats · {l.condition}</p>
+                            <p className="text-xs text-[var(--foreground)]/55">{l.seller.displayName}</p>
+                          </div>
+                          <span className="font-bold text-[var(--foreground)]">€{l.price?.toFixed(2)}</span>
+                        </Link>
+                      ))}
+                      {activeAuctions.map((a) => (
+                        <Link key={a.id} href={`/veilingen/${a.id}`} className={`${CARD} flex items-center justify-between p-3 no-underline transition-colors hover:bg-[var(--background)]`}>
+                          <div>
+                            <p className="text-sm font-semibold">Veiling · {a.condition ?? "–"}</p>
+                            <p className="text-xs text-[var(--foreground)]/55">
+                              {a.seller.displayName} · eindigt {a.endTime.toLocaleDateString("nl-NL")}
+                            </p>
+                          </div>
+                          <span className="font-bold text-[var(--foreground)]">€{(a.currentBid ?? a.startingBid).toFixed(2)}</span>
+                        </Link>
+                      ))}
+                      {activeClaims.map((c) => (
+                        <Link key={c.id} href={`/claimsales/${c.claimsale.id}`} className={`${CARD} flex items-center justify-between p-3 no-underline transition-colors hover:bg-[var(--background)]`}>
+                          <div>
+                            <p className="text-sm font-semibold">Claimsale · {c.condition}</p>
+                            <p className="text-xs text-[var(--foreground)]/55">
+                              {c.claimsale.seller.displayName} · {c.claimsale.title}
+                            </p>
+                          </div>
+                          <span className="font-bold text-[var(--foreground)]">€{c.price.toFixed(2)}</span>
+                        </Link>
+                      ))}
                     </div>
-                    <span className="font-bold text-foreground">€{l.price?.toFixed(2)}</span>
-                  </Link>
-                ))}
-                {activeAuctions.map((a) => (
-                  <Link
-                    key={a.id}
-                    href={`/veilingen/${a.id}`}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card p-3 transition-colors hover:bg-muted/40"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold">Veiling · {a.condition ?? "—"}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {a.seller.displayName} · eindigt {a.endTime.toLocaleDateString("nl-NL")}
-                      </p>
-                    </div>
-                    <span className="font-bold text-foreground">
-                      €{(a.currentBid ?? a.startingBid).toFixed(2)}
-                    </span>
-                  </Link>
-                ))}
-                {activeClaims.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/claimsales/${c.claimsale.id}`}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card p-3 transition-colors hover:bg-muted/40"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold">Claimsale · {c.condition}</p>
-                      <p className="text-xs text-muted-foreground">{c.claimsale.seller.displayName} · {c.claimsale.title}</p>
-                    </div>
-                    <span className="font-bold text-foreground">€{c.price.toFixed(2)}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
+                  )}
+                </section>
+              )}
 
-          {/* Recent sales on this platform */}
-          {recentSales.length > 0 && (
-            <section>
-              <h2 className="mb-3 text-lg font-bold text-foreground">Recent verkocht op Cards Center</h2>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                {recentSales.map((s, i) => (
-                  <div key={i} className="rounded-xl bg-muted/30 p-3 text-center">
-                    <p className="text-sm font-bold text-foreground">€{s.totalItemCost.toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {s.deliveredAt?.toLocaleDateString("nl-NL")}
-                    </p>
+              {features.FEATURE_WALLET && recentSales.length > 0 && (
+                <section>
+                  <h2 className={`mb-3 ${H2}`}>Recent verkocht op Cards Center</h2>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                    {recentSales.map((s, i) => (
+                      <div key={i} className="rounded-[10px] bg-[var(--background)] p-3 text-center">
+                        <p className="text-sm font-bold text-[var(--foreground)]">€{s.totalItemCost.toFixed(2)}</p>
+                        <p className="text-[10px] text-[var(--foreground)]/55">{s.deliveredAt?.toLocaleDateString("nl-NL")}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
+                </section>
+              )}
+            </div>
+          </div>
+
+          {/* Vorige / volgende */}
+          <nav className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-6">
+            {prevCard ? (
+              <Link href={`/kaarten/${set.tcgdexSetId}/${cardSlug(prevCard.name, prevCard.localId)}`} className={`${PILL_BTN} no-underline`}>
+                <ChevronLeft className="size-4" />
+                <span>
+                  #{prevCard.localId} {prevCard.name}
+                </span>
+              </Link>
+            ) : (
+              <span />
+            )}
+            <Link href={`/kaarten/${set.tcgdexSetId}`} className="text-sm font-semibold text-[var(--foreground)]/55 no-underline hover:text-[var(--foreground)]">
+              Hele set bekijken
+            </Link>
+            {nextCard ? (
+              <Link href={`/kaarten/${set.tcgdexSetId}/${cardSlug(nextCard.name, nextCard.localId)}`} className={`${PILL_BTN} no-underline`}>
+                <span>
+                  #{nextCard.localId} {nextCard.name}
+                </span>
+                <ChevronRight className="size-4" />
+              </Link>
+            ) : (
+              <span />
+            )}
+          </nav>
+
+          <CardCarousel title={`Meer kaarten van ${baseName}`} items={relatedCards} />
         </div>
-      </div>
-
-      {/* Prev / next */}
-      <nav className="mt-12 flex items-center justify-between border-t border-border pt-6">
-        {prevCard ? (
-          <Link
-            href={`/kaarten/${set.tcgdexSetId}/${cardSlug(prevCard.name, prevCard.localId)}`}
-            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronLeft className="size-4" />
-            <span>#{prevCard.localId} {prevCard.name}</span>
-          </Link>
-        ) : <span />}
-        <Link
-          href={`/kaarten/${set.tcgdexSetId}`}
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          Hele set bekijken
-        </Link>
-        {nextCard ? (
-          <Link
-            href={`/kaarten/${set.tcgdexSetId}/${cardSlug(nextCard.name, nextCard.localId)}`}
-            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <span>#{nextCard.localId} {nextCard.name}</span>
-            <ChevronRight className="size-4" />
-          </Link>
-        ) : <span />}
-      </nav>
-
-      <CardCarousel title={`Meer kaarten van ${baseName}`} items={relatedCards} />
-    </PageContainer>
+      </section>
+    </div>
   );
 }

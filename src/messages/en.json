@@ -2285,7 +2285,10 @@
     "sortEndingSoon": "Ending soon",
     "sortMostBids": "Most bids",
     "showFilters": "Show filters",
-    "hideFilters": "Hide filters"
+    "hideFilters": "Hide filters",
+    "heroTitle": "Find a card, Pokémon or player",
+    "heroTitleQuery": "Here is what we found",
+    "heroWord": "card"
   },
   "sellerProfile": {
     "shop": "Shop",

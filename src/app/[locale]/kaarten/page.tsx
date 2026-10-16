@@ -4,8 +4,11 @@ import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/prisma";
 import { KaartenSearch } from "@/components/card/kaarten-search";
-import { PageContainer } from "@/components/layout/page-container";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
+import { CenteredHero } from "@/components/ploy/centered-hero";
+import { Pill } from "@/components/ploy/pill";
+import { BrailleIcon } from "@/components/ploy/braille-icon";
+import { TILE } from "@/components/ploy/tile-styles";
 import { DatabaseMarquee } from "@/components/card/database-marquee";
 import { DatabaseTrending, type TrendingCard } from "@/components/card/database-trending";
 import { getCardImageUrl, getSetLogoUrl } from "@/lib/card-image";
@@ -16,7 +19,7 @@ import {
   type SnapshotPoint,
 } from "@/lib/display-price";
 import { trendDeltaPct } from "@/lib/price-trend";
-import { Layers, BookOpen, Banknote, ChevronRight } from "lucide-react";
+import { Layers, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Pokémon kaarten — Cards Center",
@@ -339,124 +342,87 @@ const getCardsOverviewData = unstable_cache(
 );
 
 export default async function CardsOverviewPage() {
-  const {
-    marqueeItems,
-    risers,
-    fallers,
-    rarityOptions,
-    seriesOptions,
-    sortedSeries,
-  } = await getCardsOverviewData();
+  const { totalCards, totalSets, latestSetName, latestSetSlug, marqueeItems, risers, fallers, rarityOptions, seriesOptions, sortedSeries } = await getCardsOverviewData();
 
   return (
-    <PageContainer width="wide" className="py-8">
+    <div className="cc-landing overflow-clip">
       <ScrollToTop />
-
-      <header className="mb-6">
-        <h1 className="sr-only">Pokémon Kaarten Database</h1>
-        {/* Plain <img>: Next image-optimizer faalt op Railway (zie performance-pass) */}
-        <img
-          src="/images/PKMdatabase.png"
-          alt="Pokémon Database"
-          className="h-16 w-auto sm:h-20"
-        />
-        <p className="mt-2 text-sm text-muted-foreground">
-          Bekijk alle kaarten per set, vergelijk marktprijzen en zie wat er nu te koop is.
-        </p>
-      </header>
-
-      <KaartenSearch rarityOptions={rarityOptions} seriesOptions={seriesOptions}>
-        {marqueeItems.length > 0 && (
-          <div className="mb-6">
-            <DatabaseMarquee items={marqueeItems} />
-          </div>
-        )}
-
-        {(risers.length > 0 || fallers.length > 0) && (
-          <div className="mb-8">
-            <DatabaseTrending risers={risers} fallers={fallers} />
-          </div>
-        )}
-
-        <div className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Link
-            href="/pokedex"
-            className="group flex items-center gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 transition-all hover:border-primary/60 hover:bg-primary/10"
-          >
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <BookOpen className="size-6" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-foreground">Pokédex</p>
-              <p className="text-xs text-muted-foreground">
-                Ontdek elke Pokémon — stats, evoluties en alle kaarten.
-              </p>
-            </div>
-            <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+      <CenteredHero eyebrow="Kaartendatabase" eyebrowColor="blue" title="Alle Pokémon-kaarten, met prijs" highlightWord="prijs" highlightColor="blue" description="Bekijk alle kaarten per set, vergelijk marktprijzen en zie wat er nu te koop is." className="pb-6 lg:pb-8">
+        <Pill tone="white">{totalCards.toLocaleString("nl-NL")} kaarten</Pill>
+        <Pill tone="white">{totalSets.toLocaleString("nl-NL")} sets</Pill>
+        {latestSetName && latestSetSlug && (
+          <Link href={`/kaarten/${latestSetSlug}`} className="no-underline">
+            <Pill tone="pastel" color="yellow">Nieuwste set: {latestSetName}</Pill>
           </Link>
+        )}
+      </CenteredHero>
 
-          <Link
-            href="/verkopen/losse-kaarten"
-            className="group flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/50"
-          >
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <Banknote className="size-6" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-foreground">Collectie Inkoop</p>
-              <p className="text-xs text-muted-foreground">
-                Verkoop je kaarten aan ons — direct een eerlijke prijs.
-              </p>
-            </div>
-            <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </div>
-
-        <div className="space-y-12">
-          {sortedSeries.map((s) => (
-            <section key={s.id}>
-              <div className="mb-4 flex items-baseline justify-between">
-                <h2 className="text-xl font-bold text-foreground">{s.name}</h2>
-                <span className="text-xs text-muted-foreground">
-                  {s.cardSets.length} {s.cardSets.length === 1 ? "set" : "sets"}
-                </span>
+      <section className="flex justify-center px-4 pb-16 sm:px-5 lg:px-6 lg:pb-24">
+        <div className="w-full max-w-6xl">
+          <KaartenSearch rarityOptions={rarityOptions} seriesOptions={seriesOptions}>
+            {marqueeItems.length > 0 && (
+              <div className="-mx-4 mb-6 sm:-mx-5 lg:-mx-6">
+                <DatabaseMarquee items={marqueeItems} />
               </div>
+            )}
 
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {s.cardSets.map((set) => (
-                  <Link
-                    key={set.id}
-                    href={`/kaarten/${set.tcgdexSetId}`}
-                    className="glass-subtle group flex flex-col gap-3 rounded-2xl p-4 transition-all hover:ring-2 hover:ring-primary/30"
-                  >
-                    <div className="relative flex h-32 items-center justify-center rounded-xl bg-muted/40 p-3">
-                      {getSetLogoUrl(set) ? (
-                        <Image
-                          src={getSetLogoUrl(set)!}
-                          alt={set.name}
-                          width={200}
-                          height={110}
-                          className="max-h-full w-auto object-contain"
-                          unoptimized
-                        />
-                      ) : (
-                        <Layers className="size-8 text-muted-foreground/40" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-foreground">{set.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {set.cardCount ?? "?"} kaarten
-                        {set.releaseDate && ` · ${new Date(set.releaseDate).getFullYear()}`}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
+            {(risers.length > 0 || fallers.length > 0) && (
+              <div className="mb-8">
+                <DatabaseTrending risers={risers} fallers={fallers} />
               </div>
-            </section>
-          ))}
+            )}
+
+            <div className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Link href="/pokedex" className="group flex items-center gap-4 rounded-[16px] p-5 no-underline transition-transform hover:-translate-y-0.5" style={{ background: "var(--pastel-pink)" }}>
+                <BrailleIcon animation="helix" color="var(--pastel-pink)" />
+                <div className="flex-1">
+                  <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">Pokédex</p>
+                  <p className="text-sm text-[var(--foreground)]/65">Ontdek elke Pokémon: stats, evoluties en alle kaarten.</p>
+                </div>
+                <ChevronRight className="size-5 shrink-0 text-[var(--foreground)]/60 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <Link href="/verkopen/losse-kaarten" className="group flex items-center gap-4 rounded-[16px] p-5 no-underline transition-transform hover:-translate-y-0.5" style={{ background: "var(--pastel-green)" }}>
+                <BrailleIcon animation="waves" color="var(--pastel-green)" />
+                <div className="flex-1">
+                  <p className="text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">Verkoop je kaarten aan ons</p>
+                  <p className="text-sm text-[var(--foreground)]/65">Direct een eerlijke prijs via de collectie-calculator.</p>
+                </div>
+                <ChevronRight className="size-5 shrink-0 text-[var(--foreground)]/60 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-14">
+              {sortedSeries.map((s) => (
+                <section key={s.id}>
+                  <div className="mb-5 flex items-baseline justify-between gap-4">
+                    <h2 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.04em] text-[var(--foreground)]">{s.name}</h2>
+                    <Pill tone="white">
+                      {s.cardSets.length} {s.cardSets.length === 1 ? "set" : "sets"}
+                    </Pill>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                    {s.cardSets.map((set) => (
+                      <Link key={set.id} href={`/kaarten/${set.tcgdexSetId}`} className={`${TILE} gap-3 p-4 no-underline`}>
+                        <div className="relative flex h-32 items-center justify-center rounded-[10px] bg-[var(--background)] p-3">
+                          {getSetLogoUrl(set) ? <Image src={getSetLogoUrl(set)!} alt={set.name} width={200} height={110} className="max-h-full w-auto object-contain" unoptimized /> : <Layers className="size-8 text-[var(--foreground)]/30" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-[var(--foreground)]">{set.name}</p>
+                          <p className="text-xs text-[var(--foreground)]/55">
+                            {set.cardCount ?? "?"} kaarten
+                            {set.releaseDate && ` · ${new Date(set.releaseDate).getFullYear()}`}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </KaartenSearch>
         </div>
-      </KaartenSearch>
-    </PageContainer>
+      </section>
+    </div>
   );
 }

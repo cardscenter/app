@@ -2285,7 +2285,10 @@
     "sortEndingSoon": "Binnenkort afgelopen",
     "sortMostBids": "Meeste biedingen",
     "showFilters": "Toon filters",
-    "hideFilters": "Verberg filters"
+    "hideFilters": "Verberg filters",
+    "heroTitle": "Zoek een kaart, Pokémon of speler",
+    "heroTitleQuery": "Dit vonden we voor je",
+    "heroWord": "kaart"
   },
   "sellerProfile": {
     "shop": "Winkel",
