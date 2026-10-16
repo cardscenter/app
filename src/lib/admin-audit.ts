@@ -73,6 +73,9 @@ export type AdminAction =
   | "DELETE_NEWS_POST"
   | "SEND_NEWSLETTER"
   | "SET_INTERNAL_NOTE"
+  // Design-pass Fase C: ervaringen
+  | "SAVE_TESTIMONIAL"
+  | "DELETE_TESTIMONIAL"
   // Community Hub (Fase 6): inkoop
   | "MARK_BUYBACK_RETURNED"
   | "UPDATE_BULK_PRICE"
@@ -110,6 +113,7 @@ export type AdminTargetType =
   | "LEAGUE_SEASON"
   | "LEAGUE_BADGE"
   | "NEWS_POST"
+  | "TESTIMONIAL"
   | "BULK_PRICE";
 
 /**

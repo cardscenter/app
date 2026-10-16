@@ -49,3 +49,19 @@ export const newsPostSchema = z.object({
 });
 
 export const internalNoteSchema = z.object({ note: z.string().trim().max(2000) });
+
+/** Ervaringen (design-pass Fase C): quote met optionele **vet**-markering. */
+export const TESTIMONIAL_SOURCE_VALUES = ["GOOGLE", "INSTAGRAM", "DISCORD", "IN_STORE", "EMAIL", "OTHER"] as const;
+export const TESTIMONIAL_COLOR_VALUES = ["white", "pink", "yellow", "blue", "green"] as const;
+export const testimonialSchema = z.object({
+  quote: z.string().trim().min(10, "Quote is te kort").max(600, "Quote mag maximaal 600 tekens zijn"),
+  authorName: z.string().trim().min(1, "Naam ontbreekt").max(80),
+  authorRole: z.string().trim().max(80).optional().or(z.literal("")),
+  source: z.enum(TESTIMONIAL_SOURCE_VALUES),
+  sourceUrl: z.string().trim().max(500).optional().or(z.literal("")),
+  avatarUrl: z.string().trim().max(500).optional().or(z.literal("")),
+  color: z.enum(TESTIMONIAL_COLOR_VALUES),
+  approved: z.coerce.boolean(),
+  featured: z.coerce.boolean(),
+  sortOrder: z.coerce.number().int().min(0).max(9999).default(0),
+});

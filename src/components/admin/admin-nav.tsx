@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { NAV_ROW, NAV_ROW_ACTIVE, NAV_ROW_IDLE, NAV_ICON_IDLE, NAV_GROUP_LABEL } from "@/components/dashboard/nav-styles";
-import { CalendarCheck, Tags, Settings2, ScanLine, UtensilsCrossed, ChefHat, QrCode, Trophy, ClipboardList, Stamp, Newspaper, Coins } from "lucide-react";
+import { CalendarCheck, Tags, Settings2, ScanLine, UtensilsCrossed, ChefHat, QrCode, Trophy, ClipboardList, Stamp, Newspaper, Coins, Quote } from "lucide-react";
 import {
   LayoutDashboard,
   Scale,
@@ -108,6 +108,7 @@ export function AdminNav({
         { href: "/dashboard/staff/league", labelKey: "navStaffLeague", icon: ClipboardList },
         { href: "/dashboard/staff/spaarkaart", labelKey: "navLoyalty", icon: Stamp },
         { href: "/dashboard/admin/news", labelKey: "navNews", icon: Newspaper },
+        { href: "/dashboard/admin/testimonials", labelKey: "navTestimonials", icon: Quote },
       ],
     },
     {

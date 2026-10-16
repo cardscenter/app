@@ -3147,3 +3147,26 @@ model NewsPost {
 
   @@index([status, pinned, publishedAt])
 }
+
+/// Ervaringen van spelers (design-pass Fase C): admin-beheerde quotes voor
+/// /ervaringen en de homepage. Bron = waar de quote vandaan komt (Google,
+/// Instagram, Discord, in de winkel, e-mail); `**vet**` in de quote wordt
+/// vetgedrukt weergegeven.
+model ShopTestimonial {
+  id         String   @id @default(cuid())
+  quote      String
+  authorName String
+  authorRole String?
+  source     String   @default("IN_STORE") // GOOGLE | INSTAGRAM | DISCORD | IN_STORE | EMAIL | OTHER
+  sourceUrl  String?
+  avatarUrl  String?
+  color      String   @default("white")    // white | pink | yellow | blue | green
+  approved   Boolean  @default(true)
+  featured   Boolean  @default(false)      // ook op de homepage
+  sortOrder  Int      @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([approved, featured, sortOrder])
+}
