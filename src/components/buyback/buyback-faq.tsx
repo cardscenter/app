@@ -1,43 +1,28 @@
 import type { ReactNode } from "react";
-import { HelpCircle, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export interface BuybackFaqItem {
   q: string;
   a: string | ReactNode;
 }
 
-// Generieke <details>-accordion voor de inkoop-FAQ's. Items zijn bewust
-// hardcoded NL (support-copy die zonder vertaalronde evolueert) — zie
-// bulk-faq.tsx en collection-faq-items.tsx.
-export function BuybackFaq({
-  title,
-  items,
-  headingLevel = "h2",
-}: {
-  title: string;
-  items: BuybackFaqItem[];
-  headingLevel?: "h2" | "h3";
-}) {
+// Generieke <details>-accordion voor de inkoop-FAQ's in de calculators.
+// Items zijn bewust hardcoded NL (support-copy die zonder vertaalronde
+// evolueert), zie bulk-faq.tsx en collection-faq-items.tsx. Design-pass:
+// witte kaart met rijen en chevrons, zoals FaqSection op de landing.
+export function BuybackFaq({ title, items, headingLevel = "h2" }: { title: string; items: BuybackFaqItem[]; headingLevel?: "h2" | "h3" }) {
   const Heading = headingLevel;
   return (
-    <section>
-      <div className="mb-3 flex items-center gap-2">
-        <HelpCircle className="h-5 w-5 text-muted-foreground" />
-        <Heading className="text-lg font-bold text-foreground">{title}</Heading>
-      </div>
-      <div className="space-y-2">
+    <section className="rounded-[12px] bg-white p-5 shadow-[0_2px_8px_0_var(--cc-border-subtle)] sm:p-6">
+      <Heading className="text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">{title}</Heading>
+      <div className="mt-4 divide-y divide-[var(--border)] border-y border-[var(--border)]">
         {items.map((item, i) => (
-          <details
-            key={i}
-            className="group rounded-xl border border-border bg-card transition-colors open:border-primary/40"
-          >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+          <details key={i} className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left text-base font-semibold text-[var(--foreground)] [&::-webkit-details-marker]:hidden">
               <span>{item.q}</span>
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+              <ChevronDown className="size-5 shrink-0 text-[var(--foreground)]/50 transition-transform group-open:rotate-180" />
             </summary>
-            <div className="border-t border-border/50 px-4 py-3 text-sm text-muted-foreground">
-              {item.a}
-            </div>
+            <div className="cc-prose max-w-[42rem] pb-5 text-sm">{item.a}</div>
           </details>
         ))}
       </div>
