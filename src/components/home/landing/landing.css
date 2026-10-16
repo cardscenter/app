@@ -1,0 +1,200 @@
+/*
+ * Cards Center landing (design-pass 2026-10): eigen, afgeschermde stijllaag
+ * voor de nieuwe homepage. Alles leeft onder `.cc-landing` zodat de rest van
+ * de site (tokens, dark mode) niet verandert. Huisstijl: het rood uit het
+ * logo (#8C1420 → #F2202B) + bijna-zwart (#202020); pastels als panelen.
+ */
+.cc-landing {
+  --cc-red: #f2202b;
+  --cc-red-mid: #c51a25;
+  --cc-red-dark: #8c1420;
+  --cc-red-soft: #fce9e8;
+  --cc-grad: linear-gradient(100deg, var(--cc-red-dark) 0%, var(--cc-red-mid) 55%, var(--cc-red) 100%);
+  --cc-ink: #202020;
+  --cc-ink-2: #555555;
+  --cc-ink-faded: rgba(32, 32, 32, 0.22);
+  --cc-bg: #f4f4f4;
+  --cc-surface: #ffffff;
+  --cc-surface-2: #f5f5f5;
+  --cc-border: #e3e3e3;
+  --cc-border-subtle: rgba(32, 32, 32, 0.08);
+  --cc-pink: #ffc4ce;
+  --cc-pink-ink: #7a0f1e;
+  --cc-yellow: #fff26b;
+  --cc-yellow-ink: #3f2a08;
+  --cc-blue: #c9dcff;
+  --cc-blue-light: #e9f1ff;
+  --cc-blue-ink: #0d1b3f;
+  --cc-green: #d4f58f;
+  --cc-green-ink: #253611;
+  --cc-dark: #16090b;
+
+  background: var(--cc-bg);
+  color: var(--cc-ink);
+  font-family: var(--cc-body), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+
+.cc-landing .cc-display {
+  font-family: var(--cc-display), "Arial Narrow", Impact, sans-serif;
+  text-transform: uppercase;
+  line-height: 0.88;
+  letter-spacing: 0;
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+.cc-landing .cc-prose {
+  color: var(--cc-ink);
+  opacity: 0.68;
+}
+
+/* Afgeronde knoppen en pillen */
+.cc-landing .cc-pill {
+  border-radius: 100rem;
+}
+
+/* Hero-intro: tekst en knoppen schuiven zacht omhoog (zoals Ploy). */
+@keyframes ccIntroIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.cc-landing .cc-intro {
+  animation: ccIntroIn 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--cc-intro-delay, 0s);
+}
+
+/* Scroll-fill voor koppen: per woord een verloop dat van links vult. */
+.cc-landing .cc-word {
+  --p: 0%;
+  color: transparent;
+  background-image: linear-gradient(90deg, var(--cc-fill, var(--cc-ink)) 0, var(--cc-fill, var(--cc-ink)) var(--p), var(--cc-fill-faded, var(--cc-ink-faded)) var(--p));
+  -webkit-background-clip: text;
+  background-clip: text;
+  display: inline-block;
+  padding: 0.08em 0;
+  margin: -0.08em 0;
+}
+
+/* Digit-roller voor tellende cijfers. */
+.cc-landing .cc-digit {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+}
+.cc-landing .cc-digit-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 900ms cubic-bezier(0.22, 0.68, 0, 1);
+}
+.cc-landing .cc-digit-inner span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+/* Status-bolletje (stats-kaarten). */
+@keyframes ccRing {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.38;
+    transform: scale(1.18);
+  }
+}
+@keyframes ccPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.72);
+  }
+}
+.cc-landing .cc-ring {
+  animation: ccRing 2.8s ease-in-out infinite;
+}
+.cc-landing .cc-pulse {
+  animation: ccPulse 2.8s ease-in-out infinite;
+}
+
+/* Punch-card: kaart met vier stippen in de hoeken (accordeon, CTA-box). */
+.cc-landing .cc-punch {
+  position: relative;
+}
+.cc-landing .cc-punch::before,
+.cc-landing .cc-punch::after,
+.cc-landing .cc-punch > .cc-punch-dots::before,
+.cc-landing .cc-punch > .cc-punch-dots::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cc-dot, var(--cc-ink));
+}
+.cc-landing .cc-punch::before {
+  top: 12px;
+  left: 12px;
+}
+.cc-landing .cc-punch::after {
+  top: 12px;
+  right: 12px;
+}
+.cc-landing .cc-punch > .cc-punch-dots::before {
+  bottom: 12px;
+  left: 12px;
+}
+.cc-landing .cc-punch > .cc-punch-dots::after {
+  bottom: 12px;
+  right: 12px;
+}
+
+/* Accordeon-inhoud via grid-rows (zachte hoogte-animatie zonder JS-meting). */
+.cc-landing .cc-acc-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.6s cubic-bezier(0.625, 0.05, 0, 1);
+}
+.cc-landing .cc-acc-body[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+/* Scrollbare kaartenrij zonder zichtbare scrollbar. */
+.cc-landing .cc-noscroll {
+  scrollbar-width: none;
+}
+.cc-landing .cc-noscroll::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-landing .cc-intro {
+    animation: none;
+  }
+  .cc-landing .cc-word {
+    --p: 100%;
+  }
+  .cc-landing .cc-ring,
+  .cc-landing .cc-pulse {
+    animation: none;
+  }
+}
