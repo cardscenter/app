@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { Check, Info, Bell, Table2, Utensils, Clock } from "lucide-react";
+import { Check, Info, Bell, Table2, Utensils, Clock, Coins } from "lucide-react";
 import { getFoodOrderStatus, retryFoodPayment } from "@/actions/food-orders";
 import type { OrderView } from "@/lib/food/orders";
 import { WAIT_DEFAULT } from "@/lib/food/menu-data";
@@ -144,11 +144,19 @@ export function OrderStatusView({ locale, orderId, token, initial, menu }: Props
 
       <div className="mt-6 space-y-2 text-sm">
         <Row icon={tb ? <Table2 className="size-4" /> : <Bell className="size-4" />}>{tb ? t("doneT", { n: order.table ?? 0 }) : t("doneB", { name: order.name ?? "" })}</Row>
-        {bar ? (
+        {order.paid && order.total + order.tip <= 0 && order.pointsUsed > 0 ? (
+          <Row icon={<Check className="size-4" />}>{t("paidWithPoints")}</Row>
+        ) : bar ? (
           order.paid ? <Row icon={<Check className="size-4" />}>{t("paidAtBarOk")}</Row> : <Row icon={<Info className="size-4" />} tone="alert">{t("payAtBarAlert", { no: order.number })}</Row>
         ) : (
           <Row icon={<Check className="size-4" />}>{t("paidWith", { m: order.method ?? "", amt: fmt(order.total + order.tip) })}</Row>
         )}
+        {order.pointsUsed > 0 && (
+          <Row icon={<Coins className="size-4" />}>
+            {t("sumPoints")}: {t("pointsUseSub", { n: order.pointsUsed, amt: fmt(order.pointsDiscount) })}
+          </Row>
+        )}
+        {!!order.pointsEarned && order.pointsEarned > 0 && <Row icon={<Coins className="size-4" />}>{t("pointsEarned", { n: order.pointsEarned })}</Row>}
         {tb && <Row icon={<Utensils className="size-4" />}>{t("clearNote")}</Row>}
       </div>
 

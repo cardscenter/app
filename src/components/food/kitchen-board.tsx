@@ -317,6 +317,7 @@ function OrderCard({ o, now, menu, lang, t, fmt, pending, onAdvance, onPaid }: {
       {food.length > 0 && <List title={t("kKitchen")} rows={food} />}
       {drinks.length > 0 && <List title={t("kBar")} rows={drinks} />}
       {o.code && <div className="mt-2 text-xs text-[var(--ink-2)]">{t("kCode")}: <b>{o.code}</b> · - {fmt(o.discount)}</div>}
+      {o.pointsUsed > 0 && <div className="mt-2 text-xs text-[var(--ink-2)]">{t("sumPoints")}: <b>{t("pointsUseSub", { n: o.pointsUsed, amt: fmt(o.pointsDiscount) })}</b></div>}
       {o.note && <div className="mt-2 rounded-md bg-[var(--wash)] px-2 py-1.5 text-sm"><b className="block text-[11px] uppercase tracking-wide text-[var(--ink-3)]">{t("kNote")}</b>{o.note}</div>}
       {btn && (
         awaiting ? (

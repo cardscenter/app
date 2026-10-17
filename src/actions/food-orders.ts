@@ -6,6 +6,8 @@ import { getGuestOrder, placeOrder, retryOrderPayment, resolveDiscountCode, type
 import { isMollieConfigured } from "@/lib/mollie";
 import { syncPaymentFromProvider } from "@/lib/shop-events/registrations";
 import { prisma } from "@/lib/prisma";
+import { getHubSettings } from "@/lib/app-config";
+import { getPointsBalance } from "@/lib/community/loyalty";
 
 /**
  * Server actions voor gasten van de bestelapp (geen account nodig). Alle
@@ -21,6 +23,14 @@ export async function getMenuState(): Promise<{ soldOut: string[]; waitMinutes: 
 export async function checkDiscountCode(raw: string): Promise<{ ok: true; code: string; type: "PCT" | "EUR"; value: number } | { ok: false }> {
   const r = await resolveDiscountCode(raw);
   return r ? { ok: true, code: r.code, type: r.rule.type, value: r.rule.value } : { ok: false };
+}
+
+/** Spaarpunten voor het afrekenscherm: gasten zien alleen dat inloggen punten oplevert. */
+export async function getMyFoodPoints(): Promise<{ loggedIn: boolean; balance: number; perEuro: number }> {
+  const [session, settings] = await Promise.all([auth(), getHubSettings()]);
+  const userId = session?.user?.id;
+  if (!userId) return { loggedIn: false, balance: 0, perEuro: settings.pointsPerEuroFood };
+  return { loggedIn: true, balance: Math.max(0, await getPointsBalance(userId)), perEuro: settings.pointsPerEuroFood };
 }
 
 export async function placeFoodOrder(input: Omit<PlaceOrderInput, "userId">) {

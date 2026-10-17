@@ -3971,7 +3971,20 @@
     "kWake": "Keep screen on",
     "kRefresh": "Refresh",
     "kUpdated": "Updated {t}",
-    "kOffline": "No connection to the server. Retrying."
+    "kOffline": "No connection to the server. Retrying.",
+    "pointsLabel": "Points",
+    "pointsUse": "Use my points",
+    "pointsUseSub": "{n} points · {amt} off",
+    "pointsHave": "You have {n} points, worth {amt}",
+    "pointsNone": "You don't have any points yet. You earn them at every check-in and with every order.",
+    "pointsGuest": "Log in to pay with points and save up points.",
+    "pointsLogin": "Log in",
+    "pointsEarn": "You earn {n} points with this order.",
+    "pointsCovered": "Your points cover the whole order.",
+    "sumPoints": "Points",
+    "placeFree": "Place order",
+    "pointsEarned": "You earned {n} points with this order.",
+    "paidWithPoints": "Paid with points"
   },
   "community": {
     "leagueTitle": "League",

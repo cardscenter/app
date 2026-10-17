@@ -42,7 +42,10 @@ export default async function MyFoodOrdersPage({ params }: { params: Promise<{ l
                 <div className="text-sm text-foreground">{o.lines.filter((l) => !l.g || l.role === "main").map((l) => `${l.qty > 1 ? l.qty + "× " : ""}${nm(l.id)}`).join(", ")}</div>
                 <div className="text-xs text-muted-foreground">{formatEventDateShort(new Date(o.createdAt), lang)} {formatEventTime(new Date(o.createdAt), lang)} · {o.mode === "TABLE" ? t("tableN", { n: o.table ?? 0 }) : o.name}</div>
               </div>
-              <span className="text-base font-semibold tabular-nums text-foreground">{formatEuro(o.total + o.tip, lang)}</span>
+              <span className="text-right text-base font-semibold tabular-nums text-foreground">
+                {formatEuro(o.total + o.tip, lang)}
+                {o.pointsUsed > 0 && <span className="block text-xs font-normal text-muted-foreground">{t("pointsUseSub", { n: o.pointsUsed, amt: formatEuro(o.pointsDiscount, lang) })}</span>}
+              </span>
               <StatusBadge tone={TONE[o.status] ?? "neutral"}>{statusLabel(o.status)}</StatusBadge>
               {o.status !== "DONE" && o.status !== "PAYMENT_FAILED" && (
                 <Link href={`/bestellen/status/${o.id}`} className={PILL_BTN_SM}>{t("statusLink")}</Link>

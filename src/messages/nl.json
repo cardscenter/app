@@ -3971,7 +3971,20 @@
     "kWake": "Scherm aan",
     "kRefresh": "Vernieuwen",
     "kUpdated": "Bijgewerkt {t}",
-    "kOffline": "Geen verbinding met de server. We proberen het opnieuw."
+    "kOffline": "Geen verbinding met de server. We proberen het opnieuw.",
+    "pointsLabel": "Spaarpunten",
+    "pointsUse": "Gebruik mijn spaarpunten",
+    "pointsUseSub": "{n} punten · {amt} korting",
+    "pointsHave": "Je hebt {n} punten, goed voor {amt}",
+    "pointsNone": "Je hebt nog geen spaarpunten. Je verdient ze bij elke check-in en bij elke bestelling.",
+    "pointsGuest": "Log in om met spaarpunten te betalen en punten te sparen.",
+    "pointsLogin": "Inloggen",
+    "pointsEarn": "Met deze bestelling verdien je {n} spaarpunten.",
+    "pointsCovered": "Je spaarpunten dekken de hele bestelling.",
+    "sumPoints": "Spaarpunten",
+    "placeFree": "Bestelling plaatsen",
+    "pointsEarned": "Je verdiende {n} spaarpunten met deze bestelling.",
+    "paidWithPoints": "Betaald met spaarpunten"
   },
   "community": {
     "leagueTitle": "League",

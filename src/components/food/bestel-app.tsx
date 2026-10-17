@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
-import { Plus, Minus, Pencil, Info, Bell, Table2, Clock, Lock, Check, RefreshCw, Utensils, ShieldCheck } from "lucide-react";
-import { getMenuState, placeFoodOrder, checkDiscountCode } from "@/actions/food-orders";
+import { Link, useRouter } from "@/i18n/navigation";
+import { Plus, Minus, Pencil, Info, Bell, Table2, Clock, Lock, Check, RefreshCw, Utensils, ShieldCheck, Coins } from "lucide-react";
+import { getMenuState, placeFoodOrder, checkDiscountCode, getMyFoodPoints } from "@/actions/food-orders";
 import type { MenuItemView } from "@/lib/food/menu-server";
 import { TIPS, NOTE_MAX, NAME_MAX, type FlowKey } from "@/lib/food/menu-data";
 import {
@@ -24,7 +24,9 @@ import {
   linePrice,
   nextStepIndex,
   normalizeCode,
+  pointsToApply,
   removeLine,
+  round2,
   setLineRemoved,
   stepsFor,
   unitDeal,
@@ -74,6 +76,9 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
   const [pop, setPop] = useState(false);
   const [pending, startTransition] = useTransition();
   const [placeError, setPlaceError] = useState<string | null>(null);
+  // Spaarpunten (1 punt = 1 cent): null = nog niet geladen. Standaard aan als je ze hebt.
+  const [points, setPoints] = useState<{ loggedIn: boolean; balance: number; perEuro: number } | null>(null);
+  const [usePoints, setUsePoints] = useState(true);
   const spyLock = useRef(0);
   const tabsRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,6 +114,10 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
+
+  useEffect(() => {
+    void getMyFoodPoints().then(setPoints);
+  }, []);
 
   // Live: uitverkocht + wachttijd elke 15s.
   useEffect(() => {
@@ -223,6 +232,12 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
   const sub = basketTotal(basket, lookup);
   const sav = basketSavings(basket, lookup);
   const disc = discountAmount(sub, codeRule);
+  const afterCode = round2(sub - disc);
+  const pts = usePoints && points?.loggedIn ? pointsToApply(afterCode, points.balance) : { points: 0, euro: 0 };
+  const due = round2(afterCode - pts.euro);
+  const covered = due <= 0;
+  const earn = points?.loggedIn ? Math.floor(round2(due * points.perEuro)) : 0;
+  const loginCallback = tb && session.table ? `/bestellen?tafel=${session.table}` : "/bestellen?modus=bar";
   const count = basketCount(basket);
   const blockedDrinks = drinksOnly(basket, lookup);
   const blockedSold = hasSoldOut(basket, lookup);
@@ -258,6 +273,7 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
         payment: atBar ? "BAR" : "ONLINE",
         method: atBar ? null : method,
         locale: lang,
+        usePoints: usePoints && !!points?.loggedIn,
       });
       if ("error" in r) {
         setPlaceError(r.error);
@@ -270,11 +286,14 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
           setSession({ code: null });
           setCodeRule(null);
         }
+        if (r.code === "points") setPoints(await getMyFoodPoints());
         return;
       }
+      const spent = pts.points;
+      setPoints((p) => (p ? { ...p, balance: Math.max(0, p.balance - spent) } : p));
       setSession((s) => ({
         myOrders: [...s.myOrders, { id: r.orderId, token: r.accessToken, number: r.number, at: Date.now() }].slice(-10),
-        history: [{ number: r.number, at: Date.now(), lines: basket, total: sub - disc }, ...s.history].slice(0, 5),
+        history: [{ number: r.number, at: Date.now(), lines: basket, total: afterCode }, ...s.history].slice(0, 5),
         basket: [],
         note: "",
         code: null,
@@ -456,13 +475,10 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
                 </div>
                 <div className="mt-5 space-y-1 rounded-xl border border-[var(--line)] p-4 text-sm">
                   {sav > 0 && <div className="font-semibold text-[var(--green)]">{t("menuSavings", { amt: fmt(sav) })}</div>}
-                  {session.code && codeRule && (
-                    <>
-                      <div className="flex justify-between"><span>{t("sumOrder")}</span><span className="tabular-nums">{fmt(sub)}</span></div>
-                      <div className="flex justify-between"><span>{t("sumDisc")} · {session.code}</span><span className="tabular-nums">- {fmt(disc)}</span></div>
-                    </>
-                  )}
-                  <div className="flex items-baseline justify-between"><b>{t("total")}</b><span className="display text-2xl font-extrabold tabular-nums">{fmt(sub - disc)}</span></div>
+                  {((session.code && codeRule) || pts.points > 0) && <div className="flex justify-between"><span>{t("sumOrder")}</span><span className="tabular-nums">{fmt(sub)}</span></div>}
+                  {session.code && codeRule && <div className="flex justify-between"><span>{t("sumDisc")} · {session.code}</span><span className="tabular-nums">- {fmt(disc)}</span></div>}
+                  {pts.points > 0 && <div className="flex justify-between text-[var(--green)]"><span>{t("sumPoints")} · {pts.points}</span><span className="tabular-nums">- {fmt(pts.euro)}</span></div>}
+                  <div className="flex items-baseline justify-between"><b>{t("total")}</b><span className="display text-2xl font-extrabold tabular-nums">{fmt(due)}</span></div>
                   <small className="text-xs text-[var(--ink-3)]">{t("vat")}</small>
                 </div>
                 <div className="mt-5 space-y-2">
@@ -483,7 +499,7 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
             <div className="mt-3 flex items-center justify-between rounded-2xl bg-[var(--ink)] px-5 py-4 text-white">
               <div>
                 <small className="block text-[11px] font-bold uppercase tracking-[.12em] text-white/60">{t("toPayLbl")}</small>
-                <b className="display text-3xl font-extrabold tabular-nums">{fmt(sub - disc + tip)}</b>
+                <b className="display text-3xl font-extrabold tabular-nums">{fmt(due + tip)}</b>
               </div>
               <div className="text-right text-sm text-white/80">
                 {count === 1 ? t("items1") : t("itemsN", { n: count })}
@@ -521,6 +537,34 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
               )}
             </div>
 
+            {points && (
+              <div className="mt-4">
+                <Eyebrow>{t("pointsLabel")}</Eyebrow>
+                {!points.loggedIn ? (
+                  <div className="mt-1 flex items-center gap-2 rounded-xl bg-[var(--card)] px-3 py-2.5 text-sm ring-1 ring-[var(--line)]">
+                    <Coins className="size-4 shrink-0 text-[var(--ink-2)]" />
+                    <span className="flex-1 text-[var(--ink-2)]">{t("pointsGuest")}</span>
+                    <Link href={{ pathname: "/login", query: { callbackUrl: loginCallback } }} className="shrink-0 text-xs font-semibold text-[var(--red-dark)] underline">{t("pointsLogin")}</Link>
+                  </div>
+                ) : points.balance <= 0 ? (
+                  <p className="mt-1 text-sm text-[var(--ink-2)]">{t("pointsNone")}</p>
+                ) : (
+                  <button type="button" role="switch" aria-checked={usePoints} onClick={() => setUsePoints((v) => !v)} className={`mt-1 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left ${usePoints ? "border-[var(--green)] bg-[var(--green-soft)]" : "border-[var(--line)] bg-[var(--card)]"}`}>
+                    <Coins className="size-5 shrink-0 text-[var(--green)]" />
+                    <span className="flex-1 text-sm font-semibold">
+                      {t("pointsUse")}
+                      <small className="block text-xs font-normal text-[var(--ink-2)]">{usePoints && pts.points > 0 ? t("pointsUseSub", { n: pts.points, amt: fmt(pts.euro) }) : t("pointsHave", { n: points.balance, amt: fmt(points.balance / 100) })}</small>
+                    </span>
+                    <span className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${usePoints ? "bg-[var(--green)]" : "bg-[var(--line)]"}`}>
+                      <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${usePoints ? "left-[18px]" : "left-0.5"}`} />
+                    </span>
+                  </button>
+                )}
+                {covered && pts.points > 0 && <p className="mt-1.5 text-xs font-semibold text-[var(--green)]">{t("pointsCovered")}</p>}
+                {earn > 0 && <p className="mt-1.5 text-xs text-[var(--ink-2)]">{t("pointsEarn", { n: earn })}</p>}
+              </div>
+            )}
+
             <div className="mt-5">
               <Eyebrow>{t("tipLabel")}</Eyebrow>
               <div className="mt-2 flex flex-wrap gap-2" role="radiogroup">
@@ -528,37 +572,50 @@ export function BestelApp({ locale, menu, waitMinutes: waitInitial, entry }: Pro
                   <Chip key={v} active={tip === v} onClick={() => setTip(v)}>{v === 0 ? t("tipNone") : fmt(v)}</Chip>
                 ))}
               </div>
-              {(tip || disc || sav) > 0 && (
+              {(tip || disc || sav || pts.points) > 0 && (
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--ink-2)]">
                   <span>{t("sumOrder")} {fmt(sub)}</span>
                   {sav > 0 && <span className="font-semibold text-[var(--green)]">{t("youSave", { amt: fmt(sav) })}</span>}
                   {disc > 0 && <span>{t("sumDisc")} - {fmt(disc)}</span>}
+                  {pts.points > 0 && <span className="text-[var(--green)]">{t("sumPoints")} - {fmt(pts.euro)}</span>}
                   {tip > 0 && <span>{t("sumTip")} {fmt(tip)}</span>}
                 </div>
               )}
             </div>
 
-            <div className="mt-5" role="radiogroup" aria-label={t("payHow")}>
-              <Eyebrow>{t("payHow")}</Eyebrow>
-              <div className="mt-2 space-y-2">
-                {METHODS.map((m) => (
-                  <button key={m.id} type="button" role="radio" aria-checked={method === m.id} onClick={() => setMethod(m.id)} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left ${method === m.id ? "border-[var(--ink)] ring-1 ring-[var(--ink)]" : "border-[var(--line)]"}`}>
-                    <span className="flex h-8 w-12 shrink-0 items-center justify-center rounded-md text-[11px] font-extrabold text-white" style={{ background: m.bg }}>{m.short}</span>
-                    <span className="flex-1 text-sm font-semibold">{m.name ?? t("card")}<small className="block text-xs font-normal text-[var(--ink-2)]">{t(m.subKey)}</small></span>
-                    <span className={`size-4 rounded-full border-2 ${method === m.id ? "border-[var(--ink)] bg-[var(--ink)]" : "border-[var(--line)]"}`} />
-                  </button>
-                ))}
+            {(!covered || tip > 0) && (
+              <div className="mt-5" role="radiogroup" aria-label={t("payHow")}>
+                <Eyebrow>{t("payHow")}</Eyebrow>
+                <div className="mt-2 space-y-2">
+                  {METHODS.map((m) => (
+                    <button key={m.id} type="button" role="radio" aria-checked={method === m.id} onClick={() => setMethod(m.id)} className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left ${method === m.id ? "border-[var(--ink)] ring-1 ring-[var(--ink)]" : "border-[var(--line)]"}`}>
+                      <span className="flex h-8 w-12 shrink-0 items-center justify-center rounded-md text-[11px] font-extrabold text-white" style={{ background: m.bg }}>{m.short}</span>
+                      <span className="flex-1 text-sm font-semibold">{m.name ?? t("card")}<small className="block text-xs font-normal text-[var(--ink-2)]">{t(m.subKey)}</small></span>
+                      <span className={`size-4 rounded-full border-2 ${method === m.id ? "border-[var(--ink)] bg-[var(--ink)]" : "border-[var(--line)]"}`} />
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="mt-6 space-y-2">
               <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--ink-2)]"><Clock className="size-3.5" /> {t("waitPay", { n: wait })}</div>
               {placeError && <div className="rounded-xl bg-[var(--red-soft)] p-3 text-sm text-[var(--red-dark)]">{placeError}</div>}
-              <Btn onClick={() => place(false)} disabled={pending || blockedDrinks || blockedSold}><Lock className="size-4" /> {pending ? t("redirect") : t("payBtn", { amt: fmt(sub - disc + tip) })}</Btn>
-              <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--ink-3)]"><ShieldCheck className="size-3.5" /> {t("secure")}</div>
-              <div className="text-center text-xs text-[var(--ink-3)]">{t("or")}</div>
-              <Btn variant="ghost" onClick={() => place(true)} disabled={pending || blockedDrinks || blockedSold}>{pending ? t("placing") : t("payBar")}</Btn>
-              <p className="text-center text-xs text-[var(--ink-3)]">{t("payBarSub")}</p>
+              {covered && tip === 0 ? (
+                <Btn onClick={() => place(false)} disabled={pending || blockedDrinks || blockedSold}><Coins className="size-4" /> {pending ? t("placing") : t("placeFree")}</Btn>
+              ) : (
+                <>
+                  <Btn onClick={() => place(false)} disabled={pending || blockedDrinks || blockedSold}><Lock className="size-4" /> {pending ? t("redirect") : t("payBtn", { amt: fmt(due + tip) })}</Btn>
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--ink-3)]"><ShieldCheck className="size-3.5" /> {t("secure")}</div>
+                </>
+              )}
+              {!covered && (
+                <>
+                  <div className="text-center text-xs text-[var(--ink-3)]">{t("or")}</div>
+                  <Btn variant="ghost" onClick={() => place(true)} disabled={pending || blockedDrinks || blockedSold}>{pending ? t("placing") : t("payBar")}</Btn>
+                  <p className="text-center text-xs text-[var(--ink-3)]">{t("payBarSub")}</p>
+                </>
+              )}
             </div>
           </div>
         )}
