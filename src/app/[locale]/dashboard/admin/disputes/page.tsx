@@ -128,10 +128,10 @@ export default async function AdminDisputesPage({
       />
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Te beoordelen" value={nEscalated} icon={Scale} iconClassName="bg-rose-500/10 text-rose-600 dark:text-rose-400" href="/dashboard/admin/disputes?tab=escalated" hint={[nOverdue > 0 ? `${nOverdue} over SLA` : null, nPriority > 0 ? `${nPriority} met voorrang` : null].filter(Boolean).join(" · ") || undefined} />
-        <StatCard label="Lopend tussen partijen" value={nActive} icon={Hourglass} iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-400" href="/dashboard/admin/disputes?tab=active" />
-        <StatCard label="Afgerond" value={nResolved} icon={CheckCircle2} iconClassName="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" href="/dashboard/admin/disputes?tab=resolved" />
-        <StatCard label="Totaal" value={nEscalated + nActive + nResolved} icon={AlertTriangle} iconClassName="bg-muted text-muted-foreground" href="/dashboard/admin/disputes?tab=all" />
+        <StatCard label="Te beoordelen" value={nEscalated} icon={Scale} tone="pink" href="/dashboard/admin/disputes?tab=escalated" hint={[nOverdue > 0 ? `${nOverdue} over SLA` : null, nPriority > 0 ? `${nPriority} met voorrang` : null].filter(Boolean).join(" · ") || undefined} />
+        <StatCard label="Lopend tussen partijen" value={nActive} icon={Hourglass} tone="yellow" href="/dashboard/admin/disputes?tab=active" />
+        <StatCard label="Afgerond" value={nResolved} icon={CheckCircle2} tone="green" href="/dashboard/admin/disputes?tab=resolved" />
+        <StatCard label="Totaal" value={nEscalated + nActive + nResolved} icon={AlertTriangle} tone="neutral" href="/dashboard/admin/disputes?tab=all" />
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

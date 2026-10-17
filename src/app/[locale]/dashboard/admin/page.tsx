@@ -24,6 +24,7 @@ import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatCard } from "@/components/dashboard/ui/stat-card";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { TONE_ICON, type DashTone } from "@/components/dashboard/ui/tones";
 
 export default async function AdminOverviewPage() {
   const t = await getTranslations("admin");
@@ -52,15 +53,15 @@ export default async function AdminOverviewPage() {
       }),
     ]);
 
-  // Tint van de icoon-tegel per queue (StatCard iconClassName).
+  // Pastel-toon van de icoon-cirkel per queue (zie dashboard/ui/tones.ts).
   const tint = {
-    rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-    emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-    purple: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-    slate: "bg-muted text-muted-foreground",
-  } as const;
+    rose: "pink",
+    emerald: "green",
+    blue: "blue",
+    amber: "yellow",
+    purple: "pink",
+    slate: "neutral",
+  } as const satisfies Record<string, DashTone>;
 
   // Wachtrijen gegroepeerd zoals de sidebar: Geschillen & meldingen /
   // Financieel / Gebruikers & content.
@@ -114,7 +115,7 @@ export default async function AdminOverviewPage() {
         <DashboardSection key={group.key} variant="plain" title={t(group.key)}>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {group.tiles.map(({ href, label, value, Icon, tint: cls }) => (
-              <StatCard key={href} href={href} label={label} value={value} icon={Icon} iconClassName={cls} />
+              <StatCard key={href} href={href} label={label} value={value} icon={Icon} tone={cls} />
             ))}
           </div>
         </DashboardSection>
@@ -128,7 +129,7 @@ export default async function AdminOverviewPage() {
               label={t(labelKey)}
               value={`€${value.toFixed(2)}`}
               icon={Icon}
-              iconClassName={tint.slate}
+              tone={tint.slate}
             />
           ))}
         </div>
@@ -140,12 +141,12 @@ export default async function AdminOverviewPage() {
             <Link
               key={href}
               href={href}
-              className="flex items-center gap-3 dash-card p-4 transition-colors hover:bg-muted/40"
+              className="flex items-center gap-3 dash-card p-4 no-underline transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-card-hover"
             >
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${cls}`}>
+              <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${TONE_ICON[cls]}`}>
                 <Icon className="h-4.5 w-4.5" />
               </span>
-              <span className="text-sm font-medium text-foreground">{t(labelKey)}</span>
+              <span className="text-sm font-semibold text-foreground">{t(labelKey)}</span>
             </Link>
           ))}
         </div>
@@ -156,23 +157,23 @@ export default async function AdminOverviewPage() {
         icon={<History className="size-4" />}
         contentClassName="p-0"
         action={
-          <Link href="/dashboard/admin/audit" className="text-xs font-medium text-primary hover:underline">
+          <Link href="/dashboard/admin/audit" className="text-sm font-semibold text-primary hover:underline">
             {t("navAudit")}
           </Link>
         }
       >
         {recentActivity.length === 0 ? (
-          <div className="p-4">
+          <div className="px-5 pb-5 sm:px-6">
             <EmptyState icon={History} title={t("noRecentActivity")} compact />
           </div>
         ) : (
           <ul className="divide-y divide-border">
             {recentActivity.map((e) => (
-              <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+              <li key={e.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm sm:px-6">
                 <div className="min-w-0 flex-1">
                   <p>
                     <span className="font-medium">{e.admin?.displayName ?? "Systeem"}</span>{" "}
-                    <code className="rounded bg-muted px-1 py-0.5 text-[10px]">{e.action}</code>{" "}
+                    <code className="rounded-full bg-[var(--pastel-blue-light)] px-2 py-0.5 text-[10px] text-[var(--pastel-blue-ink)]">{e.action}</code>{" "}
                     <span className="text-muted-foreground">on</span>{" "}
                     <code className="text-[11px]">
                       {e.targetType}

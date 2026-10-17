@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TONE_ICON, type DashTone } from "./tones";
 
 type EmptyStateProps = {
   icon: LucideIcon;
@@ -8,26 +9,30 @@ type EmptyStateProps = {
   description?: string;
   /** Meestal een Link met buttonVariants. */
   action?: ReactNode;
-  /** py-10 i.p.v. py-16, voor gebruik binnen een DashboardSection. */
+  /** Minder hoog, voor gebruik binnen een DashboardSection. */
   compact?: boolean;
+  /** Pastel-toon van de icoon-cirkel (default yellow). */
+  tone?: DashTone;
 };
 
 /**
- * Dé lege-staat van het dashboard (Fase 44) — vervangt de vijf verschillende
- * empty-state-stijlen die per pagina waren ontstaan.
+ * Dé lege staat van het dashboard (design-pass ronde G): witte punch-card met
+ * vier hoekstippen, pastel icoon-cirkel, korte tekst en optioneel een pil-actie.
  */
-export function EmptyState({ icon: Icon, title, description, action, compact }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action, compact, tone = "yellow" }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-dash border-2 border-dashed border-border bg-card px-6 text-center",
-        compact ? "py-10" : "py-16"
+        "cc-punch flex flex-col items-center justify-center gap-2 rounded-[20px] bg-white px-6 text-center shadow-card",
+        compact ? "py-10" : "py-16",
       )}
+      style={{ "--cc-dot": "var(--border)" } as CSSProperties}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <Icon className="h-6 w-6 text-muted-foreground" />
+      <span className="cc-punch-dots" aria-hidden />
+      <div className={cn("flex size-12 items-center justify-center rounded-full", TONE_ICON[tone])}>
+        <Icon className="size-6" />
       </div>
-      <p className="mt-1 text-sm font-semibold text-foreground">{title}</p>
+      <p className="mt-1 text-base font-semibold tracking-[-0.02em] text-foreground">{title}</p>
       {description && <p className="max-w-sm text-sm text-muted-foreground">{description}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>

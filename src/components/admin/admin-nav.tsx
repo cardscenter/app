@@ -152,7 +152,7 @@ export function AdminNav({
               <Icon className={`size-4 shrink-0 ${active ? "" : NAV_ICON_IDLE}`} />
               <span className="flex-1 truncate">{t(item.labelKey)}</span>
               {item.badge != null && item.badge > 0 && (
-                <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-red-500/20 px-1.5 text-[11px] font-semibold text-red-300">
+                <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center cc-grad rounded-full px-1.5 text-[11px] font-semibold text-white">
                   {item.badge}
                 </span>
               )}
@@ -166,7 +166,7 @@ export function AdminNav({
   const personalDashboardLink = (
     <Link
       href="/dashboard"
-      className={`${NAV_ROW} w-full justify-center border border-sidebar-border bg-white/5 text-sidebar-foreground hover:bg-white/10 hover:text-white`}
+      className={`${NAV_ROW} w-full justify-center bg-white/[0.08] text-sidebar-foreground hover:bg-white/[0.14] hover:text-white`}
     >
       <ArrowLeft className="size-4 shrink-0" />
       {t("switchToUserDashboard")}
@@ -176,23 +176,23 @@ export function AdminNav({
   const adminBadge = (
     <Link
       href="/dashboard/admin"
-      className="block rounded-md border border-amber-400/30 bg-amber-400/10 p-2.5 transition-colors hover:bg-amber-400/15"
+      className="block rounded-[16px] bg-[var(--pastel-yellow)] p-3 transition-colors hover:bg-[var(--pastel-yellow)]/90"
     >
       <div className="flex items-center gap-2">
-        <Shield className="size-5 shrink-0 text-amber-300" />
+        <Shield className="size-5 shrink-0 text-[var(--pastel-yellow-ink)]" />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium text-amber-300/80">{t("modeLabel")}</p>
-          <p className="truncate text-[13px] font-bold text-amber-100">{t("panelTitle")}</p>
+          <p className="text-[11px] font-medium text-[var(--pastel-yellow-ink)]/70">{t("modeLabel")}</p>
+          <p className="truncate text-[13px] font-bold text-[var(--pastel-yellow-ink)]">{t("panelTitle")}</p>
         </div>
       </div>
     </Link>
   );
 
   return (
-    <nav className="flex flex-1 flex-col gap-4 px-3 py-4 md:pl-[clamp(1rem,3vw,4rem)] md:pr-3">
+    <nav className="flex flex-1 flex-col gap-5 px-3 pb-3 pt-4">
       {adminBadge}
       {navLinks}
-      <div className="mt-auto border-t border-sidebar-border pt-3">{personalDashboardLink}</div>
+      <div className="mt-auto pt-3">{personalDashboardLink}</div>
     </nav>
   );
 }

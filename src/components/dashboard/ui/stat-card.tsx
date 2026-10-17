@@ -1,12 +1,15 @@
 import type { LucideIcon } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { TONE_ICON, type DashTone } from "./tones";
 
 type StatCardProps = {
   label: string;
   value: string | number;
   icon?: LucideIcon;
-  /** Kleur van de icoon-tegel, default primair. Bv. "bg-emerald-500/10 text-emerald-500". */
+  /** Pastel-toon van de icoon-cirkel (default yellow). */
+  tone?: DashTone;
+  /** @deprecated Gebruik `tone`. Blijft werken voor oude aanroepers. */
   iconClassName?: string;
   /** Maakt de hele tegel klikbaar. */
   href?: string;
@@ -15,20 +18,15 @@ type StatCardProps = {
 };
 
 /**
- * KPI-tegel voor het dashboard (Fase 44). Vlakke dash-card, geen glass, geen
- * hover-scale — subtiele hover-tint wanneer klikbaar.
+ * KPI-tegel voor het dashboard: witte kaart, waarde in de display-letter,
+ * ronde icoon-cirkel in een pastel-toon. Komt licht omhoog als hij klikbaar is.
  */
-export function StatCard({ label, value, icon: Icon, iconClassName, href, hint }: StatCardProps) {
+export function StatCard({ label, value, icon: Icon, tone = "yellow", iconClassName, href, hint }: StatCardProps) {
   const inner = (
     <div className="flex items-start gap-3">
       {Icon && (
-        <div
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-            iconClassName ?? "bg-primary/10 text-primary"
-          )}
-        >
-          <Icon className="h-4.5 w-4.5" />
+        <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", iconClassName ?? TONE_ICON[tone])}>
+          <Icon className="size-[18px]" />
         </div>
       )}
       <div className="min-w-0">
@@ -43,7 +41,7 @@ export function StatCard({ label, value, icon: Icon, iconClassName, href, hint }
 
   if (href) {
     return (
-      <Link href={href} className={cn(shell, "transition-transform hover:-translate-y-0.5")}>
+      <Link href={href} className={cn(shell, "no-underline transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-card-hover")}>
         {inner}
       </Link>
     );

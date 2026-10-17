@@ -37,8 +37,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-// Sidebar in TailAdmin-stijl (sept 2026): donkere navy kolom (in beide
-// thema's), compacte rijen (~32px), platte groepen met uppercase-labels,
+// Zijbalk (design-pass ronde G, 2026-10-17): zwevend bijna-zwart paneel,
+// compacte pil-rijen (actief = witte pil), rustige groepslabels,
 // Account als uitklaprij, en een Support-groep met Berichten/Meldingen
 // (ongelezen-badges, live via SSE) + Help. Onderaan een compacte
 // gebruikerskaart met level-voortgang en een uitlog-icoon (2-staps confirm).
@@ -336,7 +336,7 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
         >
           <Icon className="size-4 shrink-0" />
           <span className="flex-1 truncate">{label(item)}</span>
-          <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300">
+          <span className="rounded-full bg-[var(--pastel-yellow)] px-2 py-0.5 text-[10px] font-semibold text-[var(--pastel-yellow-ink)]">
             Soon
           </span>
         </div>
@@ -344,10 +344,10 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
     }
     const active = isActive(item);
     const showBadge = typeof item.badge === "number" && item.badge > 0;
-    const badgeClass = active
-      ? "bg-white/15 text-white"
-      : item.badgeTone === "attention"
-        ? "bg-sidebar-primary text-white"
+    const badgeClass = item.badgeTone === "attention"
+      ? "cc-grad text-white"
+      : active
+        ? "bg-[var(--cc-ink)]/10 text-[var(--cc-ink)]"
         : "bg-white/10 text-sidebar-foreground";
     return (
       <Link
@@ -367,7 +367,7 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
         <span className="flex-1 truncate">{label(item)}</span>
         {showBadge && (
           <span
-            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none tabular-nums ${badgeClass}`}
+            className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold leading-none tabular-nums ${badgeClass}`}
           >
             {item.badge! > 99 ? "99+" : item.badge}
           </span>
@@ -395,7 +395,7 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
             />
           </button>
           {open && (
-            <div className="ml-4 mt-0.5 space-y-0.5 border-l border-sidebar-border pl-2">
+            <div className="ml-5 mt-1 space-y-0.5 border-l border-sidebar-border pl-2">
               {group.items.map((item) => renderItem(item, true))}
             </div>
           )}
@@ -411,7 +411,7 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
   });
 
   const adminLink = isAdmin ? (
-    <Link href="/dashboard/admin" className={`${NAV_ROW} text-amber-300 hover:bg-amber-400/10 hover:text-amber-200`}>
+    <Link href="/dashboard/admin" className={`${NAV_ROW} bg-[var(--pastel-yellow)] font-semibold text-[var(--pastel-yellow-ink)] hover:bg-[var(--pastel-yellow)]/90`}>
       <Shield className="size-4 shrink-0" />
       <span className="flex-1 truncate">{t("adminPanel")}</span>
     </Link>
@@ -424,27 +424,27 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
     <button
       type="button"
       onClick={handleLogoutClick}
-      className="flex w-full items-center justify-center gap-2 rounded-md bg-red-600 px-3 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-red-700"
+      className="cc-pill cc-grad flex w-full items-center justify-center gap-2 px-3 py-3.5 text-[13px] font-semibold text-white"
     >
       <LogOut className="size-4 shrink-0" />
       <span className="truncate">{tc("logoutConfirm")}</span>
     </button>
   ) : user && (
     <div
-      className={`flex items-center gap-1 rounded-md border border-sidebar-border bg-white/5 p-1.5 ${
-        isLevelActive ? "ring-1 ring-sidebar-primary/60" : ""
+      className={`flex items-center gap-1 rounded-[16px] bg-white/[0.06] p-2 ${
+        isLevelActive ? "ring-1 ring-white/40" : ""
       }`}
     >
       <Link
         href={level ? "/dashboard/level" : "/dashboard/profiel"}
-        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1 py-0.5 transition-colors hover:bg-white/5"
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-[12px] px-1 py-0.5 transition-colors hover:bg-white/5"
         title={level ? `${t("myLevel")}: ${level.name}` : undefined}
       >
         {user.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.image} alt="" className="size-8 shrink-0 rounded-[22%] object-cover" />
+          <img src={user.image} alt="" className="size-9 shrink-0 rounded-[22%] object-cover" />
         ) : (
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-[22%] bg-sidebar-primary text-xs font-bold text-white">
+          <span className="cc-grad flex size-9 shrink-0 items-center justify-center rounded-[22%] text-xs font-bold text-white">
             {user.name.charAt(0).toUpperCase()}
           </span>
         )}
@@ -453,7 +453,7 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
           {level ? (
             <span className="mt-1 flex items-center gap-1.5">
               <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
-                <span className="block h-full rounded-full bg-sidebar-primary" style={{ width: `${level.progress}%` }} />
+                <span className="cc-grad block h-full rounded-full" style={{ width: `${level.progress}%` }} />
               </span>
               <span className="shrink-0 text-[10px] leading-none tabular-nums text-sidebar-foreground/60">
                 {level.icon} {Math.round(level.progress)}%
@@ -469,7 +469,7 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
         onClick={handleLogoutClick}
         aria-label={tc("logout")}
         title={tc("logout")}
-        className="grid size-8 shrink-0 place-items-center rounded-md text-sidebar-foreground/60 transition-colors hover:bg-white/10 hover:text-red-300"
+        className="grid size-8 shrink-0 place-items-center rounded-full text-sidebar-foreground/60 transition-colors hover:bg-white/10 hover:text-white"
       >
         <LogOut className="size-4" />
       </button>
@@ -477,9 +477,9 @@ function DashboardNavInner({ accountType, role, level, user, counts, unread }: D
   );
 
   return (
-    <nav className="flex flex-1 flex-col gap-4 px-3 py-4 md:pl-[clamp(1rem,3vw,4rem)] md:pr-3">
+    <nav className="flex flex-1 flex-col gap-5 px-3 pb-3 pt-4">
       {navGroups}
-      <div className="mt-auto space-y-2 border-t border-sidebar-border pt-3">
+      <div className="mt-auto space-y-2 pt-3">
         {adminLink}
         {userCard}
       </div>

@@ -52,16 +52,17 @@
   --chart-4: #fff26b;
   --chart-5: #555555;
 
-  /* Sidebar — dashboard-sidebar in TailAdmin-navy, bewust identiek in light
-     én dark (de aside draagt zelf class="dark"; zie dashboard-shell.tsx) */
-  --sidebar: #1c2434;
-  --sidebar-foreground: #dee4ee;
-  --sidebar-primary: #3b82f6;
+  /* Dashboard-zijbalk: bijna-zwart uit de huisstijl (= --cc-dark, zelfde tint
+     als de hero en de footer) met rode accenten; identiek in :root en .dark
+     (de aside draagt zelf class="dark"; zie dashboard-shell.tsx). */
+  --sidebar: #16090b;
+  --sidebar-foreground: #efe7e8;
+  --sidebar-primary: #e2232f;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #333a48;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2e3a47;
-  --sidebar-ring: #3b82f6;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #e2232f;
 
   /* Kaartschaduw: zacht, zonder rand (= SHADOW / SHADOW_HOVER in tile-styles.ts) */
   --shadow-card:       0 2px 8px 0 rgba(32, 32, 32, 0.08);
@@ -151,15 +152,15 @@
   --chart-4: #fbbf24;
   --chart-5: #94a3b8;
 
-  /* Sidebar — zelfde navy als light (zie :root) */
-  --sidebar: #1c2434;
-  --sidebar-foreground: #dee4ee;
-  --sidebar-primary: #3b82f6;
+  /* Zijbalk — zelfde als :root */
+  --sidebar: #16090b;
+  --sidebar-foreground: #efe7e8;
+  --sidebar-primary: #e2232f;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #333a48;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2e3a47;
-  --sidebar-ring: #3b82f6;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #e2232f;
 
   /* Kaartschaduw binnen de donkere zijbalk: geen. */
   --shadow-card:       none;
