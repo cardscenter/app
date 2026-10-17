@@ -6,7 +6,8 @@ import { PLATFORM, formatShopAddress } from "@/lib/platform-config";
 import { LandingHero } from "./hero";
 import { Marquee } from "@/components/ploy/marquee";
 import { Pillars } from "./pillars";
-import { StatsPanel, type StatCardData } from "./stats-panel";
+import { LoyaltyPanel } from "./loyalty-panel";
+import { StampCardTile, PointsTile } from "./loyalty-cards";
 import { ActivityPanel, type ActivityItem } from "./activity-panel";
 import { EventsPanel, type EventCardData } from "./events-panel";
 import { PlatformSection } from "./platform-section";
@@ -48,10 +49,8 @@ function datePart(d: Date, locale: string, opts: Intl.DateTimeFormatOptions) {
 export async function LandingPage({ locale, viewer }: { locale: string; viewer: { id: string; name: string; image: string | null } | null }) {
   const [t, tc, data] = await Promise.all([getTranslations("home.landing"), getTranslations("community"), getLandingData(viewer?.id ?? null)]);
   const cardDb = isFeatureEnabled("FEATURE_CARD_DATABASE");
-  const { events, news, games, season, standings, settings, counts, testimonials } = data;
+  const { events, news, games, season, standings, settings, testimonials, loyalty } = data;
   const address = formatShopAddress();
-  const leader = standings[0] ?? null;
-  const nextEvent = events[0] ?? null;
 
   // Hero: laatste nieuwsbericht als aankondiging linksonder.
   const latest = news[0] ?? null;
@@ -60,49 +59,15 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
   // Loopband: spellen + wat de winkel biedt.
   const marqueeItems = [...games.map((g) => g.name), t("marqueeTables"), t("marqueeBar"), t("marqueeLeague"), t("marqueeBuyback")];
 
-  // Cijferkaarten (echte tellingen; de lijntjes zijn sfeer).
-  const thisMonth = events.filter((e) => new Date(e.startsAt).getMonth() === new Date().getMonth()).length;
-  const statCards: StatCardData[] = [
-    {
-      badge: t("statsEventsBadge"),
-      color: "pink",
-      value: counts.upcomingEvents,
-      label: t("statsEventsLabel"),
-      feed: nextEvent ? t("statsEventsFeed", { title: nextEvent.title, date: formatEventDateShort(new Date(nextEvent.startsAt), locale) }) : t("statsEventsFeedEmpty"),
-      stats: [
-        { label: t("statsEventsStat1"), value: String(games.length) },
-        { label: t("statsEventsStat2"), value: "14" },
-        { label: t("statsEventsStat3"), value: String(thisMonth) },
-      ],
-      status: t("statsEventsStatus"),
-    },
-    {
-      badge: t("statsLeagueBadge"),
-      color: "green",
-      value: counts.seasonPlayers,
-      label: t("statsLeagueLabel"),
-      feed: leader && season ? t("statsLeagueFeed", { name: leader.displayName, points: leader.points, season: season.name }) : t("statsLeagueFeedEmpty"),
-      stats: [
-        { label: t("statsLeagueStat1"), value: String(counts.seasonResults) },
-        { label: t("statsLeagueStat2"), value: leader ? String(leader.points) : "0" },
-        { label: t("statsLeagueStat3"), value: String(counts.members) },
-      ],
-      status: t("statsLeagueStatus"),
-    },
-    {
-      badge: t("statsLoyaltyBadge"),
-      color: "yellow",
-      value: settings.stampsPerCard,
-      label: t("statsLoyaltyLabel"),
-      feed: settings.stampReward ? t("statsLoyaltyFeed", { reward: settings.stampReward }) : t("statsLoyaltyFeedEmpty"),
-      stats: [
-        { label: t("statsLoyaltyStat1"), value: String(settings.pointsPerCheckIn) },
-        { label: t("statsLoyaltyStat2"), value: String(settings.pointsPerFullCard) },
-        { label: t("statsLoyaltyStat3"), value: "1" },
-      ],
-      status: t("statsLoyaltyStatus"),
-    },
-  ];
+  // Stempelkaart + spaarpunten: ingelogd de eigen kaart, uitgelogd een voorbeeld.
+  const stampsFilled = loyalty ? loyalty.stamps.onCard : Math.min(3, settings.stampsPerCard);
+  const stampsToGo = settings.stampsPerCard - stampsFilled;
+  const earn = [
+    { label: t("loyaltyEarnCheckIn"), points: settings.pointsPerCheckIn },
+    { label: t("loyaltyEarnFullCard"), points: settings.pointsPerFullCard },
+  ].filter((e) => e.points > 0);
+  // Wat één volle kaart aan punten oplevert: het voorbeeldgetal voor gasten.
+  const fullCardPoints = settings.stampsPerCard * settings.pointsPerCheckIn + settings.pointsPerFullCard;
 
   // Activiteitenfeed: nieuws, events, league-stand en een paar vaste kaarten.
   const feed: ActivityItem[] = [
@@ -191,7 +156,36 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
             : { title: t("pillarCollectTitle"), text: t("pillarCollectTextSell"), href: "/verkopen/losse-kaarten", linkLabel: t("pillarCollectLinkSell"), color: "blue", animation: "rain" },
         ]}
       />
-      <StatsPanel titleLine1={t("statsTitle1")} titleLine2={t("statsTitle2")} description={t("statsDesc")} cards={statCards} color="pink" balloon="red" stampSrc="/images/sections/stempel.webp" />
+      <LoyaltyPanel
+        titleLine1={t("statsTitle1")}
+        titleLine2={t("statsTitle2")}
+        description={t("statsDesc")}
+        stampSrc="/images/sections/stempel.webp"
+        action={
+          <CtaButton href={viewer ? "/dashboard/league" : "/login?callbackUrl=/dashboard/league"} variant="dark">
+            {viewer ? t("loyaltyCtaMember") : t("loyaltyCtaGuest")}
+          </CtaButton>
+        }
+      >
+        <StampCardTile
+          badge={t("loyaltyStampBadge")}
+          heading={loyalty ? t("loyaltyStampHeadingMember", { n: stampsToGo }) : t("loyaltyStampHeadingGuest", { filled: stampsFilled, total: settings.stampsPerCard })}
+          filled={stampsFilled}
+          total={settings.stampsPerCard}
+          seed={viewer?.id ?? "cards-center"}
+          reward={settings.stampReward || t("loyaltyStampRewardEmpty")}
+          status={t("loyaltyStampStatus")}
+        />
+        <PointsTile
+          badge={t("loyaltyPointsBadge")}
+          value={loyalty ? loyalty.points.balance : fullCardPoints}
+          label={loyalty ? t("loyaltyPointsLabelMember") : t("loyaltyPointsLabelGuest")}
+          earn={earn}
+          redeemTitle={t("loyaltyRedeemTitle")}
+          redeemText={t("loyaltyRedeemText")}
+          status={t("loyaltyPointsStatus")}
+        />
+      </LoyaltyPanel>
       <ActivityPanel titleTop={t("activityTop")} titleBottom={t("activityBottom")} items={feed} />
       <EventsPanel
         titleParts={[t("eventsTitle1"), `${t("eventsTitle2")} ${t("eventsTitle3")}`]}
