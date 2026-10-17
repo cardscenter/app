@@ -833,7 +833,24 @@ body {
   display: none;
 }
 
+/* Stempelkaart: de nieuwste stempel valt groot en scheef in zijn vakje en
+   landt met een kleine deuk (StampCardVisual). Werkt via scale, zodat de
+   eigen schuine stand (CSS rotate) blijft staan. */
+@keyframes cc-stamp-in {
+  0% { scale: 2.2; opacity: 0; translate: 0 -30%; }
+  55% { scale: 0.86; opacity: 1; translate: 0 0; }
+  78% { scale: 1.06; }
+  100% { scale: 1; }
+}
+.cc-stamp-in {
+  animation: cc-stamp-in 0.7s 0.3s both;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.6);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .cc-stamp-in {
+    animation: none;
+  }
   .cc-intro {
     animation: none;
   }
