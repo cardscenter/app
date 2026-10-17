@@ -3000,8 +3000,14 @@ model FoodOrder {
   savings     Float    @default(0)
   code        String?
   discount    Float    @default(0)
-  total       Float                  // subtotaal - korting (zonder fooi) = wat de bar int
+  total       Float                  // subtotaal - korting - spaarpunten (zonder fooi) = wat er nog betaald wordt
   tip         Float    @default(0)
+  // Spaarpunten (1 punt = 1 cent): ingezet bij het plaatsen, teruggezet als de
+  // bestelling onbetaald vervalt, en bij betaling verdiend over het geldbedrag.
+  pointsUsed       Int       @default(0)
+  pointsDiscount   Float     @default(0)
+  pointsRefundedAt DateTime?
+  pointsAwardedAt  DateTime?
   payment     String                 // ONLINE | BAR
   method      String?                // "iDEAL" etc. (label voor de klant)
   paid        Boolean  @default(false)
@@ -3118,12 +3124,14 @@ model LoyaltyEntry {
   kind      String   // STAMP | POINTS
   delta     Int
   reason    String
-  source    String   // CHECKIN | STAFF | FULL_CARD | REDEEM
+  source    String   // CHECKIN | STAFF | FULL_CARD | REDEEM | FOOD_SPEND | FOOD_REFUND | FOOD_EARN
   eventId   String?
   staffId   String?
+  foodOrderId String?  // FOOD_*: de eetbestelling waar dit bij hoort
   createdAt DateTime @default(now())
 
   @@index([userId, kind])
+  @@index([foodOrderId])
   @@index([createdAt])
 }
 
