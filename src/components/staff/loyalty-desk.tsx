@@ -89,7 +89,7 @@ export function LoyaltyDesk() {
               </div>
             </div>
             <div className="rounded-[20px] bg-[var(--pastel-yellow)] p-4 text-[var(--pastel-yellow-ink)]">
-              <StampCardVisual total={detail.stamps.perCard} filled={detail.stamps.onCard} />
+              <StampCardVisual total={detail.stamps.perCard} filled={detail.stamps.onCard} seed={detail.user.id} />
               <p className="mt-3 text-center text-sm font-semibold">
                 {detail.stamps.onCard} van {detail.stamps.perCard} stempels · {detail.stamps.completedCards} volle kaart(en)
               </p>

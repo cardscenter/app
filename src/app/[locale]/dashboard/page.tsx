@@ -72,6 +72,7 @@ export default async function DashboardPage({
         locale={locale}
         firstName={user.firstName?.trim() || user.displayName}
         data={hub}
+        stampSeed={userId}
         unread={{ messages, notifications }}
         totpEnabled={user.totpEnabled}
       />

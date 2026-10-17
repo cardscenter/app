@@ -57,7 +57,7 @@ export default async function MyLeaguePage({ params }: { params: Promise<{ local
           tone="yellow"
           action={<span className="cc-display text-2xl tabular-nums">{loyalty.stamps.onCard}/{loyalty.stamps.perCard}</span>}
         >
-          <StampCardVisual total={loyalty.stamps.perCard} filled={loyalty.stamps.onCard} className="max-w-sm" />
+          <StampCardVisual total={loyalty.stamps.perCard} filled={loyalty.stamps.onCard} seed={session.user.id} className="max-w-sm" />
           <p className="mt-4 text-sm font-semibold">{t("stampsOnCard", { n: loyalty.stamps.onCard, per: loyalty.stamps.perCard })}</p>
           <p className="mt-1 text-sm opacity-80">{t("stampsHint")}</p>
           <p className="mt-3 text-sm">

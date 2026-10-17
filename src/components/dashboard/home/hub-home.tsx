@@ -40,12 +40,15 @@ export async function HubHome({
   locale,
   firstName,
   data,
+  stampSeed,
   unread,
   totpEnabled,
 }: {
   locale: string;
   firstName: string;
   data: HubDashboardData;
+  /** Speler-id, zodat de stempels op de kaart hetzelfde patroon hebben als elders. */
+  stampSeed: string;
   unread: { messages: number; notifications: number };
   totpEnabled: boolean;
 }) {
@@ -111,7 +114,7 @@ export async function HubHome({
           display
           hint={data.stamps.reward ? t("stampsLeft", { left: stampsLeft, reward: data.stamps.reward }) : undefined}
         >
-          <StampCardVisual total={data.stamps.perCard} filled={data.stamps.onCard} className="mt-auto max-w-[220px] gap-1.5" />
+          <StampCardVisual total={data.stamps.perCard} filled={data.stamps.onCard} seed={stampSeed} className="mt-auto max-w-[220px] gap-1.5" />
         </DashTile>
         <DashTile
           href="/dashboard/league"
