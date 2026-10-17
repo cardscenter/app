@@ -5,6 +5,9 @@ import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Truck, CheckCircle2, AlertTriangle } from "lucide-react";
 import { submitBuybackTracking } from "@/actions/buyback";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { INPUT, SELECT } from "@/components/ploy/tile-styles";
 
 interface TrackingFormProps {
   requestId: string;
@@ -49,7 +52,7 @@ export function TrackingForm({
     startTransition(async () => {
       const result = await submitBuybackTracking(requestId, carrier, trackingNumber);
       if (result?.success) {
-        toast.success("Track & Trace opgeslagen — bedankt!");
+        toast.success("Track & Trace opgeslagen, bedankt!");
         router.refresh();
       } else {
         toast.error(result?.error ?? "Er ging iets mis");
@@ -66,35 +69,26 @@ export function TrackingForm({
   const isUrgent = !isOverdue && daysLeft <= 1;
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <Truck className="h-5 w-5 text-primary" />
-        <h2 className="text-base font-bold text-foreground">Verzending &amp; tracking</h2>
+    <section className="dash-card space-y-4 p-5 sm:p-6">
+      <div className="flex items-center gap-2">
+        <Truck className="h-5 w-5 text-muted-foreground" />
+        <h2 className="text-lg font-semibold tracking-[-0.03em] text-foreground">Verzending &amp; tracking</h2>
       </div>
 
       {/* Deadline banner */}
       {deadlineDate && !shippedAt && (
-        <div
-          className={`mb-4 flex items-start gap-2 rounded-lg p-3 text-sm ${
-            isOverdue
-              ? "border-l-4 border-red-500 bg-red-50 text-red-900 dark:bg-red-950/30 dark:text-red-100"
-              : isUrgent
-              ? "border-l-4 border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
-              : "border-l-4 border-sky-400 bg-sky-50 text-sky-900 dark:bg-sky-950/30 dark:text-sky-100"
-          }`}
-        >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+        <Callout tone={isOverdue ? "pink" : isUrgent ? "yellow" : "blue"} icon={AlertTriangle}>
           <div className="min-w-0">
             {isOverdue ? (
               <p>
-                <strong>Verzenddeadline verstreken.</strong> Stuur je pakket zo snel mogelijk en vul Track &amp; Trace in — anders kunnen we de aanvraag niet meer verwerken.
+                <strong>Verzenddeadline verstreken.</strong> Stuur je pakket zo snel mogelijk en vul Track &amp; Trace in, anders kunnen we de aanvraag niet meer verwerken.
               </p>
             ) : (
               <p>
                 <strong>
                   Verzend binnen {daysLeft === 0 ? "vandaag" : `${daysLeft} ${daysLeft === 1 ? "dag" : "dagen"}`}
-                </strong>{" "}
-                — uiterlijk{" "}
+                </strong>
+                , uiterlijk{" "}
                 {deadlineDate.toLocaleDateString("nl-NL", {
                   weekday: "long",
                   day: "numeric",
@@ -104,29 +98,24 @@ export function TrackingForm({
               </p>
             )}
           </div>
-        </div>
+        </Callout>
       )}
 
       {/* Sender warning */}
-      <div className="mb-4 flex items-start gap-2 rounded-lg border-l-4 border-red-400 bg-red-50/70 p-3 text-sm text-red-900 dark:border-red-500 dark:bg-red-950/30 dark:text-red-100">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+      <Callout tone="pink" icon={AlertTriangle}>
         <p>
-          <strong>Vergeet de afzender niet.</strong> Zonder duidelijk afzendadres of een briefje met je naam in de doos kunnen we de zending niet aan je aanvraag koppelen — en kunnen we ook geen uitbetaling doen.
+          <strong>Vergeet de afzender niet.</strong> Zonder duidelijk afzendadres of een briefje met je naam in de doos kunnen we de zending niet aan je aanvraag koppelen, en kunnen we ook geen uitbetaling doen.
         </p>
-      </div>
+      </Callout>
 
       {/* Already shipped — show view-only confirmation if no longer editable */}
       {hasTracking && !canEdit && (
-        <div className="flex items-start gap-3 rounded-lg bg-emerald-50 p-3 text-sm dark:bg-emerald-950/30">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+        <Callout tone="green" icon={CheckCircle2} title={`Verzonden via ${initialCarrier}`}>
           <div>
-            <p className="font-medium text-emerald-900 dark:text-emerald-100">
-              Verzonden via {initialCarrier}
-            </p>
-            <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80">
+            <p className="text-xs">
               Track &amp; Trace: <span className="font-mono">{initialTrackingNumber}</span>
             </p>
-            <p className="mt-1 text-xs text-emerald-800/70 dark:text-emerald-200/70">
+            <p className="mt-1 text-xs opacity-80">
               Ingevuld op{" "}
               {shippedAt &&
                 new Date(shippedAt).toLocaleDateString("nl-NL", {
@@ -136,27 +125,24 @@ export function TrackingForm({
                 })}
             </p>
           </div>
-        </div>
+        </Callout>
       )}
 
       {/* Form (canEdit) */}
       {canEdit && (
         <form onSubmit={handleSubmit} className="space-y-3">
           {hasTracking && (
-            <div className="flex items-start gap-2 rounded-lg bg-emerald-50 p-3 text-xs dark:bg-emerald-950/30">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <span className="text-emerald-900 dark:text-emerald-100">
-                Tracking is opgeslagen. Je kunt het hieronder nog aanpassen totdat het pakket bij ons binnenkomt.
-              </span>
-            </div>
+            <Callout tone="green" icon={CheckCircle2}>
+              Tracking is opgeslagen. Je kunt het hieronder nog aanpassen totdat het pakket bij ons binnenkomt.
+            </Callout>
           )}
           <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Vervoerder</label>
+              <label className="mb-1 block text-xs font-medium text-foreground/70">Vervoerder</label>
               <select
                 value={carrier}
                 onChange={(e) => setCarrier(e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className={SELECT}
               >
                 {CARRIERS.map((c) => (
                   <option key={c.value} value={c.value}>
@@ -166,13 +152,13 @@ export function TrackingForm({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Track &amp; Trace-code</label>
+              <label className="mb-1 block text-xs font-medium text-foreground/70">Track &amp; Trace-code</label>
               <input
                 type="text"
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
                 placeholder="bv. 3SDFC0123456789"
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono focus:border-primary focus:outline-none"
+                className={`${INPUT} font-mono`}
                 maxLength={100}
                 required
                 minLength={4}
@@ -182,7 +168,7 @@ export function TrackingForm({
           <button
             type="submit"
             disabled={isPending || !trackingNumber.trim()}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className={buttonVariants()}
           >
             <Truck className="h-4 w-4" />
             {isPending ? "Bezig met opslaan..." : hasTracking ? "Tracking bijwerken" : "Tracking opslaan"}

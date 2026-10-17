@@ -45,7 +45,7 @@ const nowMs = () => Date.now();
 const fmt = (d: Date | null | undefined, time = false) =>
   d
     ? d.toLocaleString("nl-NL", { day: "numeric", month: "short", year: "numeric", ...(time ? { hour: "2-digit", minute: "2-digit" } : {}) })
-    : "—";
+    : "-";
 const eur = (n: number) => `€${n.toFixed(2)}`;
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -62,7 +62,7 @@ function Thumbs({ urls, size = 56 }: { urls: string[]; size?: number }) {
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
       {urls.map((u, i) => (
-        <a key={`${u}-${i}`} href={u} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md border border-border hover:opacity-80" style={{ width: size, height: size }}>
+        <a key={`${u}-${i}`} href={u} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-[10px] border border-border hover:opacity-80" style={{ width: size, height: size }}>
           <img src={u} alt="" className="h-full w-full object-cover" loading="lazy" />
         </a>
       ))}
@@ -225,10 +225,10 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
     if (!u) return null;
     const flags = flagsFor(p);
     return (
-      <div className="rounded-md border border-border p-3">
+      <div className="rounded-[12px] bg-[var(--background)] p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{p.role === "buyer" ? "Koper" : "Verkoper"}</p>
+            <p className="text-xs font-semibold text-foreground/55">{p.role === "buyer" ? "Koper" : "Verkoper"}</p>
             <Link href={`/dashboard/admin/users/${u.id}`} className="text-sm font-semibold text-primary hover:underline">
               {u.displayName}
             </Link>
@@ -251,7 +251,7 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
         )}
         <div className="mt-2 divide-y divide-border/60">
           <Row label="Lid sinds">{fmt(u.createdAt)} · {u.accountType}</Row>
-          <Row label="Locatie">{[u.city, u.country].filter(Boolean).join(", ") || "—"}</Row>
+          <Row label="Locatie">{[u.city, u.country].filter(Boolean).join(", ") || "-"}</Row>
           <Row label="Laatste login">{fmt(u.lastLoginIpAt, true)}</Row>
           <Row label="Afgeronde verkopen / aankopen">{p.completedSales} / {p.completedPurchases}</Row>
           <Row label="Geschillen als koper">{p.disputesAsBuyer} ({p.disputesAsBuyerWon}× terugbetaling)</Row>
@@ -259,7 +259,7 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
           <Row label="Meldingen tegen">{p.reportsTotal} ({p.reportsOpen} open)</Row>
           {p.role === "seller" && (
             <>
-              <Row label="Reviews als verkoper">{p.reviewAgg._count._all > 0 ? `${(p.reviewAgg._avg.rating ?? 0).toFixed(1)} ★ (${p.reviewAgg._count._all})` : "—"}</Row>
+              <Row label="Reviews als verkoper">{p.reviewAgg._count._all > 0 ? `${(p.reviewAgg._avg.rating ?? 0).toFixed(1)} ★ (${p.reviewAgg._count._all})` : "-"}</Row>
               <Row label="Saldo / in bewaring / gereserveerd">{eur(u.balance)} / {eur(u.heldBalance)} / {eur(u.reservedBalance)}</Row>
             </>
           )}
@@ -268,12 +268,12 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
     );
   };
 
-  const shipService = b.shippingMethod ? [b.shippingMethod.carrier, b.shippingMethod.service ?? b.shippingMethod.serviceName].filter(Boolean).join(" · ") : "—";
+  const shipService = b.shippingMethod ? [b.shippingMethod.carrier, b.shippingMethod.service ?? b.shippingMethod.serviceName].filter(Boolean).join(" · ") : "-";
 
   return (
     <div className="space-y-4">
       {/* 1. Bestelling & levering */}
-      <DashboardSection title="Dossier — bestelling" icon={<Package className="size-4" />}>
+      <DashboardSection title="Dossier: bestelling" icon={<Package className="size-4" />}>
         <div className="divide-y divide-border/60">
           <Row label="Bron">
             {sourceHref ? (
@@ -300,7 +300,7 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
             )}
           </Row>
           <Row label="Verzendadres (snapshot)">
-            {b.buyerStreet ? `${b.buyerStreet} ${b.buyerHouseNumber ?? ""}, ${b.buyerPostalCode ?? ""} ${b.buyerCity ?? ""} ${b.buyerCountry ?? ""}` : "—"}
+            {b.buyerStreet ? `${b.buyerStreet} ${b.buyerHouseNumber ?? ""}, ${b.buyerPostalCode ?? ""} ${b.buyerCity ?? ""} ${b.buyerCountry ?? ""}` : "-"}
           </Row>
           <Row label="Items / verzending / totaal">{eur(b.totalItemCost)} / {eur(b.shippingCost)} / {eur(b.totalCost)}</Row>
           <Row label="Al terugbetaald">{eur(b.refundedAmount ?? 0)}</Row>
@@ -341,7 +341,7 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
           ))}
           {b.items.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-semibold text-foreground/55">
                 Claimsale-items ({b.items.length}){claimsaleIds.length > 0 && (
                   <>
                     {" · "}
@@ -368,7 +368,7 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
           )}
           {b.cardItems.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kaarten uit advertentie ({b.cardItems.length})</p>
+              <p className="text-xs font-semibold text-foreground/55">Kaarten uit advertentie ({b.cardItems.length})</p>
               <ul className="mt-1 divide-y divide-border/60 text-sm">
                 {b.cardItems.map((ci) => (
                   <li key={ci.id} className="flex items-center justify-between py-1.5">
@@ -396,26 +396,26 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
       {/* 4. Chat */}
       <DashboardSection title="Chat tussen koper en verkoper" icon={<MessageSquare className="size-4" />} contentClassName="p-0">
         {conversations.length === 0 || conversations.every((c) => c.messages.length === 0) ? (
-          <p className="p-4 text-sm text-muted-foreground">Geen berichten tussen deze twee gebruikers.</p>
+          <p className="px-5 pb-5 text-sm text-muted-foreground">Geen berichten tussen deze twee gebruikers.</p>
         ) : (
           <div className="max-h-[32rem] overflow-y-auto">
             {conversations.map((c) => (
               <div key={c.id} className="border-b border-border/60 last:border-b-0">
-                <p className="bg-muted/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="bg-[var(--background)] px-5 py-1.5 text-xs font-semibold text-foreground/55">
                   Gesprek {c.id.slice(0, 6)}{c.listingId ? " · advertentie" : c.auctionId ? " · veiling" : c.claimsaleId ? " · claimsale" : ""} · laatste {c.messages.length} berichten
                 </p>
-                <ul className="space-y-2 px-4 py-3">
+                <ul className="space-y-2 px-5 py-3">
                   {[...c.messages].reverse().map((m) => {
                     const mine = m.senderId === dispute.buyerId;
                     return (
                       <li key={m.id} className={`flex ${mine ? "justify-start" : "justify-end"}`}>
-                        <div className={`max-w-[85%] rounded-md px-3 py-2 text-sm ${mine ? "bg-amber-500/10 text-foreground" : "bg-sky-500/10 text-foreground"}`}>
+                        <div className={`max-w-[85%] rounded-[12px] px-3 py-2 text-sm ${mine ? "bg-[var(--pastel-yellow)]/40 text-foreground" : "bg-[var(--pastel-blue-light)] text-foreground"}`}>
                           <p className="text-[11px] font-semibold text-muted-foreground">
                             {m.sender.displayName} · {fmt(m.createdAt, true)}
                           </p>
                           {m.body && <p className="whitespace-pre-wrap">{m.body}</p>}
                           {m.imageUrl && (
-                            <a href={m.imageUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block w-24 overflow-hidden rounded border border-border">
+                            <a href={m.imageUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block w-24 overflow-hidden rounded-[10px] border border-border">
                               <img src={m.imageUrl} alt="" className="h-24 w-24 object-cover" loading="lazy" />
                             </a>
                           )}
@@ -434,13 +434,13 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
       <DashboardSection title="Gerelateerd op deze bestelling" icon={<Link2 className="size-4" />}>
         <div className="space-y-3 text-sm">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Trackingtickets ({b.shippingIssues.length})</p>
+            <p className="text-xs font-semibold text-foreground/55">Trackingtickets ({b.shippingIssues.length})</p>
             {b.shippingIssues.length === 0 ? (
               <p className="text-xs text-muted-foreground">Geen.</p>
             ) : (
               <ul className="mt-1 space-y-1.5">
                 {b.shippingIssues.map((s) => (
-                  <li key={s.id} className="rounded-md border border-border p-2">
+                  <li key={s.id} className="rounded-[12px] bg-[var(--background)] p-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium text-foreground">{s.type}</span>
                       <StatusBadge tone={s.status.startsWith("RESOLVED") ? "neutral" : s.status === "ESCALATED_TO_DISPUTE" ? "danger" : "warning"}>{s.status}</StatusBadge>
@@ -454,7 +454,7 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
             )}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Annuleringsverzoeken ({b.cancellationRequests.length})</p>
+            <p className="text-xs font-semibold text-foreground/55">Annuleringsverzoeken ({b.cancellationRequests.length})</p>
             {b.cancellationRequests.length === 0 ? (
               <p className="text-xs text-muted-foreground">Geen.</p>
             ) : (
@@ -469,7 +469,7 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
             )}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Geldstromen op deze bestelling ({transactions.length})</p>
+            <p className="text-xs font-semibold text-foreground/55">Geldstromen op deze bestelling ({transactions.length})</p>
             {transactions.length === 0 ? (
               <p className="text-xs text-muted-foreground">Geen transacties gevonden.</p>
             ) : (
@@ -481,7 +481,7 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
                       <p className="truncate text-muted-foreground">{t.description}</p>
                       <p className="text-muted-foreground">{fmt(t.createdAt, true)}</p>
                     </div>
-                    <span className={`shrink-0 tabular-nums font-medium ${t.amount < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+                    <span className={`shrink-0 tabular-nums font-medium ${t.amount < 0 ? "text-destructive" : "text-[var(--pastel-green-ink)]"}`}>
                       {t.amount < 0 ? "−" : "+"}{eur(Math.abs(t.amount))}
                     </span>
                   </li>
@@ -490,14 +490,14 @@ export async function AdminDisputeDossier({ disputeId }: { disputeId: string }) 
             )}
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reviews op deze bestelling ({reviews.length})</p>
+            <p className="text-xs font-semibold text-foreground/55">Reviews op deze bestelling ({reviews.length})</p>
             {reviews.length === 0 ? (
               <p className="text-xs text-muted-foreground">Geen.</p>
             ) : (
               <ul className="mt-1 space-y-1">
                 {reviews.map((r) => (
                   <li key={r.id} className="text-xs text-foreground">
-                    {r.rating} ★ door {names[r.reviewerId] ?? "?"} · {fmt(r.createdAt)}{r.comment ? ` — “${r.comment}”` : ""}
+                    {r.rating} ★ door {names[r.reviewerId] ?? "?"} · {fmt(r.createdAt)}{r.comment ? ` · “${r.comment}”` : ""}
                   </li>
                 ))}
               </ul>

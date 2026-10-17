@@ -6,6 +6,7 @@ import { adminReviewVerification } from "@/actions/verification";
 import { ShieldCheck } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { PILL_BTN, PILL_RED, PILL_INK, INPUT, LABEL } from "@/components/ploy/tile-styles";
 
 interface VerificationRequest {
   id: string;
@@ -79,7 +80,7 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
       case "ID_CARD": return t("idCard");
       case "PASSPORT": return t("passport");
       case "DRIVERS_LICENSE": return t("driversLicense");
-      default: return request.documentType ?? "—";
+      default: return request.documentType ?? "-";
     }
   };
 
@@ -96,7 +97,7 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
       {pending.map((request) => (
         <div
           key={request.id}
-          className="dash-card p-4"
+          className="dash-card p-5"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -122,7 +123,7 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
             </div>
             <button
               onClick={() => setExpandedId(expandedId === request.id ? null : request.id)}
-              className="shrink-0 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+              className={`${PILL_BTN} shrink-0`}
             >
               {expandedId === request.id ? t("collapse") : t("review")}
             </button>
@@ -137,7 +138,7 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
                   <img
                     src={request.frontImageUrl}
                     alt="Document front"
-                    className="max-h-64 rounded-md border border-border object-contain"
+                    className="max-h-64 rounded-[12px] border border-border object-contain"
                   />
                 </div>
                 {request.backImageUrl && (
@@ -146,7 +147,7 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
                     <img
                       src={request.backImageUrl}
                       alt="Document back"
-                      className="max-h-64 rounded-md border border-border object-contain"
+                      className="max-h-64 rounded-[12px] border border-border object-contain"
                     />
                   </div>
                 )}
@@ -157,26 +158,26 @@ export function AdminVerificationList({ requests }: AdminVerificationListProps) 
                 <button
                   onClick={() => handleDecision(request.id, "APPROVED")}
                   disabled={loading}
-                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                  className={`${PILL_INK} disabled:opacity-50`}
                 >
                   {t("approve")}
                 </button>
 
                 <div className="flex-1">
-                  <label className="text-xs text-muted-foreground">{t("rejectReasonLabel")}</label>
+                  <label className={LABEL}>{t("rejectReasonLabel")}</label>
                   <input
                     type="text"
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder={t("rejectReasonPlaceholder")}
-                    className="mt-1 block w-full rounded-md glass-input px-3 py-2 text-sm"
+                    className={INPUT}
                   />
                 </div>
 
                 <button
                   onClick={() => handleDecision(request.id, "REJECTED")}
                   disabled={loading}
-                  className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  className={`${PILL_RED} disabled:opacity-50`}
                 >
                   {t("reject")}
                 </button>

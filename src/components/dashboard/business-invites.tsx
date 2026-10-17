@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { respondToBusinessInvite, removeBusinessMember } from "@/actions/business-team";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 export type MembershipRow = {
   id: string;
@@ -54,7 +55,7 @@ export function BusinessInvites({ rows }: { rows: MembershipRow[] }) {
   }
 
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border">
+    <ul className="divide-y divide-border rounded-[12px] border border-[var(--border)] bg-white">
       {rows.map((r) => (
         <li key={r.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
           <UserAvatar src={r.avatarUrl} name={r.companyName} size="md" />
@@ -75,7 +76,7 @@ export function BusinessInvites({ rows }: { rows: MembershipRow[] }) {
                   type="button"
                   onClick={() => respond(r.id, true)}
                   disabled={pending}
-                  className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+                  className={buttonVariants({ size: "sm" })}
                 >
                   <Check className="size-3.5" />
                   {t("teamAccept")}
@@ -84,7 +85,7 @@ export function BusinessInvites({ rows }: { rows: MembershipRow[] }) {
                   type="button"
                   onClick={() => respond(r.id, false)}
                   disabled={pending}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
                 >
                   <X className="size-3.5" />
                   {t("teamDecline")}
@@ -95,7 +96,7 @@ export function BusinessInvites({ rows }: { rows: MembershipRow[] }) {
                 type="button"
                 onClick={() => leave(r.id)}
                 disabled={pending}
-                className="text-xs font-medium text-muted-foreground hover:text-red-600 disabled:opacity-50"
+                className="text-xs font-medium text-muted-foreground hover:text-[var(--destructive)] disabled:opacity-50"
               >
                 {t("teamLeave")}
               </button>

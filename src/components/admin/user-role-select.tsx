@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { setUserRole } from "@/actions/admin/hub";
 import { ROLE_LABELS, type Role } from "@/lib/roles";
+import { SELECT } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 /**
  * Rol van een gebruiker zetten (Community Hub, Fase 2): speler of staff.
@@ -41,7 +43,7 @@ export function UserRoleSelect({ userId, current, isAdminAccount }: { userId: st
         value={value}
         onChange={(e) => change(e.target.value as Role)}
         disabled={pending}
-        className="rounded-md border border-border bg-card px-2 py-1 text-sm"
+        className={cn(SELECT, "w-auto")}
       >
         <option value="PLAYER">{ROLE_LABELS.PLAYER}</option>
         <option value="STAFF">{ROLE_LABELS.STAFF}</option>

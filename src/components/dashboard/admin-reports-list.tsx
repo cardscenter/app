@@ -10,6 +10,8 @@ import { suspendUser, liftSuspension } from "@/actions/admin-suspension";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
+import { cn } from "@/lib/utils";
+import { PILL_BTN_SM, PILL_RED_SM, INPUT, TEXTAREA } from "@/components/ploy/tile-styles";
 
 const REPORT_STATUS_TONE: Record<string, StatusTone> = {
   OPEN: "warning",
@@ -64,7 +66,7 @@ function ReportedUserGroup({ group }: { group: Group }) {
     <DashboardSection
       title={group.reportedName}
       icon={<Flag className="h-4 w-4" />}
-      description={`${t("totalReports", { count: group.reports.length })} — ${t("openReports", { count: group.openCount })}`}
+      description={`${t("totalReports", { count: group.reports.length })} · ${t("openReports", { count: group.openCount })}`}
       action={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <StatusBadge tone="neutral">{group.reportedAccountType}</StatusBadge>
@@ -88,7 +90,7 @@ function ReportedUserGroup({ group }: { group: Group }) {
           />
         </div>
       }
-      contentClassName="space-y-3 p-4"
+      contentClassName="space-y-3"
     >
       {showSuspendForm && !group.reportedSuspended && (
         <SuspendUserForm
@@ -138,7 +140,7 @@ function SuspendUserActions({
       <button
         onClick={handleLift}
         disabled={pending}
-        className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+        className="cc-pill inline-flex items-center bg-[var(--pastel-yellow)] px-3 py-1.5 text-xs font-semibold text-[var(--pastel-yellow-ink)] transition-opacity hover:opacity-85 disabled:opacity-50"
       >
         {t("liftSuspension")}
       </button>
@@ -150,7 +152,7 @@ function SuspendUserActions({
       onClick={onToggleForm}
       disabled={pending}
       aria-expanded={formOpen}
-      className="rounded-md border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
+      className={`${PILL_RED_SM} disabled:opacity-50`}
     >
       {t("suspendUser")}
     </button>
@@ -197,7 +199,7 @@ function SuspendUserForm({
   return (
     <form
       onSubmit={handleSuspend}
-      className="space-y-2 rounded-md border border-red-300 bg-red-50/50 p-3 dark:border-red-800 dark:bg-red-950/30"
+      className="space-y-3 rounded-[14px] bg-[var(--pastel-pink)] p-4 text-[var(--pastel-pink-ink)]"
     >
       <div className="flex flex-wrap gap-2 text-xs">
         <label className="inline-flex items-center gap-1">
@@ -227,7 +229,7 @@ function SuspendUserForm({
             max={365}
             value={days}
             onChange={(e) => setDays(e.target.value)}
-            className="w-20 glass-input px-2 py-1 text-foreground"
+            className={cn(INPUT, "w-20")}
           />
         </div>
       )}
@@ -236,14 +238,14 @@ function SuspendUserForm({
         onChange={(e) => setReason(e.target.value)}
         rows={2}
         placeholder={t("suspendReasonPlaceholder")}
-        className="block w-full glass-input px-2 py-1.5 text-sm text-foreground"
+        className={TEXTAREA}
         required
       />
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={pending || reason.trim().length < 5}
-          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          className={`${PILL_RED_SM} disabled:opacity-50`}
         >
           {pending ? "..." : t("confirmSuspend")}
         </button>
@@ -251,7 +253,7 @@ function SuspendUserForm({
           type="button"
           onClick={onClose}
           disabled={pending}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          className={`${PILL_BTN_SM} disabled:opacity-50`}
         >
           {t("cancel")}
         </button>
@@ -284,7 +286,7 @@ function ReportRow({ report }: { report: Report }) {
   }
 
   return (
-    <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
+    <div className="rounded-[12px] bg-[var(--background)] p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -293,7 +295,7 @@ function ReportRow({ report }: { report: Report }) {
               {t(`status.${report.status}` as never)}
             </StatusBadge>
             <span className="text-xs text-muted-foreground">
-              {t("byReporter", { name: report.reporterName })} —{" "}
+              {t("byReporter", { name: report.reporterName })} ·{" "}
               {new Date(report.createdAt).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}
             </span>
           </div>
@@ -315,7 +317,7 @@ function ReportRow({ report }: { report: Report }) {
           {report.adminNote && (
             <p className="mt-1 text-xs text-muted-foreground italic">
               {t("adminNoteLabel")}: {report.adminNote}
-              {report.reviewerName && ` — ${report.reviewerName}`}
+              {report.reviewerName && ` · ${report.reviewerName}`}
             </p>
           )}
         </div>
@@ -329,28 +331,28 @@ function ReportRow({ report }: { report: Report }) {
               value={adminNote}
               onChange={(e) => setAdminNote(e.target.value)}
               placeholder={t("adminNotePlaceholder")}
-              className="block w-full glass-input px-3 py-2 text-sm text-foreground"
+              className={INPUT}
             />
           )}
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowNote((s) => !s)}
               disabled={pending}
-              className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              className={`${PILL_BTN_SM} disabled:opacity-50`}
             >
               {showNote ? t("hideNote") : t("addNote")}
             </button>
             <button
               onClick={() => handleAction("ACTION_TAKEN")}
               disabled={pending}
-              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+              className={`${PILL_RED_SM} disabled:opacity-50`}
             >
               {t("markActionTaken")}
             </button>
             <button
               onClick={() => handleAction("DISMISS")}
               disabled={pending}
-              className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              className={`${PILL_BTN_SM} disabled:opacity-50`}
             >
               {t("dismissReport")}
             </button>

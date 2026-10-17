@@ -5,12 +5,12 @@ import { toast } from "sonner";
 import { Search, Stamp, Coins, MinusCircle, PlusCircle } from "lucide-react";
 import { findPlayers, getPlayerLoyalty, giveStamp, givePoints, redeemPlayerPoints } from "@/actions/staff/community";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { StampCard } from "@/components/community/stamp-card";
+import { StampCardVisual } from "@/components/community/stamp-card-visual";
+import { INPUT, LABEL, PILL_BTN, PILL_INK, PILL_RED } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 type Hit = { id: string; displayName: string; fullName: string; avatarUrl: string | null; stamps: number; points: number };
 type Detail = NonNullable<Awaited<ReturnType<typeof getPlayerLoyalty>>>;
-
-const BTN = "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold disabled:opacity-50";
 
 /** Kassa-scherm: speler zoeken, stempel geven, punten bijschrijven of inwisselen. */
 export function LoyaltyDesk() {
@@ -48,15 +48,15 @@ export function LoyaltyDesk() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-      <div className="dash-card p-4">
-        <label className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2">
-          <Search className="size-4 text-muted-foreground" />
-          <input value={q} onChange={(e) => search(e.target.value)} placeholder="Zoek speler op naam of e-mail" className="w-full bg-transparent text-sm outline-none" autoFocus />
-        </label>
-        <ul className="mt-2 divide-y divide-border">
+      <div className="dash-card p-5">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input value={q} onChange={(e) => search(e.target.value)} placeholder="Zoek speler op naam of e-mail" className={cn(INPUT, "py-2.5 pl-9")} autoFocus />
+        </div>
+        <ul className="mt-2 space-y-0.5">
           {hits.map((h) => (
             <li key={h.id}>
-              <button type="button" onClick={() => load(h.id)} className="flex w-full items-center gap-3 px-2 py-2 text-left hover:bg-muted">
+              <button type="button" onClick={() => load(h.id)} className="flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-[var(--background)]">
                 <UserAvatar src={h.avatarUrl} name={h.displayName} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{h.displayName}</p>
@@ -72,7 +72,7 @@ export function LoyaltyDesk() {
         </ul>
       </div>
 
-      <div className="dash-card p-4">
+      <div className="dash-card p-5">
         {!detail ? (
           <p className="py-10 text-center text-sm text-muted-foreground">Zoek links een speler om stempels of punten te geven.</p>
         ) : (
@@ -84,34 +84,39 @@ export function LoyaltyDesk() {
                 <p className="text-sm text-muted-foreground">{[detail.user.firstName, detail.user.lastName].filter(Boolean).join(" ")}</p>
               </div>
               <div className="ml-auto text-right">
-                <p className="text-2xl font-bold tabular-nums">{detail.points.balance}</p>
+                <p className="cc-display text-3xl tabular-nums">{detail.points.balance}</p>
                 <p className="text-xs text-muted-foreground">spaarpunten</p>
               </div>
             </div>
-            <StampCard onCard={detail.stamps.onCard} perCard={detail.stamps.perCard} label={`${detail.stamps.onCard} van ${detail.stamps.perCard} stempels · ${detail.stamps.completedCards} volle kaart(en)`} />
+            <div className="rounded-[20px] bg-[var(--pastel-yellow)] p-4 text-[var(--pastel-yellow-ink)]">
+              <StampCardVisual total={detail.stamps.perCard} filled={detail.stamps.onCard} accent="var(--pastel-yellow)" />
+              <p className="mt-3 text-center text-sm font-semibold">
+                {detail.stamps.onCard} van {detail.stamps.perCard} stempels · {detail.stamps.completedCards} volle kaart(en)
+              </p>
+            </div>
             <p className="text-sm text-muted-foreground">Beloning volle kaart: {detail.stamps.reward}</p>
 
             <div className="space-y-3 border-t border-border pt-4">
-              <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={120} placeholder="Reden (optioneel), bv. gratis drankje, Pokémon-avond" className="glass-input w-full rounded-md px-3 py-2 text-sm" />
+              <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={120} placeholder="Reden (optioneel), bv. gratis drankje, Pokémon-avond" className={cn(INPUT, "py-2.5")} aria-label="Reden" />
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" disabled={pending} onClick={() => run(() => giveStamp(detail.user.id, reason), "Stempel gegeven")} className={`${BTN} bg-amber-500 text-white hover:bg-amber-600`}>
+                <button type="button" disabled={pending} onClick={() => run(() => giveStamp(detail.user.id, reason), "Stempel gegeven")} className={cn(PILL_RED, "disabled:opacity-50")}>
                   <Stamp className="size-4" /> Stempel geven
                 </button>
-                <label className="inline-flex items-center gap-1 text-sm">
-                  <input type="number" min={1} max={1000} value={points} onChange={(e) => setPoints(Number(e.target.value))} className="glass-input w-20 rounded-md px-2 py-1.5 text-sm" />
+                <label className="inline-flex items-center gap-1.5 text-sm">
+                  <input type="number" min={1} max={1000} value={points} onChange={(e) => setPoints(Number(e.target.value))} className={cn(INPUT, "w-20 py-2")} />
                   punten
                 </label>
-                <button type="button" disabled={pending} onClick={() => run(() => givePoints(detail.user.id, points, reason), `${points} punten bijgeschreven`)} className={`${BTN} bg-emerald-600 text-white hover:bg-emerald-700`}>
+                <button type="button" disabled={pending} onClick={() => run(() => givePoints(detail.user.id, points, reason), `${points} punten bijgeschreven`)} className={cn(PILL_INK, "disabled:opacity-50")}>
                   <PlusCircle className="size-4" /> Bijschrijven
                 </button>
-                <button type="button" disabled={pending || detail.points.balance < points} onClick={() => run(() => redeemPlayerPoints(detail.user.id, points, reason), `${points} punten ingewisseld`)} className={`${BTN} border border-border bg-card hover:bg-muted`}>
+                <button type="button" disabled={pending || detail.points.balance < points} onClick={() => run(() => redeemPlayerPoints(detail.user.id, points, reason), `${points} punten ingewisseld`)} className={cn(PILL_BTN, "disabled:opacity-50")}>
                   <MinusCircle className="size-4" /> Inwisselen
                 </button>
               </div>
             </div>
 
             <div className="border-t border-border pt-4">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className={cn(LABEL, "flex items-center gap-1.5")}>
                 <Coins className="size-3.5" /> Laatste mutaties
               </p>
               <ul className="divide-y divide-border text-sm">
@@ -119,7 +124,7 @@ export function LoyaltyDesk() {
                 {detail.recent.map((e) => (
                   <li key={e.id} className="flex items-center justify-between py-1.5">
                     <span className="truncate">{e.reason}</span>
-                    <span className={`ml-3 shrink-0 tabular-nums ${e.delta < 0 ? "text-rose-600" : "text-emerald-700"}`}>
+                    <span className={`ml-3 shrink-0 font-semibold tabular-nums ${e.delta < 0 ? "text-destructive" : "text-[var(--pastel-green-ink)]"}`}>
                       {e.delta > 0 ? "+" : ""}
                       {e.delta} {e.kind === "STAMP" ? "st" : "pt"}
                     </span>

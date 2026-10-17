@@ -7,6 +7,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { unblockUser } from "@/actions/block-report";
 
+import { PILL_BTN_SM } from "@/components/ploy/tile-styles";
 interface Row {
   id: string;
   blockedId: string;
@@ -45,7 +46,7 @@ export function BlockedListContent({ rows }: { rows: Row[] }) {
       {rows.map((r) => (
         <li
           key={r.id}
-          className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white/40 p-3 dark:bg-white/5"
+          className="flex items-center justify-between gap-3 dash-card p-4"
         >
           <div className="flex items-center gap-3">
             <div className="relative size-10 overflow-hidden rounded-[22%] bg-muted">
@@ -68,7 +69,7 @@ export function BlockedListContent({ rows }: { rows: Row[] }) {
           <button
             onClick={() => handleUnblock(r.blockedId)}
             disabled={pending && removing === r.blockedId}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+            className={`${PILL_BTN_SM} disabled:opacity-50`}
           >
             {removing === r.blockedId ? "..." : t("unblockButton")}
           </button>

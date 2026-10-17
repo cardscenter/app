@@ -9,6 +9,7 @@ import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { ResultSheet } from "@/components/staff/result-sheet";
+import { PILL_BTN } from "@/components/ploy/tile-styles";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function StaffLeaguePage({ params, searchParams }: { params
         title="Uitslagen invoeren"
         subtitle={season ? `Seizoen ${season.name}: winst ${season.pointsWin}, gelijk ${season.pointsDraw}, verlies ${season.pointsLoss}, meedoen ${season.pointsParticipation} punten.` : "Er is geen actief seizoen. Een admin maakt er een aan onder Community > League."}
         action={
-          <Link href="/league" className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background">
+          <Link href="/league" className={PILL_BTN}>
             <Trophy className="size-4" /> Ranglijst
           </Link>
         }
@@ -51,18 +52,18 @@ export default async function StaffLeaguePage({ params, searchParams }: { params
         <>
           <div className="flex flex-wrap gap-2">
             {events.map((e) => (
-              <Link key={e.id} href={`/dashboard/staff/league?event=${e.id}`} className={`rounded-full border px-3 py-1.5 text-sm ${e.id === selectedId ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:bg-muted"}`}>
+              <Link key={e.id} href={`/dashboard/staff/league?event=${e.id}`} className={`cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold transition-colors ${e.id === selectedId ? "bg-foreground text-white" : "bg-white text-foreground/70 hover:text-foreground"}`}>
                 {formatEventDateShort(e.startsAt, locale)} {formatEventTime(e.startsAt)} · {e.title}
               </Link>
             ))}
-            <Link href="/dashboard/staff/league?event=los" className={`rounded-full border px-3 py-1.5 text-sm ${selectedId === null && eventParam === "los" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:bg-muted"}`}>
+            <Link href="/dashboard/staff/league?event=los" className={`cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold transition-colors ${selectedId === null && eventParam === "los" ? "bg-foreground text-white" : "bg-white text-foreground/70 hover:text-foreground"}`}>
               Los resultaat (zonder event)
             </Link>
           </div>
           {events.length === 0 && eventParam !== "los" && (
-            <p className="text-sm text-muted-foreground">Geen league-events in de afgelopen 45 dagen. Zet bij een event "Telt mee voor de league" aan, of voer een los resultaat in.</p>
+            <p className="text-sm text-muted-foreground">Geen league-events in de afgelopen 45 dagen. Zet bij een event &ldquo;Telt mee voor de league&rdquo; aan, of voer een los resultaat in.</p>
           )}
-          <DashboardSection title={selected ? selected.title : "Los resultaat"} description={selected ? `${formatEventDateShort(selected.startsAt, locale)} ${formatEventTime(selected.startsAt)}. Deelnemers met ticket staan er al; anderen voeg je toe.` : "Resultaten zonder event, bv. een inhaalpartij. Eén per speler per seizoen."} contentClassName="p-0">
+          <DashboardSection title={selected ? selected.title : "Los resultaat"} description={selected ? `${formatEventDateShort(selected.startsAt, locale)} ${formatEventTime(selected.startsAt)}. Deelnemers met ticket staan er al; anderen voeg je toe.` : "Resultaten zonder event, bv. een inhaalpartij. Eén per speler per seizoen."} contentClassName="px-0 pb-0 pt-4 sm:px-0 sm:pb-0">
             <ResultSheet rows={rows} seasonId={season.id} eventId={selectedId} />
           </DashboardSection>
         </>

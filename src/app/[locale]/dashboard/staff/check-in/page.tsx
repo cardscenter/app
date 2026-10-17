@@ -8,6 +8,7 @@ import { DashboardSection } from "@/components/dashboard/ui/section";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { CheckInScanner } from "@/components/staff/check-in-scanner";
 import { CheckInList } from "@/components/staff/check-in-list";
+import { PILL_BTN } from "@/components/ploy/tile-styles";
 import { parseAgeDivisions, divisionLabel } from "@/lib/shop-events/config";
 import { formatEventDateShort, formatEventTime } from "@/lib/shop-events/format";
 
@@ -73,7 +74,7 @@ export default async function CheckInPage({ params, searchParams }: { params: Pr
         subtitle="Scan de QR op het ticket of typ de code. Buiten het venster van 3 uur voor tot 3 uur na het event vraagt de scanner om bevestiging."
         action={
           selected ? (
-            <a href={`/api/staff/events/${selected.id}/export`} className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
+            <a href={`/api/staff/events/${selected.id}/export`} className={PILL_BTN}>
               <Download className="size-4" /> CSV
             </a>
           ) : undefined
@@ -89,7 +90,7 @@ export default async function CheckInPage({ params, searchParams }: { params: Pr
               <Link
                 key={e.id}
                 href={{ pathname: "/dashboard/staff/check-in", query: { event: e.id } }}
-                className={`rounded-full border px-3 py-1.5 text-sm font-medium ${e.id === selectedId ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:bg-muted"}`}
+                className={`cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold transition-colors ${e.id === selectedId ? "bg-foreground text-white" : "bg-white text-foreground/70 hover:text-foreground"}`}
               >
                 {formatEventDateShort(e.startsAt)} {formatEventTime(e.startsAt)} · {e.title}
               </Link>
@@ -101,7 +102,7 @@ export default async function CheckInPage({ params, searchParams }: { params: Pr
               <DashboardSection title="Scanner" icon={<ScanLine className="size-5" />} description={`${checkedIn} van ${expected} ingecheckt`}>
                 <CheckInScanner eventId={selected.id} eventTitle={selected.title} />
               </DashboardSection>
-              <DashboardSection title={`Deelnemers · ${selected.title}`} contentClassName="p-0">
+              <DashboardSection title={`Deelnemers · ${selected.title}`} contentClassName="px-0 pb-2 pt-4 sm:px-0 sm:pb-2">
                 <CheckInList rows={rows} />
               </DashboardSection>
             </div>

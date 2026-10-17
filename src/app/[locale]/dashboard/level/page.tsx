@@ -20,6 +20,18 @@ import { LevelTrack } from "@/components/dashboard/level/level-track";
 import { ReputationTabs } from "@/components/dashboard/cluster-tabs";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { TONE_ICON, type DashTone } from "@/components/dashboard/ui/tones";
+import { H2 } from "@/components/ploy/tile-styles";
+
+/** Pastel-toon per XP-bron, zodat de kaarten niet allemaal dezelfde kleur hebben. */
+const SOURCE_TONE: Record<string, DashTone> = {
+  accountAge: "blue",
+  sales: "green",
+  purchases: "pink",
+  positiveReviews: "yellow",
+  reviewsGiven: "blue",
+  transactions: "green",
+};
 
 /**
  * Level & XP-pagina (volledig vernieuwd in Fase 44): gradient-hero in
@@ -128,7 +140,7 @@ export default async function DashboardLevelPage({
       <ReputationTabs />
 
       {/* Gradient-hero in level-kleur */}
-      <div className="relative overflow-hidden rounded-2xl border border-border shadow-card">
+      <div className="dash-card relative overflow-hidden rounded-[20px]">
         <div className={`relative bg-gradient-to-br ${currentLevel.gradient} px-6 py-8 text-white`}>
           <span
             className="pointer-events-none absolute -right-6 -top-10 select-none text-[9rem] opacity-15"
@@ -137,20 +149,20 @@ export default async function DashboardLevelPage({
             {currentLevel.icon}
           </span>
           <div className="relative flex flex-wrap items-center gap-5">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-4xl backdrop-blur-sm">
+            <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-white/15 text-4xl">
               {currentLevel.icon}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm text-white/80">{t("currentLevel")}</p>
-              <h2 className="text-3xl font-bold">{currentLevel.name}</h2>
+              <h2 className="cc-display mt-1 text-[40px] leading-none">{currentLevel.name}</h2>
             </div>
-            <p className="font-mono text-2xl font-bold tabular-nums">
+            <p className="cc-display text-3xl tabular-nums">
               {stats.xp.toLocaleString("nl-NL")} XP
             </p>
           </div>
         </div>
 
-        <div className="bg-card p-6">
+        <div className="bg-white p-6">
           {nextLevel ? (
             <>
               <div className="mb-2 flex items-center justify-between text-sm">
@@ -167,7 +179,7 @@ export default async function DashboardLevelPage({
                   </span>
                 </span>
               </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-3 w-full overflow-hidden rounded-full bg-[var(--background)]">
                 <div
                   className={`h-full rounded-full bg-gradient-to-r ${nextLevel.gradient} transition-all duration-500`}
                   style={{ width: `${progress}%` }}
@@ -190,32 +202,32 @@ export default async function DashboardLevelPage({
 
       {/* XP-bronnen als kaarten */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-foreground">{t("xpSourcesTitle")}</h2>
+        <h2 className={`mb-4 ${H2}`}>{t("xpSourcesTitle")}</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {xpSources.map((source) => {
             const Icon = source.icon;
             return (
               <div
                 key={source.key}
-                className="flex flex-col dash-card p-5 shadow-card"
+                className="flex flex-col dash-card p-5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="h-4.5 w-4.5" />
+                  <div className={`flex size-10 shrink-0 items-center justify-center rounded-full ${TONE_ICON[SOURCE_TONE[source.key] ?? "yellow"]}`}>
+                    <Icon className="size-[18px]" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">{source.label}</p>
                     <p className="text-xs text-muted-foreground">{source.rate}</p>
                   </div>
                 </div>
-                <p className="mt-3 font-mono text-2xl font-bold tabular-nums text-foreground">
+                <p className="cc-display mt-4 text-3xl tabular-nums text-foreground">
                   {source.value.toLocaleString("nl-NL")} XP
                 </p>
                 <p className="mt-2 flex-1 text-xs text-muted-foreground">{source.tip}</p>
                 {source.ctaHref && source.ctaLabel && (
                   <Link
                     href={source.ctaHref}
-                    className="mt-2 text-xs font-medium text-primary hover:underline"
+                    className="mt-3 text-xs font-semibold text-primary hover:underline"
                   >
                     {source.ctaLabel} →
                   </Link>
@@ -225,17 +237,17 @@ export default async function DashboardLevelPage({
           })}
 
           {stats.xpBreakdown.bonus > 0 && (
-            <div className="flex flex-col rounded-2xl border border-amber-500/25 bg-card p-5 shadow-card">
+            <div className="flex flex-col rounded-[20px] bg-[var(--pastel-yellow)] p-5 text-[var(--pastel-yellow-ink)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
-                  <Sparkles className="h-4.5 w-4.5" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/70">
+                  <Sparkles className="size-[18px]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{t("bonusXpTitle")}</p>
-                  <p className="text-xs text-muted-foreground">{t("bonusXpVia")}</p>
+                  <p className="text-sm font-semibold">{t("bonusXpTitle")}</p>
+                  <p className="text-xs opacity-75">{t("bonusXpVia")}</p>
                 </div>
               </div>
-              <p className="mt-3 font-mono text-2xl font-bold tabular-nums text-foreground">
+              <p className="cc-display mt-4 text-3xl tabular-nums">
                 {stats.xpBreakdown.bonus.toLocaleString("nl-NL")} XP
               </p>
             </div>
@@ -243,9 +255,9 @@ export default async function DashboardLevelPage({
         </div>
 
         {/* Totaalstrip */}
-        <div className="mt-4 flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <span className="text-sm font-semibold text-foreground">{t("xpTotal")}</span>
-          <span className="font-mono text-lg font-bold tabular-nums text-primary">
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-[20px] bg-[var(--cc-dark)] px-5 py-4 text-white">
+          <span className="text-sm font-semibold">{t("xpTotal")}</span>
+          <span className="cc-display text-2xl tabular-nums">
             {stats.xp.toLocaleString("nl-NL")} XP
           </span>
         </div>
@@ -258,10 +270,10 @@ export default async function DashboardLevelPage({
           description={t("xpToNextLevel", { xp: nextLevel.minXP - stats.xp, level: nextLevel.name })}
         >
           <div
-            className={`flex h-20 items-center gap-3 rounded-xl bg-gradient-to-br ${nextLevel.gradient} px-5 text-white`}
+            className={`flex h-20 items-center gap-3 rounded-[14px] bg-gradient-to-br ${nextLevel.gradient} px-5 text-white`}
           >
             <span className="text-3xl">{nextLevel.icon}</span>
-            <span className="text-lg font-bold">{nextLevel.name}</span>
+            <span className="cc-display text-2xl">{nextLevel.name}</span>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
             {t("nextLevelUnlocks", { name: nextLevel.name })}
@@ -286,9 +298,9 @@ export default async function DashboardLevelPage({
                   <p className="text-sm font-medium text-foreground">{a.name}</p>
                   <StatusBadge tone="primary">+{a.nextTier?.rewardXP} XP</StatusBadge>
                 </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--background)]">
                   <div
-                    className="h-full rounded-full bg-primary transition-all duration-500"
+                    className="cc-grad h-full rounded-full transition-all duration-500"
                     style={{ width: `${a.nextTierProgressPercent}%` }}
                   />
                 </div>

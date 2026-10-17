@@ -9,6 +9,7 @@ import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { SeasonCard, BadgeCard } from "@/components/admin/league-admin";
 import { StandingsTable } from "@/components/community/standings-table";
+import { PILL_RED } from "@/components/ploy/tile-styles";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function AdminLeaguePage() {
         title="League"
         subtitle="Seizoenen met hun puntenregels en de badges die spelers kunnen verdienen. Uitslagen voert staff in via Uitslagen invoeren."
         action={
-          <Link href="/dashboard/staff/league" className="inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground">
+          <Link href="/dashboard/staff/league" className={PILL_RED}>
             <Trophy className="size-4" /> Uitslagen invoeren
           </Link>
         }
@@ -67,8 +68,8 @@ export default async function AdminLeaguePage() {
       </DashboardSection>
 
       {active && (
-        <DashboardSection title={`Ranglijst ${active.name}`} description="Volledige lijst, inclusief spelers die zich publiek verborgen hebben." contentClassName="p-0">
-          {standings.length === 0 ? <p className="px-4 py-6 text-sm text-muted-foreground">Nog geen uitslagen.</p> : <StandingsTable rows={standings} compact />}
+        <DashboardSection title={`Ranglijst ${active.name}`} description="Volledige lijst, inclusief spelers die zich publiek verborgen hebben." contentClassName="px-0 pb-0 pt-4 sm:px-0 sm:pb-0">
+          {standings.length === 0 ? <p className="px-5 pb-6 text-sm text-muted-foreground sm:px-6">Nog geen uitslagen.</p> : <StandingsTable rows={standings} compact />}
         </DashboardSection>
       )}
 

@@ -9,12 +9,13 @@ import { formatEventDateShort } from "@/lib/shop-events/format";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatCard } from "@/components/dashboard/ui/stat-card";
-import { StampCard } from "@/components/community/stamp-card";
+import { StampCardVisual } from "@/components/community/stamp-card-visual";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { PILL_BTN, TABLE_HEAD, TABLE_CELL } from "@/components/ploy/tile-styles";
 import { LeagueBadgePill } from "@/components/community/league-badge-pill";
 
 export const dynamic = "force-dynamic";
-
-const BTN_OUTLINE = "inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted";
 
 /** Speler: eigen league-positie, stempelkaart, spaarpunten, badges en historie. */
 export default async function MyLeaguePage({ params }: { params: Promise<{ locale: string }> }) {
@@ -31,7 +32,7 @@ export default async function MyLeaguePage({ params }: { params: Promise<{ local
         title={t("myLeague")}
         subtitle={t("myLeagueSubtitle")}
         action={
-          <Link href="/league" className={BTN_OUTLINE}>
+          <Link href="/league" className={PILL_BTN}>
             <Trophy className="size-4" /> {t("viewLeague")}
           </Link>
         }
@@ -40,27 +41,33 @@ export default async function MyLeaguePage({ params }: { params: Promise<{ local
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label={league.season ? t("seasonPosition", { name: league.season.name }) : t("noSeasonTitle")}
-          value={league.rank ? `#${league.rank}` : "–"}
+          value={league.rank ? `#${league.rank}` : "-"}
           icon={Trophy}
-          iconClassName="bg-amber-500/10 text-amber-600"
+          tone="blue"
           hint={league.season ? `${league.points} ${t("points").toLowerCase()} · ${league.wins}-${league.losses}-${league.draws}` : undefined}
         />
-        <StatCard label={t("pointsBalance")} value={String(loyalty.points.balance)} icon={Coins} iconClassName="bg-emerald-500/10 text-emerald-600" hint={t("pointsHint")} />
-        <StatCard label={t("stampCardTitle")} value={t("stampsOnCard", { n: loyalty.stamps.onCard, per: loyalty.stamps.perCard })} icon={Stamp} iconClassName="bg-amber-500/10 text-amber-600" hint={t("cardsCompleted", { count: loyalty.stamps.completedCards })} />
+        <StatCard label={t("pointsBalance")} value={String(loyalty.points.balance)} icon={Coins} tone="green" hint={t("pointsHint")} />
+        <StatCard label={t("stampCardTitle")} value={t("stampsOnCard", { n: loyalty.stamps.onCard, per: loyalty.stamps.perCard })} icon={Stamp} tone="yellow" hint={t("cardsCompleted", { count: loyalty.stamps.completedCards })} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <DashboardSection title={t("stampCardTitle")} icon={<Stamp className="size-5" />}>
-          <StampCard onCard={loyalty.stamps.onCard} perCard={loyalty.stamps.perCard} label={t("stampsOnCard", { n: loyalty.stamps.onCard, per: loyalty.stamps.perCard })} />
-          <p className="mt-3 text-sm text-muted-foreground">{t("stampsHint")}</p>
-          <p className="mt-2 text-sm">
+        <DashboardSection
+          title={t("stampCardTitle")}
+          icon={<Stamp className="size-5" />}
+          tone="yellow"
+          action={<span className="cc-display text-2xl tabular-nums">{loyalty.stamps.onCard}/{loyalty.stamps.perCard}</span>}
+        >
+          <StampCardVisual total={loyalty.stamps.perCard} filled={loyalty.stamps.onCard} className="max-w-sm" />
+          <p className="mt-4 text-sm font-semibold">{t("stampsOnCard", { n: loyalty.stamps.onCard, per: loyalty.stamps.perCard })}</p>
+          <p className="mt-1 text-sm opacity-80">{t("stampsHint")}</p>
+          <p className="mt-3 text-sm">
             <span className="font-semibold">{t("reward")}:</span> {loyalty.stamps.reward}
           </p>
         </DashboardSection>
 
         <DashboardSection title={t("myBadges")} icon={<Award className="size-5" />}>
           {league.badges.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("noBadges")}</p>
+            <EmptyState icon={Award} title={t("noBadges")} tone="blue" compact />
           ) : (
             <ul className="space-y-3">
               {league.badges.map((b) => (
@@ -79,31 +86,31 @@ export default async function MyLeaguePage({ params }: { params: Promise<{ local
           )}
         </DashboardSection>
 
-        <DashboardSection title={t("recentResults")} icon={<Trophy className="size-5" />} contentClassName="p-0">
+        <DashboardSection title={t("recentResults")} icon={<Trophy className="size-5" />} contentClassName="px-0 pb-3 pt-4 sm:px-0 sm:pb-3">
           {league.recentResults.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">{league.season ? t("noPositionYet") : t("noResults")}</p>
+            <p className="px-5 pb-2 text-sm text-muted-foreground sm:px-6">{league.season ? t("noPositionYet") : t("noResults")}</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+              <thead className={`${TABLE_HEAD} bg-[var(--background)]`}>
                 <tr>
-                  <th className="px-4 py-2 text-left">Event</th>
-                  <th className="px-4 py-2 text-right">{t("record")}</th>
-                  <th className="px-4 py-2 text-right">{t("points")}</th>
+                  <th className={TABLE_CELL}>Event</th>
+                  <th className={`${TABLE_CELL} text-right`}>{t("record")}</th>
+                  <th className={`${TABLE_CELL} text-right`}>{t("points")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {league.recentResults.map((r) => (
                   <tr key={r.id}>
-                    <td className="px-4 py-2">
+                    <td className={TABLE_CELL}>
                       <p className="font-medium">{r.eventTitle ?? r.seasonName}</p>
                       <p className="text-xs text-muted-foreground">
                         {formatEventDateShort(new Date(r.date), locale)} · {r.seasonName}
                       </p>
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    <td className={`${TABLE_CELL} text-right tabular-nums`}>
                       {r.wins}-{r.losses}-{r.draws}
                     </td>
-                    <td className="px-4 py-2 text-right font-semibold tabular-nums">+{r.points}</td>
+                    <td className={`${TABLE_CELL} text-right font-semibold tabular-nums`}>+{r.points}</td>
                   </tr>
                 ))}
               </tbody>
@@ -111,21 +118,21 @@ export default async function MyLeaguePage({ params }: { params: Promise<{ local
           )}
         </DashboardSection>
 
-        <DashboardSection title={t("history")} icon={<History className="size-5" />} contentClassName="p-0">
+        <DashboardSection title={t("history")} icon={<History className="size-5" />} contentClassName="px-0 pb-3 pt-4 sm:px-0 sm:pb-3">
           {loyalty.recent.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">{t("noHistory")}</p>
+            <p className="px-5 pb-2 text-sm text-muted-foreground sm:px-6">{t("noHistory")}</p>
           ) : (
             <ul className="divide-y divide-border">
               {loyalty.recent.map((e) => (
-                <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                <li key={e.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm sm:px-6">
                   <div className="min-w-0">
                     <p className="truncate">{e.reason}</p>
                     <p className="text-xs text-muted-foreground">{formatEventDateShort(new Date(e.createdAt), locale)}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${e.delta < 0 ? "bg-rose-500/10 text-rose-600" : e.kind === "STAMP" ? "bg-amber-500/10 text-amber-700" : "bg-emerald-500/10 text-emerald-700"}`}>
+                  <StatusBadge tone={e.delta < 0 ? "danger" : e.kind === "STAMP" ? "warning" : "success"}>
                     {e.delta > 0 ? "+" : ""}
                     {e.delta} {e.kind === "STAMP" ? (Math.abs(e.delta) === 1 ? "stempel" : "stempels") : "pt"}
-                  </span>
+                  </StatusBadge>
                 </li>
               ))}
             </ul>

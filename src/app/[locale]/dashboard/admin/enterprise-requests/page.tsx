@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { Callout } from "@/components/dashboard/ui/callout";
 
 const STATUS_FILTERS = ["PENDING", "APPROVED", "REJECTED"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -51,15 +52,15 @@ export default async function AdminEnterpriseRequestsPage({
         title="Enterprise-aanvragen"
         subtitle="Handmatige goedkeuring voor Enterprise-tier (€749/m default, custom prijs mogelijk)."
         action={
-          <nav className="inline-flex flex-wrap gap-1 dash-card p-1">
+          <nav className="flex flex-wrap gap-2">
             {STATUS_FILTERS.map((s) => (
               <Link
                 key={s}
                 href={`/dashboard/admin/enterprise-requests?status=${s}`}
                 className={
                   filter === s
-                    ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-                    : "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-foreground text-white"
+                    : "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-white text-foreground/70 transition-colors hover:text-foreground"
                 }
               >
                 {STATUS_LABEL[s]}{" "}
@@ -90,7 +91,7 @@ export default async function AdminEnterpriseRequestsPage({
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Door <Link href={`/dashboard/admin/users/${r.user.id}`} className="text-primary hover:underline">{r.user.displayName}</Link>
-                    {" "}<span className="text-xs">({r.user.email})</span> — huidige tier:{" "}
+                    {" "}<span className="text-xs">({r.user.email})</span> · huidige tier:{" "}
                     <span className="font-medium text-foreground">{r.user.accountType}</span>
                   </p>
 
@@ -103,22 +104,22 @@ export default async function AdminEnterpriseRequestsPage({
                     </span>
                   </div>
 
-                  <div className="mt-3 rounded-md border border-border bg-muted/30 p-3 text-sm text-foreground">
+                  <div className="mt-3 rounded-[12px] bg-[var(--background)] p-3 text-sm text-foreground">
                     {r.motivation}
                   </div>
 
                   {r.status === "REJECTED" && r.rejectionReason && (
-                    <div className="mt-3 rounded-md border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
+                    <Callout tone="pink" className="mt-3">
                       <strong>Afgewezen:</strong> {r.rejectionReason}
                       {r.reviewedBy && <span className="ml-1 text-xs">door {r.reviewedBy.displayName}</span>}
-                    </div>
+                    </Callout>
                   )}
 
                   {r.status === "APPROVED" && (
-                    <div className="mt-3 rounded-md border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+                    <Callout tone="green" className="mt-3">
                       <strong>Goedgekeurd</strong> op €{r.approvedMonthlyPrice?.toLocaleString("nl-NL") ?? "?"}/m
                       {r.reviewedBy && <span className="ml-1 text-xs">door {r.reviewedBy.displayName}</span>}
-                    </div>
+                    </Callout>
                   )}
                 </div>
               </div>

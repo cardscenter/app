@@ -6,6 +6,9 @@ import { Link } from "@/i18n/navigation";
 import { BuybackStatusBadge } from "./buyback-status-badge";
 import { Calculator, Package, ChevronRight, Search } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { INPUT, PILL_BTN_SM, SELECT, TABLE_HEAD } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 type RequestWithUser = BuybackRequest & {
   user: { displayName: string; email: string };
@@ -41,20 +44,20 @@ export function AdminBuybackList({ requests }: AdminBuybackListProps) {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative min-w-[14rem] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Zoek op gebruiker of ID..."
-            className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-3 text-sm"
+            className={cn(INPUT, "py-2.5 pl-9")}
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+          className={cn(SELECT, "w-auto py-2.5")}
         >
           {statuses.map((s) => (
             <option key={s} value={s}>
@@ -65,10 +68,12 @@ export function AdminBuybackList({ requests }: AdminBuybackListProps) {
       </div>
 
       {/* Table */}
-      <div className="glass overflow-hidden rounded-xl">
+      {filtered.length > 0 && (
+      <div className="dash-card overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+          <thead className={cn(TABLE_HEAD, "bg-[var(--background)]")}>
+            <tr>
               <th className="px-4 py-3">Gebruiker</th>
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3 text-center">Items</th>
@@ -78,11 +83,11 @@ export function AdminBuybackList({ requests }: AdminBuybackListProps) {
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/30">
+          <tbody className="divide-y divide-border">
             {filtered.map((req) => (
-              <tr key={req.id} className="transition-colors hover:bg-muted/30">
+              <tr key={req.id} className="transition-colors hover:bg-[var(--background)]/60">
                 <td className="px-4 py-3">
-                  <p className="font-medium">{req.user.displayName}</p>
+                  <p className="font-semibold">{req.user.displayName}</p>
                   <p className="text-xs text-muted-foreground">{req.user.email}</p>
                 </td>
                 <td className="px-4 py-3">
@@ -90,16 +95,16 @@ export function AdminBuybackList({ requests }: AdminBuybackListProps) {
                     {req.type === "COLLECTION" ? (
                       <Calculator className="h-3.5 w-3.5 text-primary" />
                     ) : (
-                      <Package className="h-3.5 w-3.5 text-amber-600" />
+                      <Package className="h-3.5 w-3.5 text-[var(--pastel-yellow-ink)]" />
                     )}
                     {req.type === "COLLECTION" ? t("typeCollection") : t("typeBulk")}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">{req.totalItems}</td>
-                <td className="px-4 py-3 text-right font-medium">
+                <td className="px-4 py-3 text-right font-semibold tabular-nums">
                   €{(req.finalPayout ?? req.estimatedPayout).toFixed(2)}
                   {req.payoutMethod === "STORE_CREDIT" && (
-                    <span className="ml-1 text-xs text-emerald-600">+tegoed</span>
+                    <span className="ml-1 text-xs text-[var(--pastel-green-ink)]">+tegoed</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -114,7 +119,7 @@ export function AdminBuybackList({ requests }: AdminBuybackListProps) {
                 <td className="px-4 py-3">
                   <Link
                     href={`/dashboard/admin/buybacks/${req.id}`}
-                    className="flex items-center gap-1 text-primary hover:underline"
+                    className={PILL_BTN_SM}
                   >
                     {t("adminInspect")} <ChevronRight className="h-3 w-3" />
                   </Link>
@@ -123,12 +128,10 @@ export function AdminBuybackList({ requests }: AdminBuybackListProps) {
             ))}
           </tbody>
         </table>
-        {filtered.length === 0 && (
-          <div className="p-8 text-center text-sm text-muted-foreground">
-            {t("noRequests")}
-          </div>
-        )}
+        </div>
       </div>
+      )}
+      {filtered.length === 0 && <EmptyState icon={Package} title={t("noRequests")} compact />}
     </div>
   );
 }

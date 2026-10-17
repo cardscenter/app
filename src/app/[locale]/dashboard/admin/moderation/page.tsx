@@ -109,7 +109,7 @@ export default async function AdminModerationPage({
         subtitle="Actieve listings, veilingen en claimsales. Filter op “alleen verkopers met open rapporten” en verwijder bulk met reden."
       />
 
-      <nav className="inline-flex flex-wrap gap-1 dash-card p-1">
+      <nav className="flex flex-wrap gap-2">
         {TABS.map((t) => {
           const active = t.key === tab;
           return (
@@ -118,8 +118,8 @@ export default async function AdminModerationPage({
               href={{ pathname: "/dashboard/admin/moderation", query: { tab: t.key } }}
               className={
                 active
-                  ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-                  : "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-foreground text-white"
+                  : "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-white text-foreground/70 transition-colors hover:text-foreground"
               }
             >
               {t.label}
@@ -133,8 +133,8 @@ export default async function AdminModerationPage({
           href={{ pathname: "/dashboard/admin/moderation", query: { tab } }}
           className={
             flaggedOnly
-              ? "rounded-md border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
-              : "rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+              ? "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-white text-foreground/70 transition-colors hover:text-foreground"
+              : "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-foreground text-white"
           }
         >
           Alle
@@ -143,8 +143,8 @@ export default async function AdminModerationPage({
           href={{ pathname: "/dashboard/admin/moderation", query: { tab, flagged: "1" } }}
           className={
             flaggedOnly
-              ? "rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-              : "rounded-md border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+              ? "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-foreground text-white"
+              : "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-white text-foreground/70 transition-colors hover:text-foreground"
           }
         >
           Alleen met open rapport

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Users, Pencil } from "lucide-react";
+import { Users, Pencil, Clock, UserCheck, Euro, Ban } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAdminPage } from "@/lib/admin";
 import { listEnabledGames } from "@/lib/games-server";
@@ -7,6 +7,7 @@ import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatCard } from "@/components/dashboard/ui/stat-card";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { Callout } from "@/components/dashboard/ui/callout";
 import { ShopEventForm } from "@/components/admin/shop-event-form";
 import { ShopEventActions } from "@/components/admin/shop-event-actions";
 import { ShopEventRegistrations } from "@/components/admin/shop-event-registrations";
@@ -53,18 +54,20 @@ export default async function AdminShopEventPage({ params }: { params: Promise<{
         action={<StatusBadge tone={TONE[event.status] ?? "neutral"}>{SHOP_EVENT_STATUS_LABEL[event.status as ShopEventStatus] ?? event.status}</StatusBadge>}
       />
       {event.status === "CANCELLED" && event.cancelReason && (
-        <p className="rounded-md border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">Geannuleerd: {event.cancelReason}</p>
+        <Callout tone="pink" icon={Ban} title="Geannuleerd">
+          {event.cancelReason}
+        </Callout>
       )}
       <ShopEventActions eventId={event.id} status={event.status} endsAtIso={event.endsAt.toISOString()} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Ingeschreven" value={availability.capacity ? `${active.length} / ${availability.capacity}` : active.length} icon={Users} hint={availability.spotsLeft === null ? "Onbeperkt" : `${availability.spotsLeft} plekken over`} />
-        <StatCard label="Wachtlijst" value={availability.waitlistCount} />
-        <StatCard label="Ingecheckt" value={checkedIn} />
-        <StatCard label="Omzet" value={formatPrice(revenue)} hint={`Prijs ${formatPrice(event.price)}`} />
+        <StatCard label="Ingeschreven" value={availability.capacity ? `${active.length} / ${availability.capacity}` : active.length} icon={Users} tone="pink" hint={availability.spotsLeft === null ? "Onbeperkt" : `${availability.spotsLeft} plekken over`} />
+        <StatCard label="Wachtlijst" value={availability.waitlistCount} icon={Clock} tone="yellow" />
+        <StatCard label="Ingecheckt" value={checkedIn} icon={UserCheck} tone="green" />
+        <StatCard label="Omzet" value={formatPrice(revenue)} icon={Euro} tone="blue" hint={`Prijs ${formatPrice(event.price)}`} />
       </div>
 
-      <DashboardSection title="Inschrijvingen" icon={<Users className="size-5" />} contentClassName="p-0">
+      <DashboardSection title="Inschrijvingen" icon={<Users className="size-5" />} contentClassName="px-0 pb-0 pt-4 sm:px-0 sm:pb-0">
         <ShopEventRegistrations
           eventId={event.id}
           canAdd={event.status === "PUBLISHED"}

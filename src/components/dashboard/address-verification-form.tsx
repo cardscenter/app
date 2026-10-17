@@ -5,6 +5,7 @@ import { submitAddressVerification } from "@/actions/verification";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { useRefreshOnRealtime } from "@/hooks/use-refresh-on-realtime";
 
+import { LABEL, PILL_RED, SELECT } from "@/components/ploy/tile-styles";
 const ADDRESS_DOCUMENT_LABELS: Record<string, string> = {
   TAX_LETTER: "Belastingdienst-brief",
   UTILITY_BILL: "Energie- of waterrekening",
@@ -43,8 +44,8 @@ export function AddressVerificationForm() {
 
   if (success) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6 dark:border-green-800 dark:bg-green-900/10">
-        <p className="text-sm text-green-700 dark:text-green-400">
+      <div className="rounded-[14px] bg-[var(--pastel-green)] p-6 text-[var(--pastel-green-ink)]">
+        <p className="text-sm">
           Aanvraag ingediend. We laten je weten zodra de admin je adres heeft gecontroleerd.
         </p>
       </div>
@@ -52,7 +53,7 @@ export function AddressVerificationForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="dash-card p-5">
+    <form onSubmit={handleSubmit} className="dash-card p-5 sm:p-6">
       <h3 className="font-semibold text-foreground">Adres-document uploaden</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         Upload een officieel document waarop je naam én adres zichtbaar zijn (max 3 maanden oud). De
@@ -60,15 +61,15 @@ export function AddressVerificationForm() {
       </p>
 
       {error && (
-        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mt-3 text-sm text-destructive">{error}</p>
       )}
 
       <div className="mt-4">
-        <label className="text-sm font-medium text-foreground">Documenttype</label>
+        <label className={LABEL}>Documenttype</label>
         <select
           value={addressDocumentType}
           onChange={(e) => setAddressDocumentType(e.target.value)}
-          className="mt-1 block w-full rounded-md glass-input px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+          className={`mt-1 ${SELECT}`}
         >
           {Object.entries(ADDRESS_DOCUMENT_LABELS).map(([key, label]) => (
             <option key={key} value={key}>
@@ -79,7 +80,7 @@ export function AddressVerificationForm() {
       </div>
 
       <div className="mt-4">
-        <label className="text-sm font-medium text-foreground">Document-foto</label>
+        <label className={LABEL}>Document-foto</label>
         <div className="mt-1">
           <ImageUploader
             images={frontImageUrl ? [frontImageUrl] : []}
@@ -92,7 +93,7 @@ export function AddressVerificationForm() {
       <button
         type="submit"
         disabled={loading || !frontImageUrl}
-        className="mt-6 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className={`mt-6 w-full ${PILL_RED} disabled:cursor-not-allowed disabled:opacity-50`}
       >
         {loading ? "Versturen..." : "Verstuur aanvraag"}
       </button>

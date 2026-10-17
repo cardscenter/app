@@ -9,6 +9,8 @@ import { EVENT_TYPE_COLORS, eventColorClasses } from "@/lib/shop-events/config";
 import { FieldRow } from "@/components/dashboard/ui/field-row";
 import { POKEMON_DIVISIONS_2027, type AgeDivisionRule } from "@/lib/age";
 import { EventTypePill } from "@/components/shop-events/event-type-pill";
+import { INPUT, PILL_BTN_SM, PILL_RED, SELECT, TEXTAREA } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 export interface EventTypeRow {
   id: string;
@@ -26,8 +28,6 @@ export interface EventTypeRow {
   sortOrder: number;
   eventCount: number;
 }
-
-const INPUT = "glass-input w-full rounded-lg px-3 py-2 text-sm";
 
 function slugify(s: string): string {
   return s
@@ -89,7 +89,7 @@ export function EventTypeCard({ row, games, startOpen = false }: { row: EventTyp
 
   return (
     <div className="dash-card">
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 px-5 py-4">
         {row ? (
           <>
             <EventTypePill name={row.name} color={row.color} />
@@ -100,19 +100,19 @@ export function EventTypeCard({ row, games, startOpen = false }: { row: EventTyp
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <input type="checkbox" checked={row.enabled} disabled={pending} onChange={(e) => toggle(e.target.checked)} className="accent-primary" /> Actief
               </label>
-              <button type="button" onClick={() => setOpen((v) => !v)} className="rounded-md p-1.5 hover:bg-muted" aria-label="Bewerken">
+              <button type="button" onClick={() => setOpen((v) => !v)} className="cc-pill p-2 transition-colors hover:bg-[var(--background)]" aria-label="Bewerken">
                 {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
               </button>
             </span>
           </>
         ) : (
-          <button type="button" onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+          <button type="button" onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-[#8c1420]">
             <Plus className="size-4" /> Nieuw event-type
           </button>
         )}
       </div>
       {open && (
-        <form onSubmit={onSubmit} className="space-y-4 border-t border-border p-4">
+        <form onSubmit={onSubmit} className="space-y-4 border-t border-border p-5 sm:p-6">
           <FieldRow label="Naam" htmlFor={`name-${row?.id ?? "new"}`}>
             <input
               id={`name-${row?.id ?? "new"}`}
@@ -127,10 +127,10 @@ export function EventTypeCard({ row, games, startOpen = false }: { row: EventTyp
             />
           </FieldRow>
           <FieldRow label="Sleutel" hint="Voor filters en links, bv. league-avond" htmlFor={`key-${row?.id ?? "new"}`}>
-            <input id={`key-${row?.id ?? "new"}`} name="key" value={key} onChange={(e) => { setKey(e.target.value); setKeyTouched(true); }} className={`${INPUT} font-mono`} required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+            <input id={`key-${row?.id ?? "new"}`} name="key" value={key} onChange={(e) => { setKey(e.target.value); setKeyTouched(true); }} className={cn(INPUT, "font-mono")} required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
           </FieldRow>
           <FieldRow label="Spel" htmlFor={`game-${row?.id ?? "new"}`}>
-            <select id={`game-${row?.id ?? "new"}`} name="game" defaultValue={row?.game ?? ""} className={INPUT}>
+            <select id={`game-${row?.id ?? "new"}`} name="game" defaultValue={row?.game ?? ""} className={SELECT}>
               <option value="">Geen / alle spellen</option>
               {games.map((g) => (
                 <option key={g.key} value={g.key}>
@@ -149,7 +149,7 @@ export function EventTypeCard({ row, games, startOpen = false }: { row: EventTyp
             </div>
           </FieldRow>
           <FieldRow label="Beschrijving" htmlFor={`desc-${row?.id ?? "new"}`}>
-            <textarea id={`desc-${row?.id ?? "new"}`} name="description" defaultValue={row?.description ?? ""} rows={2} maxLength={500} className={INPUT} />
+            <textarea id={`desc-${row?.id ?? "new"}`} name="description" defaultValue={row?.description ?? ""} rows={2} maxLength={500} className={TEXTAREA} />
           </FieldRow>
           <FieldRow label="Standaard prijs en capaciteit" hint="Vooringevuld bij een nieuw event van dit type">
             <div className="grid grid-cols-2 gap-2">
@@ -165,33 +165,33 @@ export function EventTypeCard({ row, games, startOpen = false }: { row: EventTyp
             </div>
           </FieldRow>
           <FieldRow label="Volgorde" htmlFor={`sort-${row?.id ?? "new"}`}>
-            <input id={`sort-${row?.id ?? "new"}`} name="sortOrder" type="number" min="0" max="999" defaultValue={row?.sortOrder ?? 0} className={`${INPUT} w-24`} />
+            <input id={`sort-${row?.id ?? "new"}`} name="sortOrder" type="number" min="0" max="999" defaultValue={row?.sortOrder ?? 0} className={cn(INPUT, "w-24")} />
           </FieldRow>
           <FieldRow label="Leeftijdsdivisies" hint="Op geboortejaar. Leeg = geen divisies. De speler krijgt bij het boeken automatisch de juiste divisie.">
             <div className="space-y-2">
               {divisions.map((d, i) => (
                 <div key={i} className="grid grid-cols-[1fr_1fr_110px_110px_auto] items-center gap-2">
                   <input value={d.label} onChange={(e) => setDiv(i, { label: e.target.value })} placeholder="Label (Junior)" className={INPUT} />
-                  <input value={d.key} onChange={(e) => setDiv(i, { key: e.target.value })} placeholder="sleutel" className={`${INPUT} font-mono`} />
+                  <input value={d.key} onChange={(e) => setDiv(i, { key: e.target.value })} placeholder="sleutel" className={cn(INPUT, "font-mono")} />
                   <input type="number" value={d.minBirthYear ?? ""} onChange={(e) => setDiv(i, { minBirthYear: e.target.value ? Number(e.target.value) : undefined })} placeholder="vanaf jaar" className={INPUT} />
                   <input type="number" value={d.maxBirthYear ?? ""} onChange={(e) => setDiv(i, { maxBirthYear: e.target.value ? Number(e.target.value) : undefined })} placeholder="t/m jaar" className={INPUT} />
-                  <button type="button" onClick={() => setDivisions((x) => x.filter((_, j) => j !== i))} className="rounded-md p-2 text-muted-foreground hover:text-rose-600" aria-label="Verwijder">
+                  <button type="button" onClick={() => setDivisions((x) => x.filter((_, j) => j !== i))} className="cc-pill p-2 text-muted-foreground transition-colors hover:bg-[var(--background)] hover:text-destructive" aria-label="Verwijder">
                     <Trash2 className="size-4" />
                   </button>
                 </div>
               ))}
               <div className="flex gap-2">
-                <button type="button" onClick={() => setDivisions((x) => [...x, { key: "", label: "" }])} className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted">
+                <button type="button" onClick={() => setDivisions((x) => [...x, { key: "", label: "" }])} className={PILL_BTN_SM}>
                   <Plus className="size-3.5" /> Divisie
                 </button>
-                <button type="button" onClick={() => setDivisions(POKEMON_DIVISIONS_2027.map((d) => ({ ...d })))} className="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted">
+                <button type="button" onClick={() => setDivisions(POKEMON_DIVISIONS_2027.map((d) => ({ ...d })))} className={PILL_BTN_SM}>
                   Pokémon-defaults (Junior/Senior/Masters)
                 </button>
               </div>
             </div>
           </FieldRow>
           <div className="flex justify-end border-t border-border pt-3">
-            <button type="submit" disabled={pending} className="inline-flex items-center gap-2 cc-pill cc-grad px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60">
+            <button type="submit" disabled={pending} className={cn(PILL_RED, "disabled:opacity-60")}>
               <Save className="size-4" /> Opslaan
             </button>
           </div>

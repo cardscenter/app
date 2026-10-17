@@ -8,10 +8,12 @@ import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { PILL_RED, TABLE_CELL, TABLE_HEAD } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground";
+const BTN = PILL_RED;
 
 /** Admin: nieuwsberichten (concept/gepubliceerd) + nieuwsbrief-status. */
 export default async function AdminNewsPage() {
@@ -31,36 +33,38 @@ export default async function AdminNewsPage() {
       {posts.length === 0 ? (
         <EmptyState icon={Newspaper} title="Nog geen berichten" description="Schrijf het eerste bericht: een aankondiging, een nieuwe set of de openingsdatum." action={<Link href="/dashboard/admin/news/nieuw" className={BTN}>Nieuw bericht</Link>} />
       ) : (
-        <DashboardSection title="Berichten" contentClassName="p-0">
+        <DashboardSection title="Berichten" contentClassName="px-0 pb-0 pt-4 sm:px-0 sm:pb-0">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+            <thead className={cn(TABLE_HEAD, "bg-[var(--background)]")}>
               <tr>
-                <th className="px-4 py-3 text-left">Titel</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Gepubliceerd</th>
-                <th className="px-4 py-3 text-left">Nieuwsbrief</th>
-                <th className="px-4 py-3 text-left">Auteur</th>
+                <th className={TABLE_CELL}>Titel</th>
+                <th className={TABLE_CELL}>Status</th>
+                <th className={TABLE_CELL}>Gepubliceerd</th>
+                <th className={TABLE_CELL}>Nieuwsbrief</th>
+                <th className={TABLE_CELL}>Auteur</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {posts.map((p) => (
-                <tr key={p.id} className="hover:bg-muted/40">
+                <tr key={p.id} className="transition-colors hover:bg-[var(--background)]/60">
                   <td className="px-4 py-3">
-                    <Link href={`/dashboard/admin/news/${p.id}`} className="font-medium hover:underline">
-                      {p.pinned && <Pin className="mr-1 inline size-3.5 text-amber-500" />}
+                    <Link href={`/dashboard/admin/news/${p.id}`} className="font-semibold text-foreground hover:text-primary">
+                      {p.pinned && <Pin className="mr-1 inline size-3.5 text-primary" />}
                       {p.title}
                     </Link>
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge tone={p.status === "PUBLISHED" ? "success" : "warning"}>{p.status === "PUBLISHED" ? "Gepubliceerd" : "Concept"}</StatusBadge>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.publishedAt ? formatEventDateShort(p.publishedAt, "nl") : "–"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.newsletterSentAt ? `${p.newsletterRecipients} ontvangers` : "–"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{p.publishedAt ? formatEventDateShort(p.publishedAt, "nl") : "·"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{p.newsletterSentAt ? `${p.newsletterRecipients} ontvangers` : "·"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.author.displayName}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </DashboardSection>
       )}
     </div>

@@ -6,6 +6,7 @@ import { submitVerification } from "@/actions/verification";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { useRefreshOnRealtime } from "@/hooks/use-refresh-on-realtime";
 
+import { LABEL, PILL_RED, SELECT } from "@/components/ploy/tile-styles";
 export function VerificationForm() {
   const t = useTranslations("verification");
 
@@ -42,8 +43,8 @@ export function VerificationForm() {
 
   if (success) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6 dark:border-green-800 dark:bg-green-900/10">
-        <p className="text-sm text-green-700 dark:text-green-400">
+      <div className="rounded-[14px] bg-[var(--pastel-green)] p-6 text-[var(--pastel-green-ink)]">
+        <p className="text-sm">
           {t("submitSuccess")}
         </p>
       </div>
@@ -51,25 +52,25 @@ export function VerificationForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="dash-card p-5">
+    <form onSubmit={handleSubmit} className="dash-card p-5 sm:p-6">
       <h3 className="font-semibold text-foreground">{t("uploadDocuments")}</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         {t("uploadDescription")}
       </p>
 
       {error && (
-        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mt-3 text-sm text-destructive">{error}</p>
       )}
 
       {/* Document type selection */}
       <div className="mt-4">
-        <label className="text-sm font-medium text-foreground">
+        <label className={LABEL}>
           {t("documentType")}
         </label>
         <select
           value={documentType}
           onChange={(e) => setDocumentType(e.target.value)}
-          className="mt-1 block w-full rounded-md glass-input px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+          className={`mt-1 ${SELECT}`}
         >
           <option value="ID_CARD">{t("idCard")}</option>
           <option value="PASSPORT">{t("passport")}</option>
@@ -79,7 +80,7 @@ export function VerificationForm() {
 
       {/* Front image */}
       <div className="mt-4">
-        <label className="text-sm font-medium text-foreground">
+        <label className={LABEL}>
           {t("frontImage")}
         </label>
         <div className="mt-1">
@@ -94,7 +95,7 @@ export function VerificationForm() {
       {/* Back image (not for passport) */}
       {needsBackImage && (
         <div className="mt-4">
-          <label className="text-sm font-medium text-foreground">
+          <label className={LABEL}>
             {t("backImage")}
           </label>
           <div className="mt-1">
@@ -110,7 +111,7 @@ export function VerificationForm() {
       <button
         type="submit"
         disabled={loading || !frontImageUrl || (needsBackImage && !backImageUrl)}
-        className="mt-6 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className={`mt-6 w-full ${PILL_RED} disabled:cursor-not-allowed disabled:opacity-50`}
       >
         {loading ? t("submitting") : t("submit")}
       </button>

@@ -6,6 +6,10 @@ import { Link } from "@/i18n/navigation";
 import { BuybackStatusBadge } from "./buyback-status-badge";
 import { Calculator, Package, ChevronRight } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
+import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { TONE_ICON } from "@/components/dashboard/ui/tones";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { cn } from "@/lib/utils";
 
 type RequestWithItems = BuybackRequest & {
   items: BuybackItem[];
@@ -43,16 +47,19 @@ export function BuybackDashboard({ requests }: BuybackDashboardProps) {
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg bg-muted/50 p-1">
+      <div className="flex flex-wrap gap-2">
         {tabs.map((tb) => (
           <button
             key={tb.key}
+            type="button"
             onClick={() => setTab(tb.key)}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            aria-pressed={tab === tb.key}
+            className={cn(
+              "cc-pill inline-flex h-9 shrink-0 items-center px-4 text-sm font-semibold whitespace-nowrap transition-colors",
               tab === tb.key
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+                ? "bg-foreground text-white"
+                : "bg-white text-foreground/70 hover:text-foreground"
+            )}
           >
             {tb.label}
           </button>
@@ -61,38 +68,40 @@ export function BuybackDashboard({ requests }: BuybackDashboardProps) {
 
       {/* Requests list */}
       {filtered.length === 0 ? (
-        <div className="glass flex flex-col items-center gap-4 rounded-xl p-10 text-center">
-          <Package className="h-12 w-12 text-muted-foreground/30" />
-          <div>
-            <p className="font-medium">{t("noRequests")}</p>
-            <p className="text-sm text-muted-foreground">{t("noRequestsDesc")}</p>
-          </div>
-          <Link
-            href="/verkopen"
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-          >
-            <Calculator className="h-4 w-4" /> {t("createNew")}
-          </Link>
-        </div>
+        <EmptyState
+          icon={Package}
+          title={t("noRequests")}
+          description={t("noRequestsDesc")}
+          action={
+            <Link href="/verkopen" className={buttonVariants()}>
+              <Calculator className="h-4 w-4" /> {t("createNew")}
+            </Link>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map((req) => (
             <Link
               key={req.id}
               href={`/dashboard/inkoop/${req.id}`}
-              className="glass flex items-center gap-4 rounded-xl p-4 transition-all hover:ring-1 hover:ring-primary/30"
+              className="dash-card flex items-center gap-4 p-4 transition-shadow hover:shadow-card-hover"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <div
+                className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                  req.type === "COLLECTION" ? TONE_ICON.blue : TONE_ICON.yellow
+                )}
+              >
                 {req.type === "COLLECTION" ? (
-                  <Calculator className="h-5 w-5 text-primary" />
+                  <Calculator className="h-5 w-5" />
                 ) : (
-                  <Package className="h-5 w-5 text-amber-600" />
+                  <Package className="h-5 w-5" />
                 )}
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">
-                  {req.type === "COLLECTION" ? t("typeCollection") : t("typeBulk")} —{" "}
+                <p className="text-sm font-semibold">
+                  {req.type === "COLLECTION" ? t("typeCollection") : t("typeBulk")} ·{" "}
                   {req.totalItems} {req.totalItems === 1 ? "kaart" : "kaarten"}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -104,8 +113,8 @@ export function BuybackDashboard({ requests }: BuybackDashboardProps) {
                 </p>
               </div>
 
-              <div className="text-right">
-                <p className="text-sm font-bold">
+              <div className="flex flex-col items-end gap-1 text-right">
+                <p className="text-sm font-bold tabular-nums">
                   €{(req.finalPayout ?? req.estimatedPayout).toFixed(2)}
                 </p>
                 <BuybackStatusBadge status={req.status} />

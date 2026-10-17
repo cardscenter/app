@@ -5,6 +5,8 @@ import { confirmBankTransfer } from "@/actions/wallet";
 import { useRouter } from "@/i18n/navigation";
 import { Check, X } from "lucide-react";
 import { PLATFORM, PLATFORM_IBAN_DISPLAY } from "@/lib/platform-config";
+import { cn } from "@/lib/utils";
+import { PILL_BTN_SM, PILL_RED, PILL_RED_SM, INPUT } from "@/components/ploy/tile-styles";
 
 export function BankTransferForm({
   userId,
@@ -51,7 +53,7 @@ export function BankTransferForm({
       if ("error" in result) {
         setError(result.error ?? null);
       } else {
-        const ibanMsg = result.ibanVerified ? " — IBAN-match: rekeningnummer geverifieerd ✓" : "";
+        const ibanMsg = result.ibanVerified ? " · IBAN-match: rekeningnummer geverifieerd ✓" : "";
         setSuccess(`Bevestigd. Nieuw saldo: €${result.newBalance.toFixed(2)}${ibanMsg}`);
         setAmount("");
         setNote("");
@@ -65,7 +67,7 @@ export function BankTransferForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+        className={PILL_RED}
       >
         Bevestig storting
       </button>
@@ -73,17 +75,17 @@ export function BankTransferForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+    <form onSubmit={submit} className="space-y-3 rounded-[14px] bg-[var(--background)] p-4">
       <div className="text-xs text-muted-foreground">
-        {userName} — huidig saldo €{currentBalance.toFixed(2)}
+        {userName} · huidig saldo €{currentBalance.toFixed(2)}
       </div>
       <div className="text-xs text-muted-foreground">
         Controleer de bijschrijving op <span className="font-mono">{PLATFORM_IBAN_DISPLAY}</span>{" "}
-        ({PLATFORM.bank.accountHolder}) — de referentiecode van de gebruiker moet in de omschrijving staan.
+        ({PLATFORM.bank.accountHolder}). De referentiecode van de gebruiker moet in de omschrijving staan.
       </div>
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
           <input
             type="number"
             step="0.01"
@@ -91,7 +93,7 @@ export function BankTransferForm({
             placeholder="Bedrag"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full rounded-md border border-border bg-card pl-6 pr-2 py-1.5 text-sm"
+            className={`${INPUT} pl-7`}
             autoFocus
           />
         </div>
@@ -100,25 +102,25 @@ export function BankTransferForm({
           placeholder="Notitie (optioneel)"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          className="flex-1 rounded-md border border-border bg-card px-2 py-1.5 text-sm"
+          className={cn(INPUT, "w-auto flex-1")}
         />
       </div>
       {showIbanField && (
         <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">
-            IBAN-match (optioneel) — verifieert het rekeningnummer als het overeenkomt met het profiel-IBAN
+            IBAN-match (optioneel): verifieert het rekeningnummer als het overeenkomt met het profiel-IBAN
           </label>
           <input
             type="text"
             placeholder="NL00BANK0000000000"
             value={senderIban}
             onChange={(e) => setSenderIban(e.target.value)}
-            className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm font-mono uppercase"
+            className={`${INPUT} font-mono uppercase`}
           />
         </div>
       )}
-      {error && <p className="text-xs text-rose-600">{error}</p>}
-      {success && <p className="text-xs text-emerald-600">{success}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {success && <p className="text-xs font-medium text-[var(--pastel-green-ink)]">{success}</p>}
       <div className="flex justify-end gap-2">
         <button
           type="button"
@@ -127,14 +129,14 @@ export function BankTransferForm({
             setError(null);
             setSuccess(null);
           }}
-          className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-muted"
+          className={PILL_BTN_SM}
         >
           <X className="h-3 w-3" /> Annuleer
         </button>
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+          className={`${PILL_RED_SM} disabled:opacity-50`}
         >
           <Check className="h-3 w-3" />
           {pending ? "Bezig…" : "Bevestig"}

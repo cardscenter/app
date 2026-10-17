@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { bulkRemoveListings, bulkRemoveAuctions, bulkRemoveClaimsales } from "@/actions/admin/moderation";
 import { Trash2, X, AlertTriangle } from "lucide-react";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { PILL_BTN, PILL_RED, PILL_RED_SM, TEXTAREA, TABLE_HEAD } from "@/components/ploy/tile-styles";
 
 type Item = {
   id: string;
@@ -63,22 +65,23 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
     <>
       <div className="space-y-3">
         {selected.size > 0 && (
-          <div className="flex items-center justify-between rounded-md border border-rose-200 bg-rose-50 p-3 dark:border-rose-900/50 dark:bg-rose-950/20">
-            <p className="text-sm font-medium text-rose-700 dark:text-rose-300">
-              {selected.size} geselecteerd
-            </p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700"
-            >
-              <Trash2 className="h-4 w-4" /> Verwijder met reden
-            </button>
-          </div>
+          <Callout
+            tone="pink"
+            title={`${selected.size} geselecteerd`}
+            action={
+              <button
+                onClick={() => setShowModal(true)}
+                className={PILL_RED_SM}
+              >
+                <Trash2 className="h-4 w-4" /> Verwijder met reden
+              </button>
+            }
+          />
         )}
 
         <div className="overflow-x-auto dash-card">
           <table className="w-full text-sm">
-            <thead className="bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <thead className={`${TABLE_HEAD} bg-[var(--background)]`}>
               <tr>
                 <th className="w-8 px-4 py-2.5">
                   <input
@@ -102,7 +105,7 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
                 </tr>
               )}
               {items.map((it) => (
-                <tr key={it.id} className={`transition-colors hover:bg-muted/40 ${it.sellerOpenReports > 0 ? "bg-amber-50/50 dark:bg-amber-950/10" : ""}`}>
+                <tr key={it.id} className={`transition-colors hover:bg-[var(--background)] ${it.sellerOpenReports > 0 ? "bg-[var(--pastel-yellow)]/20" : ""}`}>
                   <td className="px-4 py-3">
                     <input type="checkbox" checked={selected.has(it.id)} onChange={() => toggle(it.id)} />
                   </td>
@@ -113,22 +116,22 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
                     </a>
                   </td>
                   <td className="px-4 py-3">
-                    <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{it.status}</code>
+                    <code className="rounded-full bg-muted px-2 py-0.5 text-[11px]">{it.status}</code>
                   </td>
                   <td className="px-4 py-3 text-right">
                     {it.sellerOpenReports > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--pastel-yellow-ink)]">
                         <AlertTriangle className="h-3 w-3" /> {it.sellerOpenReports}
                       </span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-muted-foreground">
                     {new Date(it.createdAt).toLocaleDateString("nl-NL")}
                   </td>
                   <td className="px-4 py-3 text-right text-xs tabular-nums">
-                    {it.amount != null ? `€${it.amount.toFixed(2)}` : "—"}
+                    {it.amount != null ? `€${it.amount.toFixed(2)}` : "-"}
                   </td>
                 </tr>
               ))}
@@ -138,11 +141,11 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-md space-y-3 rounded-dash border border-border bg-card p-5 shadow-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md space-y-3 rounded-[20px] bg-white p-5 shadow-card-hover">
             <div className="flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">{selected.size} item(s) verwijderen</h3>
-              <button onClick={() => setShowModal(false)} className="rounded-md p-1 hover:bg-muted">
+              <h3 className="text-lg font-semibold tracking-[-0.03em]">{selected.size} item(s) verwijderen</h3>
+              <button onClick={() => setShowModal(false)} className="rounded-full p-1.5 hover:bg-[var(--background)]">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -154,17 +157,17 @@ export function ModerationTable({ kind, items }: { kind: "listings" | "auctions"
               onChange={(e) => setReason(e.target.value)}
               rows={3}
               placeholder="Reden voor verwijdering (min. 5 tekens, zichtbaar voor verkoper)"
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+              className={TEXTAREA}
             />
-            {error && <p className="text-xs text-rose-600">{error}</p>}
+            {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowModal(false)} className="rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted">
+              <button onClick={() => setShowModal(false)} className={PILL_BTN}>
                 Annuleer
               </button>
               <button
                 onClick={handleBulkRemove}
                 disabled={pending}
-                className="inline-flex items-center gap-1 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+                className={`${PILL_RED} disabled:opacity-50`}
               >
                 <Trash2 className="h-4 w-4" />
                 {pending ? "Bezig…" : "Verwijder"}

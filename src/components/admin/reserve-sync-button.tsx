@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { syncUserReservedBalance } from "@/actions/admin/users";
+import { PILL_RED_SM } from "@/components/ploy/tile-styles";
 
 function formatEuro(n: number): string {
   return `€${n.toFixed(2).replace(".", ",")}`;
@@ -25,7 +26,7 @@ export function ReserveSyncButton({ userId }: { userId: string }) {
       }
       const verb = result.delta > 0 ? "verhoogd" : result.delta < 0 ? "verlaagd" : "gelijk gebleven";
       toast.success(
-        `Saldo gesynchroniseerd — ${formatEuro(result.previousReserved)} → ${formatEuro(result.newReserved)} (${verb})`,
+        `Saldo gesynchroniseerd: ${formatEuro(result.previousReserved)} → ${formatEuro(result.newReserved)} (${verb})`,
       );
       // revalidatePath in de action ververst de pagina, dus de UI updatet automatisch
       setForceRender((n) => n + 1);
@@ -37,7 +38,7 @@ export function ReserveSyncButton({ userId }: { userId: string }) {
       type="button"
       onClick={handleClick}
       disabled={pending}
-      className="inline-flex shrink-0 items-center gap-2 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
+      className={`${PILL_RED_SM} shrink-0 disabled:opacity-60`}
     >
       {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
       Sync nu

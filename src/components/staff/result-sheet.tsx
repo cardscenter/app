@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { Save, Trash2, Search, UserPlus, Check } from "lucide-react";
 import { saveLeagueResult, removeLeagueResult, findPlayers } from "@/actions/staff/community";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { INPUT, MENU, PILL_BTN_SM, PILL_RED_SM, TABLE_HEAD } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 export interface SheetRow {
   userId: string;
@@ -15,7 +18,7 @@ export interface SheetRow {
   result: { id: string; wins: number; losses: number; draws: number; bonusPoints: number; points: number; note: string | null } | null;
 }
 
-const NUM = "glass-input w-14 rounded-md px-2 py-1 text-center text-sm";
+const NUM = cn(INPUT, "w-14 px-2 py-1 text-center");
 
 function Row({ row, seasonId, eventId }: { row: SheetRow; seasonId: string; eventId: string | null }) {
   const router = useRouter();
@@ -47,27 +50,27 @@ function Row({ row, seasonId, eventId }: { row: SheetRow; seasonId: string; even
   }
 
   return (
-    <tr className={row.result && !dirty ? "bg-emerald-500/5" : ""}>
-      <td className="px-3 py-2">
+    <tr className={row.result && !dirty ? "bg-[var(--pastel-green)]/25" : ""}>
+      <td className="px-4 py-2">
         <div className="flex items-center gap-2">
           <UserAvatar src={row.avatarUrl} name={row.displayName} size="xs" />
           <span className="font-medium">{row.displayName}</span>
-          {row.checkedIn ? <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">ingecheckt</span> : <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">niet ingecheckt</span>}
+          {row.checkedIn ? <StatusBadge tone="success">ingecheckt</StatusBadge> : <StatusBadge tone="neutral">niet ingecheckt</StatusBadge>}
         </div>
       </td>
       <td className="px-2 py-2 text-center"><input type="number" min={0} max={99} value={wins} onChange={(e) => setWins(Number(e.target.value))} className={NUM} aria-label="Winst" /></td>
       <td className="px-2 py-2 text-center"><input type="number" min={0} max={99} value={losses} onChange={(e) => setLosses(Number(e.target.value))} className={NUM} aria-label="Verlies" /></td>
       <td className="px-2 py-2 text-center"><input type="number" min={0} max={99} value={draws} onChange={(e) => setDraws(Number(e.target.value))} className={NUM} aria-label="Gelijk" /></td>
       <td className="px-2 py-2 text-center"><input type="number" min={-99} max={99} value={bonus} onChange={(e) => setBonus(Number(e.target.value))} className={NUM} aria-label="Bonus" /></td>
-      <td className="px-2 py-2"><input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="Notitie" className="glass-input w-full min-w-[8rem] rounded-md px-2 py-1 text-sm" /></td>
-      <td className="px-2 py-2 text-right tabular-nums font-semibold">{row.result && !dirty ? row.result.points : "–"}</td>
-      <td className="px-2 py-2">
+      <td className="px-2 py-2"><input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="Notitie" className={cn(INPUT, "min-w-[8rem] px-2 py-1")} /></td>
+      <td className="px-2 py-2 text-right tabular-nums font-semibold">{row.result && !dirty ? row.result.points : "·"}</td>
+      <td className="px-4 py-2">
         <div className="flex justify-end gap-1">
-          <button type="button" onClick={save} disabled={pending || !dirty} className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-40">
+          <button type="button" onClick={save} disabled={pending || !dirty} className={cn(PILL_RED_SM, "disabled:opacity-40")}>
             {row.result && !dirty ? <Check className="size-3.5" /> : <Save className="size-3.5" />} {row.result && !dirty ? "Opgeslagen" : "Opslaan"}
           </button>
           {row.result && (
-            <button type="button" onClick={remove} disabled={pending} className="rounded-md border border-border p-1.5 text-muted-foreground hover:text-rose-600" title="Verwijderen">
+            <button type="button" onClick={remove} disabled={pending} className={cn(PILL_BTN_SM, "px-2 text-muted-foreground hover:text-destructive")} title="Verwijderen">
               <Trash2 className="size-3.5" />
             </button>
           )}
@@ -103,22 +106,22 @@ export function ResultSheet({ rows, seasonId, eventId }: { rows: SheetRow[]; sea
     <div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+          <thead className={cn(TABLE_HEAD, "bg-[var(--background)]")}>
             <tr>
-              <th className="px-3 py-2 text-left">Speler</th>
-              <th className="px-2 py-2">W</th>
-              <th className="px-2 py-2">V</th>
-              <th className="px-2 py-2">G</th>
-              <th className="px-2 py-2">Bonus</th>
-              <th className="px-2 py-2 text-left">Notitie</th>
-              <th className="px-2 py-2 text-right">Punten</th>
-              <th className="px-2 py-2" />
+              <th className="px-4 py-2.5 text-left">Speler</th>
+              <th className="px-2 py-2.5 text-center">W</th>
+              <th className="px-2 py-2.5 text-center">V</th>
+              <th className="px-2 py-2.5 text-center">G</th>
+              <th className="px-2 py-2.5 text-center">Bonus</th>
+              <th className="px-2 py-2.5 text-left">Notitie</th>
+              <th className="px-2 py-2.5 text-right">Punten</th>
+              <th className="px-4 py-2.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {all.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">Geen deelnemers. Voeg hieronder een speler toe.</td>
+                <td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Geen deelnemers. Voeg hieronder een speler toe.</td>
               </tr>
             )}
             {all.map((r) => (
@@ -127,17 +130,17 @@ export function ResultSheet({ rows, seasonId, eventId }: { rows: SheetRow[]; sea
           </tbody>
         </table>
       </div>
-      <div className="relative border-t border-border p-3">
+      <div className="relative border-t border-border px-4 py-4 sm:px-6">
         <label className="flex items-center gap-2 text-sm">
           <UserPlus className="size-4 text-muted-foreground" />
-          <input value={q} onChange={(e) => search(e.target.value)} placeholder="Speler toevoegen (naam of e-mail)" className="glass-input w-full max-w-sm rounded-md px-3 py-1.5 text-sm" />
+          <input value={q} onChange={(e) => search(e.target.value)} placeholder="Speler toevoegen (naam of e-mail)" className={cn(INPUT, "max-w-sm")} />
           {searching && <Search className="size-4 animate-pulse text-muted-foreground" />}
         </label>
         {hits.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full max-w-sm rounded-md border border-border bg-card shadow-lg">
+          <ul className={cn(MENU, "absolute z-10 mt-1 w-full max-w-sm overflow-hidden p-1")}>
             {hits.map((h) => (
               <li key={h.id}>
-                <button type="button" onClick={() => add(h)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted">
+                <button type="button" onClick={() => add(h)} className="flex w-full items-center gap-2 rounded-[8px] px-3 py-2 text-left text-sm hover:bg-[var(--background)]">
                   <UserAvatar src={h.avatarUrl} name={h.displayName} size="xs" />
                   <span className="font-medium">{h.displayName}</span>
                   <span className="text-xs text-muted-foreground">{h.fullName}</span>

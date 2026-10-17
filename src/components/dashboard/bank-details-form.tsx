@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import { updateBankDetails } from "@/actions/profile";
 import { formatIbanForDisplay } from "@/lib/validations/iban";
 import { TotpStepUpField } from "@/components/dashboard/totp-step-up-field";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { INPUT, LABEL, PILL_BTN_SM } from "@/components/ploy/tile-styles";
 
 interface BankDetailsFormProps {
   iban: string | null;
@@ -59,7 +62,7 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
 
   if (!editing && iban) {
     return (
-      <div className="space-y-3 rounded-lg border border-border bg-muted/40 px-3 py-3">
+      <div className="space-y-3 rounded-[12px] border border-[var(--border)] bg-white px-4 py-3.5">
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">{t("ibanLabel")}</p>
           <p className="font-mono text-sm text-foreground">{formatIbanForDisplay(iban)}</p>
@@ -71,16 +74,14 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
         </div>
 
         {cooldownActive && (
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            {t("ibanCooldown", { days: daysRemaining })}
-          </p>
+          <Callout tone="yellow">{t("ibanCooldown", { days: daysRemaining })}</Callout>
         )}
 
         <button
           type="button"
           onClick={() => setEditing(true)}
           disabled={cooldownActive}
-          className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+          className={`${PILL_BTN_SM} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           {t("editBankDetails")}
         </button>
@@ -93,7 +94,7 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
       <p className="text-xs text-muted-foreground">{t("bankDetailsHelp")}</p>
 
       <div>
-        <label htmlFor="iban" className="block text-sm font-medium text-foreground">
+        <label htmlFor="iban" className={LABEL}>
           {t("ibanLabel")}
         </label>
         <input
@@ -103,7 +104,7 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
           value={ibanInput}
           onChange={(e) => setIbanInput(e.target.value)}
           placeholder="NL91 ABNA 0417 1643 00"
-          className="mt-1 block w-full glass-input px-3 py-2.5 text-sm font-mono uppercase text-foreground"
+          className={`${INPUT} font-mono uppercase`}
           autoComplete="off"
           spellCheck={false}
           required
@@ -111,7 +112,7 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
       </div>
 
       <div>
-        <label htmlFor="accountHolderName" className="block text-sm font-medium text-foreground">
+        <label htmlFor="accountHolderName" className={LABEL}>
           {t("accountHolderLabel")}
         </label>
         <input
@@ -120,27 +121,23 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
           type="text"
           value={holderInput}
           onChange={(e) => setHolderInput(e.target.value)}
-          className="mt-1 block w-full glass-input px-3 py-2.5 text-sm text-foreground"
+          className={INPUT}
           autoComplete="off"
           required
         />
       </div>
 
-      {iban && (
-        <p className="text-xs text-amber-600 dark:text-amber-400">
-          {t("ibanChangeWarning", { days: cooldownDays })}
-        </p>
-      )}
+      {iban && <Callout tone="yellow">{t("ibanChangeWarning", { days: cooldownDays })}</Callout>}
 
       {totpRequired && <TotpStepUpField value={totpCode} onChange={setTotpCode} />}
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <Callout tone="pink">{error}</Callout>}
 
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+          className={buttonVariants()}
         >
           {pending ? "..." : t("saveBankDetails")}
         </button>
@@ -154,7 +151,7 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
               setError(null);
             }}
             disabled={pending}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+            className={buttonVariants({ variant: "outline" })}
           >
             {t("cancel")}
           </button>

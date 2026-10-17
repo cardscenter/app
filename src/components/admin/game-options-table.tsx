@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { toggleGameOption } from "@/actions/admin/hub";
 import type { GameDefinition } from "@/lib/games";
+import { TABLE_CELL, TABLE_HEAD } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 type Row = GameDefinition & { favoriteCount: number };
 
@@ -30,20 +32,20 @@ export function GameOptionsTable({ games }: { games: Row[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+        <thead className={cn(TABLE_HEAD, "bg-[var(--background)]")}>
           <tr>
-            <th className="px-4 py-3 text-left font-medium">Spel</th>
-            <th className="px-4 py-3 text-left font-medium">Spelers-ID</th>
-            <th className="px-4 py-3 text-left font-medium">Favoriet bij</th>
-            <th className="px-4 py-3 text-left font-medium">Status</th>
-            <th className="px-4 py-3 text-right font-medium">Aan/uit</th>
+            <th className={TABLE_CELL}>Spel</th>
+            <th className={TABLE_CELL}>Spelers-ID</th>
+            <th className={TABLE_CELL}>Favoriet bij</th>
+            <th className={TABLE_CELL}>Status</th>
+            <th className={cn(TABLE_CELL, "text-right")}>Aan/uit</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {rows.map((g) => (
             <tr key={g.key}>
               <td className="px-4 py-3">
-                <p className="font-medium text-foreground">{g.name}</p>
+                <p className="font-semibold text-foreground">{g.name}</p>
                 <code className="text-xs text-muted-foreground">{g.key}</code>
               </td>
               <td className="px-4 py-3 text-muted-foreground">{g.playerIdLabel ?? "geen"}</td>

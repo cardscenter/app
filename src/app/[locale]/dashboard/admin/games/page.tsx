@@ -34,7 +34,7 @@ export default async function AdminGamesPage() {
         title="Spellen"
         subtitle="Welke spellen spelers kunnen kiezen als favoriet en waarvoor ze een spelers-ID kunnen opgeven. Uitzetten verbergt het spel in profielen en registratie; opgeslagen keuzes blijven bewaard."
       />
-      <DashboardSection title="Beschikbare spellen" icon={<Gamepad2 className="size-5" />} contentClassName="p-0">
+      <DashboardSection title="Beschikbare spellen" icon={<Gamepad2 className="size-5" />} contentClassName="px-0 pb-0 pt-4 sm:px-0 sm:pb-0">
         <GameOptionsTable games={games.map((g) => ({ ...g, favoriteCount: counts[g.key] ?? 0 }))} />
       </DashboardSection>
     </div>

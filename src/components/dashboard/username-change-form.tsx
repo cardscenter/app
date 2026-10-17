@@ -10,6 +10,10 @@ import { changeUsername } from "@/actions/profile";
 import { USERNAME_MAX, USERNAME_MIN, validateUsername } from "@/lib/username-policy";
 import { formatCurrency, formatDateShort } from "@/lib/format";
 import { useFeature } from "@/components/providers/feature-flags-provider";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { PILL_BTN_SM } from "@/components/ploy/tile-styles";
+import { TONE_SURFACE } from "@/components/dashboard/ui/tones";
+import { cn } from "@/lib/utils";
 
 type Props = {
   currentName: string;
@@ -73,7 +77,7 @@ export function UsernameChangeForm({ currentName, canChange: canChangeProp, used
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
+        <span className="inline-flex items-center rounded-[10px] border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-foreground">
           <span className="text-muted-foreground">@</span>
           {currentName}
         </span>
@@ -87,14 +91,14 @@ export function UsernameChangeForm({ currentName, canChange: canChangeProp, used
                 setError(null);
                 setOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              className={PILL_BTN_SM}
             >
               <Pencil className="size-3.5" />
               {t("usernameChangeButton", { fee: feeLabel })}
             </button>
           )
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
+          <span className="cc-pill inline-flex items-center gap-1.5 bg-muted px-2.5 py-1.5 text-xs font-semibold text-foreground/70">
             <Lock className="size-3.5" />
             {t("usernameLocked")}
           </span>
@@ -121,27 +125,27 @@ export function UsernameChangeForm({ currentName, canChange: canChangeProp, used
       )}
 
       {open && (
-        <div className="space-y-3 rounded-xl border border-amber-300/70 bg-amber-50 p-3.5 dark:border-amber-500/30 dark:bg-amber-500/10">
+        <div className={cn("space-y-3 rounded-[14px] p-3.5", TONE_SURFACE.yellow)}>
           <div className="flex items-start justify-between gap-3">
-            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+            <p className="text-sm font-semibold">
               {t("usernameChangeTitle")}
             </p>
             <button
               type="button"
               onClick={() => setOpen(false)}
               aria-label={tc("cancel")}
-              className="shrink-0 text-amber-700/70 transition-colors hover:text-amber-900 dark:text-amber-300/70 dark:hover:text-amber-200"
+              className="shrink-0 opacity-60 transition-opacity hover:opacity-100"
             >
               <X className="size-3.5" />
             </button>
           </div>
 
-          <p className="text-xs leading-relaxed text-amber-900/90 dark:text-amber-200/90">
+          <p className="text-xs leading-relaxed opacity-85">
             {t("usernameChangeWarning", { fee: feeLabel })}
           </p>
 
-          <div className="relative flex rounded-lg border border-border bg-card transition-colors focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/15">
-            <span className="flex select-none items-center border-r border-border bg-muted/60 px-3 text-sm text-muted-foreground">
+          <div className="relative flex overflow-hidden rounded-[10px] border border-[var(--border)] bg-white transition-colors focus-within:border-[var(--foreground)]">
+            <span className="flex select-none items-center border-r border-[var(--border)] bg-[var(--background)] px-3 text-sm text-muted-foreground">
               @
             </span>
             <input
@@ -162,32 +166,32 @@ export function UsernameChangeForm({ currentName, canChange: canChangeProp, used
               autoComplete="off"
               spellCheck={false}
               aria-label={t("displayName")}
-              className="block w-full bg-transparent px-3 py-2.5 pr-10 text-sm text-foreground outline-none"
+              className="block w-full bg-transparent px-3 py-2 pr-10 text-sm text-foreground outline-none"
             />
             <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
               {canSubmit && (
-                <span className="flex size-4 items-center justify-center rounded-full bg-emerald-500 text-white">
+                <span className="flex size-4 items-center justify-center rounded-full bg-[var(--pastel-green-ink)] text-white">
                   <Check className="size-3" strokeWidth={3} />
                 </span>
               )}
             </span>
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[11px] opacity-75">
             {t("displayNameHint", { min: USERNAME_MIN, max: USERNAME_MAX })}
           </p>
 
           {!check.ok && trimmed.length > 0 && (
-            <p className="text-xs text-red-600 dark:text-red-400">{check.error}</p>
+            <p className="text-xs font-medium text-[var(--destructive)]">{check.error}</p>
           )}
-          {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+          {error && <p className="text-xs font-medium text-[var(--destructive)]">{error}</p>}
 
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={submit}
               disabled={!canSubmit}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
+              className={buttonVariants({ size: "sm" })}
             >
               {pending && <Loader2 className="size-3.5 animate-spin" />}
               {t("usernameChangeConfirm", { fee: feeLabel })}
@@ -195,7 +199,7 @@ export function UsernameChangeForm({ currentName, canChange: canChangeProp, used
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               {tc("cancel")}
             </button>

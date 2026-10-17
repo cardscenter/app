@@ -14,6 +14,8 @@ import {
 } from "@/actions/admin/users";
 import { ACCOUNT_TIERS, type BillingCycle } from "@/lib/subscription-tiers";
 import { Ban, ShieldOff, RotateCcw, UserCog, CreditCard, X, Crown, CircleMinus, IdCard } from "lucide-react";
+import { INPUT, TEXTAREA, PILL_BTN, PILL_RED, PILL_INK } from "@/components/ploy/tile-styles";
+import { Callout } from "@/components/dashboard/ui/callout";
 
 type Props = {
   userId: string;
@@ -166,7 +168,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
     setNameError(null);
     const reasonTrimmed = nameReason.trim();
     if (reasonTrimmed.length < 5) {
-      setNameError("Reden minimaal 5 tekens — noteer hier de ID-controle.");
+      setNameError("Reden minimaal 5 tekens. Noteer hier de ID-controle.");
       return;
     }
     const usernameChanged = newUsername.trim() !== userName;
@@ -202,7 +204,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
     });
   }
 
-  const inputCls = "w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm";
+  const inputCls = INPUT;
 
   return (
     <>
@@ -211,7 +213,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={handleLift}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className={`${PILL_INK} disabled:opacity-50`}
           >
             <ShieldOff className="h-4 w-4" /> Hef opschorting op
           </button>
@@ -219,7 +221,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={() => setSuspendOpen(true)}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+            className={`${PILL_RED} disabled:opacity-50`}
           >
             <Ban className="h-4 w-4" /> Opschorten
           </button>
@@ -229,7 +231,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={() => setTierOpen(true)}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+            className={`${PILL_INK} disabled:opacity-50`}
           >
             <Crown className="h-4 w-4" /> Tier toekennen
           </button>
@@ -239,7 +241,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={() => setRevokeOpen(true)}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-50"
+            className={`${PILL_BTN} disabled:opacity-50`}
           >
             <CircleMinus className="h-4 w-4" /> Tier intrekken
           </button>
@@ -247,7 +249,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
 
         <Link
           href={`/dashboard/admin/bank-transfers?q=${encodeURIComponent(userName)}`}
-          className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background"
+          className={PILL_BTN}
         >
           <CreditCard className="h-4 w-4" /> Bevestig storting
         </Link>
@@ -255,7 +257,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
         <button
           onClick={() => setNameOpen(true)}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-50"
+          className={`${PILL_BTN} disabled:opacity-50`}
         >
           <IdCard className="h-4 w-4" /> Naam wijzigen
         </button>
@@ -264,7 +266,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={handleResetIban}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-50"
+            className={`${PILL_BTN} disabled:opacity-50`}
           >
             <RotateCcw className="h-4 w-4" /> Reset IBAN-cooldown
           </button>
@@ -274,7 +276,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
           <button
             onClick={handleResetUsername}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-50"
+            className={`${PILL_BTN} disabled:opacity-50`}
           >
             <UserCog className="h-4 w-4" /> Geef naamswijziging terug
           </button>
@@ -282,26 +284,26 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
       </div>
 
       {nameOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <form
             onSubmit={handleChangeName}
-            className="w-full max-w-md space-y-3 rounded-dash border border-border bg-card p-5 shadow-lg"
+            className="w-full max-w-md space-y-3 rounded-[20px] bg-white p-5 shadow-card-hover"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Naam wijzigen: {userName}</h3>
               <button
                 type="button"
                 onClick={() => setNameOpen(false)}
-                className="rounded-md p-1 hover:bg-muted"
+                className="rounded-full p-1.5 hover:bg-[var(--background)]"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="rounded-md border border-amber-300/70 bg-amber-50 p-2.5 text-xs leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            <Callout tone="yellow">
               Alleen wijzigen na controle van een geldig identiteitsbewijs. De oude
               gebruikersnaam blijft publiek zichtbaar op het profiel. Beide naamvelden
               leegmaken geeft de gebruiker het naamveld weer vrij.
-            </p>
+            </Callout>
             <div className="space-y-2">
               <label className="text-sm font-medium">Gebruikersnaam</label>
               <input
@@ -338,22 +340,22 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
                 onChange={(e) => setNameReason(e.target.value)}
                 rows={3}
                 placeholder="Bijv. ID gecontroleerd, ticket #123"
-                className={inputCls}
+                className={TEXTAREA}
               />
             </div>
-            {nameError && <p className="text-xs text-rose-600">{nameError}</p>}
+            {nameError && <p className="text-xs text-destructive">{nameError}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setNameOpen(false)}
-                className="rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
+                className={PILL_BTN}
               >
                 Annuleer
               </button>
               <button
                 type="submit"
                 disabled={pending}
-                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+                className={`${PILL_RED} disabled:opacity-50`}
               >
                 {pending ? "Bezig…" : "Wijzig naam"}
               </button>
@@ -363,17 +365,17 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
       )}
 
       {suspendOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <form
             onSubmit={handleSuspend}
-            className="w-full max-w-md space-y-3 rounded-dash border border-border bg-card p-5 shadow-lg"
+            className="w-full max-w-md space-y-3 rounded-[20px] bg-white p-5 shadow-card-hover"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Opschorten: {userName}</h3>
               <button
                 type="button"
                 onClick={() => setSuspendOpen(false)}
-                className="rounded-md p-1 hover:bg-muted"
+                className="rounded-full p-1.5 hover:bg-[var(--background)]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -382,7 +384,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
               <label className="text-sm font-medium">Type</label>
               <div className="flex gap-2">
                 {(["TEMPORARY", "PERMANENT"] as const).map((t) => (
-                  <label key={t} className="flex flex-1 cursor-pointer items-center gap-2 rounded-md border border-border p-2 text-sm hover:bg-muted/40">
+                  <label key={t} className="flex flex-1 cursor-pointer items-center gap-2 rounded-[10px] border border-border p-2 text-sm hover:bg-[var(--background)]">
                     <input
                       type="radio"
                       name="type"
@@ -415,22 +417,22 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 placeholder="Min. 5 tekens"
-                className={inputCls}
+                className={TEXTAREA}
               />
             </div>
-            {error && <p className="text-xs text-rose-600">{error}</p>}
+            {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setSuspendOpen(false)}
-                className="rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted"
+                className={PILL_BTN}
               >
                 Annuleer
               </button>
               <button
                 type="submit"
                 disabled={pending}
-                className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+                className={`${PILL_RED} disabled:opacity-50`}
               >
                 {pending ? "Bezig…" : "Opschorten"}
               </button>
@@ -440,14 +442,14 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
       )}
 
       {tierOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <form
             onSubmit={handleGrantTier}
-            className="w-full max-w-md space-y-3 rounded-dash border border-border bg-card p-5 shadow-lg"
+            className="w-full max-w-md space-y-3 rounded-[20px] bg-white p-5 shadow-card-hover"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Tier toekennen: {userName}</h3>
-              <button type="button" onClick={() => setTierOpen(false)} className="rounded-md p-1 hover:bg-muted">
+              <button type="button" onClick={() => setTierOpen(false)} className="rounded-full p-1.5 hover:bg-[var(--background)]">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -460,7 +462,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
               <label className="text-sm font-medium">Tier</label>
               <div className="flex gap-2">
                 {GRANTABLE.map((t) => (
-                  <label key={t} className="flex flex-1 cursor-pointer items-center gap-2 rounded-md border border-border p-2 text-sm hover:bg-muted/40">
+                  <label key={t} className="flex flex-1 cursor-pointer items-center gap-2 rounded-[10px] border border-border p-2 text-sm hover:bg-[var(--background)]">
                     <input type="radio" name="tier" value={t} checked={tier === t} onChange={() => setTier(t)} />
                     <span>
                       {TIER_LABEL[t]}
@@ -476,7 +478,7 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
               <label className="text-sm font-medium">Cyclus</label>
               <div className="flex gap-2">
                 {(["MONTHLY", "YEARLY"] as const).map((c) => (
-                  <label key={c} className="flex flex-1 cursor-pointer items-center gap-2 rounded-md border border-border p-2 text-sm hover:bg-muted/40">
+                  <label key={c} className="flex flex-1 cursor-pointer items-center gap-2 rounded-[10px] border border-border p-2 text-sm hover:bg-[var(--background)]">
                     <input type="radio" name="cycle" value={c} checked={cycle === c} onChange={() => setCycle(c)} />
                     {c === "MONTHLY" ? "Maandelijks (1 maand)" : "Jaarlijks (1 jaar)"}
                   </label>
@@ -503,15 +505,15 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
                 onChange={(e) => setTierReason(e.target.value)}
                 rows={2}
                 placeholder="Bv. handmatige betaling ontvangen / testaccount"
-                className={inputCls}
+                className={TEXTAREA}
               />
             </div>
-            {tierError && <p className="text-xs text-rose-600">{tierError}</p>}
+            {tierError && <p className="text-xs text-destructive">{tierError}</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setTierOpen(false)} className="rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted">
+              <button type="button" onClick={() => setTierOpen(false)} className={PILL_BTN}>
                 Annuleer
               </button>
-              <button type="submit" disabled={pending} className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50">
+              <button type="submit" disabled={pending} className={`${PILL_INK} disabled:opacity-50`}>
                 {pending ? "Bezig…" : `Toekennen: ${TIER_LABEL[tier]}`}
               </button>
             </div>
@@ -520,14 +522,14 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
       )}
 
       {revokeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <form
             onSubmit={handleRevokeTier}
-            className="w-full max-w-md space-y-3 rounded-dash border border-border bg-card p-5 shadow-lg"
+            className="w-full max-w-md space-y-3 rounded-[20px] bg-white p-5 shadow-card-hover"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Tier intrekken: {userName}</h3>
-              <button type="button" onClick={() => setRevokeOpen(false)} className="rounded-md p-1 hover:bg-muted">
+              <button type="button" onClick={() => setRevokeOpen(false)} className="rounded-full p-1.5 hover:bg-[var(--background)]">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -543,15 +545,15 @@ export function UserActionBar({ userId, userName, accountType, isSuspended, hasI
                 onChange={(e) => setRevokeReason(e.target.value)}
                 rows={2}
                 placeholder="Min. 5 tekens"
-                className={inputCls}
+                className={TEXTAREA}
               />
             </div>
-            {revokeError && <p className="text-xs text-rose-600">{revokeError}</p>}
+            {revokeError && <p className="text-xs text-destructive">{revokeError}</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setRevokeOpen(false)} className="rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-muted">
+              <button type="button" onClick={() => setRevokeOpen(false)} className={PILL_BTN}>
                 Annuleer
               </button>
-              <button type="submit" disabled={pending} className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50">
+              <button type="submit" disabled={pending} className={`${PILL_RED} disabled:opacity-50`}>
                 {pending ? "Bezig…" : "Intrekken"}
               </button>
             </div>

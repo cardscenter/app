@@ -9,9 +9,11 @@ import { requestGuardianConsent, updatePlayerProfile } from "@/actions/player-pr
 import { ageOn, isMinor, parseDateOfBirth, GUARDIAN_CONSENT_AGE } from "@/lib/age";
 import type { GameDefinition } from "@/lib/games";
 import { FieldRow } from "@/components/dashboard/ui/field-row";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { INPUT as BASE_INPUT, PILL_BTN_SM } from "@/components/ploy/tile-styles";
 
-const INPUT =
-  "block w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 transition-colors focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/15";
+const INPUT = `block ${BASE_INPUT}`;
 
 type Props = {
   games: GameDefinition[];
@@ -128,10 +130,10 @@ export function PlayerProfileForm({ games, initial }: Props) {
                 type="button"
                 onClick={() => toggleFavorite(g.key)}
                 aria-pressed={on}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`cc-pill inline-flex items-center gap-1.5 border px-3 py-1.5 text-sm font-semibold transition-colors ${
                   on
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-card text-foreground hover:bg-muted"
+                    ? "border-[var(--foreground)] bg-[var(--foreground)] text-white"
+                    : "border-[var(--border)] bg-white text-foreground hover:bg-[var(--background)]"
                 }`}
               >
                 {on && <Check className="size-3.5" />}
@@ -149,7 +151,7 @@ export function PlayerProfileForm({ games, initial }: Props) {
               .filter((g) => g.playerIdLabel && favorites.includes(g.key))
               .map((g) => (
                 <div key={g.key}>
-                  <label htmlFor={`pid-${g.key}`} className="mb-1 block text-xs font-medium text-muted-foreground">
+                  <label htmlFor={`pid-${g.key}`} className="mb-1 block text-xs font-medium text-foreground/70">
                     {g.playerIdLabel}
                   </label>
                   <input
@@ -195,43 +197,39 @@ export function PlayerProfileForm({ games, initial }: Props) {
               required
             />
 
-            <div
-              className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm ${
-                consentGiven
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
-                  : "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200"
-              }`}
+            <Callout
+              tone={consentGiven ? "green" : "yellow"}
+              icon={consentGiven ? ShieldCheck : Mail}
+              action={
+                !consentGiven && (
+                  <button
+                    type="button"
+                    onClick={sendConsent}
+                    disabled={sending || guardianDirty || !initial.guardianEmail}
+                    title={guardianDirty || !initial.guardianEmail ? t("consentSaveFirst") : undefined}
+                    className={`${PILL_BTN_SM} disabled:opacity-50`}
+                  >
+                    {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+                    {t("consentSend")}
+                  </button>
+                )
+              }
             >
-              <span className="inline-flex items-center gap-2">
-                {consentGiven ? <ShieldCheck className="size-4" /> : <Mail className="size-4" />}
-                {consentGiven ? t("consentGiven") : t("consentMissing")}
-              </span>
-              {!consentGiven && (
-                <button
-                  type="button"
-                  onClick={sendConsent}
-                  disabled={sending || guardianDirty || !initial.guardianEmail}
-                  title={guardianDirty || !initial.guardianEmail ? t("consentSaveFirst") : undefined}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-                >
-                  {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-                  {t("consentSend")}
-                </button>
-              )}
-            </div>
+              {consentGiven ? t("consentGiven") : t("consentMissing")}
+            </Callout>
           </div>
         </FieldRow>
       )}
 
       {error && (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>
+        <Callout tone="pink">{error}</Callout>
       )}
 
       <div className="flex justify-end">
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary-hover disabled:opacity-50"
+          className={buttonVariants()}
         >
           {pending && <Loader2 className="size-4 animate-spin" />}
           {t("save")}

@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { UserPlus, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { INPUT, PILL_BTN, PILL_BTN_SM, PILL_RED, TABLE_CELL, TABLE_HEAD } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 import { adminAddRegistration, adminCancelRegistration } from "@/actions/admin/shop-events";
 import { REGISTRATION_STATUS_LABEL, type RegistrationStatus } from "@/lib/shop-events/config";
 import { formatEventDateShort, formatEventTime, formatPrice } from "@/lib/shop-events/format";
@@ -80,21 +82,21 @@ export function ShopEventRegistrations({ eventId, rows, canAdd }: { eventId: str
   return (
     <div>
       {canAdd && (
-        <div className="border-b border-border p-3">
+        <div className="px-5 pb-4 sm:px-6">
           {!addOpen ? (
-            <button type="button" onClick={() => setAddOpen(true)} className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
+            <button type="button" onClick={() => setAddOpen(true)} className={PILL_BTN}>
               <UserPlus className="size-4" /> Speler handmatig toevoegen
             </button>
           ) : (
             <div className="grid gap-2 sm:grid-cols-[1fr_120px_1fr_auto]">
-              <input value={who} onChange={(e) => setWho(e.target.value)} placeholder="E-mail of gebruikersnaam" className="glass-input rounded-md px-3 py-2 text-sm" />
-              <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" step="0.01" min="0" placeholder="Bedrag" className="glass-input rounded-md px-3 py-2 text-sm" />
-              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notitie (bv. contant aan de balie)" className="glass-input rounded-md px-3 py-2 text-sm" />
+              <input value={who} onChange={(e) => setWho(e.target.value)} placeholder="E-mail of gebruikersnaam" className={INPUT} />
+              <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" step="0.01" min="0" placeholder="Bedrag" className={INPUT} />
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notitie (bv. contant aan de balie)" className={INPUT} />
               <div className="flex gap-2">
-                <button type="button" disabled={pending || !who.trim()} onClick={add} className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">
+                <button type="button" disabled={pending || !who.trim()} onClick={add} className={cn(PILL_RED, "px-4 py-2 disabled:opacity-60")}>
                   Toevoegen
                 </button>
-                <button type="button" onClick={() => setAddOpen(false)} className="rounded-md px-2 py-2 text-sm text-muted-foreground">
+                <button type="button" onClick={() => setAddOpen(false)} className={PILL_BTN}>
                   Sluit
                 </button>
               </div>
@@ -103,19 +105,19 @@ export function ShopEventRegistrations({ eventId, rows, canAdd }: { eventId: str
         </div>
       )}
       {rows.length === 0 ? (
-        <p className="p-6 text-center text-sm text-muted-foreground">Nog geen inschrijvingen.</p>
+        <p className="px-6 pb-8 pt-4 text-center text-sm text-muted-foreground">Nog geen inschrijvingen.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+            <thead className={cn(TABLE_HEAD, "bg-[var(--background)]")}>
               <tr>
-                <th className="px-4 py-3 text-left">Speler</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Divisie</th>
-                <th className="px-4 py-3 text-left">Betaling</th>
-                <th className="px-4 py-3 text-left">Ticket</th>
-                <th className="px-4 py-3 text-left">Ingeschreven</th>
-                <th className="px-4 py-3" />
+                <th className={TABLE_CELL}>Speler</th>
+                <th className={TABLE_CELL}>Status</th>
+                <th className={TABLE_CELL}>Divisie</th>
+                <th className={TABLE_CELL}>Betaling</th>
+                <th className={TABLE_CELL}>Ticket</th>
+                <th className={TABLE_CELL}>Ingeschreven</th>
+                <th className={TABLE_CELL} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -148,18 +150,18 @@ export function ShopEventRegistrations({ eventId, rows, canAdd }: { eventId: str
                     {["RESERVED", "CONFIRMED", "WAITLIST", "OFFERED"].includes(r.status) &&
                       (cancelId === r.id ? (
                         <div className="flex flex-col items-end gap-1">
-                          <input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Reden (optioneel)" className="glass-input w-44 rounded-md px-2 py-1 text-xs" />
+                          <input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Reden (optioneel)" className={cn(INPUT, "w-44 px-2 py-1 text-xs")} />
                           <div className="flex gap-1">
-                            <button type="button" disabled={pending} onClick={() => cancel(r.id)} className="rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-60">
+                            <button type="button" disabled={pending} onClick={() => cancel(r.id)} className="cc-pill inline-flex items-center bg-destructive px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-60">
                               Annuleer + terugbetalen
                             </button>
-                            <button type="button" onClick={() => setCancelId(null)} className="rounded-md px-2 py-1 text-xs text-muted-foreground">
+                            <button type="button" onClick={() => setCancelId(null)} className={PILL_BTN_SM}>
                               Nee
                             </button>
                           </div>
                         </div>
                       ) : (
-                        <button type="button" onClick={() => setCancelId(r.id)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-rose-600" title="Annuleren">
+                        <button type="button" onClick={() => setCancelId(r.id)} className="cc-pill inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-[var(--background)] hover:text-destructive" title="Annuleren">
                           <XCircle className="size-4" />
                         </button>
                       ))}

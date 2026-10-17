@@ -4,12 +4,12 @@ import { useState } from "react";
 import { markAsRead, markAllAsRead } from "@/actions/notification";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronRight } from "lucide-react";
-import {
-  NOTIFICATION_TONE_CLASSES,
-  resolveNotificationMeta,
-} from "@/lib/notification-display";
-import { NotificationDetailModal } from "@/components/ui/notification-detail-modal";
+import { CheckCheck, ChevronRight } from "lucide-react";
+import { resolveNotificationMeta } from "@/lib/notification-display";
+import { NotificationDetailModal, NOTIFICATION_DASH_TONE } from "@/components/ui/notification-detail-modal";
+import { TONE_ICON } from "@/components/dashboard/ui/tones";
+import { PILL_BTN_SM } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 type NotificationItem = {
   id: string;
@@ -22,11 +22,10 @@ type NotificationItem = {
 };
 
 /**
- * Meldingen-lijst (Fase 44-rewrite). Klik opent een detail-popup met
- * uitgebreide uitleg per melding i.p.v. direct te navigeren — de oude
- * directe links gaven bovendien 404 door inconsistente locale-prefixes
- * in de DB. Kleuren volgen de site-branding (veilingen blauw, claimsales
- * amber, marktplaats groen, annuleringen/boetes rose).
+ * Meldingen-lijst (Fase 44-rewrite, design-pass ronde G). Klik opent een
+ * detail-popup met uitgebreide uitleg per melding i.p.v. direct te
+ * navigeren; de oude directe links gaven bovendien 404 door inconsistente
+ * locale-prefixes in de DB. De categorie bepaalt de pastel-toon van het icoon.
  */
 export function NotificationList({ notifications }: { notifications: NotificationItem[] }) {
   const t = useTranslations("notifications");
@@ -51,10 +50,8 @@ export function NotificationList({ notifications }: { notifications: Notificatio
     <div className="space-y-3">
       {hasUnread && (
         <div className="flex justify-end">
-          <button
-            onClick={handleMarkAllRead}
-            className="text-sm font-medium text-primary hover:underline"
-          >
+          <button type="button" onClick={handleMarkAllRead} className={PILL_BTN_SM}>
+            <CheckCheck className="size-3.5" />
             {t("markAllRead")}
           </button>
         </div>
@@ -62,43 +59,29 @@ export function NotificationList({ notifications }: { notifications: Notificatio
 
       {notifications.map((n) => {
         const meta = resolveNotificationMeta(n);
-        const tone = NOTIFICATION_TONE_CLASSES[meta.tone];
+        const tone = NOTIFICATION_DASH_TONE[meta.tone];
         const Icon = meta.icon;
 
         return (
-          <button
-            key={n.id}
-            type="button"
-            onClick={() => handleOpen(n)}
-            className="block w-full text-left"
-          >
+          <button key={n.id} type="button" onClick={() => handleOpen(n)} className="block w-full text-left">
             <div
-              className={`flex items-start gap-3 rounded-2xl border bg-card p-4 shadow-card transition-shadow hover:shadow-card-hover ${
-                !n.read ? "border-primary/25 bg-primary/[0.03]" : "border-border"
-              }`}
+              className={cn(
+                "dash-card flex items-start gap-3 p-4 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-card-hover",
+                !n.read && "ring-2 ring-[var(--pastel-yellow)]",
+              )}
             >
-              <div
-                className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${tone.iconWrap}`}
-              >
-                <Icon className="h-4 w-4" />
+              <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", TONE_ICON[tone])}>
+                <Icon className="size-[18px]" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <p
-                      className={`truncate text-sm ${
-                        !n.read ? "font-semibold text-foreground" : "font-medium text-foreground"
-                      }`}
-                    >
-                      {n.title}
-                    </p>
-                    <span
-                      className={`hidden flex-shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-medium sm:inline-flex ${tone.pill}`}
-                    >
+                    <p className={cn("truncate text-sm text-foreground", !n.read ? "font-semibold" : "font-medium")}>{n.title}</p>
+                    <span className="cc-pill hidden shrink-0 items-center bg-[var(--background)] px-2.5 py-1 text-[11px] font-semibold leading-none text-foreground/70 sm:inline-flex">
                       {meta.category}
                     </span>
                   </div>
-                  <span className="flex-shrink-0 text-[11px] text-muted-foreground">
+                  <span className="shrink-0 text-[11px] text-muted-foreground">
                     {new Date(n.createdAt).toLocaleDateString("nl-NL", {
                       day: "numeric",
                       month: "short",
@@ -107,23 +90,18 @@ export function NotificationList({ notifications }: { notifications: Notificatio
                     })}
                   </span>
                 </div>
-                <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
+                <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{n.body}</p>
               </div>
-              <div className="flex flex-shrink-0 items-center gap-1.5 self-center">
-                {!n.read && <div className="h-2 w-2 rounded-full bg-primary" />}
-                <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+              <div className="flex shrink-0 items-center gap-1.5 self-center">
+                {!n.read && <span className="cc-grad size-2 rounded-full" />}
+                <ChevronRight className="size-4 text-foreground/35" />
               </div>
             </div>
           </button>
         );
       })}
 
-      {selected && (
-        <NotificationDetailModal
-          notification={selected}
-          onClose={() => setSelected(null)}
-        />
-      )}
+      {selected && <NotificationDetailModal notification={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }

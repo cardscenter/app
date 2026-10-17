@@ -7,6 +7,8 @@ import { Save, Trash2 } from "lucide-react";
 import { saveTestimonial, deleteTestimonial } from "@/actions/admin/testimonials";
 import { FieldRow } from "@/components/dashboard/ui/field-row";
 import { ImageUploader } from "@/components/ui/image-uploader";
+import { INPUT, PILL_RED, SELECT, TEXTAREA } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 export interface TestimonialEditorRow {
   id: string;
@@ -22,8 +24,7 @@ export interface TestimonialEditorRow {
   sortOrder: number;
 }
 
-const INPUT = "glass-input w-full rounded-lg px-3 py-2 text-sm";
-const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60";
+const BTN = cn(PILL_RED, "px-4 py-2 disabled:opacity-60");
 
 const SOURCES: Array<{ value: string; label: string }> = [
   { value: "GOOGLE", label: "Google-review" },
@@ -73,7 +74,7 @@ export function TestimonialEditor({ row }: { row: TestimonialEditorRow | null })
   return (
     <form onSubmit={submit} className="space-y-5">
       <FieldRow label="Quote" hint="Max 600 tekens. Zet een zinsdeel tussen dubbele sterretjes (**zo**) om het vet te tonen." htmlFor="quote">
-        <textarea id="quote" name="quote" defaultValue={row?.quote ?? ""} rows={5} maxLength={600} className={INPUT} required />
+        <textarea id="quote" name="quote" defaultValue={row?.quote ?? ""} rows={5} maxLength={600} className={TEXTAREA} required />
       </FieldRow>
       <FieldRow label="Naam" hint="Voornaam of voornaam + eerste letter, zoals de speler het zelf wil." htmlFor="authorName">
         <input id="authorName" name="authorName" defaultValue={row?.authorName ?? ""} className={INPUT} required maxLength={80} />
@@ -82,7 +83,7 @@ export function TestimonialEditor({ row }: { row: TestimonialEditorRow | null })
         <input id="authorRole" name="authorRole" defaultValue={row?.authorRole ?? ""} className={INPUT} maxLength={80} />
       </FieldRow>
       <FieldRow label="Bron" hint="Waar de quote vandaan komt; staat als pil op de kaart." htmlFor="source">
-        <select id="source" name="source" defaultValue={row?.source ?? "IN_STORE"} className={INPUT}>
+        <select id="source" name="source" defaultValue={row?.source ?? "IN_STORE"} className={SELECT}>
           {SOURCES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
@@ -104,7 +105,7 @@ export function TestimonialEditor({ row }: { row: TestimonialEditorRow | null })
               type="button"
               onClick={() => setColor(c.value)}
               aria-pressed={color === c.value}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${color === c.value ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted"}`}
+              className={`cc-pill inline-flex items-center gap-2 border px-3 py-1.5 text-sm font-semibold transition-colors ${color === c.value ? "border-foreground bg-foreground text-white" : "border-border bg-white text-foreground/70 hover:bg-[var(--background)] hover:text-foreground"}`}
             >
               <span className="inline-block size-3.5 rounded-full border border-border" style={{ background: c.swatch }} />
               {c.label}
@@ -113,7 +114,7 @@ export function TestimonialEditor({ row }: { row: TestimonialEditorRow | null })
         </div>
       </FieldRow>
       <FieldRow label="Volgorde" hint="Lager = eerder op de muur. Gelijke waarden: nieuwste eerst." htmlFor="sortOrder">
-        <input id="sortOrder" name="sortOrder" type="number" min={0} max={9999} defaultValue={row?.sortOrder ?? 0} className={`${INPUT} max-w-[8rem]`} />
+        <input id="sortOrder" name="sortOrder" type="number" min={0} max={9999} defaultValue={row?.sortOrder ?? 0} className={cn(INPUT, "max-w-[8rem]")} />
       </FieldRow>
       <FieldRow label="Zichtbaar" hint="Uit = alleen in dit overzicht.">
         <label className="inline-flex items-center gap-2 text-sm">
@@ -129,7 +130,7 @@ export function TestimonialEditor({ row }: { row: TestimonialEditorRow | null })
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <div>
           {row && (
-            <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-sm text-rose-600 hover:underline">
+            <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-sm font-semibold text-destructive hover:underline">
               <Trash2 className="size-3.5" /> Verwijderen
             </button>
           )}

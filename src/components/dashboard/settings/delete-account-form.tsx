@@ -5,6 +5,9 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import { deleteOwnAccount } from "@/actions/account";
 import { PasswordInput } from "@/components/auth/password-input";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { INPUT } from "@/components/ploy/tile-styles";
 
 /**
  * Account verwijderen (AVG, Community Hub Fase 2): uitklapbaar blok met
@@ -38,7 +41,7 @@ export function DeleteAccountForm({ locale, totpEnabled }: { locale: string; tot
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+        className={buttonVariants({ variant: "destructive" })}
       >
         <Trash2 className="size-4" />
         {t("deleteAccountButton")}
@@ -47,11 +50,10 @@ export function DeleteAccountForm({ locale, totpEnabled }: { locale: string; tot
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-      <p className="flex items-start gap-2 text-sm text-destructive">
-        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-        <span>{t("deleteAccountWarning")}</span>
-      </p>
+    <form onSubmit={submit} className="space-y-3 rounded-[12px] border border-[var(--border)] bg-[var(--background)] p-4">
+      <Callout tone="pink" icon={AlertTriangle}>
+        {t("deleteAccountWarning")}
+      </Callout>
       <PasswordInput
         value={password}
         onChange={(e) => setPassword(e.target.value)}
@@ -66,7 +68,7 @@ export function DeleteAccountForm({ locale, totpEnabled }: { locale: string; tot
           value={totpCode}
           onChange={(e) => setTotpCode(e.target.value)}
           placeholder={t("deleteAccountTotp")}
-          className="block w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground"
+          className={`block ${INPUT}`}
         />
       )}
       <input
@@ -74,15 +76,15 @@ export function DeleteAccountForm({ locale, totpEnabled }: { locale: string; tot
         value={confirmText}
         onChange={(e) => setConfirmText(e.target.value)}
         placeholder={t("deleteAccountConfirmPlaceholder")}
-        className="block w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground"
+        className={`block ${INPUT}`}
         required
       />
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <Callout tone="pink">{error}</Callout>}
       <div className="flex items-center gap-2">
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
+          className="cc-pill inline-flex h-9 items-center gap-1.5 bg-[var(--destructive)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--destructive)]/90 disabled:opacity-50"
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
           {t("deleteAccountConfirm")}
@@ -93,7 +95,7 @@ export function DeleteAccountForm({ locale, totpEnabled }: { locale: string; tot
             setOpen(false);
             setError(null);
           }}
-          className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+          className={buttonVariants({ variant: "ghost" })}
         >
           {t("cancel")}
         </button>

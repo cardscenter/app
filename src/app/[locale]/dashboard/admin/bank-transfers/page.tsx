@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { PILL_RED, INPUT } from "@/components/ploy/tile-styles";
 
 export default async function BankTransfersPage({
   searchParams,
@@ -60,13 +61,13 @@ export default async function BankTransfersPage({
             name="q"
             defaultValue={query}
             placeholder="Naam, email of reference (bv. atomicsnipz8729376290)"
-            className="w-full rounded-md border border-border bg-card py-2 pl-9 pr-3 text-sm"
+            className={`${INPUT} pl-9`}
             autoFocus
           />
         </div>
         <button
           type="submit"
-          className="rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+          className={PILL_RED}
         >
           Zoek
         </button>
@@ -107,7 +108,7 @@ export default async function BankTransfersPage({
                       {u.bankTransferReference && (
                         <p className="mt-1 text-xs">
                           Reference:{" "}
-                          <code className="rounded bg-muted px-1 py-0.5 text-[11px]">
+                          <code className="rounded-full bg-muted px-2 py-0.5 text-[11px]">
                             {u.bankTransferReference}
                           </code>
                         </p>

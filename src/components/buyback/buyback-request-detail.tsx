@@ -10,9 +10,13 @@ import { TrackingForm } from "./tracking-form";
 import { PriceCorrectionPrompt } from "./price-correction-prompt";
 import { BuybackOutcomeInfo, BuybackFAQ } from "./buyback-outcome-info";
 import { cancelBuybackRequest } from "@/actions/buyback";
-import { X, CheckCircle2, XCircle, Clock, CreditCard, Banknote, Package, ExternalLink, Truck } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Banknote, Package, ExternalLink, Truck } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
 import { BuybackDecision } from "./buyback-decision";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { TABLE_HEAD, TABLE_CELL } from "@/components/ploy/tile-styles";
+import { TONE_ICON, TONE_SURFACE } from "@/components/dashboard/ui/tones";
+import { cn } from "@/lib/utils";
 
 type RequestWithItems = Omit<BuybackRequest, "iban"> & {
   /** Gemaskeerd door de page (Fase 6: het IBAN staat versleuteld in de DB). */
@@ -29,9 +33,9 @@ const ITEM_STATUS_ICON: Record<string, typeof CheckCircle2> = {
 };
 
 const ITEM_STATUS_COLOR: Record<string, string> = {
-  APPROVED: "text-emerald-500",
-  REJECTED: "text-red-500",
-  PENDING: "text-yellow-500",
+  APPROVED: "text-[var(--pastel-green-ink)]",
+  REJECTED: "text-[var(--destructive)]",
+  PENDING: "text-foreground/40",
 };
 
 export function BuybackRequestDetail({ request, categoryLabels = {} }: { request: RequestWithItems; categoryLabels?: Record<string, string> }) {
@@ -57,10 +61,10 @@ export function BuybackRequestDetail({ request, categoryLabels = {} }: { request
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-bold">{t("requestDetail")}</h2>
-          <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="cc-display text-[32px] text-foreground lg:text-[40px]">{t("requestDetail")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {request.type === "COLLECTION" ? t("typeCollection") : t("typeBulk")} · {" "}
             {new Date(request.createdAt).toLocaleDateString("nl-NL", {
               day: "numeric",
@@ -82,14 +86,14 @@ export function BuybackRequestDetail({ request, categoryLabels = {} }: { request
       <BuybackDecision request={{ id: request.id, status: request.status, userDecision: request.userDecision, decisionDeadline: request.decisionDeadline ? new Date(request.decisionDeadline).toISOString() : null, finalPayout: request.finalPayout, returnPayment: request.returnPayment }} />
 
       {(request.returnCarrier || request.returnTrackingNumber) && (
-        <div className="glass rounded-xl p-4 text-sm">
-          <p className="flex items-center gap-2 font-medium"><Truck className="h-4 w-4" /> Retourzending</p>
+        <div className="dash-card p-5 text-sm">
+          <p className="flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" /> Retourzending</p>
           <p className="mt-1 text-muted-foreground">{request.returnCarrier} · <span className="font-mono">{request.returnTrackingNumber}</span>{request.returnedAt ? ` · verzonden op ${new Date(request.returnedAt).toLocaleDateString("nl-NL")}` : ""}</p>
         </div>
       )}
 
       {/* Status timeline */}
-      <div className="glass rounded-xl p-4">
+      <div className="dash-card p-5">
         <div className="flex items-center gap-2 text-sm">
           <span className="font-medium">{t("requestType")}:</span>
           <span>{request.type === "COLLECTION" ? t("typeCollection") : t("typeBulk")}</span>
@@ -108,21 +112,21 @@ export function BuybackRequestDetail({ request, categoryLabels = {} }: { request
 
       {/* Collection items */}
       {request.type === "COLLECTION" && request.items.length > 0 && (
-        <div className="glass overflow-hidden rounded-xl">
-          <div className="divide-y divide-border/30">
+        <div className="dash-card overflow-hidden">
+          <div className="divide-y divide-border">
             {request.items.map((item) => {
               const Icon = ITEM_STATUS_ICON[item.inspectionStatus] ?? Clock;
               const color = ITEM_STATUS_COLOR[item.inspectionStatus] ?? "text-muted-foreground";
               const correctionReadOnly = request.status !== "INSPECTING";
 
               return (
-                <div key={item.id} className="p-3">
+                <div key={item.id} className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-8 shrink-0 overflow-hidden rounded">
+                    <div className="h-12 w-8 shrink-0 overflow-hidden rounded-[4px] bg-[var(--muted)]">
                       {item.imageUrl ? (
                         <Image src={item.imageUrl} alt={item.cardName} width={32} height={48} className="h-full w-full object-cover" />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-muted text-[8px]">?</div>
+                        <div className="flex h-full w-full items-center justify-center text-[8px] text-muted-foreground">?</div>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -131,7 +135,7 @@ export function BuybackRequestDetail({ request, categoryLabels = {} }: { request
                         {item.setName} · #{item.cardLocalId}
                       </p>
                       {item.rejectionReason && (
-                        <p className="text-xs text-red-500">{item.rejectionReason}</p>
+                        <p className="text-xs font-medium text-[var(--destructive)]">{item.rejectionReason}</p>
                       )}
                     </div>
                     <div className="text-center text-sm">
@@ -163,33 +167,38 @@ export function BuybackRequestDetail({ request, categoryLabels = {} }: { request
 
       {/* Bulk items */}
       {request.type === "BULK" && request.bulkItems.length > 0 && (
-        <div className="glass overflow-hidden rounded-xl">
+        <div className="dash-card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/50 text-left text-xs uppercase text-muted-foreground">
-                <th className="px-4 py-2">{t("bulkCategory")}</th>
-                <th className="px-4 py-2 text-center">{t("quantity")}</th>
-                <th className="px-4 py-2 text-center">{t("approvedQuantity")}</th>
-                <th className="px-4 py-2 text-right">{t("bulkSubtotal")}</th>
+            <thead className={cn(TABLE_HEAD, "bg-[var(--background)]")}>
+              <tr>
+                <th className={TABLE_CELL}>{t("bulkCategory")}</th>
+                <th className={cn(TABLE_CELL, "text-center")}>{t("quantity")}</th>
+                <th className={cn(TABLE_CELL, "text-center")}>{t("approvedQuantity")}</th>
+                <th className={cn(TABLE_CELL, "text-right")}>{t("bulkSubtotal")}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/30">
+            <tbody className="divide-y divide-border">
               {request.bulkItems.map((item) => {
                 const label = categoryLabels[item.category] ?? item.category;
                 return (
                   <tr key={item.id}>
-                    <td className="px-4 py-2 font-medium">{label}</td>
-                    <td className="px-4 py-2 text-center">{item.quantity}</td>
-                    <td className="px-4 py-2 text-center">
+                    <td className={cn(TABLE_CELL, "font-medium")}>{label}</td>
+                    <td className={cn(TABLE_CELL, "text-center tabular-nums")}>{item.quantity}</td>
+                    <td className={cn(TABLE_CELL, "text-center tabular-nums")}>
                       {item.approvedQuantity !== null ? (
-                        <span className={item.approvedQuantity < item.quantity ? "text-amber-600" : "text-emerald-600"}>
+                        <span
+                          className={cn(
+                            "cc-pill inline-flex px-2 py-0.5 text-xs font-semibold text-foreground",
+                            item.approvedQuantity < item.quantity ? "bg-[var(--pastel-yellow)]" : "bg-[var(--pastel-green)]"
+                          )}
+                        >
                           {item.approvedQuantity}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-right">€{item.subtotal.toFixed(2)}</td>
+                    <td className={cn(TABLE_CELL, "text-right tabular-nums")}>€{item.subtotal.toFixed(2)}</td>
                   </tr>
                 );
               })}
@@ -214,26 +223,22 @@ export function BuybackRequestDetail({ request, categoryLabels = {} }: { request
             href="/verkopen/verpakken"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+            className={cn("flex items-center gap-3 rounded-[14px] p-4 transition-opacity hover:opacity-90", TONE_SURFACE.yellow)}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200">
+            <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", TONE_ICON.ink)}>
               <Package className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                {t("packingInstructionsLink")}
-              </p>
-              <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
-                {t("packingInstructionsLinkDesc")}
-              </p>
+              <p className="text-sm font-semibold">{t("packingInstructionsLink")}</p>
+              <p className="text-xs opacity-80">{t("packingInstructionsLinkDesc")}</p>
             </div>
-            <ExternalLink className="h-4 w-4 shrink-0 text-amber-800 dark:text-amber-300" />
+            <ExternalLink className="h-4 w-4 shrink-0" />
           </Link>
         </>
       )}
 
       {/* Payout summary */}
-      <div className="glass rounded-xl p-4">
+      <div className="dash-card p-5">
         <div className="flex items-center justify-between">
           <span className="text-sm">{t("estimatedPayoutLabel")}</span>
           <span className="font-medium">€{request.estimatedPayout.toFixed(2)}</span>
@@ -241,7 +246,7 @@ export function BuybackRequestDetail({ request, categoryLabels = {} }: { request
         {request.finalPayout !== null && (
           <div className="mt-1 flex items-center justify-between">
             <span className="text-sm font-medium">{t("finalPayoutLabel")}</span>
-            <span className="text-lg font-bold text-emerald-600">
+            <span className="cc-display text-2xl tabular-nums text-foreground">
               €{request.finalPayout.toFixed(2)}
             </span>
           </div>
@@ -259,26 +264,26 @@ export function BuybackRequestDetail({ request, categoryLabels = {} }: { request
             <button
               type="button"
               onClick={() => setShowCancel(true)}
-              className="text-sm text-red-500 hover:text-red-600"
+              className="text-sm font-semibold text-[var(--destructive)] hover:underline"
             >
               {t("cancelRequest")}
             </button>
           ) : (
-            <div className="glass rounded-xl p-4">
+            <div className="dash-card p-5">
               <p className="mb-3 text-sm">{t("cancelConfirm")}</p>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleCancel}
                   disabled={isPending}
-                  className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                  className="cc-pill inline-flex h-9 items-center bg-[var(--destructive)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--destructive)]/90 disabled:opacity-50"
                 >
                   {t("cancelRequest")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCancel(false)}
-                  className="rounded-lg border border-input px-4 py-2 text-sm hover:bg-muted/50"
+                  className={buttonVariants({ variant: "outline" })}
                 >
                   {t("backToOverview")}
                 </button>

@@ -12,6 +12,7 @@ import {
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
 import { PLATFORM } from "@/lib/platform-config";
 import { RETURN_FEE_EUR, DECISION_DAYS } from "@/lib/buyback-status";
+import { TONE_SURFACE, type DashTone } from "@/components/dashboard/ui/tones";
 
 type RequestWithItems = BuybackRequest & {
   items: BuybackItem[];
@@ -58,23 +59,25 @@ interface InfoCardProps {
   children: React.ReactNode;
 }
 
-function InfoCard({ variant, icon, title, children }: InfoCardProps) {
-  const styles = {
-    sky:     { bg: "bg-sky-50/70 dark:bg-sky-950/30",         border: "border-sky-400 dark:border-sky-500",     text: "text-sky-900 dark:text-sky-100",         body: "text-sky-800/80 dark:text-sky-200/80",         iconColor: "text-sky-600 dark:text-sky-400" },
-    amber:   { bg: "bg-amber-50/70 dark:bg-amber-950/30",     border: "border-amber-400 dark:border-amber-500", text: "text-amber-900 dark:text-amber-100",     body: "text-amber-800/80 dark:text-amber-200/80",     iconColor: "text-amber-600 dark:text-amber-400" },
-    emerald: { bg: "bg-emerald-50/70 dark:bg-emerald-950/30", border: "border-emerald-400 dark:border-emerald-500", text: "text-emerald-900 dark:text-emerald-100", body: "text-emerald-800/80 dark:text-emerald-200/80", iconColor: "text-emerald-600 dark:text-emerald-400" },
-    red:     { bg: "bg-red-50/70 dark:bg-red-950/30",         border: "border-red-400 dark:border-red-500",     text: "text-red-900 dark:text-red-100",         body: "text-red-800/80 dark:text-red-200/80",         iconColor: "text-red-600 dark:text-red-400" },
-    slate:   { bg: "bg-slate-50 dark:bg-slate-900/40",        border: "border-slate-400 dark:border-slate-600", text: "text-slate-900 dark:text-slate-100",     body: "text-slate-700 dark:text-slate-300",           iconColor: "text-slate-600 dark:text-slate-400" },
-    purple:  { bg: "bg-purple-50/70 dark:bg-purple-950/30",   border: "border-purple-400 dark:border-purple-500", text: "text-purple-900 dark:text-purple-100",   body: "text-purple-800/80 dark:text-purple-200/80",   iconColor: "text-purple-600 dark:text-purple-400" },
-  }[variant];
+/** Oude variant-namen → pastel-tonen uit het design-systeem (ronde G). */
+const VARIANT_TONE: Record<InfoCardProps["variant"], DashTone> = {
+  sky: "blue",
+  amber: "yellow",
+  emerald: "green",
+  red: "pink",
+  slate: "neutral",
+  purple: "blue",
+};
 
+function InfoCard({ variant, icon, title, children }: InfoCardProps) {
+  const tone = VARIANT_TONE[variant];
   return (
-    <section className={`rounded-xl border-l-4 ${styles.border} ${styles.bg} p-4`}>
+    <section className={`rounded-[14px] p-4 sm:p-5 ${TONE_SURFACE[tone]} ${tone === "neutral" ? "shadow-card" : ""}`}>
       <div className="flex items-start gap-3">
-        <div className={`mt-0.5 ${styles.iconColor}`}>{icon}</div>
+        <div className="mt-0.5 shrink-0 opacity-80">{icon}</div>
         <div className="min-w-0 flex-1">
-          <h3 className={`text-sm font-bold ${styles.text}`}>{title}</h3>
-          <div className={`mt-1.5 space-y-2 text-sm ${styles.body}`}>{children}</div>
+          <h3 className="text-sm font-semibold">{title}</h3>
+          <div className="mt-1.5 space-y-2 text-sm opacity-85">{children}</div>
         </div>
       </div>
     </section>
@@ -100,7 +103,7 @@ function PendingInfo() {
 
 function ReceivedInfo() {
   return (
-    <InfoCard variant="sky" icon={<Package className="h-5 w-5" />} title="Pakket ontvangen — bedankt!">
+    <InfoCard variant="sky" icon={<Package className="h-5 w-5" />} title="Pakket ontvangen, bedankt!">
       <p>
         We hebben je zending in goede orde ontvangen. De inspectie en verwerking kan tot{" "}
         <strong>3 werkdagen</strong> duren. Je krijgt automatisch een melding zodra we starten met de inspectie en
@@ -220,7 +223,7 @@ function PaidInfo() {
         je rekening staat.
       </p>
       <p>
-        Bedankt voor je verkoop — we hopen je snel weer terug te zien!
+        Bedankt voor je verkoop, we hopen je snel weer terug te zien!
       </p>
     </InfoCard>
   );
@@ -307,21 +310,21 @@ export function BuybackFAQ({ type }: { type?: string }) {
     },
   ];
   return (
-    <section className="rounded-xl border border-border bg-card p-4">
-      <div className="mb-3 flex items-center gap-2">
+    <section className="dash-card p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-2">
         <Clock className="h-5 w-5 text-muted-foreground" />
-        <h2 className="text-base font-bold text-foreground">Veelgestelde vragen</h2>
+        <h2 className="text-lg font-semibold tracking-[-0.03em] text-foreground">Veelgestelde vragen</h2>
       </div>
       <div className="space-y-2">
         {items.map((item, i) => (
           <details
             key={i}
-            className="group rounded-lg border border-border/60 transition-colors open:border-primary/40"
+            className="group overflow-hidden rounded-[12px] border border-[var(--border)] bg-white transition-colors open:border-[var(--foreground)]/30"
           >
-            <summary className="cursor-pointer list-none px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40">
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-foreground hover:bg-[var(--background)]">
               {item.q}
             </summary>
-            <div className="border-t border-border/40 px-3 py-2 text-sm text-muted-foreground">
+            <div className="border-t border-[var(--border)] px-4 py-3 text-sm text-muted-foreground">
               {item.a}
             </div>
           </details>

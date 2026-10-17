@@ -17,6 +17,8 @@ import {
 } from "@/lib/shipping-issue/config";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
+import { cn } from "@/lib/utils";
+import { PILL_BTN_SM, PILL_RED_SM, INPUT, TEXTAREA } from "@/components/ploy/tile-styles";
 
 type IssueData = {
   id: string;
@@ -61,15 +63,15 @@ export function ShippingIssuesAdminList({
   return (
     <div className="mt-6 space-y-4">
       {/* Status tabs */}
-      <div className="inline-flex flex-wrap gap-1 dash-card p-1">
+      <div className="flex flex-wrap gap-2">
         {STATUS_TABS.map((s) => (
           <button
             key={s}
             onClick={() => router.push(`/dashboard/admin/shipping-issues?status=${s}`)}
             className={
               currentStatus === s
-                ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-                : "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                ? "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-foreground text-white"
+                : "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-white text-foreground/70 transition-colors hover:text-foreground"
             }
           >
             {s === "ALL" ? "Alle" : STATUS_LABELS[s]?.label ?? s}
@@ -145,7 +147,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
     <div className="overflow-hidden dash-card">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/40"
+        className="flex w-full items-center justify-between gap-3 p-5 text-left transition-colors hover:bg-[var(--background)]"
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -171,7 +173,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
       </button>
 
       {expanded && (
-        <div className="space-y-4 border-t border-border p-4">
+        <div className="space-y-4 border-t border-border p-5">
           <div>
             <p className="text-xs font-semibold text-muted-foreground">Beschrijving van {issue.reporter.displayName}:</p>
             <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{issue.description}</p>
@@ -195,7 +197,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
           </div>
 
           {issue.resolution && (
-            <div className="rounded-md border border-border bg-muted/40 p-3">
+            <div className="rounded-[12px] bg-[var(--background)] p-3">
               <p className="text-xs font-semibold text-muted-foreground">Admin-onderbouwing</p>
               <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{issue.resolution}</p>
             </div>
@@ -208,7 +210,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
                 <button
                   onClick={handleStartInvestigating}
                   disabled={loading}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                  className={`${PILL_BTN_SM} disabled:opacity-50`}
                 >
                   <Clock className="h-3 w-3" /> Markeer als onder onderzoek
                 </button>
@@ -217,24 +219,24 @@ function IssueCard({ issue }: { issue: IssueData }) {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setAction(action === "goodwill" ? null : "goodwill")}
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    action === "goodwill" ? "bg-emerald-600 text-white" : "border border-border bg-card text-foreground hover:bg-muted"
+                  className={`cc-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    action === "goodwill" ? "bg-[var(--pastel-green)] text-[var(--pastel-green-ink)]" : "border border-border bg-white text-foreground hover:bg-[var(--background)]"
                   }`}
                 >
                   <CheckCircle2 className="h-3 w-3" /> Goodwill-credit
                 </button>
                 <button
                   onClick={() => setAction(action === "noaction" ? null : "noaction")}
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    action === "noaction" ? "bg-foreground text-background" : "border border-border bg-card text-foreground hover:bg-muted"
+                  className={`cc-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    action === "noaction" ? "bg-foreground text-white" : "border border-border bg-white text-foreground hover:bg-[var(--background)]"
                   }`}
                 >
                   <XCircle className="h-3 w-3" /> Sluit zonder actie
                 </button>
                 <button
                   onClick={() => setAction(action === "escalate" ? null : "escalate")}
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    action === "escalate" ? "bg-rose-600 text-white" : "border border-border bg-card text-foreground hover:bg-muted"
+                  className={`cc-pill inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    action === "escalate" ? "cc-grad text-white" : "border border-border bg-white text-foreground hover:bg-[var(--background)]"
                   }`}
                 >
                   <AlertTriangle className="h-3 w-3" /> Escaleer naar geschil
@@ -242,7 +244,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
               </div>
 
               {action && (
-                <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+                <div className="space-y-3 rounded-[14px] bg-[var(--background)] p-3">
                   {action === "goodwill" && (
                     <div>
                       <label className="text-xs font-medium text-foreground">Bedrag (max €{GOODWILL_REFUND_MAX.toFixed(2)})</label>
@@ -253,7 +255,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
                         step="0.01"
                         value={goodwillAmount}
                         onChange={(e) => setGoodwillAmount(e.target.value)}
-                        className="mt-1 block w-32 glass-input px-3 py-1.5 text-sm text-foreground"
+                        className={cn(INPUT, "mt-1 w-32")}
                       />
                     </div>
                   )}
@@ -263,7 +265,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
                       value={resolution}
                       onChange={(e) => setResolution(e.target.value)}
                       rows={3}
-                      className="mt-1 block w-full glass-input px-3 py-2 text-sm text-foreground resize-none"
+                      className={cn(TEXTAREA, "mt-1 resize-none")}
                       placeholder={action === "escalate" ? "Reden voor escalatie naar geschil..." : "Onderbouwing voor de partijen..."}
                     />
                     <p className="mt-1 text-xs text-muted-foreground">{resolution.length}/20</p>
@@ -271,7 +273,7 @@ function IssueCard({ issue }: { issue: IssueData }) {
                   <button
                     onClick={handleSubmit}
                     disabled={loading || resolution.length < 20}
-                    className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+                    className={`${PILL_RED_SM} disabled:opacity-50`}
                   >
                     {loading ? "Bezig..." : "Bevestig"}
                   </button>

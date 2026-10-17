@@ -33,7 +33,7 @@ export function BidConfirmationToggle({ currentValue }: Props) {
   return (
     <div className="flex items-center gap-2">
       {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-      {savedFlash && !isPending && <Check className="h-4 w-4 text-emerald-500" />}
+      {savedFlash && !isPending && <Check className="h-4 w-4 text-[var(--pastel-green-ink)]" />}
       <Switch
         id="bid-confirmation"
         checked={!skip}

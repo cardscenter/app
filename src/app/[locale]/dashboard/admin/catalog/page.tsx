@@ -6,6 +6,8 @@ import { Search } from "lucide-react";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { cn } from "@/lib/utils";
+import { PILL_RED, INPUT, TABLE_HEAD, SELECT } from "@/components/ploy/tile-styles";
 
 const SUB_TABS = [
   { key: "series", label: "Series" },
@@ -15,7 +17,7 @@ const SUB_TABS = [
 
 type SubTab = (typeof SUB_TABS)[number]["key"];
 
-const TABLE_HEAD = "bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground";
+const THEAD = `${TABLE_HEAD} bg-[var(--background)]`;
 const TH = "px-4 py-2.5";
 const TD = "px-4 py-3";
 
@@ -34,7 +36,7 @@ export default async function AdminCatalogPage({
         subtitle="Beheer Series, CardSets en Cards. Bulk-imports blijven via seed/sync; deze UI is voor punt-correcties en handmatige toevoegingen."
       />
 
-      <nav className="inline-flex flex-wrap gap-1 dash-card p-1">
+      <nav className="flex flex-wrap gap-2">
         {SUB_TABS.map((t) => {
           const active = t.key === tab;
           return (
@@ -43,8 +45,8 @@ export default async function AdminCatalogPage({
               href={{ pathname: "/dashboard/admin/catalog", query: { tab: t.key } }}
               className={
                 active
-                  ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-                  : "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-foreground text-white"
+                  : "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-white text-foreground/70 transition-colors hover:text-foreground"
               }
             >
               {t.label}
@@ -87,7 +89,7 @@ async function SeriesTab() {
 
       <div className="overflow-x-auto dash-card">
         <table className="w-full text-sm">
-          <thead className={TABLE_HEAD}>
+          <thead className={THEAD}>
             <tr>
               <th className={TH}>Naam</th>
               <th className={TH}>Category</th>
@@ -98,10 +100,10 @@ async function SeriesTab() {
           </thead>
           <tbody className="divide-y divide-border">
             {series.map((s) => (
-              <tr key={s.id} className="hover:bg-muted/40">
+              <tr key={s.id} className="hover:bg-[var(--background)]">
                 <td className={`${TD} font-medium`}>{s.name}</td>
                 <td className={`${TD} text-xs text-muted-foreground`}>{s.category.name}</td>
-                <td className={`${TD} text-xs`}>{s.tcgdexSeriesId ?? "—"}</td>
+                <td className={`${TD} text-xs`}>{s.tcgdexSeriesId ?? "-"}</td>
                 <td className={`${TD} text-right tabular-nums`}>
                   <Link
                     href={{ pathname: "/dashboard/admin/catalog", query: { tab: "cardsets", series: s.id } }}
@@ -143,19 +145,19 @@ async function CardSetsTab({ seriesId }: { seriesId?: string }) {
 
   return (
     <div className="space-y-4">
-      <form method="get" className="flex gap-2">
+      <form method="get" className="flex flex-wrap gap-2">
         <input type="hidden" name="tab" value="cardsets" />
         <select
           name="series"
           defaultValue={seriesId ?? ""}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+          className={cn(SELECT, "w-auto")}
         >
-          <option value="">— Alle series —</option>
+          <option value="">Alle series</option>
           {seriesList.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
-        <button type="submit" className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+        <button type="submit" className={PILL_RED}>
           Filter
         </button>
       </form>
@@ -181,7 +183,7 @@ async function CardSetsTab({ seriesId }: { seriesId?: string }) {
 
       <div className="overflow-x-auto dash-card">
         <table className="w-full text-sm">
-          <thead className={TABLE_HEAD}>
+          <thead className={THEAD}>
             <tr>
               <th className={TH}>Naam</th>
               <th className={TH}>Series</th>
@@ -193,11 +195,11 @@ async function CardSetsTab({ seriesId }: { seriesId?: string }) {
           </thead>
           <tbody className="divide-y divide-border">
             {cardSets.map((s) => (
-              <tr key={s.id} className="hover:bg-muted/40">
+              <tr key={s.id} className="hover:bg-[var(--background)]">
                 <td className={`${TD} font-medium`}>{s.name}</td>
                 <td className={`${TD} text-xs text-muted-foreground`}>{s.series.name}</td>
-                <td className={`${TD} text-xs`}>{s.pokewalletSetCode ?? "—"}</td>
-                <td className={`${TD} text-xs`}>{s.releaseDate ?? "—"}</td>
+                <td className={`${TD} text-xs`}>{s.pokewalletSetCode ?? "-"}</td>
+                <td className={`${TD} text-xs`}>{s.releaseDate ?? "-"}</td>
                 <td className={`${TD} text-right tabular-nums`}>
                   <Link
                     href={{ pathname: "/dashboard/admin/catalog", query: { tab: "cards", set: s.id } }}
@@ -254,9 +256,9 @@ async function CardsTab({ setId, q }: { setId?: string; q: string }) {
         <select
           name="set"
           defaultValue={setId ?? ""}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+          className={cn(SELECT, "w-auto")}
         >
-          <option value="">— Alle sets —</option>
+          <option value="">Alle sets</option>
           {sets.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
@@ -268,10 +270,10 @@ async function CardsTab({ setId, q }: { setId?: string; q: string }) {
             name="q"
             defaultValue={q}
             placeholder="Zoek kaartnaam"
-            className="w-full rounded-md border border-border bg-card py-1.5 pl-9 pr-3 text-sm"
+            className={`${INPUT} pl-9`}
           />
         </div>
-        <button type="submit" className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+        <button type="submit" className={PILL_RED}>
           Zoek
         </button>
       </form>
@@ -287,7 +289,7 @@ async function CardsTab({ setId, q }: { setId?: string; q: string }) {
       {(setId || q) && (
         <div className="overflow-x-auto dash-card">
           <table className="w-full text-sm">
-            <thead className={TABLE_HEAD}>
+            <thead className={THEAD}>
               <tr>
                 <th className={TH}>Naam</th>
                 <th className={TH}>Set</th>
@@ -304,12 +306,12 @@ async function CardsTab({ setId, q }: { setId?: string; q: string }) {
                 </tr>
               )}
               {cards.map((c) => (
-                <tr key={c.id} className="hover:bg-muted/40">
+                <tr key={c.id} className="hover:bg-[var(--background)]">
                   <td className={`${TD} font-medium`}>{c.name}</td>
                   <td className={`${TD} text-xs text-muted-foreground`}>{c.cardSet.name}</td>
                   <td className={`${TD} text-xs`}>{c.localId}</td>
-                  <td className={`${TD} text-xs`}>{c.rarity ?? "—"}</td>
-                  <td className={`${TD} text-right text-xs tabular-nums`}>{c.priceAvg7?.toFixed(2) ?? "—"}</td>
+                  <td className={`${TD} text-xs`}>{c.rarity ?? "-"}</td>
+                  <td className={`${TD} text-right text-xs tabular-nums`}>{c.priceAvg7?.toFixed(2) ?? "-"}</td>
                   <td className={TD}>
                     <CatalogEditForm
                       id={c.id}

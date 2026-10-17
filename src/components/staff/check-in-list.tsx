@@ -6,9 +6,11 @@ import { toast } from "sonner";
 import { Search, Undo2, UserCheck, Phone } from "lucide-react";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { INPUT, PILL_BTN_SM, PILL_INK } from "@/components/ploy/tile-styles";
 import { checkInRegistrationById, undoTicketCheckIn } from "@/actions/staff/check-in";
 import { REGISTRATION_STATUS_LABEL, type RegistrationStatus } from "@/lib/shop-events/config";
 import { formatEventTime } from "@/lib/shop-events/format";
+import { cn } from "@/lib/utils";
 
 export interface CheckInRow {
   id: string;
@@ -68,10 +70,10 @@ export function CheckInList({ rows }: { rows: CheckInRow[] }) {
 
   return (
     <div>
-      <div className="border-b border-border p-3">
+      <div className="px-5 pb-3 sm:px-6">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek op naam, code of divisie" className="glass-input w-full rounded-lg py-2 pl-9 pr-3 text-sm" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek op naam, code of divisie" className={cn(INPUT, "pl-9")} />
         </div>
       </div>
       {filtered.length === 0 ? (
@@ -79,7 +81,7 @@ export function CheckInList({ rows }: { rows: CheckInRow[] }) {
       ) : (
         <ul className="divide-y divide-border">
           {filtered.map((r) => (
-            <li key={r.id} className="flex items-center gap-3 px-4 py-3">
+            <li key={r.id} className="flex items-center gap-3 px-5 py-3 sm:px-6">
               <UserAvatar src={r.avatarUrl} name={r.displayName} size="sm" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -90,7 +92,7 @@ export function CheckInList({ rows }: { rows: CheckInRow[] }) {
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                   <span className="font-mono">{r.ticketCode}</span>
                   {r.division && <span>{r.division}</span>}
-                  {r.supervised && <span className="text-amber-600 dark:text-amber-400">Met begeleider</span>}
+                  {r.supervised && <span className="cc-pill bg-[var(--pastel-yellow)] px-2 py-0.5 font-semibold text-[var(--pastel-yellow-ink)]">Met begeleider</span>}
                   {r.guardianPhone && (
                     <span className="inline-flex items-center gap-1">
                       <Phone className="size-3" /> {r.guardianPhone}
@@ -101,12 +103,12 @@ export function CheckInList({ rows }: { rows: CheckInRow[] }) {
                 </div>
               </div>
               {r.status === "CONFIRMED" && (
-                <button type="button" disabled={pending} onClick={() => checkIn(r.id)} className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                <button type="button" disabled={pending} onClick={() => checkIn(r.id)} className={cn(PILL_INK, "px-3 py-1.5 text-xs disabled:opacity-60")}>
                   <UserCheck className="size-3.5" /> Check in
                 </button>
               )}
               {r.status === "CHECKED_IN" && (
-                <button type="button" disabled={pending} onClick={() => undo(r.id)} className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60" title="Check-in terugdraaien">
+                <button type="button" disabled={pending} onClick={() => undo(r.id)} className={cn(PILL_BTN_SM, "disabled:opacity-60")} title="Check-in terugdraaien">
                   <Undo2 className="size-3.5" />
                 </button>
               )}

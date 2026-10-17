@@ -8,6 +8,10 @@ import {
   confirmTotpEnrollment,
   disableTotp,
 } from "@/actions/two-factor";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { INPUT } from "@/components/ploy/tile-styles";
 
 type Step = "idle" | "scan" | "backup" | "disable";
 
@@ -78,21 +82,20 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
     });
   }
 
-  const inputClass =
-    "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
+  const inputClass = INPUT;
 
   return (
     <div>
       {/* Kop-rij: status + actie (label/uitleg komen van de FieldRow) */}
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+      <div className="flex items-center justify-between gap-4 rounded-[12px] border border-[var(--border)] bg-white px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2 text-sm">
-          <span className={enabled ? "text-emerald-500" : "text-muted-foreground"}>
-            {enabled ? <ShieldCheck className="size-4" /> : <Shield className="size-4" />}
-          </span>
           {enabled ? (
-            <span className="font-medium text-emerald-600 dark:text-emerald-400">Ingeschakeld</span>
+            <StatusBadge tone="success" icon={ShieldCheck}>Ingeschakeld</StatusBadge>
           ) : (
-            <span className="text-foreground">Uitgeschakeld</span>
+            <>
+              <Shield className="size-4 text-muted-foreground" />
+              <span className="text-foreground">Uitgeschakeld</span>
+            </>
           )}
         </div>
         <div className="shrink-0">
@@ -133,14 +136,14 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
       </div>
 
       {error && (
-        <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+        <Callout tone="pink" className="mt-3">
           {error}
-        </p>
+        </Callout>
       )}
 
       {/* Stap 1 — QR scannen + code bevestigen */}
       {step === "scan" && qrDataUrl && (
-        <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+        <div className="mt-3 space-y-3 rounded-[12px] border border-[var(--border)] bg-[var(--background)] p-4">
           <p className="flex items-center gap-2 text-sm text-foreground">
             <strong>1.</strong>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -156,11 +159,11 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
               alt="2FA QR-code"
               width={160}
               height={160}
-              className="rounded-lg border border-border bg-white p-2"
+              className="rounded-[12px] border border-[var(--border)] bg-white p-2"
             />
             <div className="text-xs text-muted-foreground">
               <p className="mb-1">Kun je niet scannen? Voer deze sleutel handmatig in:</p>
-              <code className="block break-all rounded bg-muted px-2 py-1 font-mono text-[11px] text-foreground">
+              <code className="block break-all rounded-[10px] border border-[var(--border)] bg-white px-2 py-1 font-mono text-[11px] text-foreground">
                 {secret}
               </code>
             </div>
@@ -184,7 +187,7 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
               <button
                 type="submit"
                 disabled={isPending}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-60"
+                className={buttonVariants()}
               >
                 {isPending && <Loader2 className="size-4 animate-spin" />}
                 Bevestigen
@@ -196,16 +199,14 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
 
       {/* Stap 2 — backup-codes (eenmalig zichtbaar) */}
       {step === "backup" && backupCodes && (
-        <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
-          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-            ✅ 2FA staat aan!
-          </p>
+        <div className="mt-3 space-y-3 rounded-[12px] border border-[var(--border)] bg-[var(--background)] p-4">
+          <StatusBadge tone="success" icon={ShieldCheck}>2FA staat aan!</StatusBadge>
           <p className="text-sm text-foreground">
             Bewaar deze <strong>backup-codes</strong> op een veilige plek (wachtwoordmanager,
-            print). Elke code werkt één keer — gebruik ze als je je telefoon kwijt bent.{" "}
+            print). Elke code werkt één keer. Gebruik ze als je je telefoon kwijt bent.{" "}
             <strong>Ze worden maar één keer getoond.</strong>
           </p>
-          <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 font-mono text-sm text-foreground sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-1.5 rounded-[12px] border border-[var(--border)] bg-white px-3 py-2 font-mono text-sm text-foreground sm:grid-cols-4">
             {backupCodes.map((c) => (
               <span key={c}>{c}</span>
             ))}
@@ -226,7 +227,7 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
                 setBackupCodes(null);
                 router.refresh();
               }}
-              className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+              className={buttonVariants()}
             >
               Ik heb ze opgeslagen
             </button>
@@ -236,13 +237,13 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
 
       {/* Uitzetten — wachtwoord + code */}
       {step === "disable" && (
-        <form onSubmit={handleDisable} className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+        <form onSubmit={handleDisable} className="mt-3 space-y-3 rounded-[12px] border border-[var(--border)] bg-[var(--background)] p-4">
           <p className="text-sm text-muted-foreground">
             Bevestig met je wachtwoord en een geldige 2FA- of backup-code.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <label className="mb-1 block text-xs font-medium text-foreground/70">
                 Wachtwoord
               </label>
               <input
@@ -254,7 +255,7 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <label className="mb-1 block text-xs font-medium text-foreground/70">
                 2FA- of backup-code
               </label>
               <input
@@ -270,7 +271,7 @@ export function TwoFactorSettings({ enabled }: { enabled: boolean }) {
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-500/20 disabled:opacity-60 dark:text-red-400"
+            className={buttonVariants({ variant: "destructive" })}
           >
             {isPending && <Loader2 className="size-4 animate-spin" />}
             2FA uitzetten

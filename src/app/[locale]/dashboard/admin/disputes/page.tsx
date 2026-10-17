@@ -15,6 +15,8 @@ import {
   type DisputeV2Resolution,
   type DisputeV2Status,
 } from "@/lib/dispute-v2/config";
+import { cn } from "@/lib/utils";
+import { PILL_BTN, INPUT, TABLE_HEAD } from "@/components/ploy/tile-styles";
 
 // Admin-wachtrij voor geschillen. Vier tabs zodat de beheerder op ELK moment
 // kan meekijken (niet alleen na escalatie):
@@ -135,18 +137,18 @@ export default async function AdminDisputesPage({
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav className="inline-flex gap-1 dash-card p-1">
+        <nav className="flex flex-wrap gap-2">
           {TABS.map((t) => (
             <Link
               key={t.key}
               href={`/dashboard/admin/disputes?tab=${t.key}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                tab === t.key ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+              className={`cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap transition-colors ${
+                tab === t.key ? "bg-foreground text-white" : "bg-white text-foreground/70 hover:text-foreground"
               }`}
             >
               {t.label}
               {t.key === "escalated" && nEscalated > 0 && (
-                <span className="ml-1.5 rounded-full bg-rose-500/15 px-1.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400">{nEscalated}</span>
+                <span className="cc-grad ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{nEscalated}</span>
               )}
             </Link>
           ))}
@@ -157,9 +159,9 @@ export default async function AdminDisputesPage({
             name="q"
             defaultValue={q}
             placeholder="Zoek op ordernummer, naam of id"
-            className="glass-input w-64 px-3 py-1.5 text-sm text-foreground"
+            className={cn(INPUT, "w-64")}
           />
-          <button className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50">Zoek</button>
+          <button className={PILL_BTN}>Zoek</button>
         </form>
       </div>
 
@@ -168,7 +170,7 @@ export default async function AdminDisputesPage({
       ) : (
         <div className="dash-card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+            <thead className={`${TABLE_HEAD} bg-[var(--background)]`}>
               <tr>
                 <th className="px-4 py-3 text-left">Geschil</th>
                 <th className="px-4 py-3 text-left">Partijen</th>
@@ -194,7 +196,7 @@ export default async function AdminDisputesPage({
                   deadline = { label: `afgerond ${fmt(d.resolvedAt)}`, tone: "neutral" };
                 }
                 return (
-                  <tr key={d.id} className="transition-colors hover:bg-muted/40">
+                  <tr key={d.id} className="transition-colors hover:bg-[var(--background)]">
                     <td className="px-4 py-3">
                       <Link href={`/dashboard/geschillen/${d.id}`} className="font-medium text-primary hover:underline">
                         {d.bundle.orderNumber}

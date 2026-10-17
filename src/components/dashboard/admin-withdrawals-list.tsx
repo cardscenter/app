@@ -8,6 +8,8 @@ import { approveWithdrawal, rejectWithdrawal, markWithdrawalPaid } from "@/actio
 import { formatIbanForDisplay } from "@/lib/validations/iban";
 import { Banknote } from "lucide-react";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
+import { cn } from "@/lib/utils";
+import { PILL_BTN_SM, PILL_RED_SM, PILL_INK, INPUT } from "@/components/ploy/tile-styles";
 
 interface Row {
   id: string;
@@ -98,7 +100,7 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="font-semibold text-foreground">
-            €{row.amount.toFixed(2)} — {row.user.displayName}
+            €{row.amount.toFixed(2)} · {row.user.displayName}
           </p>
           <p className="text-xs text-muted-foreground">{row.user.email}</p>
           <p className="text-xs font-mono text-foreground">{formatIbanForDisplay(row.iban)}</p>
@@ -114,13 +116,13 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
             </p>
           )}
           {row.paidAt && (
-            <p className="text-xs text-green-600 dark:text-green-400">
+            <p className="text-xs font-medium text-[var(--pastel-green-ink)]">
               {t("paidOn")}:{" "}
               {new Date(row.paidAt).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}
             </p>
           )}
           {row.rejectedAt && row.rejectReason && (
-            <p className="text-xs text-red-500">
+            <p className="text-xs text-destructive">
               {t("rejectReasonLabel")}: {row.rejectReason}
             </p>
           )}
@@ -132,14 +134,14 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
               <button
                 onClick={handleApprove}
                 disabled={pending}
-                className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                className={cn(PILL_INK, "px-3 py-1.5 text-xs disabled:opacity-50")}
               >
                 {t("approveAction")}
               </button>
               <button
                 onClick={() => setShowReject((s) => !s)}
                 disabled={pending}
-                className="rounded-md border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
+                className="cc-pill inline-flex items-center border border-[var(--destructive)]/30 bg-white px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-[var(--pastel-pink)]/40 disabled:opacity-50"
               >
                 {t("rejectAction")}
               </button>
@@ -150,14 +152,14 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
               <button
                 onClick={handleMarkPaid}
                 disabled={pending}
-                className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                className={cn(PILL_INK, "px-3 py-1.5 text-xs disabled:opacity-50")}
               >
                 {t("markPaidAction")}
               </button>
               <button
                 onClick={() => setShowReject((s) => !s)}
                 disabled={pending}
-                className="rounded-md border border-red-300 bg-card px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950"
+                className="cc-pill inline-flex items-center border border-[var(--destructive)]/30 bg-white px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-[var(--pastel-pink)]/40 disabled:opacity-50"
               >
                 {t("rejectAction")}
               </button>
@@ -167,20 +169,20 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
       </div>
 
       {showReject && (mode === "pending" || mode === "approved") && (
-        <div className="mt-3 space-y-2 rounded-md border border-border bg-muted/40 p-3">
+        <div className="mt-3 space-y-2 rounded-[14px] bg-[var(--background)] p-3">
           <label className="block text-xs font-medium text-foreground">{t("rejectReasonLabel")}</label>
           <input
             type="text"
             value={rejectReason}
             onChange={(e) => setRejectReasonText(e.target.value)}
             placeholder={t("rejectReasonPlaceholder")}
-            className="block w-full glass-input px-3 py-2 text-sm text-foreground"
+            className={INPUT}
           />
           <div className="flex gap-2">
             <button
               onClick={handleReject}
               disabled={pending || !rejectReason.trim()}
-              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              className={`${PILL_RED_SM} disabled:opacity-50`}
             >
               {t("rejectConfirm")}
             </button>
@@ -190,7 +192,7 @@ function AdminWithdrawalRow({ row, mode }: { row: Row; mode: Mode }) {
                 setRejectReasonText("");
               }}
               disabled={pending}
-              className="rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              className={`${PILL_BTN_SM} disabled:opacity-50`}
             >
               {t("cancel")}
             </button>

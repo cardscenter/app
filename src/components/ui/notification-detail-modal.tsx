@@ -3,14 +3,40 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ArrowRight, X } from "lucide-react";
 import {
-  NOTIFICATION_TONE_CLASSES,
   buildNotificationDetail,
   localizeNotificationLink,
   resolveNotificationMeta,
+  type NotificationTone,
 } from "@/lib/notification-display";
+import { TONE_SURFACE, type DashTone } from "@/components/dashboard/ui/tones";
+import { PILL_BTN } from "@/components/ploy/tile-styles";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { cn } from "@/lib/utils";
+
+/** Categorie-kleur van een melding → pastel-toon van de design-pass. */
+export const NOTIFICATION_DASH_TONE: Record<NotificationTone, DashTone> = {
+  blue: "blue",
+  sky: "blue",
+  amber: "yellow",
+  emerald: "green",
+  rose: "pink",
+  violet: "pink",
+  slate: "neutral",
+};
+
+/** Bolletje voor de opsommingstekens in de uitleg. */
+const BULLET_DOT: Record<DashTone, string> = {
+  pink: "bg-[var(--pastel-pink-ink)]",
+  yellow: "bg-[var(--pastel-yellow-ink)]",
+  blue: "bg-[var(--pastel-blue-ink)]",
+  green: "bg-[var(--pastel-green-ink)]",
+  ink: "bg-[var(--foreground)]",
+  red: "bg-[var(--primary)]",
+  neutral: "bg-[var(--foreground)]/40",
+};
 
 type NotificationItem = {
   id: string;
@@ -36,9 +62,10 @@ export function NotificationDetailModal({
   onClose: () => void;
 }) {
   const locale = useLocale();
+  const t = useTranslations("notifications");
   const meta = resolveNotificationMeta(notification);
   const detail = buildNotificationDetail(notification);
-  const tone = NOTIFICATION_TONE_CLASSES[meta.tone];
+  const tone = NOTIFICATION_DASH_TONE[meta.tone];
   const href = localizeNotificationLink(notification.link, locale);
   const Icon = meta.icon;
 
@@ -73,49 +100,39 @@ export function NotificationDetailModal({
       aria-label={notification.title}
     >
       <div
-        className="flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-border bg-card shadow-card-hover sm:max-w-lg sm:rounded-2xl"
+        className="flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-[20px] bg-white shadow-card-hover sm:max-w-lg sm:rounded-[20px]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header met tint in de categorie-kleur */}
-        <div className={`flex items-start gap-3 border-b border-border px-5 py-4 ${tone.headerBar}`}>
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone.iconWrap}`}>
-            <Icon className="h-5 w-5" />
+        {/* Kop in de pastel van de categorie */}
+        <div className={cn("flex items-start gap-3 px-5 py-4", tone === "neutral" ? "bg-[var(--background)] text-foreground" : TONE_SURFACE[tone])}>
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/70">
+            <Icon className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${tone.pill}`}
-            >
-              {meta.category}
-            </span>
-            <h2 className="mt-1.5 text-base font-semibold leading-snug text-foreground">
-              {notification.title}
-            </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">{fullDate}</p>
+            <span className="cc-pill inline-flex items-center bg-white/70 px-2.5 py-1 text-[11px] font-semibold leading-none">{meta.category}</span>
+            <h2 className="mt-2 text-lg font-semibold leading-snug tracking-[-0.03em]">{notification.title}</h2>
+            <p className="mt-0.5 text-xs opacity-70">{fullDate}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Sluiten"
-            className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={t("close")}
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/70 transition-colors hover:bg-white"
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </button>
         </div>
 
         {/* Scrollbare inhoud */}
-        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          {/* De volledige originele melding — bevat de specifieke bedragen/ordernummers */}
-          <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
-              {notification.body}
-            </p>
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+          {/* De volledige originele melding: bevat de specifieke bedragen/ordernummers */}
+          <div className="rounded-[14px] bg-[var(--background)] px-4 py-3">
+            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">{notification.body}</p>
           </div>
 
           {/* Uitgebreide uitleg */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Wat betekent dit?
-            </h3>
+            <h3 className="text-base font-semibold tracking-[-0.02em] text-foreground">{t("whatMeans")}</h3>
             <div className="mt-2 space-y-2.5">
               {detail.paragraphs.map((p, i) => (
                 <p key={i} className="text-sm leading-relaxed text-muted-foreground">
@@ -127,10 +144,7 @@ export function NotificationDetailModal({
               <ul className="mt-3 space-y-2">
                 {detail.bullets.map((b, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
-                    <span
-                      className={`mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${tone.dot}`}
-                      aria-hidden
-                    />
+                    <span className={cn("mt-2 inline-block size-1.5 shrink-0 rounded-full", BULLET_DOT[tone])} aria-hidden />
                     <span>{b}</span>
                   </li>
                 ))}
@@ -141,21 +155,13 @@ export function NotificationDetailModal({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3.5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            Sluiten
+          <button type="button" onClick={onClose} className={PILL_BTN}>
+            {t("close")}
           </button>
           {href && (
-            <Link
-              href={href}
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-            >
+            <Link href={href} onClick={onClose} className={buttonVariants()}>
               {detail.linkLabel}
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="size-4" />
             </Link>
           )}
         </div>

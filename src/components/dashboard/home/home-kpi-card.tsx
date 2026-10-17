@@ -1,14 +1,21 @@
 import type { LucideIcon } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { ChangeIndicator } from "@/components/dashboard/statistics/change-indicator";
+import { TONE_ICON, type DashTone } from "@/components/dashboard/ui/tones";
+import { cn } from "@/lib/utils";
 
-// KPI-tegel in TailAdmin-anatomie (sept 2026): icoon-cirkel linksboven,
-// daaronder groot getal + label, rechtsonder de delta (of een periode-hint).
-// Optionele voetnoot voor uitleg in één regel.
+// KPI-tegel (design-pass ronde G): pastel icoon-cirkel linksboven, daaronder
+// het getal in de display-letter + label, rechtsonder de delta (of een
+// periode-hint). Optionele voetnoot voor uitleg in één regel.
 
 type Props = {
   icon: LucideIcon;
-  /** Kleur van het icoon (de cirkel zelf is altijd bg-muted). */
+  /** Pastel-toon van de icoon-cirkel. */
+  tone?: DashTone;
+  /**
+   * @deprecated Gebruik `tone`. Oude aanroepers geven een Tailwind-kleur mee
+   * (`text-emerald-600` …); die wordt hier naar een pastel-toon vertaald.
+   */
   iconClass?: string;
   label: string;
   hint?: string;
@@ -18,16 +25,25 @@ type Props = {
   href?: string;
 };
 
-export function HomeKpiCard({ icon: Icon, iconClass, label, hint, value, comparison, footnote, href }: Props) {
+function toneFromClass(iconClass?: string): DashTone {
+  if (!iconClass) return "pink";
+  if (iconClass.includes("emerald") || iconClass.includes("green")) return "green";
+  if (iconClass.includes("amber") || iconClass.includes("yellow")) return "yellow";
+  if (iconClass.includes("sky") || iconClass.includes("blue")) return "blue";
+  return "pink";
+}
+
+export function HomeKpiCard({ icon: Icon, tone, iconClass, label, hint, value, comparison, footnote, href }: Props) {
+  const resolvedTone = tone ?? toneFromClass(iconClass);
   const body = (
     <>
-      <span className="flex size-11 items-center justify-center rounded-full bg-muted">
-        <Icon className={`size-5 ${iconClass ?? "text-primary"}`} />
+      <span className={cn("flex size-10 items-center justify-center rounded-full", TONE_ICON[resolvedTone])}>
+        <Icon className="size-[18px]" />
       </span>
       <div className="mt-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">{label}</p>
+          <p className="cc-display truncate text-3xl tabular-nums text-foreground">{value}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{label}</p>
         </div>
         {comparison ? (
           <ChangeIndicator change={comparison.change} direction={comparison.direction} invert={comparison.invert} />
@@ -38,9 +54,9 @@ export function HomeKpiCard({ icon: Icon, iconClass, label, hint, value, compari
       {footnote && <p className="mt-2 text-xs text-muted-foreground">{footnote}</p>}
     </>
   );
-  const cls = "block dash-card p-4";
+  const cls = "block dash-card p-5";
   return href ? (
-    <Link href={href} className={`${cls} transition-colors hover:bg-muted/40`}>
+    <Link href={href} className={`${cls} no-underline transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-card-hover`}>
       {body}
     </Link>
   ) : (

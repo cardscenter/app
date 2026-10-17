@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { History } from "lucide-react";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { PILL_BTN, PILL_BTN_SM, PILL_RED, INPUT, SELECT, TABLE_HEAD } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
 
@@ -90,13 +92,13 @@ export default async function AdminAuditPage({
     <div className="space-y-6">
       <DashboardPageHeader title={t("navAudit")} subtitle={`${total} entries`} />
 
-      <form className="flex flex-wrap gap-2 dash-card p-3" method="get">
+      <form className="flex flex-wrap gap-2 dash-card p-4" method="get">
         <select
           name="action"
           defaultValue={sp.action ?? ""}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+          className={cn(SELECT, "w-auto")}
         >
-          <option value="">— Alle actions —</option>
+          <option value="">Alle actions</option>
           {ACTIONS.map((a) => (
             <option key={a} value={a}>{a}</option>
           ))}
@@ -104,9 +106,9 @@ export default async function AdminAuditPage({
         <select
           name="targetType"
           defaultValue={sp.targetType ?? ""}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+          className={cn(SELECT, "w-auto")}
         >
-          <option value="">— Alle target-types —</option>
+          <option value="">Alle target-types</option>
           {TARGET_TYPES.map((tt) => (
             <option key={tt} value={tt}>{tt}</option>
           ))}
@@ -116,17 +118,17 @@ export default async function AdminAuditPage({
           name="targetId"
           defaultValue={sp.targetId ?? ""}
           placeholder="targetId bevat…"
-          className="flex-1 min-w-[150px] rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+          className={cn(INPUT, "w-auto min-w-[150px] flex-1")}
         />
         <button
           type="submit"
-          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+          className={PILL_RED}
         >
           Filter
         </button>
         <Link
           href="/dashboard/admin/audit"
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+          className={PILL_BTN}
         >
           Reset
         </Link>
@@ -134,7 +136,7 @@ export default async function AdminAuditPage({
 
       <div className="overflow-x-auto dash-card">
         <table className="w-full text-sm">
-          <thead className="bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <thead className={`${TABLE_HEAD} bg-[var(--background)]`}>
             <tr>
               <th className="px-4 py-2.5">Tijdstip</th>
               <th className="px-4 py-2.5">Admin</th>
@@ -153,7 +155,7 @@ export default async function AdminAuditPage({
               </tr>
             )}
             {entries.map((e) => (
-              <tr key={e.id} className="align-top hover:bg-muted/40">
+              <tr key={e.id} className="align-top hover:bg-[var(--background)]">
                 <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                   {e.createdAt.toLocaleString("nl-NL")}
                 </td>
@@ -170,7 +172,7 @@ export default async function AdminAuditPage({
                   )}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{e.action}</code>
+                  <code className="rounded-full bg-muted px-2 py-0.5 text-xs">{e.action}</code>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className="text-xs text-muted-foreground">{e.targetType}</span>
@@ -212,7 +214,7 @@ export default async function AdminAuditPage({
                   pathname: "/dashboard/admin/audit",
                   query: { ...sp, page: String(page - 1) },
                 }}
-                className="rounded-md border border-border bg-card px-3 py-1.5 hover:bg-muted"
+                className={PILL_BTN_SM}
               >
                 Vorige
               </Link>
@@ -223,7 +225,7 @@ export default async function AdminAuditPage({
                   pathname: "/dashboard/admin/audit",
                   query: { ...sp, page: String(page + 1) },
                 }}
-                className="rounded-md border border-border bg-card px-3 py-1.5 hover:bg-muted"
+                className={PILL_BTN_SM}
               >
                 Volgende
               </Link>

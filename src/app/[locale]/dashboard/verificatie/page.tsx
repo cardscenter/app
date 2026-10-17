@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { CheckCircle2, Clock, XCircle, Landmark, MapPin, IdCard } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 
+import { Callout } from "@/components/dashboard/ui/callout";
 type Status = "NONE" | "PENDING" | "APPROVED" | "REJECTED";
 
 export default async function VerificationPage({
@@ -169,55 +170,27 @@ function Section({
       title={title}
       description={subtitle}
       action={badge}
-      contentClassName="space-y-3 p-5"
+      contentClassName="space-y-3"
     >
       {statusValue === "APPROVED" && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/10">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 text-green-600 dark:text-green-400" />
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-green-800 dark:text-green-300">{approvedLabel}</h3>
-              <p className="text-xs text-green-600 dark:text-green-400">{approvedDescription}</p>
-              {reviewedAt && (
-                <p className="mt-1 text-xs text-green-500">
-                  Goedgekeurd op {new Date(reviewedAt).toLocaleDateString("nl-NL")}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        <Callout tone="green" icon={CheckCircle2} title={approvedLabel}>
+          <p>{approvedDescription}</p>
+          {reviewedAt && <p className="mt-1 text-xs opacity-75">Goedgekeurd op {new Date(reviewedAt).toLocaleDateString("nl-NL")}</p>}
+        </Callout>
       )}
 
       {statusValue === "PENDING" && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/10">
-          <div className="flex items-start gap-3">
-            <Clock className="mt-0.5 h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300">{pendingLabel}</h3>
-              <p className="text-xs text-blue-600 dark:text-blue-400">{pendingDescription}</p>
-              {submittedAt && (
-                <p className="mt-1 text-xs text-blue-500">
-                  Ingediend op {new Date(submittedAt).toLocaleDateString("nl-NL")}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        <Callout tone="blue" icon={Clock} title={pendingLabel}>
+          <p>{pendingDescription}</p>
+          {submittedAt && <p className="mt-1 text-xs opacity-75">Ingediend op {new Date(submittedAt).toLocaleDateString("nl-NL")}</p>}
+        </Callout>
       )}
 
       {statusValue === "REJECTED" && (
         <>
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/10">
-            <div className="flex items-start gap-3">
-              <XCircle className="mt-0.5 h-5 w-5 text-red-600 dark:text-red-400" />
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-red-800 dark:text-red-300">{rejectedLabel}</h3>
-                {rejectReason && (
-                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">Reden: {rejectReason}</p>
-                )}
-              </div>
-            </div>
-          </div>
+          <Callout tone="pink" icon={XCircle} title={rejectedLabel}>
+            {rejectReason && <p>Reden: {rejectReason}</p>}
+          </Callout>
           {children}
         </>
       )}

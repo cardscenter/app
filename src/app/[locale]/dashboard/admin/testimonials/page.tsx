@@ -7,10 +7,12 @@ import { DashboardSection } from "@/components/dashboard/ui/section";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { TestimonialFlagToggle } from "@/components/admin/testimonial-flag-toggle";
+import { PILL_RED, TABLE_CELL, TABLE_HEAD } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground";
+const BTN = PILL_RED;
 
 const SOURCE_LABEL: Record<string, string> = { GOOGLE: "Google", INSTAGRAM: "Instagram", DISCORD: "Discord", IN_STORE: "In de winkel", EMAIL: "E-mail", OTHER: "Overig" };
 
@@ -34,29 +36,30 @@ export default async function AdminTestimonialsPage() {
       {rows.length === 0 ? (
         <EmptyState icon={Quote} title="Nog geen ervaringen" description="Voeg een quote toe uit een Google-review, een Discord-bericht of een gesprek in de winkel." action={<Link href="/dashboard/admin/testimonials/nieuw" className={BTN}>Nieuwe ervaring</Link>} />
       ) : (
-        <DashboardSection title="Quotes" contentClassName="p-0">
+        <DashboardSection title="Quotes" contentClassName="px-0 pb-0 pt-4 sm:px-0 sm:pb-0">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+            <thead className={cn(TABLE_HEAD, "bg-[var(--background)]")}>
               <tr>
-                <th className="px-4 py-3 text-left">Quote</th>
-                <th className="px-4 py-3 text-left">Van</th>
-                <th className="px-4 py-3 text-left">Bron</th>
-                <th className="px-4 py-3 text-left">Kleur</th>
-                <th className="px-4 py-3 text-left">Zichtbaar</th>
-                <th className="px-4 py-3 text-left">Homepage</th>
-                <th className="px-4 py-3 text-right">Volgorde</th>
+                <th className={TABLE_CELL}>Quote</th>
+                <th className={TABLE_CELL}>Van</th>
+                <th className={TABLE_CELL}>Bron</th>
+                <th className={TABLE_CELL}>Kleur</th>
+                <th className={TABLE_CELL}>Zichtbaar</th>
+                <th className={TABLE_CELL}>Homepage</th>
+                <th className={cn(TABLE_CELL, "text-right")}>Volgorde</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-muted/40">
+                <tr key={r.id} className="transition-colors hover:bg-[var(--background)]/60">
                   <td className="max-w-md px-4 py-3">
-                    <Link href={`/dashboard/admin/testimonials/${r.id}`} className="line-clamp-2 font-medium hover:underline">
+                    <Link href={`/dashboard/admin/testimonials/${r.id}`} className="line-clamp-2 font-semibold text-foreground hover:text-primary">
                       {r.quote.replace(/\*\*/g, "")}
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium">{r.authorName}</p>
+                    <p className="font-semibold">{r.authorName}</p>
                     {r.authorRole && <p className="text-xs text-muted-foreground">{r.authorRole}</p>}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{SOURCE_LABEL[r.source] ?? r.source}</td>
@@ -73,14 +76,15 @@ export default async function AdminTestimonialsPage() {
                     <TestimonialFlagToggle id={r.id} flag="featured" value={r.featured} disabled={!r.approved} />
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                    {r.featured && r.approved && <Star className="mr-1 inline size-3.5 text-amber-500" />}
+                    {r.featured && r.approved && <Star className="mr-1 inline size-3.5 fill-[var(--pastel-yellow)] text-[var(--pastel-yellow-ink)]" />}
                     {r.sortOrder}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
+          </div>
+          <p className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-4 text-xs text-muted-foreground sm:px-6">
             <StatusBadge tone="neutral">Tip</StatusBadge> Zet een zinsdeel tussen dubbele sterretjes (**zo**) om het vet te tonen op de muur.
           </p>
         </DashboardSection>

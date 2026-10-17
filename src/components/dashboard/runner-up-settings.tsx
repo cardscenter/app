@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateMaxRunnerUpAttempts } from "@/actions/profile";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 interface RunnerUpSettingsProps {
   current: number;
@@ -53,7 +54,7 @@ export function RunnerUpSettings({ current }: RunnerUpSettingsProps) {
         type="button"
         onClick={handleSave}
         disabled={!dirty || pending}
-        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
+        className={buttonVariants({ size: "sm" })}
       >
         {pending ? "..." : t("runnerUpSave")}
       </button>

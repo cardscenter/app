@@ -32,7 +32,7 @@ export default async function QrCodesPage() {
       <DashboardSection title="Kaartjes" icon={<QrCode className="size-5" />}>
         <div id="qr-print" className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {cards.map((c) => (
-            <div key={c.label} className="qr-card flex flex-col items-center rounded-2xl border-2 border-[#1F1F22] bg-white p-4 text-center text-[#1F1F22]">
+            <div key={c.label} className="qr-card flex flex-col items-center rounded-[16px] border-2 border-[#1F1F22] bg-white p-4 text-center text-[#1F1F22]">
               <span className="text-[11px] font-bold uppercase tracking-[.14em]">Cards Center</span>
               <span className="mt-1 text-2xl font-extrabold">Bestel hier</span>
               <span className="text-sm font-semibold">{c.label}</span>

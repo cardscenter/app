@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { reviewEventReport } from "@/actions/admin/events";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { PILL_BTN, PILL_RED, INPUT } from "@/components/ploy/tile-styles";
 
 const REASON_LABELS: Record<string, string> = {
   MISLEADING: "Misleidend",
@@ -83,21 +84,21 @@ function ReportCard({ report }: { report: ReportRow }) {
         onChange={(e) => setNote(e.target.value)}
         placeholder="Interne notitie (optioneel)…"
         rows={1}
-        className="mt-3 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+        className={`${INPUT} mt-3`}
       />
 
       <div className="mt-2 flex flex-wrap gap-2">
         <button
           onClick={() => handle("DISMISS")}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:opacity-50"
+          className={`${PILL_BTN} disabled:opacity-50`}
         >
           <Check className="h-4 w-4" /> Afwijzen (geen actie)
         </button>
         <button
           onClick={() => handle("ACTION_TAKEN")}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+          className={`${PILL_RED} disabled:opacity-50`}
         >
           <EyeOff className="h-4 w-4" /> Evenement verbergen
         </button>

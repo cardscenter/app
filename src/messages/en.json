@@ -2224,6 +2224,10 @@
     "title": "Notifications",
     "empty": "No notifications",
     "markAllRead": "Mark all as read",
+    "countSubtitle": "{count, plural, one {# notification} other {# notifications}} · click for details",
+    "manageEmailPrefs": "Manage email preferences",
+    "whatMeans": "What does this mean?",
+    "close": "Close",
     "emailPrefs": {
       "title": "Email preferences",
       "subtitle": "Choose what you want to receive emails about",

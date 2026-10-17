@@ -19,6 +19,7 @@ import { TierPill } from "@/components/ui/tier-pill";
 import { UserRoleSelect } from "@/components/admin/user-role-select";
 import { ageOn, isMinor } from "@/lib/age";
 import { parseFavoriteGames } from "@/lib/games";
+import { TABLE_HEAD } from "@/components/ploy/tile-styles";
 
 const USER_DETAIL_SELECT = {
   id: true, displayName: true, email: true, firstName: true, lastName: true,
@@ -116,7 +117,7 @@ export default async function AdminUserDetailPage({
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <code className="rounded bg-muted px-2 py-0.5 text-[11px]">
+          <code className="rounded-full bg-muted px-2 py-0.5 text-[11px]">
             {user.accountType}
           </code>
           <TierPill accountType={user.accountType} size="md" />
@@ -137,7 +138,7 @@ export default async function AdminUserDetailPage({
       <InternalNoteForm userId={user.id} initial={user.internalNote} />
 
       {/* Tab nav */}
-      <nav className="inline-flex flex-wrap gap-1 dash-card p-1">
+      <nav className="flex flex-wrap gap-2">
         {TABS.map((t) => {
           const active = t.key === tab;
           return (
@@ -149,8 +150,8 @@ export default async function AdminUserDetailPage({
               }}
               className={
                 active
-                  ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-                  : "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-foreground text-white"
+                  : "cc-pill inline-flex h-9 items-center px-4 text-sm font-semibold whitespace-nowrap bg-white text-foreground/70 transition-colors hover:text-foreground"
               }
             >
               {t.label}
@@ -182,8 +183,8 @@ export default async function AdminUserDetailPage({
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="space-y-0.5">
-      <dt className="text-xs uppercase tracking-wider text-muted-foreground/70">{label}</dt>
-      <dd className="text-sm">{value || <span className="text-muted-foreground">—</span>}</dd>
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="text-sm">{value || <span className="text-muted-foreground">-</span>}</dd>
     </div>
   );
 }
@@ -244,8 +245,8 @@ function ProfileTab({ user, subscription }: { user: UserDetailPayload; subscript
       {user.suspensionReason && <Field label="Suspension reden" value={user.suspensionReason} />}
 
       {/* Fase 45: abonnement / tier-status */}
-      <div className="md:col-span-3 mt-2 rounded-md border border-border bg-muted/30 p-4">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="md:col-span-3 mt-2 rounded-[14px] bg-[var(--background)] p-4">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           Abonnement
         </h3>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-3">
@@ -287,8 +288,8 @@ function ProfileTab({ user, subscription }: { user: UserDetailPayload; subscript
       </div>
 
       {/* Fase 29: veiling-status — strikes, borg-vrijstelling, IP-tracking */}
-      <div className="md:col-span-3 mt-2 rounded-md border border-border bg-muted/30 p-4">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="md:col-span-3 mt-2 rounded-[14px] bg-[var(--background)] p-4">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           Veiling-status (Fase 29)
         </h3>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-3">
@@ -296,11 +297,11 @@ function ProfileTab({ user, subscription }: { user: UserDetailPayload; subscript
             label="Wanbetalingen (strikes)"
             value={
               user.paymentFailureCount > 0 ? (
-                <span className={user.paymentFailureCount >= 2 ? "font-semibold text-rose-600" : "text-amber-600"}>
+                <span className={user.paymentFailureCount >= 2 ? "font-semibold text-destructive" : "font-semibold text-[var(--pastel-yellow-ink)]"}>
                   {user.paymentFailureCount}× wanbetaling
                 </span>
               ) : (
-                <span className="text-emerald-600">Geen</span>
+                <span className="text-[var(--pastel-green-ink)]">Geen</span>
               )
             }
           />
@@ -346,10 +347,10 @@ async function WalletTab({ userId, userName, balance, held, reserved }: { userId
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Balance" value={`€${balance.toFixed(2)}`} />
-        <StatCard label="Beschikbaar" value={`€${(balance - reserved).toFixed(2)}`} />
-        <StatCard label="Held (escrow)" value={`€${held.toFixed(2)}`} />
-        <StatCard label="Reserved" value={`€${reserved.toFixed(2)}`} />
+        <StatCard label="Balance" value={`€${balance.toFixed(2)}`} tone="green" />
+        <StatCard label="Beschikbaar" value={`€${(balance - reserved).toFixed(2)}`} tone="blue" />
+        <StatCard label="Held (escrow)" value={`€${held.toFixed(2)}`} tone="yellow" />
+        <StatCard label="Reserved" value={`€${reserved.toFixed(2)}`} tone="pink" />
       </div>
 
       <ReserveBreakdownCard userId={userId} userName={userName} />
@@ -360,7 +361,7 @@ async function WalletTab({ userId, userName, balance, held, reserved }: { userId
         ) : (
           <div className="overflow-x-auto dash-card">
             <table className="w-full text-sm">
-              <thead className="bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <thead className={`${TABLE_HEAD} bg-[var(--background)]`}>
                 <tr>
                   <th className="px-4 py-2.5">Tijd</th>
                   <th className="px-4 py-2.5">Type</th>
@@ -371,12 +372,12 @@ async function WalletTab({ userId, userName, balance, held, reserved }: { userId
               </thead>
               <tbody className="divide-y divide-border">
                 {transactions.map((t) => (
-                  <tr key={t.id} className="hover:bg-muted/40">
+                  <tr key={t.id} className="hover:bg-[var(--background)]">
                     <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                       {t.createdAt.toLocaleString("nl-NL")}
                     </td>
                     <td className="px-4 py-3"><code className="text-xs">{t.type}</code></td>
-                    <td className={`px-4 py-3 text-right tabular-nums ${t.amount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    <td className={`px-4 py-3 text-right tabular-nums ${t.amount >= 0 ? "text-[var(--pastel-green-ink)]" : "text-destructive"}`}>
                       €{t.amount.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">€{t.balanceAfter.toFixed(2)}</td>

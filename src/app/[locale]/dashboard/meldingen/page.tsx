@@ -52,17 +52,17 @@ export default async function MeldingenPage({
           deze pagina is puur de notificatie-lijst. */}
       <DashboardPageHeader
         title={t("title")}
-        subtitle={totalCount > 0 ? `${totalCount} melding${totalCount === 1 ? "" : "en"} — klik voor uitleg en details` : undefined}
+        subtitle={totalCount > 0 ? t("countSubtitle", { count: totalCount }) : undefined}
         action={
           <Link href="/dashboard/instellingen" className={buttonVariants({ variant: "outline" })}>
             <Settings className="h-4 w-4" />
-            E-mailvoorkeuren beheren
+            {t("manageEmailPrefs")}
           </Link>
         }
       />
 
       {notifications.length === 0 ? (
-        <EmptyState icon={Bell} title={t("empty")} />
+        <EmptyState icon={Bell} title={t("empty")} tone="blue" />
       ) : (
         <>
           <NotificationList

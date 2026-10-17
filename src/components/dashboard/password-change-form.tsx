@@ -5,6 +5,9 @@ import { Link } from "@/i18n/navigation";
 import { Lock, Check, Loader2 } from "lucide-react";
 import { changePassword } from "@/actions/auth";
 import { TotpStepUpField } from "@/components/dashboard/totp-step-up-field";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { INPUT } from "@/components/ploy/tile-styles";
 
 /**
  * Wachtwoord-wijzigen rij + uitklap-formulier op /dashboard/profiel
@@ -42,19 +45,18 @@ export function PasswordChangeForm() {
     });
   }
 
-  const inputClass =
-    "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
+  const inputClass = INPUT;
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+      <div className="flex items-center justify-between gap-4 rounded-[12px] border border-[var(--border)] bg-white px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2 text-sm text-foreground">
           <Lock className="size-4 text-muted-foreground" />
           <span className="tracking-[0.2em]">••••••••</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {saved && (
-            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <span className="cc-pill flex items-center gap-1 bg-[var(--pastel-green)] px-2.5 py-1 text-xs font-semibold text-[var(--pastel-green-ink)]">
               <Check className="size-3.5" /> Gewijzigd
             </span>
           )}
@@ -72,9 +74,9 @@ export function PasswordChangeForm() {
       </div>
 
       {open && (
-        <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+        <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded-[12px] border border-[var(--border)] bg-[var(--background)] p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label className="mb-1 block text-xs font-medium text-foreground/70">
               Huidig wachtwoord
             </label>
             <input
@@ -87,7 +89,7 @@ export function PasswordChangeForm() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <label className="mb-1 block text-xs font-medium text-foreground/70">
                 Nieuw wachtwoord
               </label>
               <input
@@ -100,7 +102,7 @@ export function PasswordChangeForm() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <label className="mb-1 block text-xs font-medium text-foreground/70">
                 Herhaal nieuw wachtwoord
               </label>
               <input
@@ -117,11 +119,7 @@ export function PasswordChangeForm() {
 
           {totpRequired && <TotpStepUpField value={totpCode} onChange={setTotpCode} />}
 
-          {error && (
-            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
-              {error}
-            </p>
-          )}
+          {error && <Callout tone="pink">{error}</Callout>}
 
           <div className="flex items-center justify-between gap-3">
             <Link
@@ -133,7 +131,7 @@ export function PasswordChangeForm() {
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-60"
+              className={buttonVariants()}
             >
               {isPending && <Loader2 className="size-4 animate-spin" />}
               Wachtwoord wijzigen

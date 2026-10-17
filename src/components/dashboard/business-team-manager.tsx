@@ -11,6 +11,8 @@ import { MAX_BUSINESS_MEMBERS, MEMBER_TITLE_MAX } from "@/lib/business-team-conf
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { PROFILE_INPUT_CLASS } from "@/components/dashboard/profile-form";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { cn } from "@/lib/utils";
 
 export type TeamManagerRow = {
   id: string;
@@ -78,7 +80,7 @@ export function BusinessTeamManager({ members }: { members: TeamManagerRow[] }) 
   return (
     <div className="space-y-3">
       {members.length > 0 && (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <ul className="divide-y divide-border rounded-[12px] border border-[var(--border)] bg-white">
           {members.map((m) => (
             <li key={m.id} className="flex items-center gap-3 px-3 py-2.5">
               <UserAvatar src={m.avatarUrl} name={m.fullName} size="md" />
@@ -103,7 +105,7 @@ export function BusinessTeamManager({ members }: { members: TeamManagerRow[] }) 
                       onChange={(e) => setEditTitle(e.target.value)}
                       maxLength={MEMBER_TITLE_MAX}
                       placeholder={t("teamTitlePlaceholder")}
-                      className={`${PROFILE_INPUT_CLASS} max-w-xs py-1.5 text-xs`}
+                      className={cn(PROFILE_INPUT_CLASS, "max-w-xs py-1.5 text-xs")}
                       autoFocus
                     />
                     <button type="submit" disabled={pending} className="text-xs font-medium text-primary hover:text-primary-hover">
@@ -132,7 +134,7 @@ export function BusinessTeamManager({ members }: { members: TeamManagerRow[] }) 
                 disabled={pending}
                 aria-label={t("teamRemove")}
                 title={t("teamRemove")}
-                className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-red-600"
+                className="cc-pill inline-flex size-8 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-[var(--background)] hover:text-[var(--destructive)]"
               >
                 <X className="size-4" />
               </button>
@@ -149,7 +151,7 @@ export function BusinessTeamManager({ members }: { members: TeamManagerRow[] }) 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t("teamInviteUsername")}
-              className={`${PROFILE_INPUT_CLASS} pl-8`}
+              className={cn(PROFILE_INPUT_CLASS, "pl-8")}
               autoComplete="off"
               spellCheck={false}
               required
@@ -160,12 +162,12 @@ export function BusinessTeamManager({ members }: { members: TeamManagerRow[] }) 
             onChange={(e) => setTitle(e.target.value)}
             maxLength={MEMBER_TITLE_MAX}
             placeholder={t("teamTitlePlaceholder")}
-            className={`${PROFILE_INPUT_CLASS} sm:max-w-[12rem]`}
+            className={cn(PROFILE_INPUT_CLASS, "sm:max-w-[12rem]")}
           />
           <button
             type="submit"
             disabled={pending || !username.trim()}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
+            className={buttonVariants()}
           >
             {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
             {t("teamInvite")}

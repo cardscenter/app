@@ -7,6 +7,8 @@ import { Save, Trash2, Send, Eye } from "lucide-react";
 import { saveNewsPost, deleteNewsPost, sendNewsletter } from "@/actions/admin/community";
 import { FieldRow } from "@/components/dashboard/ui/field-row";
 import { ImageUploader } from "@/components/ui/image-uploader";
+import { INPUT, PILL_BTN, PILL_RED, TEXTAREA } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 export interface NewsEditorRow {
   id: string;
@@ -21,9 +23,8 @@ export interface NewsEditorRow {
   newsletterRecipients: number;
 }
 
-const INPUT = "glass-input w-full rounded-lg px-3 py-2 text-sm";
-const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60";
-const BTN_OUTLINE = "inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-60";
+const BTN = cn(PILL_RED, "px-4 py-2 disabled:opacity-60");
+const BTN_OUTLINE = cn(PILL_BTN, "disabled:opacity-60");
 
 export function NewsEditor({ row, optInCount }: { row: NewsEditorRow | null; optInCount: number }) {
   const router = useRouter();
@@ -68,10 +69,10 @@ export function NewsEditor({ row, optInCount }: { row: NewsEditorRow | null; opt
         <input id="title" name="title" defaultValue={row?.title ?? ""} className={INPUT} required maxLength={120} />
       </FieldRow>
       <FieldRow label="Samenvatting" hint="Korte intro voor de overzichtspagina en de nieuwsbrief (max 300 tekens)." htmlFor="excerpt">
-        <textarea id="excerpt" name="excerpt" defaultValue={row?.excerpt ?? ""} rows={2} maxLength={300} className={INPUT} />
+        <textarea id="excerpt" name="excerpt" defaultValue={row?.excerpt ?? ""} rows={2} maxLength={300} className={TEXTAREA} />
       </FieldRow>
       <FieldRow label="Tekst" hint="Platte tekst. Een lege regel begint een nieuwe alinea." htmlFor="body">
-        <textarea id="body" name="body" defaultValue={row?.body ?? ""} rows={14} maxLength={20000} className={INPUT} required />
+        <textarea id="body" name="body" defaultValue={row?.body ?? ""} rows={14} maxLength={20000} className={TEXTAREA} required />
       </FieldRow>
       <FieldRow label="Omslagfoto" hint="Optioneel, liggend formaat werkt het best.">
         <ImageUploader images={cover} onChange={(imgs) => setCover(imgs.slice(-1))} maxImages={1} context="event" />
@@ -86,12 +87,12 @@ export function NewsEditor({ row, optInCount }: { row: NewsEditorRow | null; opt
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <div className="flex items-center gap-2">
           {row && (
-            <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-sm text-rose-600 hover:underline">
+            <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-sm font-semibold text-destructive hover:underline">
               <Trash2 className="size-3.5" /> Verwijderen
             </button>
           )}
           {row?.status === "PUBLISHED" && (
-            <a href={`/nl/nieuws/${row.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline">
+            <a href={`/nl/nieuws/${row.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground hover:underline">
               <Eye className="size-3.5" /> Bekijk
             </a>
           )}

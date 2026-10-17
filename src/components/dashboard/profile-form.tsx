@@ -25,14 +25,15 @@ import { AvatarCropModal } from "@/components/ui/avatar-crop-modal";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { SocialIcon } from "@/components/events/social-icon";
 import { FieldRow } from "@/components/dashboard/ui/field-row";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { INPUT, TEXTAREA, PILL_BTN_SM } from "@/components/ploy/tile-styles";
 
 const BIO_MAX = 500;
 
-export const PROFILE_INPUT_CLASS =
-  "block w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 transition-colors focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/15";
+export const PROFILE_INPUT_CLASS = `block ${INPUT}`;
 
-const PILL_BUTTON =
-  "inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50";
+const PILL_BUTTON = `${PILL_BTN_SM} disabled:opacity-50`;
 
 type ProfileFormUser = {
   displayName: string;
@@ -178,14 +179,14 @@ export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocia
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt="" className="size-full object-cover" />
           ) : (
-            <div className={`size-full bg-gradient-to-r ${fallbackGradient} opacity-60 dark:opacity-50`} />
+            <div className={`size-full bg-gradient-to-r ${fallbackGradient} opacity-60`} />
           )}
           <div className="absolute right-3 top-3 flex items-center gap-2">
             <button
               type="button"
               onClick={() => coverInputRef.current?.click()}
               disabled={coverUploading}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-900 shadow-sm ring-1 ring-black/5 transition-colors hover:bg-white disabled:opacity-60"
+              className="cc-pill inline-flex items-center gap-1.5 bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-card transition-colors hover:bg-[var(--background)] disabled:opacity-60"
             >
               {coverUploading ? <Loader2 className="size-3.5 animate-spin" /> : <ImageIcon className="size-3.5" />}
               {t("coverEdit")}
@@ -196,7 +197,7 @@ export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocia
                 onClick={() => setCoverUrl(null)}
                 title={t("coverRemove")}
                 aria-label={t("coverRemove")}
-                className="inline-flex size-8 items-center justify-center rounded-lg bg-white/95 text-slate-700 shadow-sm ring-1 ring-black/5 transition-colors hover:bg-white hover:text-red-600"
+                className="cc-pill inline-flex size-8 items-center justify-center bg-white text-foreground/70 shadow-card transition-colors hover:text-[var(--destructive)]"
               >
                 <X className="size-4" />
               </button>
@@ -220,10 +221,10 @@ export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocia
           >
             {user.fullNameLocked ? (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
+                <span className="inline-flex items-center rounded-[10px] border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-foreground">
                   {[user.firstName, user.lastName].filter(Boolean).join(" ") || "—"}
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
+                <span className="cc-pill inline-flex items-center gap-1.5 bg-muted px-2.5 py-1.5 text-xs font-semibold text-foreground/70">
                   <Lock className="size-3.5" />
                   {t("usernameLocked")}
                 </span>
@@ -329,7 +330,7 @@ export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocia
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder={t("aboutYouPlaceholder")}
-              className={`${PROFILE_INPUT_CLASS} resize-y leading-relaxed`}
+              className={TEXTAREA}
             />
             <p className="mt-1 text-right text-[11px] tabular-nums text-muted-foreground">
               {bio.length}/{BIO_MAX}
@@ -338,7 +339,7 @@ export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocia
 
           {/* Locatie — afgeleid van het adres, alleen plaats + land publiek */}
           <FieldRow label={t("location")} hint={t("locationHint")}>
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--border)] bg-white px-3 py-2.5">
               <span className="inline-flex min-w-0 items-center gap-2 text-sm text-foreground">
                 {hasLocation ? (
                   <>
@@ -392,10 +393,10 @@ export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocia
                 return (
                   <div
                     key={i}
-                    className="flex rounded-lg border border-border bg-card transition-colors focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/15"
+                    className="flex overflow-hidden rounded-[10px] border border-[var(--border)] bg-white transition-colors focus-within:border-[var(--foreground)]"
                   >
                     <span
-                      className="flex w-11 shrink-0 items-center justify-center border-r border-border bg-muted/60 text-muted-foreground"
+                      className="flex w-11 shrink-0 items-center justify-center border-r border-[var(--border)] bg-[var(--background)] text-muted-foreground"
                       title={label}
                     >
                       <SocialIcon platform={platform} className="size-4" />
@@ -409,14 +410,14 @@ export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocia
                         setSocials((prev) => prev.map((v, j) => (j === i ? e.target.value : v)))
                       }
                       placeholder="instagram.com/jouwnaam"
-                      className="block w-full bg-transparent px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
+                      className="block w-full bg-transparent px-3 py-2 text-sm text-foreground outline-none placeholder:text-[var(--foreground)]/45"
                       spellCheck={false}
                     />
                     <button
                       type="button"
                       onClick={() => setSocials((prev) => prev.filter((_, j) => j !== i))}
                       aria-label={tc("delete")}
-                      className="flex w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-red-600"
+                      className="flex w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-[var(--destructive)]"
                     >
                       <X className="size-4" />
                     </button>
@@ -437,18 +438,17 @@ export function ProfileForm({ user, usernameChangeFee, socialLinks: initialSocia
           </FieldRow>
 
           {/* Opslaan */}
-          <div className="mt-2 flex flex-col-reverse items-stretch gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground">
-              {state?.error ? (
-                <span className="text-red-600 dark:text-red-400">{state.error}</span>
-              ) : (
-                t("publicNote")
-              )}
-            </p>
+          {state?.error && (
+            <Callout tone="pink" className="mt-2">
+              {state.error}
+            </Callout>
+          )}
+          <div className="mt-2 flex flex-col-reverse items-stretch gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">{t("publicNote")}</p>
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
+              className={buttonVariants()}
             >
               {pending && <Loader2 className="size-4 animate-spin" />}
               {t("saveProfile")}

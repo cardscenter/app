@@ -58,7 +58,7 @@ export default async function SettingsPage({
   if (!user) return null;
 
   const features = getFeatureSnapshot(user.accountType);
-  const rowsClass = "divide-y divide-border px-5 py-2";
+  const rowsClass = "divide-y divide-border pt-2";
 
   return (
     <div className="space-y-6">
@@ -81,7 +81,7 @@ export default async function SettingsPage({
         icon={<Mail className="size-5" />}
         title={t("sectionEmail")}
         description={t("sectionEmailDesc")}
-        contentClassName="px-5 py-2"
+        contentClassName="pt-2"
       >
         <EmailPreferenceRows
           initialPrefs={parseEmailPreferences(user.emailPreferences)}
@@ -165,7 +165,7 @@ export default async function SettingsPage({
           <Link href="/dashboard/blokkeerlijst" className={buttonVariants({ variant: "outline", size: "sm" })}>
             {t("manageBlockedList")}
             {blockedCount > 0 && (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
+              <span className="cc-pill bg-[var(--background)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-foreground/60">
                 {blockedCount}
               </span>
             )}

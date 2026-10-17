@@ -205,7 +205,7 @@ export default async function ProfilePage({
 
         {features.FEATURE_WALLET && (
         <FieldRow label={tp("accountTier")} hint={tp("accountTierHint")}>
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--border)] bg-white px-3 py-2.5">
             <TierPill accountType={user.accountType} />
             <Link
               href="/dashboard/abonnement"
@@ -225,7 +225,7 @@ export default async function ProfilePage({
 
         {user.usernameHistory.length > 0 && (
           <FieldRow label={tp("usernameHistory")} hint={tp("usernameHistoryHint")}>
-            <ul className="divide-y divide-border rounded-lg border border-border">
+            <ul className="divide-y divide-border rounded-[12px] border border-[var(--border)] bg-white">
               {user.usernameHistory.map((h) => (
                 <li key={h.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                   <span className="text-muted-foreground line-through">@{h.oldName}</span>

@@ -18,6 +18,10 @@ import { getBuybackPrice } from "@/lib/buyback-pricing";
 import { canMarkPaid, RETURN_FEE_EUR } from "@/lib/buyback-status";
 import { CheckCircle2, XCircle, Banknote, AlertTriangle, Pencil, Clock, ChevronDown, Truck } from "lucide-react";
 import type { BuybackRequest, BuybackItem, BulkBuybackItem } from "@prisma/client";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { H2, H3, INPUT, LABEL, MENU, PILL_BTN_SM, PILL_INK, PILL_RED, PILL_RED_SM, SELECT, TABLE_HEAD, TEXTAREA } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 type RequestWithAll = Omit<BuybackRequest, "iban"> & {
   /** Ontsleuteld door de page (admin ziet het volledige IBAN). */
@@ -89,7 +93,7 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
     startTransition(async () => {
       const result = await finalizeBuybackInspection(request.id);
       if (result?.success) {
-        toast.success(`Inspectie afgerond: ${result.status} — €${result.finalPayout?.toFixed(2)}`);
+        toast.success(`Inspectie afgerond: ${result.status}, €${result.finalPayout?.toFixed(2)}`);
         router.refresh();
       } else {
         toast.error(result?.error ?? "Er ging iets mis");
@@ -100,13 +104,13 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
   // Status action buttons
   const statusActions: Array<{ label: string; status: string; color: string; disabled?: boolean; hint?: string }> = [];
   if (request.status === "PENDING") {
-    statusActions.push({ label: t("adminMarkReceived"), status: "RECEIVED", color: "bg-blue-600 hover:bg-blue-700" });
+    statusActions.push({ label: t("adminMarkReceived"), status: "RECEIVED", color: "bg-foreground hover:bg-foreground/85" });
   }
   if (request.status === "RECEIVED") {
-    statusActions.push({ label: t("adminStartInspection"), status: "INSPECTING", color: "bg-indigo-600 hover:bg-indigo-700" });
+    statusActions.push({ label: t("adminStartInspection"), status: "INSPECTING", color: "bg-foreground hover:bg-foreground/85" });
   }
   if (request.status === "APPROVED" || request.status === "PARTIALLY_APPROVED" || request.status === "RETURNED") {
-    statusActions.push({ label: t("adminMarkPaid"), status: "PAID", color: "bg-emerald-600 hover:bg-emerald-700", disabled: !paidGate.ok, hint: paidGate.reason });
+    statusActions.push({ label: t("adminMarkPaid"), status: "PAID", color: "cc-grad", disabled: !paidGate.ok, hint: paidGate.reason });
   }
 
   function handleReturned() {
@@ -124,9 +128,9 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-bold">{request.user.displayName}</h2>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className={H2}>{request.user.displayName}</h2>
           <p className="text-sm text-muted-foreground">
             {request.user.email} · {request.type} · {request.id.slice(0, 8)}
           </p>
@@ -136,8 +140,8 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
 
       {/* Shipping info — admins zien alle verzendgegevens van de verkoper */}
       {request.type === "BULK" && (
-        <div className="glass rounded-xl p-4">
-          <h3 className="mb-2 text-sm font-semibold">Verzending</h3>
+        <div className="dash-card p-5">
+          <h3 className={cn(H3, "mb-3")}>Verzending</h3>
           <div className="grid gap-3 text-sm md:grid-cols-3">
             <div>
               <p className="text-muted-foreground">Verzenddeadline</p>
@@ -148,16 +152,16 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
                       month: "long",
                       year: "numeric",
                     })
-                  : "—"}
+                  : "·"}
               </p>
             </div>
             <div>
               <p className="text-muted-foreground">Vervoerder</p>
-              <p className="font-medium">{request.shippingCarrier ?? "—"}</p>
+              <p className="font-medium">{request.shippingCarrier ?? "·"}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Track &amp; Trace</p>
-              <p className="font-mono text-xs">{request.trackingNumber ?? "—"}</p>
+              <p className="font-mono text-xs">{request.trackingNumber ?? "·"}</p>
             </div>
             {request.shippedAt && (
               <div className="md:col-span-3">
@@ -170,7 +174,7 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
       )}
 
       {/* Payout info */}
-      <div className="glass rounded-xl p-4">
+      <div className="dash-card p-5">
         <div className="grid gap-3 text-sm md:grid-cols-3">
           <div>
             <p className="text-muted-foreground">{t("payoutMethod")}</p>
@@ -183,24 +187,24 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
           {request.finalPayout !== null && (
             <div>
               <p className="text-muted-foreground">{t("finalPayoutLabel")}</p>
-              <p className="font-bold text-emerald-600">€{request.finalPayout.toFixed(2)}</p>
+              <p className="cc-display text-2xl tabular-nums text-foreground">€{request.finalPayout.toFixed(2)}</p>
             </div>
           )}
         </div>
         {request.iban && (
-          <p className="mt-2 text-sm">
-            IBAN: <span className="font-mono">{request.iban}</span> — {request.accountHolder}
+          <p className="mt-3 text-sm">
+            IBAN: <span className="font-mono">{request.iban}</span> · {request.accountHolder}
           </p>
         )}
       </div>
 
       {/* Collection items inspection */}
       {request.type === "COLLECTION" && request.items.length > 0 && (
-        <div className="glass overflow-hidden rounded-xl">
-          <div className="border-b border-border/50 p-3">
-            <h3 className="font-semibold">Kaarten ({request.items.length})</h3>
+        <div className="dash-card overflow-hidden">
+          <div className="px-5 pb-2 pt-5">
+            <h3 className={H3}>Kaarten ({request.items.length})</h3>
           </div>
-          <div className="divide-y divide-border/30">
+          <div className="divide-y divide-border">
             {request.items.map((item) => (
               <AdminCollectionItemRow
                 key={item.id}
@@ -216,18 +220,19 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
 
       {/* Bulk items inspection */}
       {request.type === "BULK" && request.bulkItems.length > 0 && (
-        <div className="glass overflow-hidden rounded-xl">
+        <div className="dash-card overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/50 text-left text-xs uppercase text-muted-foreground">
-                <th className="px-4 py-2">{t("bulkCategory")}</th>
-                <th className="px-4 py-2 text-center">Ingediend</th>
-                <th className="px-4 py-2 text-center">{t("approvedQuantity")}</th>
-                <th className="px-4 py-2 text-right">Subtotaal</th>
-                <th className="px-4 py-2"></th>
+            <thead className={cn(TABLE_HEAD, "bg-[var(--background)]")}>
+              <tr>
+                <th className="px-4 py-3">{t("bulkCategory")}</th>
+                <th className="px-4 py-3 text-center">Ingediend</th>
+                <th className="px-4 py-3 text-center">{t("approvedQuantity")}</th>
+                <th className="px-4 py-3 text-right">Subtotaal</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/30">
+            <tbody className="divide-y divide-border">
               {request.bulkItems.map((item) => {
                 const label = categoryLabels[item.category] ?? item.category;
                 return (
@@ -247,10 +252,10 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
                               [item.id]: Math.min(item.quantity, Math.max(0, parseInt(e.target.value) || 0)),
                             }))
                           }
-                          className="w-20 rounded border border-input bg-background px-2 py-1 text-center text-sm"
+                          className={cn(INPUT, "w-20 px-2 py-1 text-center")}
                         />
                       ) : (
-                        <span>{item.approvedQuantity ?? "—"}</span>
+                        <span>{item.approvedQuantity ?? "·"}</span>
                       )}
                     </td>
                     <td className="px-4 py-2 text-right">€{item.subtotal.toFixed(2)}</td>
@@ -260,7 +265,7 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
                           type="button"
                           onClick={() => handleBulkInspect(item.id)}
                           disabled={isPending}
-                          className="rounded bg-primary px-2 py-1 text-xs text-white hover:bg-primary/90 disabled:opacity-50"
+                          className={cn(PILL_RED_SM, "disabled:opacity-50")}
                         >
                           Opslaan
                         </button>
@@ -271,18 +276,19 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {/* Admin notes */}
       <div>
-        <label className="mb-1 block text-sm font-medium">{t("adminNotes")}</label>
+        <label className={LABEL}>{t("adminNotes")}</label>
         <textarea
           value={adminNotes}
           onChange={(e) => setAdminNotes(e.target.value)}
           placeholder={t("adminNotesPlaceholder")}
           rows={3}
-          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+          className={TEXTAREA}
         />
       </div>
 
@@ -295,7 +301,7 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
             onClick={() => handleStatusChange(action.status)}
             disabled={isPending || action.disabled}
             title={action.hint}
-            className={`rounded-xl px-6 py-2.5 text-sm font-medium text-white disabled:opacity-50 ${action.color}`}
+            className={`cc-pill inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${action.color}`}
           >
             {action.label}
           </button>
@@ -311,18 +317,18 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
           </p>
         )}
         {request.status === "RETURN_REQUESTED" && (
-          <div className="basis-full rounded-xl border border-violet-300 bg-violet-50/60 p-4 dark:border-violet-700/50 dark:bg-violet-950/20">
-            <p className="flex items-center gap-2 text-sm font-semibold"><Truck className="h-4 w-4" /> Retourkosten betaald: stuur de kaarten terug en vul de Track &amp; Trace in</p>
+          <Callout tone="blue" icon={Truck} className="basis-full">
+            <p className="font-semibold">Retourkosten betaald: stuur de kaarten terug en vul de Track &amp; Trace in</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <select value={returnCarrier} onChange={(e) => setReturnCarrier(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
+              <select value={returnCarrier} onChange={(e) => setReturnCarrier(e.target.value)} className={cn(SELECT, "w-auto")}>
                 {["PostNL", "DPD", "DHL", "UPS", "OTHER"].map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
-              <input value={returnTracking} onChange={(e) => setReturnTracking(e.target.value)} placeholder="Track &amp; Trace-code" className="min-w-[14rem] flex-1 rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm" />
-              <button type="button" onClick={handleReturned} disabled={isPending || returnTracking.trim().length < 4} className="rounded-xl bg-violet-600 px-5 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50">Retour verzonden</button>
+              <input value={returnTracking} onChange={(e) => setReturnTracking(e.target.value)} placeholder="Track &amp; Trace-code" className={cn(INPUT, "w-auto min-w-[14rem] flex-1 font-mono")} />
+              <button type="button" onClick={handleReturned} disabled={isPending || returnTracking.trim().length < 4} className={cn(PILL_INK, "disabled:opacity-50")}>Retour verzonden</button>
             </div>
-          </div>
+          </Callout>
         )}
         {request.returnedAt && (
           <p className="basis-full text-xs text-muted-foreground">Retour verzonden op {new Date(request.returnedAt).toLocaleDateString("nl-NL")} via {request.returnCarrier} ({request.returnTrackingNumber}).</p>
@@ -333,7 +339,7 @@ export function AdminBuybackDetail({ request, categoryLabels = {} }: { request: 
             type="button"
             onClick={handleFinalize}
             disabled={isPending}
-            className="rounded-xl bg-purple-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+            className={cn(PILL_RED, "disabled:opacity-50")}
           >
             {t("adminFinalizeInspection")}
           </button>
@@ -373,7 +379,7 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
     startTx(async () => {
       const result = await applyItemPriceCorrection(item.id, price, reason);
       if (result?.success) {
-        toast.success("Prijscorrectie verzonden — verkoper moet nu reageren");
+        toast.success("Prijscorrectie verzonden. De verkoper moet nu reageren.");
         setShowCorrectionForm(false);
         setCorrectedPrice("");
         setReason("");
@@ -385,9 +391,9 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
   }
 
   return (
-    <div className="p-3">
+    <div className="px-5 py-3">
       <div className="flex items-center gap-3">
-        <div className="h-14 w-10 shrink-0 overflow-hidden rounded">
+        <div className="h-14 w-10 shrink-0 overflow-hidden rounded-[6px] bg-[var(--muted)]">
           {item.imageUrl ? (
             <Image src={item.imageUrl} alt={item.cardName} width={40} height={56} className="h-full w-full object-cover" />
           ) : (
@@ -395,7 +401,7 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{item.cardName}</p>
+          <p className="truncate text-sm font-semibold">{item.cardName}</p>
           <p className="text-xs text-muted-foreground">
             {item.setName} · #{item.cardLocalId} · {item.quantity}x · €{item.buybackPrice.toFixed(2)}/st
           </p>
@@ -407,7 +413,7 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
               type="button"
               onClick={() => onInspect(item.id, "APPROVED")}
               disabled={isPending}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className={cn(PILL_INK, "px-3 py-2 text-xs disabled:opacity-50")}
               title={t("adminApprove")}
             >
               <CheckCircle2 className="h-4 w-4" />
@@ -420,7 +426,7 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
                 type="button"
                 onClick={() => setShowRejectMenu((v) => !v)}
                 disabled={isPending}
-                className="flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                className="cc-pill inline-flex items-center gap-1.5 bg-destructive px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
                 title="Afkeuren met reden"
               >
                 <XCircle className="h-4 w-4" />
@@ -436,7 +442,7 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
                     className="fixed inset-0 z-30 cursor-default"
                     aria-hidden
                   />
-                  <div className="absolute right-0 top-full z-40 mt-1 w-48 overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+                  <div className={cn(MENU, "absolute right-0 top-full z-40 mt-1 w-48 overflow-hidden p-1")}>
                     {REJECTION_REASONS.map((rj) => (
                       <button
                         key={rj.key}
@@ -446,9 +452,9 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
                           onInspect(item.id, "REJECTED", rj.value);
                         }}
                         disabled={isPending}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                        className="flex w-full items-center gap-2 rounded-[8px] px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-[var(--pastel-pink)] hover:text-[var(--pastel-pink-ink)]"
                       >
-                        <XCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                        <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
                         {t(rj.key)}
                       </button>
                     ))}
@@ -461,8 +467,8 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
               type="button"
               onClick={() => setShowCorrectionForm((v) => !v)}
               disabled={isPending}
-              className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-50"
-              title="Prijsfout — voer correctie in"
+              className={cn(PILL_BTN_SM, "py-2 disabled:opacity-50")}
+              title="Prijsfout: voer een correctie in"
             >
               <Pencil className="h-4 w-4" />
               <span className="hidden sm:inline">Prijs</span>
@@ -471,13 +477,13 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
         ) : (
           <div className="text-sm">
             {item.inspectionStatus === "APPROVED" && (
-              <span className="font-medium text-emerald-600">{t("adminApprove")}</span>
+              <StatusBadge tone="success">{t("adminApprove")}</StatusBadge>
             )}
             {item.inspectionStatus === "REJECTED" && (
-              <span className="text-red-500">{item.rejectionReason}</span>
+              <StatusBadge tone="danger">{item.rejectionReason}</StatusBadge>
             )}
             {item.inspectionStatus === "PENDING" && (
-              <span className="text-muted-foreground">—</span>
+              <span className="text-muted-foreground">·</span>
             )}
           </div>
         )}
@@ -485,45 +491,42 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
 
       {/* Existing price-correction state */}
       {item.priceCorrected && (
-        <div className="mt-2 rounded-lg border-l-4 border-amber-400 bg-amber-50/70 p-3 text-xs dark:border-amber-500 dark:bg-amber-950/30">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+        <Callout tone="yellow" icon={AlertTriangle} className="mt-2 text-xs">
             <div className="min-w-0">
-              <p className="font-medium text-amber-900 dark:text-amber-100">
+              <p className="font-semibold">
                 Prijscorrectie:{" "}
                 <span className="font-mono">€{item.buybackPrice.toFixed(2)}</span> →{" "}
                 <span className="font-mono font-semibold">
                   €{(item.correctedBuybackPrice ?? 0).toFixed(2)}
                 </span>{" "}
-                <span className="text-amber-700/80 dark:text-amber-300/80">
+                <span className="opacity-75">
                   (Marktprijs €{(item.correctedMarketPrice ?? 0).toFixed(2)})
                 </span>
               </p>
-              <p className="mt-1 italic text-amber-800/90 dark:text-amber-200/90">
+              <p className="mt-1 italic opacity-90">
                 Reden: {item.priceCorrectionReason}
               </p>
-              <p className="mt-1 text-amber-800/80 dark:text-amber-300/80">
+              <p className="mt-1 opacity-85">
                 Verkoper:{" "}
                 {item.userApprovedCorrection === null ? (
                   <span className="inline-flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" /> wacht op reactie
                   </span>
                 ) : item.userApprovedCorrection ? (
-                  <span className="font-medium text-emerald-600">geaccepteerd</span>
+                  <StatusBadge tone="success">geaccepteerd</StatusBadge>
                 ) : (
-                  <span className="font-medium text-red-600">afgewezen</span>
+                  <StatusBadge tone="danger">afgewezen</StatusBadge>
                 )}
               </p>
             </div>
-          </div>
-        </div>
+        </Callout>
       )}
 
       {/* Inline form for new correction */}
       {showCorrectionForm && canTakeAction && (
-        <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50/40 p-3 dark:border-amber-700/50 dark:bg-amber-950/20">
-          <p className="mb-2 text-xs font-medium text-amber-900 dark:text-amber-100">
-            Prijsfout corrigeren — vul de juiste Marktprijs in. Inkoopprijs wordt automatisch berekend (85%).
+        <div className="mt-2 rounded-[14px] bg-[var(--pastel-yellow)] p-3 text-[var(--pastel-yellow-ink)]">
+          <p className="mb-2 text-xs font-semibold">
+            Prijsfout corrigeren: vul de juiste Marktprijs in. De inkoopprijs wordt automatisch berekend (85%).
           </p>
           <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
             <input
@@ -532,27 +535,27 @@ function AdminCollectionItemRow({ item, requestStatus, isPending, onInspect }: A
               value={correctedPrice}
               onChange={(e) => setCorrectedPrice(e.target.value)}
               placeholder="Marktprijs €"
-              className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm tabular-nums"
+              className={cn(INPUT, "py-1.5 tabular-nums")}
             />
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Reden (bv. verkeerde variant gemapt)"
-              className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm"
+              className={cn(INPUT, "py-1.5")}
               maxLength={200}
             />
             <button
               type="button"
               onClick={submitCorrection}
               disabled={isPending || !correctedPrice.trim() || reason.trim().length < 3}
-              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              className={cn(PILL_INK, "px-4 py-1.5 text-xs disabled:opacity-50")}
             >
               Versturen
             </button>
           </div>
           {correctedPrice && Number.isFinite(parseFloat(correctedPrice.replace(",", "."))) && (
-            <p className="mt-1.5 text-[11px] text-amber-800/80 dark:text-amber-300/80">
+            <p className="mt-1.5 text-[11px] opacity-80">
               → Inkoopprijs wordt: €{getBuybackPrice(parseFloat(correctedPrice.replace(",", "."))).toFixed(2)}
             </p>
           )}

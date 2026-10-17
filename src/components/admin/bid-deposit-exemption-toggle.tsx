@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { setBidDepositExemption } from "@/actions/admin/users";
 import { ShieldCheck, ShieldOff } from "lucide-react";
+import { TEXTAREA, PILL_RED_SM, PILL_BTN_SM } from "@/components/ploy/tile-styles";
 
 type Props = {
   userId: string;
@@ -49,10 +50,10 @@ export function BidDepositExemptionToggle({ userId, userName, currentlyExempt }:
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+        className={`cc-pill inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors ${
           currentlyExempt
-            ? "bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-950/40 dark:text-rose-300"
-            : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
+            ? "bg-[var(--pastel-pink)] text-[var(--pastel-pink-ink)] hover:opacity-85"
+            : "bg-[var(--pastel-green)] text-[var(--pastel-green-ink)] hover:opacity-85"
         }`}
       >
         {currentlyExempt ? (
@@ -69,26 +70,26 @@ export function BidDepositExemptionToggle({ userId, userName, currentlyExempt }:
       </button>
 
       {open && (
-        <form onSubmit={handleSubmit} className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+        <form onSubmit={handleSubmit} className="space-y-2 rounded-[14px] bg-[var(--background)] p-3">
           <p className="text-xs text-muted-foreground">
             {currentlyExempt
-              ? `Vrijstelling voor ${userName} intrekken — bids ≥ €2000 vereisen weer een geverifieerd account.`
+              ? `Vrijstelling voor ${userName} intrekken. Bids ≥ €2000 vereisen weer een geverifieerd account.`
               : `${userName} vrijstellen van verified-eis bij bids ≥ €2000. Borg-forfait blijft van toepassing bij wanbetaling.`}
           </p>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Reden (minimaal 5 tekens) — bv. KvK-nummer geverifieerd door admin"
+            placeholder="Reden (minimaal 5 tekens), bv. KvK-nummer geverifieerd door admin"
             rows={2}
-            className="w-full rounded-md border border-border bg-card px-2 py-1 text-sm"
+            className={TEXTAREA}
             disabled={pending}
           />
-          {error && <p className="text-xs text-rose-600">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={pending}
-              className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+              className={`${PILL_RED_SM} disabled:opacity-50`}
             >
               {pending ? "Bezig..." : currentlyExempt ? "Intrekken" : "Toekennen"}
             </button>
@@ -99,7 +100,7 @@ export function BidDepositExemptionToggle({ userId, userName, currentlyExempt }:
                 setReason("");
                 setError(null);
               }}
-              className="rounded-md border border-border bg-card px-3 py-1 text-xs hover:bg-muted"
+              className={PILL_BTN_SM}
             >
               Annuleren
             </button>

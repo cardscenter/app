@@ -17,6 +17,8 @@ import {
 import type { CashFlow } from "@/lib/dashboard-queries";
 import { formatCurrency } from "@/lib/format";
 import { ChangeIndicator } from "@/components/dashboard/statistics/change-indicator";
+import { TONE_ICON } from "@/components/dashboard/ui/tones";
+import { PILL_BTN_SM } from "@/components/ploy/tile-styles";
 
 // Cash flow = verkopen (staven omhoog) vs aankopen (staven omlaag), met
 // week/dag-toggle. Rechts de totalen van de periode met "vs vorige periode".
@@ -44,21 +46,21 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
 
   return (
     <section className="overflow-hidden dash-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 sm:px-6">
         <div className="flex items-center gap-2">
-          <ArrowUpDown className="size-4 text-muted-foreground" />
-          <h2 className="text-[15px] font-semibold text-foreground">{t("cashFlow")}</h2>
+          <ArrowUpDown className="size-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold tracking-[-0.03em] text-foreground">{t("cashFlow")}</h2>
         </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5 text-xs font-medium">
+          <div className="cc-pill inline-flex bg-[var(--background)] p-1 text-xs font-semibold">
             {(["week", "day"] as const).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMode(m)}
                 aria-pressed={mode === m}
-                className={`rounded px-3 py-1 transition-colors ${
-                  mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                className={`cc-pill px-3 py-1 transition-colors ${
+                  mode === m ? "bg-[var(--foreground)] text-white" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {m === "week" ? t("weekly") : t("daily")}
@@ -68,7 +70,7 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
           {showStatsLink && (
             <Link
               href="/dashboard/statistieken"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              className={PILL_BTN_SM}
             >
               <BarChart3 className="size-3.5" />
               {t("statistics")}
@@ -77,7 +79,7 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-5 p-4 2xl:grid-cols-3">
+      <div className="grid gap-5 px-5 pb-5 pt-4 sm:px-6 sm:pb-6 2xl:grid-cols-3">
         <div className="2xl:col-span-2">
           {hasData ? (
             <ResponsiveContainer width="100%" height={240}>
@@ -117,7 +119,7 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-[240px] items-center justify-center rounded-dash border border-dashed border-border text-sm text-muted-foreground">
+            <div className="flex h-[240px] items-center justify-center rounded-[14px] bg-[var(--background)] text-sm text-muted-foreground">
               {t("cashFlowEmpty")}
             </div>
           )}
@@ -126,7 +128,7 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
         <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-1 2xl:gap-0 2xl:divide-y 2xl:divide-border 2xl:self-center 2xl:border-l 2xl:border-border 2xl:pl-5">
           <SummaryRow
             Icon={ArrowDownLeft}
-            iconClass="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+            iconClass={TONE_ICON.green}
             label={t("sales")}
             value={data.current.sales}
             count={data.current.salesCount}
@@ -136,7 +138,7 @@ export function CashFlowCard({ data, showStatsLink }: Props) {
           />
           <SummaryRow
             Icon={ArrowUpRight}
-            iconClass="bg-blue-500/15 text-blue-600 dark:text-blue-400"
+            iconClass={TONE_ICON.pink}
             label={t("purchases")}
             value={data.current.purchases}
             count={data.current.purchaseCount}
@@ -173,13 +175,13 @@ function SummaryRow({
 }) {
   return (
     <div className="flex items-center gap-3 2xl:py-4 2xl:first:pt-0 2xl:last:pb-0">
-      <span className={`flex size-11 shrink-0 items-center justify-center rounded-full ${iconClass}`}>
-        <Icon className="size-5" />
+      <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${iconClass}`}>
+        <Icon className="size-[18px]" />
       </span>
       <div className="min-w-0">
         <p className="text-sm text-muted-foreground">{label}</p>
         <div className="flex flex-wrap items-baseline gap-x-2">
-          <p className="text-xl font-bold tabular-nums text-foreground">{formatCurrency(value)}</p>
+          <p className="cc-display text-2xl tabular-nums text-foreground">{formatCurrency(value)}</p>
           <ChangeIndicator change={comparison.change} direction={comparison.direction} invert={invert} />
         </div>
         <p className="text-xs text-muted-foreground">

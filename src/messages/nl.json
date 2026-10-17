@@ -2224,6 +2224,10 @@
     "title": "Meldingen",
     "empty": "Geen meldingen",
     "markAllRead": "Alles als gelezen markeren",
+    "countSubtitle": "{count, plural, one {# melding} other {# meldingen}} · klik voor uitleg en details",
+    "manageEmailPrefs": "E-mailvoorkeuren beheren",
+    "whatMeans": "Wat betekent dit?",
+    "close": "Sluiten",
     "emailPrefs": {
       "title": "E-mailvoorkeuren",
       "subtitle": "Kies waarover je e-mails wilt ontvangen",

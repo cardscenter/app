@@ -3,11 +3,12 @@ import { Link } from "@/i18n/navigation";
 import { ArrowUpRight, Lock, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import type { BalanceOverview } from "@/lib/dashboard-queries";
+import { PILL_RED } from "@/components/ploy/tile-styles";
 
-// Donkere saldo-band bovenaan het dashboard: totaal saldo groot, drie
-// sub-pills (beschikbaar / gereserveerd / escrow) en de primaire geld-acties
-// rechts. Altijd donker, in beide thema's. TailAdmin-pass (sept 2026):
-// platter (6px radius, compacte padding), decoratie gedempt.
+// Donkere saldo-band bovenaan het dashboard (design-pass ronde G): cc-dark
+// paneel met 20px radius, totaal saldo groot in de display-letter, drie
+// sub-pills (beschikbaar / gereserveerd / escrow) met een pastel-icoon en de
+// geld-acties rechts als pillen.
 
 type Props = { balance: BalanceOverview };
 
@@ -16,53 +17,36 @@ export async function BalanceHero({ balance }: Props) {
   const total = balance.available + balance.reserved;
 
   const pills = [
-    { Icon: Wallet, label: t("available"), value: balance.available, tone: "text-emerald-300" },
-    { Icon: Lock, label: t("reserved"), value: balance.reserved, tone: "text-sky-300" },
-    { Icon: ShieldCheck, label: t("escrow"), value: balance.escrow, tone: "text-amber-300" },
+    { Icon: Wallet, label: t("available"), value: balance.available, tone: "text-[var(--pastel-green)]" },
+    { Icon: Lock, label: t("reserved"), value: balance.reserved, tone: "text-[var(--pastel-blue)]" },
+    { Icon: ShieldCheck, label: t("escrow"), value: balance.escrow, tone: "text-[var(--pastel-yellow)]" },
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-dash bg-slate-950 p-5 text-white sm:p-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(60% 80% at 100% 0%, rgba(37,99,235,0.28) 0%, transparent 60%), radial-gradient(40% 60% at 0% 100%, rgba(16,185,129,0.12) 0%, transparent 60%)",
-        }}
-      />
-
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <section className="relative overflow-hidden rounded-[20px] bg-[var(--cc-dark)] p-6 text-white sm:p-8">
+      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm font-medium text-white/70">{t("totalBalance")}</p>
-          <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight sm:text-4xl">
-            {formatCurrency(total)}
-          </p>
-          <ul className="mt-3 flex flex-wrap gap-2">
+          <p className="cc-display mt-1 text-[44px] leading-none tabular-nums sm:text-[56px]">{formatCurrency(total)}</p>
+          <ul className="mt-4 flex flex-wrap gap-2">
             {pills.map(({ Icon, label, value, tone }) => (
-              <li
-                key={label}
-                className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90 ring-1 ring-white/10"
-              >
+              <li key={label} className="cc-pill inline-flex items-center gap-1.5 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
                 <Icon className={`size-3.5 ${tone}`} />
                 {label}
-                <span className="tabular-nums text-white">{formatCurrency(value)}</span>
+                <span className="font-semibold tabular-nums text-white">{formatCurrency(value)}</span>
               </li>
             ))}
           </ul>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/dashboard/saldo"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-emerald-500 px-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400"
-          >
+          <Link href="/dashboard/saldo" className={PILL_RED}>
             <Plus className="size-4" />
             {t("deposit")}
           </Link>
           <Link
             href="/dashboard/uitbetalingen"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-white/10 px-4 text-sm font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-white/15"
+            className="cc-pill inline-flex items-center justify-center gap-1.5 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
           >
             <ArrowUpRight className="size-4" />
             {t("withdraw")}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Save, Edit2, X } from "lucide-react";
+import { PILL_BTN_SM, PILL_RED_SM, INPUT } from "@/components/ploy/tile-styles";
 
 type Field = { name: string; label: string; type?: "text" | "number"; defaultValue?: string };
 
@@ -46,7 +47,7 @@ export function CatalogEditForm({ fields, action, id, triggerLabel = "Bewerk", a
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-muted"
+        className={PILL_BTN_SM}
       >
         <Edit2 className="h-3 w-3" /> {triggerLabel}
       </button>
@@ -54,27 +55,27 @@ export function CatalogEditForm({ fields, action, id, triggerLabel = "Bewerk", a
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+    <form onSubmit={submit} className="space-y-3 rounded-[14px] bg-[var(--background)] p-3">
       <div className={`grid gap-2 ${fields.length > 4 ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
         {fields.map((f) => (
           <div key={f.name} className="space-y-1">
-            <label className="text-[11px] uppercase tracking-wider text-muted-foreground/70">{f.label}</label>
+            <label className="text-xs font-medium text-foreground">{f.label}</label>
             <input
               name={f.name}
               type={f.type ?? "text"}
               defaultValue={f.defaultValue}
-              className="w-full rounded-md border border-border bg-card px-2 py-1 text-sm"
+              className={INPUT}
             />
           </div>
         ))}
       </div>
-      {error && <p className="text-xs text-rose-600">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
         {!alwaysOpen && (
           <button
             type="button"
             onClick={() => { setOpen(false); setError(null); }}
-            className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-muted"
+            className={PILL_BTN_SM}
           >
             <X className="h-3 w-3" /> Annuleer
           </button>
@@ -82,7 +83,7 @@ export function CatalogEditForm({ fields, action, id, triggerLabel = "Bewerk", a
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+          className={`${PILL_RED_SM} disabled:opacity-50`}
         >
           <Save className="h-3 w-3" /> {pending ? "Opslaan…" : "Opslaan"}
         </button>

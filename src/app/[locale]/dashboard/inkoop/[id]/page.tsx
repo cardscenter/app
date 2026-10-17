@@ -40,7 +40,7 @@ export default async function BuybackDetailPage({
     <div>
       <Link
         href="/dashboard/inkoop"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" /> {t("backToOverview")}
       </Link>

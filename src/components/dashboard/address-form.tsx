@@ -8,6 +8,9 @@ import { MapPin, Pencil, Lock, Info } from "lucide-react";
 import { getAddressCooldownInfo } from "@/lib/address-cooldown";
 import { CountryFlag } from "@/components/ui/country-flag";
 import type { User } from "@prisma/client";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { INPUT, LABEL, SELECT } from "@/components/ploy/tile-styles";
 
 export function AddressForm({
   user,
@@ -76,11 +79,11 @@ export function AddressForm({
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-              <MapPin className="h-4 w-4 text-primary" />
+            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--pastel-blue)] text-[var(--pastel-blue-ink)]">
+              <MapPin className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-semibold text-muted-foreground">
                 {t("primaryAddress")}
               </p>
               <p className="mt-1 text-sm font-medium text-foreground">
@@ -99,7 +102,7 @@ export function AddressForm({
             type="button"
             onClick={() => setEditing(true)}
             disabled={!cooldown.canEdit}
-            className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+            className="cc-pill inline-flex size-9 shrink-0 items-center justify-center border border-[var(--border)] bg-white text-muted-foreground transition-colors hover:bg-[var(--background)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
             title={cooldown.canEdit ? t("addressEditButton") : tc("edit")}
           >
             {cooldown.canEdit ? (
@@ -118,21 +121,18 @@ export function AddressForm({
               {t("addressLastChanged", {
                 date: formatDate(user.lastAddressChange),
               })}
-              {" — "}
+              {" · "}
               {t("addressEditNote")}
             </span>
           </p>
         )}
         {!cooldown.canEdit && cooldown.availableAt && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-            <Lock className="size-3.5 shrink-0 mt-0.5" />
-            <span>
-              {t("addressLockedUntil", {
-                days: cooldown.daysRemaining,
-                date: formatDate(cooldown.availableAt),
-              })}
-            </span>
-          </div>
+          <Callout tone="yellow" icon={Lock}>
+            {t("addressLockedUntil", {
+              days: cooldown.daysRemaining,
+              date: formatDate(cooldown.availableAt),
+            })}
+          </Callout>
         )}
       </div>
     );
@@ -142,26 +142,22 @@ export function AddressForm({
   return (
     <form action={formAction} className="space-y-4">
       {state?.error && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
-          {state.error}
-        </div>
+        <Callout tone="pink">{state.error}</Callout>
       )}
 
       {/* Cooldown-warning bovenaan voor de duidelijkheid */}
       {!user.lastAddressChange ? (
-        <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
-          <Info className="size-3.5 shrink-0 mt-0.5" />
-          <span>{t("addressFirstEditFree")}</span>
-        </div>
+        <Callout tone="blue" icon={Info}>
+          {t("addressFirstEditFree")}
+        </Callout>
       ) : (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          <Lock className="size-3.5 shrink-0 mt-0.5" />
-          <span>{t("addressEditNote")}</span>
-        </div>
+        <Callout tone="yellow" icon={Lock}>
+          {t("addressEditNote")}
+        </Callout>
       )}
 
       <div>
-        <label htmlFor="country" className="block text-sm font-medium text-foreground">
+        <label htmlFor="country" className={LABEL}>
           {t("country")}
         </label>
         <select
@@ -169,7 +165,7 @@ export function AddressForm({
           name="country"
           required
           defaultValue={address.country}
-          className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+          className={SELECT}
         >
           <option value="" disabled>
             {t("selectCountry")}
@@ -184,7 +180,7 @@ export function AddressForm({
 
       <div className="grid grid-cols-3 gap-3">
         <div className="col-span-2">
-          <label htmlFor="street" className="block text-sm font-medium text-foreground">
+          <label htmlFor="street" className={LABEL}>
             {t("street")}
           </label>
           <input
@@ -193,14 +189,11 @@ export function AddressForm({
             type="text"
             required
             defaultValue={address.street}
-            className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+            className={INPUT}
           />
         </div>
         <div>
-          <label
-            htmlFor="houseNumber"
-            className="block text-sm font-medium text-foreground"
-          >
+          <label htmlFor="houseNumber" className={LABEL}>
             {t("houseNumber")}
           </label>
           <input
@@ -209,14 +202,14 @@ export function AddressForm({
             type="text"
             required
             defaultValue={address.houseNumber}
-            className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+            className={INPUT}
           />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="postalCode" className="block text-sm font-medium text-foreground">
+          <label htmlFor="postalCode" className={LABEL}>
             {t("postalCode")}
           </label>
           <input
@@ -225,11 +218,11 @@ export function AddressForm({
             type="text"
             required
             defaultValue={address.postalCode}
-            className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+            className={INPUT}
           />
         </div>
         <div>
-          <label htmlFor="city" className="block text-sm font-medium text-foreground">
+          <label htmlFor="city" className={LABEL}>
             {t("city")}
           </label>
           <input
@@ -238,7 +231,7 @@ export function AddressForm({
             type="text"
             required
             defaultValue={address.city}
-            className="mt-1 block w-full glass-input px-3 py-2.5 text-foreground"
+            className={INPUT}
           />
         </div>
       </div>
@@ -247,7 +240,7 @@ export function AddressForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
+          className={buttonVariants()}
         >
           {pending ? "..." : tc("save")}
         </button>
@@ -255,7 +248,7 @@ export function AddressForm({
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+            className={buttonVariants({ variant: "outline" })}
           >
             {tc("cancel")}
           </button>

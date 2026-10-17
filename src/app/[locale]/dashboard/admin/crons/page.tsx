@@ -5,6 +5,8 @@ import { CheckCircle2, AlertCircle, Loader2, Clock, AlertTriangle, Calendar, Zap
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { TABLE_HEAD } from "@/components/ploy/tile-styles";
 
 const RUN_STATUS_META: Record<string, { tone: StatusTone; icon: typeof CheckCircle2 }> = {
   SUCCESS: { tone: "success", icon: CheckCircle2 },
@@ -21,8 +23,11 @@ function CronStatusPill({ status }: { status: string }) {
   );
 }
 
+// Buiten de component (purity-lint): server component, rendert per request.
+const nowMs = () => Date.now();
+
 function formatDuration(ms: number | null) {
-  if (ms == null) return "—";
+  if (ms == null) return "-";
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
@@ -41,7 +46,7 @@ export default async function AdminCronsPage() {
 
       <DashboardSection
         title="Auction-end scheduler"
-        icon={<Zap className="size-4 text-amber-500" />}
+        icon={<Zap className="size-4" />}
         action={
           <StatusBadge tone={scheduler.hasTimer ? "success" : "neutral"}>
             {scheduler.hasTimer ? "Actief" : "Idle"}
@@ -58,12 +63,12 @@ export default async function AdminCronsPage() {
             <p className="font-medium tabular-nums">
               {scheduler.scheduledFor
                 ? new Date(scheduler.scheduledFor).toLocaleString("nl-NL", { hour12: false })
-                : "—"}
+                : "-"}
             </p>
           </div>
           <div>
             <span className="text-muted-foreground">Voor auction-id</span>
-            <p className="font-mono text-[11px]">{scheduler.scheduledAuctionId ?? "—"}</p>
+            <p className="font-mono text-[11px]">{scheduler.scheduledAuctionId ?? "-"}</p>
           </div>
         </div>
         {scheduler.history.length > 0 && (
@@ -72,7 +77,7 @@ export default async function AdminCronsPage() {
               Laatste {scheduler.history.length} fires
             </summary>
             <table className="mt-2 w-full">
-              <thead className="text-left text-[10px] uppercase tracking-wider text-muted-foreground/70">
+              <thead className={TABLE_HEAD}>
                 <tr>
                   <th className="py-1">Gevuurd op</th>
                   <th className="py-1 text-right">Verwerkt</th>
@@ -89,7 +94,7 @@ export default async function AdminCronsPage() {
                     <td className="py-1 text-right tabular-nums">{h.errors}</td>
                     <td className="py-1 text-right tabular-nums">{h.delayMs}ms</td>
                     <td className="py-1 tabular-nums">
-                      {h.nextScheduledFor ? new Date(h.nextScheduledFor).toLocaleString("nl-NL", { hour12: false }) : "—"}
+                      {h.nextScheduledFor ? new Date(h.nextScheduledFor).toLocaleString("nl-NL", { hour12: false }) : "-"}
                     </td>
                   </tr>
                 ))}
@@ -101,7 +106,7 @@ export default async function AdminCronsPage() {
 
       <div className="space-y-3">
         {jobs.map((job) => (
-          <div key={job.name} className="dash-card p-4">
+          <div key={job.name} className="dash-card p-5">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -118,10 +123,9 @@ export default async function AdminCronsPage() {
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{job.description}</p>
                 {job.runWarning && (
-                  <p className="mt-2 inline-flex items-start gap-1.5 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-400">
-                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-                    <span>{job.runWarning}</span>
-                  </p>
+                  <Callout tone="yellow" icon={AlertTriangle} className="mt-2">
+                    {job.runWarning}
+                  </Callout>
                 )}
                 {job.latest ? (
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
@@ -144,7 +148,7 @@ export default async function AdminCronsPage() {
                     {job.latest.errorMessage && (
                       <div className="col-span-2 md:col-span-4">
                         <span className="text-muted-foreground">Error</span>
-                        <p className="rounded-md bg-red-500/10 p-2 text-[11px] text-red-700 dark:text-red-400">
+                        <p className="mt-1 rounded-[10px] bg-[var(--pastel-pink)] p-2 text-[11px] text-[var(--pastel-pink-ink)]">
                           {job.latest.errorMessage}
                         </p>
                       </div>
@@ -166,7 +170,7 @@ export default async function AdminCronsPage() {
                   job.latest?.status === "RUNNING" &&
                   // Stale-guard: RUNNING ouder dan 2u = achtergebleven rij na
                   // een container-restart — knop dan niet blokkeren.
-                  Date.now() - new Date(job.latest.startedAt).getTime() < 2 * 60 * 60 * 1000
+                  nowMs() - new Date(job.latest.startedAt).getTime() < 2 * 60 * 60 * 1000
                 }
               />
             </div>
@@ -177,7 +181,7 @@ export default async function AdminCronsPage() {
                   Laatste {job.recentRuns.length} runs
                 </summary>
                 <table className="mt-2 w-full">
-                  <thead className="text-left text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                  <thead className={TABLE_HEAD}>
                     <tr>
                       <th className="py-1">Tijd</th>
                       <th className="py-1">Status</th>

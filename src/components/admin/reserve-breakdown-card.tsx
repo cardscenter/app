@@ -3,6 +3,8 @@ import { CheckCircle2, AlertTriangle, Info, Gavel, Zap, Clock } from "lucide-rea
 import { getReserveBreakdown } from "@/lib/balance-check";
 import { ReserveSyncButton } from "@/components/admin/reserve-sync-button";
 import { StatusBadge, type StatusTone } from "@/components/dashboard/ui/status-badge";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { cn } from "@/lib/utils";
 
 // Server-component voor de admin user-detail page. Toont waar de
 // `reservedBalance` van deze user vandaan komt en of de DB-waarde nog
@@ -55,10 +57,10 @@ export async function ReserveBreakdownCard({ userId, userName }: Props) {
   return (
     <div className="overflow-hidden dash-card">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5">
         <div>
-          <h3 className="text-[15px] font-semibold text-foreground">Vastgehouden bedrag — uitleg</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <h3 className="text-lg font-semibold tracking-[-0.03em] text-foreground">Vastgehouden bedrag: uitleg</h3>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Waar het vastgehouden saldo van {userName} vandaan komt.
           </p>
         </div>
@@ -67,91 +69,61 @@ export async function ReserveBreakdownCard({ userId, userName }: Props) {
       </div>
 
       {/* Status-blok */}
-      <div className="px-4 pt-4">
+      <div className="px-5 pt-4">
         {inSync ? (
-          <div className="flex items-start gap-3 rounded-md border border-emerald-300/50 bg-emerald-50 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/30">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <div className="text-sm">
-              <p className="font-semibold text-emerald-800 dark:text-emerald-200">
-                Klopt — geen actie nodig
-              </p>
-              <p className="mt-0.5 text-emerald-700 dark:text-emerald-300">
-                De vastgehouden {formatEuro(dbReserved)} matcht precies met wat de actieve veilingen
-                vasthouden. {hasReserves ? "Zodra die veilingen eindigen valt het geld vanzelf vrij." : "Er staan op dit moment geen biedingen open — verwacht: €0,00."}
-              </p>
-            </div>
-          </div>
+          <Callout tone="green" icon={CheckCircle2} title="Klopt, geen actie nodig">
+            De vastgehouden {formatEuro(dbReserved)} matcht precies met wat de actieve veilingen
+            vasthouden. {hasReserves ? "Zodra die veilingen eindigen valt het geld vanzelf vrij." : "Er staan op dit moment geen biedingen open. Verwacht: €0,00."}
+          </Callout>
         ) : (
-          <div className="flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <div className="text-sm">
-              <p className="font-semibold text-amber-800 dark:text-amber-200">
-                Saldo loopt uit de pas
-              </p>
-              <p className="mt-0.5 text-amber-700 dark:text-amber-300">
-                In de database staat <strong>{formatEuro(dbReserved)}</strong> vast, maar volgens
-                de werkelijke biedingen zou dat <strong>{formatEuro(liveReserved)}</strong> moeten
-                zijn — een verschil van <strong>{formatEuro(Math.abs(drift))}</strong>{" "}
-                {drift > 0 ? "te veel" : "te weinig"}. Druk op <em>Sync nu</em> om dit te
-                corrigeren. Veilig: hierdoor wordt geen geld weggehaald, alleen de "vast"-teller
-                herberekend.
-              </p>
-            </div>
-          </div>
+          <Callout tone="yellow" icon={AlertTriangle} title="Saldo loopt uit de pas">
+            In de database staat <strong>{formatEuro(dbReserved)}</strong> vast, maar volgens
+            de werkelijke biedingen zou dat <strong>{formatEuro(liveReserved)}</strong> moeten
+            zijn: een verschil van <strong>{formatEuro(Math.abs(drift))}</strong>{" "}
+            {drift > 0 ? "te veel" : "te weinig"}. Druk op <em>Sync nu</em> om dit te
+            corrigeren. Veilig: hierdoor wordt geen geld weggehaald, alleen de &quot;vast&quot;-teller
+            herberekend.
+          </Callout>
         )}
       </div>
 
       {/* Bedragen */}
-      <div className="grid grid-cols-2 gap-3 px-4 pt-4 md:grid-cols-3">
-        <div className="rounded-md border border-border bg-muted/40 p-3">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
-            In database
-          </p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-foreground">
+      <div className="grid grid-cols-2 gap-3 px-5 pt-4 md:grid-cols-3">
+        <div className="rounded-[12px] bg-[var(--background)] p-3">
+          <p className="text-xs font-medium text-muted-foreground">In database</p>
+          <p className="cc-display mt-1 text-2xl tabular-nums text-foreground">
             {formatEuro(dbReserved)}
           </p>
         </div>
-        <div className="rounded-md border border-border bg-muted/40 p-3">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
-            Volgens biedingen
-          </p>
-          <p className="mt-1 text-lg font-bold tabular-nums text-foreground">
+        <div className="rounded-[12px] bg-[var(--background)] p-3">
+          <p className="text-xs font-medium text-muted-foreground">Volgens biedingen</p>
+          <p className="cc-display mt-1 text-2xl tabular-nums text-foreground">
             {formatEuro(liveReserved)}
           </p>
         </div>
         <div
-          className={`rounded-md border p-3 ${
+          className={cn(
+            "rounded-[12px] p-3",
             inSync
-              ? "border-emerald-300/50 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-950/30"
-              : "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30"
-          }`}
+              ? "bg-[var(--pastel-green)] text-[var(--pastel-green-ink)]"
+              : "bg-[var(--pastel-yellow)] text-[var(--pastel-yellow-ink)]",
+          )}
         >
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
-            Verschil
-          </p>
-          <p
-            className={`mt-1 text-lg font-bold tabular-nums ${
-              inSync ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"
-            }`}
-          >
+          <p className="text-xs font-medium opacity-80">Verschil</p>
+          <p className="cc-display mt-1 text-2xl tabular-nums">
             {drift === 0 ? "€0,00" : `${drift > 0 ? "+" : ""}${formatEuro(drift).replace("€-", "−€")}`}
           </p>
         </div>
       </div>
 
       {/* Breakdown per veiling */}
-      <div className="px-4 py-4">
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          Per veiling
-        </h4>
+      <div className="px-5 py-5">
+        <h4 className="mb-2 text-sm font-semibold text-foreground">Per veiling</h4>
         {rows.length === 0 ? (
-          <div className="flex items-start gap-2 rounded-dash border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground">
-            <Info className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              Geen actieve veilingen die geld vasthouden. Als de "In database"-waarde toch
-              boven nul staat, druk dan op <em>Sync nu</em> om het terug te zetten naar €0,00.
-            </span>
-          </div>
+          <Callout tone="blue" icon={Info}>
+            Geen actieve veilingen die geld vasthouden. Als de &quot;In database&quot;-waarde toch
+            boven nul staat, druk dan op <em>Sync nu</em> om het terug te zetten naar €0,00.
+          </Callout>
         ) : (
           <ul className="space-y-2">
             {rows.map((row) => {
@@ -160,7 +132,7 @@ export async function ReserveBreakdownCard({ userId, userName }: Props) {
               return (
                 <li
                   key={row.auctionId}
-                  className="rounded-md border border-border bg-muted/40 p-3"
+                  className="rounded-[12px] bg-[var(--background)] p-3"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -178,9 +150,7 @@ export async function ReserveBreakdownCard({ userId, userName }: Props) {
                       <p className="mt-1 text-xs text-muted-foreground">{meta.explainer}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70">
-                        Vast
-                      </p>
+                      <p className="text-xs font-medium text-muted-foreground">Vast</p>
                       <p className="text-base font-bold tabular-nums text-foreground">
                         {formatEuro(row.reserveAmount)}
                       </p>
@@ -192,7 +162,7 @@ export async function ReserveBreakdownCard({ userId, userName }: Props) {
                 </li>
               );
             })}
-            <li className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
+            <li className="flex items-center justify-between rounded-[12px] bg-muted px-3 py-2 text-sm">
               <span className="font-semibold text-foreground">Totaal volgens biedingen</span>
               <span className="text-base font-bold tabular-nums text-foreground">
                 {formatEuro(liveReserved)}

@@ -2,6 +2,7 @@ import { Flag } from "lucide-react";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { FEATURE_FLAGS, FEATURE_FLAG_KEYS, isFeatureEnabled } from "@/lib/feature-flags";
+import { TABLE_HEAD } from "@/components/ploy/tile-styles";
 
 /**
  * Read-only overzicht van de feature-flags (Community Hub, Fase 1) op
@@ -28,12 +29,12 @@ export function FeatureFlagsPanel() {
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
+          <thead className={`${TABLE_HEAD} bg-[var(--background)]`}>
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Flag</th>
-              <th className="px-4 py-3 text-left font-medium">Omschrijving</th>
-              <th className="px-4 py-3 text-left font-medium">Env-waarde</th>
-              <th className="px-4 py-3 text-left font-medium">Effectief</th>
+              <th className="px-4 py-3 text-left">Flag</th>
+              <th className="px-4 py-3 text-left">Omschrijving</th>
+              <th className="px-4 py-3 text-left">Env-waarde</th>
+              <th className="px-4 py-3 text-left">Effectief</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -59,7 +60,7 @@ export function FeatureFlagsPanel() {
                     {r.effective ? "aan" : "uit"}
                   </StatusBadge>
                   {r.missingRequirement && (
-                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    <p className="mt-1 text-xs font-medium text-[var(--pastel-yellow-ink)]">
                       Staat aan in de env, maar {r.missingRequirement} is uit.
                     </p>
                   )}

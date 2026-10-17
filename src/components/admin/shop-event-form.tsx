@@ -8,6 +8,8 @@ import { createShopEvent, updateShopEvent } from "@/actions/admin/shop-events";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { FieldRow } from "@/components/dashboard/ui/field-row";
 import { utcToShopWallClock } from "@/lib/shop-events/format";
+import { INPUT, PILL_RED, SELECT, TEXTAREA } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 export interface EventTypeOption {
   id: string;
@@ -44,8 +46,6 @@ export interface ShopEventFormValues {
   status?: string;
   hasRegistrations?: boolean;
 }
-
-const INPUT = "glass-input w-full rounded-lg px-3 py-2 text-sm";
 
 /** Formulier voor een winkel-event (nieuw + bewerken). Tijden in winkel-tijd (Europe/Amsterdam). */
 export function ShopEventForm({ initial, types, games }: { initial: ShopEventFormValues; types: EventTypeOption[]; games: Array<{ key: string; name: string }> }) {
@@ -95,7 +95,7 @@ export function ShopEventForm({ initial, types, games }: { initial: ShopEventFor
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <FieldRow label="Type" hint="Bepaalt divisies en standaardwaarden" htmlFor="typeId">
-        <select id="typeId" name="typeId" value={typeId} onChange={(e) => applyTypeDefaults(e.target.value)} className={INPUT} required>
+        <select id="typeId" name="typeId" value={typeId} onChange={(e) => applyTypeDefaults(e.target.value)} className={SELECT} required>
           {types.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -107,7 +107,7 @@ export function ShopEventForm({ initial, types, games }: { initial: ShopEventFor
         <input id="title" name="title" defaultValue={initial.title} className={INPUT} required maxLength={100} placeholder="bv. League-avond Pokémon" />
       </FieldRow>
       <FieldRow label="Spel" hint="Leeg = volgt het type" htmlFor="game">
-        <select id="game" name="game" value={game} onChange={(e) => setGame(e.target.value)} className={INPUT}>
+        <select id="game" name="game" value={game} onChange={(e) => setGame(e.target.value)} className={SELECT}>
           <option value="">Geen / alle spellen</option>
           {games.map((g) => (
             <option key={g.key} value={g.key}>
@@ -153,23 +153,23 @@ export function ShopEventForm({ initial, types, games }: { initial: ShopEventFor
           <label className="flex items-center gap-2"><input type="checkbox" name="waitlistEnabled" value="true" defaultChecked={initial.waitlistEnabled} className="accent-primary" /> Wachtlijst als het vol is</label>
           <label className="flex items-center gap-2"><input type="checkbox" name="countsForLeague" value="true" checked={league} onChange={(e) => setLeague(e.target.checked)} className="accent-primary" /> Telt mee voor de league</label>
           <label className="flex items-center gap-2"><input type="checkbox" name="countsForStampCard" value="true" checked={stamp} onChange={(e) => setStamp(e.target.checked)} className="accent-primary" /> Stempel op de stempelkaart bij check-in</label>
-          <label className="flex items-center gap-2"><input type="checkbox" name="showParticipants" value="true" defaultChecked={initial.showParticipants} className="accent-primary" /> Toon "wie komt er" (alleen spelers met opt-in)</label>
+          <label className="flex items-center gap-2"><input type="checkbox" name="showParticipants" value="true" defaultChecked={initial.showParticipants} className="accent-primary" /> Toon &ldquo;wie komt er&rdquo; (alleen spelers met opt-in)</label>
         </div>
       </FieldRow>
       <FieldRow label="Annuleren tot (uur vooraf)" hint="Tot zoveel uur voor de start krijgt de speler het geld terug" htmlFor="cancellationHours">
         <input id="cancellationHours" name="cancellationHours" type="number" min="0" max="720" defaultValue={initial.cancellationHours} className={INPUT} required />
       </FieldRow>
       <FieldRow label="Extra regels" hint="Bijvoorbeeld: inclusief 6 boosters, neem je eigen deck mee" htmlFor="refundPolicy">
-        <textarea id="refundPolicy" name="refundPolicy" defaultValue={initial.refundPolicy} rows={2} maxLength={1000} className={INPUT} />
+        <textarea id="refundPolicy" name="refundPolicy" defaultValue={initial.refundPolicy} rows={2} maxLength={1000} className={TEXTAREA} />
       </FieldRow>
       <FieldRow label="Beschrijving" htmlFor="description">
-        <textarea id="description" name="description" defaultValue={initial.description} rows={6} maxLength={4000} className={INPUT} placeholder="Format, prijzen, wat je meeneemt, hoe de avond verloopt." />
+        <textarea id="description" name="description" defaultValue={initial.description} rows={6} maxLength={4000} className={TEXTAREA} placeholder="Format, prijzen, wat je meeneemt, hoe de avond verloopt." />
       </FieldRow>
       <FieldRow label="Omslagfoto" hint="Breed (3:1), optioneel">
         <ImageUploader images={cover} onChange={(imgs) => setCover(imgs.slice(-1))} maxImages={1} context="event" />
       </FieldRow>
       <div className="flex justify-end border-t border-border pt-4">
-        <button type="submit" disabled={pending} className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
+        <button type="submit" disabled={pending} className={cn(PILL_RED, "disabled:opacity-60")}>
           <Save className="size-4" /> {initial.id ? "Opslaan" : "Aanmaken als concept"}
         </button>
       </div>

@@ -10,10 +10,11 @@ import { StatusBadge } from "@/components/dashboard/ui/status-badge";
 import { EVENT_TYPE_COLORS, eventColorClasses } from "@/lib/shop-events/config";
 import { BADGE_CRITERIA, BADGE_CRITERION_LABEL } from "@/lib/community/config";
 import { LeagueBadgePill } from "@/components/community/league-badge-pill";
+import { INPUT, PILL_BTN, PILL_RED, SELECT, TEXTAREA } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
-const INPUT = "glass-input w-full rounded-lg px-3 py-2 text-sm";
-const BTN = "inline-flex items-center gap-1.5 cc-pill cc-grad px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60";
-const BTN_OUTLINE = "inline-flex items-center gap-1.5 cc-pill border border-border bg-white px-4 py-2 text-sm font-semibold hover:bg-background disabled:opacity-60";
+const BTN = cn(PILL_RED, "px-4 py-2 disabled:opacity-60");
+const BTN_OUTLINE = cn(PILL_BTN, "disabled:opacity-60");
 
 export interface SeasonRow {
   id: string;
@@ -71,7 +72,7 @@ export function SeasonCard({ row, games, startOpen = false }: { row: SeasonRow |
 
   return (
     <div className="dash-card">
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-5 py-4">
         <button type="button" onClick={() => setOpen((o) => !o)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           {row ? (
             <>
@@ -82,7 +83,7 @@ export function SeasonCard({ row, games, startOpen = false }: { row: SeasonRow |
               </span>
             </>
           ) : (
-            <span className="inline-flex items-center gap-1.5 font-medium text-primary">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
               <Plus className="size-4" /> Nieuw seizoen
             </span>
           )}
@@ -102,17 +103,17 @@ export function SeasonCard({ row, games, startOpen = false }: { row: SeasonRow |
             Heropenen
           </button>
         )}
-        <button type="button" onClick={() => setOpen((o) => !o)} className="text-muted-foreground">
+        <button type="button" onClick={() => setOpen((o) => !o)} className="cc-pill p-2 text-muted-foreground transition-colors hover:bg-[var(--background)] hover:text-foreground" aria-label="Uitklappen">
           {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
         </button>
       </div>
       {open && (
-        <form onSubmit={onSubmit} className="space-y-4 border-t border-border p-4">
+        <form onSubmit={onSubmit} className="space-y-4 border-t border-border p-5 sm:p-6">
           <FieldRow label="Naam" htmlFor={`name-${row?.id ?? "new"}`}>
             <input id={`name-${row?.id ?? "new"}`} name="name" defaultValue={row?.name ?? ""} className={INPUT} required maxLength={80} placeholder="bv. Winter 2027" />
           </FieldRow>
           <FieldRow label="Spel" hint="Leeg = alle spellen tellen mee." htmlFor={`game-${row?.id ?? "new"}`}>
-            <select id={`game-${row?.id ?? "new"}`} name="game" defaultValue={row?.game ?? ""} className={INPUT}>
+            <select id={`game-${row?.id ?? "new"}`} name="game" defaultValue={row?.game ?? ""} className={SELECT}>
               <option value="">Alle spellen</option>
               {games.map((g) => (
                 <option key={g.key} value={g.key}>{g.name}</option>
@@ -121,25 +122,25 @@ export function SeasonCard({ row, games, startOpen = false }: { row: SeasonRow |
           </FieldRow>
           <FieldRow label="Periode" htmlFor={`startsAt-${row?.id ?? "new"}`}>
             <div className="flex flex-wrap items-center gap-2">
-              <input id={`startsAt-${row?.id ?? "new"}`} name="startsAt" type="date" defaultValue={row?.startsAt ?? ""} className={`${INPUT} w-44`} required />
+              <input id={`startsAt-${row?.id ?? "new"}`} name="startsAt" type="date" defaultValue={row?.startsAt ?? ""} className={cn(INPUT, "w-44")} required />
               <span className="text-sm text-muted-foreground">t/m</span>
-              <input name="endsAt" type="date" defaultValue={row?.endsAt ?? ""} className={`${INPUT} w-44`} required />
+              <input name="endsAt" type="date" defaultValue={row?.endsAt ?? ""} className={cn(INPUT, "w-44")} required />
             </div>
           </FieldRow>
           <FieldRow label="Punten" hint="Per partij: winst / gelijk / verlies, plus een bonus per gespeeld event. Wijzigen herberekent bestaande uitslagen.">
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              <label className="inline-flex items-center gap-1">W <input name="pointsWin" type="number" min={0} max={100} defaultValue={row?.pointsWin ?? 3} className={`${INPUT} w-16`} /></label>
-              <label className="inline-flex items-center gap-1">G <input name="pointsDraw" type="number" min={0} max={100} defaultValue={row?.pointsDraw ?? 1} className={`${INPUT} w-16`} /></label>
-              <label className="inline-flex items-center gap-1">V <input name="pointsLoss" type="number" min={0} max={100} defaultValue={row?.pointsLoss ?? 0} className={`${INPUT} w-16`} /></label>
-              <label className="inline-flex items-center gap-1">Meedoen <input name="pointsParticipation" type="number" min={0} max={100} defaultValue={row?.pointsParticipation ?? 1} className={`${INPUT} w-16`} /></label>
+              <label className="inline-flex items-center gap-1">W <input name="pointsWin" type="number" min={0} max={100} defaultValue={row?.pointsWin ?? 3} className={cn(INPUT, "w-16")} /></label>
+              <label className="inline-flex items-center gap-1">G <input name="pointsDraw" type="number" min={0} max={100} defaultValue={row?.pointsDraw ?? 1} className={cn(INPUT, "w-16")} /></label>
+              <label className="inline-flex items-center gap-1">V <input name="pointsLoss" type="number" min={0} max={100} defaultValue={row?.pointsLoss ?? 0} className={cn(INPUT, "w-16")} /></label>
+              <label className="inline-flex items-center gap-1">Meedoen <input name="pointsParticipation" type="number" min={0} max={100} defaultValue={row?.pointsParticipation ?? 1} className={cn(INPUT, "w-16")} /></label>
             </div>
           </FieldRow>
           <FieldRow label="Omschrijving" htmlFor={`desc-${row?.id ?? "new"}`}>
-            <textarea id={`desc-${row?.id ?? "new"}`} name="description" defaultValue={row?.description ?? ""} rows={2} maxLength={2000} className={INPUT} />
+            <textarea id={`desc-${row?.id ?? "new"}`} name="description" defaultValue={row?.description ?? ""} rows={2} maxLength={2000} className={TEXTAREA} />
           </FieldRow>
           <div className="flex items-center justify-between border-t border-border pt-3">
             {row && row.resultCount === 0 ? (
-              <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-sm text-rose-600 hover:underline">
+              <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-sm font-semibold text-destructive hover:underline">
                 <Trash2 className="size-3.5" /> Verwijderen
               </button>
             ) : <span />}
@@ -194,7 +195,7 @@ export function BadgeCard({ row }: { row: BadgeRow | null }) {
 
   return (
     <div className="dash-card">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-5 py-4 text-left">
         {row ? (
           <>
             <LeagueBadgePill name={row.name} color={row.color} size="sm" />
@@ -204,14 +205,14 @@ export function BadgeCard({ row }: { row: BadgeRow | null }) {
             {!row.enabled && <StatusBadge tone="neutral">Uit</StatusBadge>}
           </>
         ) : (
-          <span className="inline-flex items-center gap-1.5 font-medium text-primary">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
             <Plus className="size-4" /> Nieuwe badge
           </span>
         )}
         <span className="ml-auto text-muted-foreground">{open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}</span>
       </button>
       {open && (
-        <form onSubmit={onSubmit} className="space-y-4 border-t border-border p-4">
+        <form onSubmit={onSubmit} className="space-y-4 border-t border-border p-5 sm:p-6">
           <FieldRow label="Naam" htmlFor={`bname-${id}`}>
             <input id={`bname-${id}`} name="name" defaultValue={row?.name ?? ""} className={INPUT} required maxLength={60} />
           </FieldRow>
@@ -223,13 +224,13 @@ export function BadgeCard({ row }: { row: BadgeRow | null }) {
           </FieldRow>
           <FieldRow label="Voorwaarde" htmlFor={`bcrit-${id}`}>
             <div className="flex flex-wrap items-center gap-2">
-              <select id={`bcrit-${id}`} name="criterion" defaultValue={row?.criterion ?? "TOTAL_EVENTS"} className={`${INPUT} w-auto`}>
+              <select id={`bcrit-${id}`} name="criterion" defaultValue={row?.criterion ?? "TOTAL_EVENTS"} className={cn(SELECT, "w-auto")}>
                 {BADGE_CRITERIA.map((c) => (
                   <option key={c} value={c}>{BADGE_CRITERION_LABEL[c]}</option>
                 ))}
               </select>
               <span className="text-sm text-muted-foreground">minimaal</span>
-              <input name="threshold" type="number" min={1} max={100000} defaultValue={row?.threshold ?? 1} className={`${INPUT} w-24`} required />
+              <input name="threshold" type="number" min={1} max={100000} defaultValue={row?.threshold ?? 1} className={cn(INPUT, "w-24")} required />
             </div>
           </FieldRow>
           <FieldRow label="Kleur">
@@ -242,13 +243,13 @@ export function BadgeCard({ row }: { row: BadgeRow | null }) {
           </FieldRow>
           <FieldRow label="Volgorde en status">
             <div className="flex flex-wrap items-center gap-4 text-sm">
-              <label className="inline-flex items-center gap-1">Volgorde <input name="sortOrder" type="number" min={0} max={10000} defaultValue={row?.sortOrder ?? 100} className={`${INPUT} w-20`} /></label>
+              <label className="inline-flex items-center gap-1">Volgorde <input name="sortOrder" type="number" min={0} max={10000} defaultValue={row?.sortOrder ?? 100} className={cn(INPUT, "w-20")} /></label>
               <label className="inline-flex items-center gap-2"><input type="checkbox" name="enabled" value="true" defaultChecked={row?.enabled ?? true} className="size-4 accent-primary" /> Actief</label>
             </div>
           </FieldRow>
           <div className="flex items-center justify-between border-t border-border pt-3">
             {row ? (
-              <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-sm text-rose-600 hover:underline">
+              <button type="button" onClick={remove} disabled={pending} className="inline-flex items-center gap-1 text-sm font-semibold text-destructive hover:underline">
                 <Trash2 className="size-3.5" /> Verwijderen
               </button>
             ) : <span />}

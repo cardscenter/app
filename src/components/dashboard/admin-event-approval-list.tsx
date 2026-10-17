@@ -25,6 +25,7 @@ import { formatEventDateRange } from "@/lib/events/timezones";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { PILL_RED, PILL_INK, TEXTAREA } from "@/components/ploy/tile-styles";
 
 interface OrganizerInfo {
   id: string;
@@ -130,7 +131,7 @@ function EventApprovalCard({ event }: { event: EventRow }) {
     <div className="dash-card p-4">
       <div className="flex flex-col gap-4 sm:flex-row">
         {/* Thumbnail */}
-        <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-md bg-muted sm:h-28 sm:w-44">
+        <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-[12px] bg-muted sm:h-28 sm:w-44">
           {event.coverImage ? (
             <Image src={event.coverImage} alt={event.title} fill className="object-cover" sizes="200px" unoptimized />
           ) : (
@@ -159,7 +160,7 @@ function EventApprovalCard({ event }: { event: EventRow }) {
               {event.venueName}, {event.street} {event.houseNumber}, {event.postalCode} {event.city}
               <CountryFlag code={event.country} size="sm" />
               {getEventCountryName(event.country, locale)}
-              {event.lat === null && <span className="text-amber-600 dark:text-amber-400">(geen kaart-pin)</span>}
+              {event.lat === null && <span className="font-medium text-[var(--pastel-yellow-ink)]">(geen kaart-pin)</span>}
             </p>
             <p>
               Entree: {event.entryType === "FREE" ? "Gratis" : "Betaald (tickets)"}
@@ -176,7 +177,7 @@ function EventApprovalCard({ event }: { event: EventRow }) {
           )}
 
           {/* Organisator */}
-          <div className="mt-3 rounded-md border border-border bg-muted/40 p-2.5 text-sm">
+          <div className="mt-3 rounded-[12px] bg-[var(--background)] p-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium text-foreground">{event.organizer.displayName ?? "Onbekend"}</span>
               <span className="text-muted-foreground">{event.organizer.email}</span>
@@ -196,24 +197,24 @@ function EventApprovalCard({ event }: { event: EventRow }) {
         <button
           onClick={handleApprove}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+          className={`${PILL_INK} disabled:opacity-50`}
         >
           <Check className="h-4 w-4" /> Goedkeuren
         </button>
         <button
           onClick={() => setShowReject((v) => !v)}
           disabled={isPending}
-          className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+          className={`${PILL_RED} disabled:opacity-50`}
         >
           <X className="h-4 w-4" /> Afwijzen
         </button>
         <button
           onClick={handleToggleOfficial}
           disabled={isPending}
-          className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${
+          className={`cc-pill inline-flex items-center gap-1.5 border px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
             event.isOfficial
-              ? "border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-300"
-              : "border-border bg-card text-muted-foreground hover:bg-muted"
+              ? "border-transparent bg-[var(--pastel-blue)] text-[var(--pastel-blue-ink)]"
+              : "border-border bg-white text-foreground/70 hover:bg-[var(--background)] hover:text-foreground"
           }`}
         >
           <ShieldCheck className="h-4 w-4" /> {event.isOfficial ? "Geverifieerd" : "Markeer geverifieerd"}
@@ -221,10 +222,10 @@ function EventApprovalCard({ event }: { event: EventRow }) {
         <button
           onClick={handleToggleTrusted}
           disabled={isPending}
-          className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition disabled:opacity-50 ${
+          className={`cc-pill inline-flex items-center gap-1.5 border px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
             event.organizer.isTrustedEventOrganizer
-              ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300"
-              : "border-border bg-card text-muted-foreground hover:bg-muted"
+              ? "border-transparent bg-[var(--pastel-yellow)] text-[var(--pastel-yellow-ink)]"
+              : "border-border bg-white text-foreground/70 hover:bg-[var(--background)] hover:text-foreground"
           }`}
         >
           <Star className="h-4 w-4" /> {event.organizer.isTrustedEventOrganizer ? "Vertrouwd" : "Markeer organisator vertrouwd"}
@@ -238,12 +239,12 @@ function EventApprovalCard({ event }: { event: EventRow }) {
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reden voor afwijzing (zichtbaar voor de organisator)…"
             rows={2}
-            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+            className={TEXTAREA}
           />
           <button
             onClick={handleReject}
             disabled={isPending}
-            className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+            className={`${PILL_RED} disabled:opacity-50`}
           >
             Bevestig afwijzing
           </button>

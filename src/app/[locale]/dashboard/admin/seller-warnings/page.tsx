@@ -6,6 +6,7 @@ import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { EmptyState } from "@/components/dashboard/ui/empty-state";
 import { StatusBadge } from "@/components/dashboard/ui/status-badge";
+import { TABLE_HEAD } from "@/components/ploy/tile-styles";
 
 // Lijst van bundles die automatisch zijn geannuleerd door de
 // `auto-cancel-stale-paid` cron — sellers die 14 dagen niet verzonden hebben.
@@ -68,7 +69,7 @@ export default async function SellerWarningsPage() {
     <div className="space-y-6">
       <DashboardPageHeader
         title="Niet-verzonden bestellingen"
-        subtitle="Bundles die automatisch zijn geannuleerd door de cron omdat de verkoper niet binnen 14 dagen heeft verzonden. Repeat-offenders kun je hieronder direct identificeren — herhaaldelijk niet-verzenden is grond voor suspensie."
+        subtitle="Bundles die automatisch zijn geannuleerd door de cron omdat de verkoper niet binnen 14 dagen heeft verzonden. Repeat-offenders kun je hieronder direct identificeren. Herhaaldelijk niet-verzenden is grond voor suspensie."
       />
 
       {/* Top-offenders sectie — alleen sellers met 2+ events */}
@@ -76,11 +77,11 @@ export default async function SellerWarningsPage() {
         <DashboardSection
           variant="plain"
           title={`Repeat-offenders (${topOffenders.length})`}
-          icon={<AlertTriangle className="size-5 text-rose-600 dark:text-rose-400" />}
+          icon={<AlertTriangle className="size-5 text-destructive" />}
         >
           <div className="overflow-x-auto dash-card">
             <table className="w-full text-sm">
-              <thead className="bg-muted text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <thead className={`${TABLE_HEAD} bg-[var(--background)]`}>
                 <tr>
                   <th className="px-4 py-2.5">Verkoper</th>
                   <th className="px-4 py-2.5 text-right">Aantal</th>
@@ -91,12 +92,12 @@ export default async function SellerWarningsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {topOffenders.map((s) => (
-                  <tr key={s.sellerId} className="hover:bg-muted/40">
+                  <tr key={s.sellerId} className="hover:bg-[var(--background)]">
                     <td className="px-4 py-3">
                       <div className="font-medium text-foreground">{s.displayName}</div>
                       <div className="text-xs text-muted-foreground">{s.email}</div>
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums font-bold text-rose-700 dark:text-rose-400">
+                    <td className="px-4 py-3 text-right tabular-nums font-bold text-destructive">
                       {s.count}×
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">€{s.totalRefunded.toFixed(2)}</td>
@@ -129,7 +130,7 @@ export default async function SellerWarningsPage() {
         {bundles.length === 0 ? (
           <EmptyState icon={AlertTriangle} title="Geen automatisch geannuleerde bundles." compact />
         ) : (
-          <ul className="divide-y divide-border dash-card">
+          <ul className="divide-y divide-border overflow-hidden dash-card">
             {bundles.map((b) => {
               const rejectedCancel = b.cancellationRequests[0];
               // Highlight: seller wees een cancel af (was respondedById), daarna alsnog niet verzonden
@@ -137,11 +138,11 @@ export default async function SellerWarningsPage() {
                 && rejectedCancel.proposedById === b.buyer.id
                 && rejectedCancel.respondedAt !== null;
               return (
-                <li key={b.id} className={`px-4 py-3 ${sellerRejectedThenGhosted ? "bg-red-500/5" : ""}`}>
+                <li key={b.id} className={`px-5 py-3 ${sellerRejectedThenGhosted ? "bg-[var(--pastel-pink)]/30" : ""}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono">{b.orderNumber}</code>
+                        <code className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-mono">{b.orderNumber}</code>
                         <span className="text-sm font-medium text-foreground">
                           {b.seller.displayName}
                         </span>
@@ -159,7 +160,7 @@ export default async function SellerWarningsPage() {
                         <span className="font-medium text-foreground">€{b.totalCost.toFixed(2)} terug</span>
                       </div>
                       {sellerRejectedThenGhosted && rejectedCancel.rejectionNote && (
-                        <p className="mt-1 text-xs text-rose-700/80 dark:text-rose-400/80 italic">
+                        <p className="mt-1 text-xs italic text-[var(--pastel-pink-ink)]">
                           Afwijzingsreden seller: &ldquo;{rejectedCancel.rejectionNote}&rdquo;
                         </p>
                       )}

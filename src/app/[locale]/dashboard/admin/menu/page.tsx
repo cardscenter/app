@@ -18,7 +18,7 @@ export default async function AdminMenuPage() {
         title="Menu en kortingscodes"
         subtitle="Het assortiment van de bestelapp. Prijzen zijn placeholders tot ze definitief zijn. Uitverkocht zet de keuken normaal zelf; hier kan het ook. Nieuwe producten (en foto's) voeg ik toe in de seed, zeg het als er iets bij moet."
       />
-      <DashboardSection title="Menu" icon={<UtensilsCrossed className="size-5" />} contentClassName="p-0">
+      <DashboardSection title="Menu" icon={<UtensilsCrossed className="size-5" />} contentClassName="px-0 pb-0 pt-4 sm:px-0 sm:pb-0">
         <MenuAdmin categories={menu.categories} items={menu.items} />
       </DashboardSection>
       <DashboardSection title="Kortingscodes" icon={<Ticket className="size-5" />} description="Code op het betaalscherm. Procent of vast bedrag, optioneel met vervaldatum en maximaal aantal keer.">

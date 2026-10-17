@@ -56,7 +56,7 @@ export default async function AdminShippingIssuesPage({
     <div className="space-y-6">
       <DashboardPageHeader
         title="Trackingtickets (ShippingIssue)"
-        subtitle="Lichtgewicht tickets voor tracking-problemen — voor scenario’s waar een zware geschillen-flow disproportioneel zou zijn."
+        subtitle="Lichtgewicht tickets voor tracking-problemen, voor scenario’s waar een zware geschillen-flow disproportioneel zou zijn."
       />
       <ShippingIssuesAdminList issues={serialized} currentStatus={statusFilter} />
     </div>

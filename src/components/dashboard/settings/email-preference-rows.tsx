@@ -10,6 +10,7 @@ import {
   type EmailPreferences,
   type EmailPrefCategory,
 } from "@/lib/email/preferences-config";
+import { Callout } from "@/components/dashboard/ui/callout";
 
 /**
  * E-mailvoorkeuren als settings-rijen (Fase 44, verhuisd van /meldingen).
@@ -46,17 +47,16 @@ export function EmailPreferenceRows({
   return (
     <div>
       {!emailVerified && (
-        <div className="mb-3 mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
-          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{t("emailPrefs.verifyHint")}</span>
-        </div>
+        <Callout tone="yellow" icon={TriangleAlert} className="mb-3">
+          {t("emailPrefs.verifyHint")}
+        </Callout>
       )}
 
       <div className="divide-y divide-border">
         {EMAIL_PREF_CATEGORIES.map(({ key, label, description }) => (
           <div
             key={key}
-            className="flex items-center justify-between gap-4 py-4 first:pt-3 last:pb-3"
+            className="flex items-center justify-between gap-4 py-4 first:pt-0"
           >
             <div className="min-w-0">
               <label htmlFor={`email-pref-${key}`} className="text-sm font-medium text-foreground">
@@ -76,7 +76,7 @@ export function EmailPreferenceRows({
         <div className="flex items-center justify-between gap-4 py-4 opacity-70">
           <div className="min-w-0">
             <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              <ShieldCheck className="h-4 w-4 text-[var(--pastel-green-ink)]" />
               {t("emailPrefs.alwaysOn")}
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground">{t("emailPrefs.alwaysOnDesc")}</p>
@@ -87,7 +87,7 @@ export function EmailPreferenceRows({
 
       <div className="flex h-5 items-center justify-end gap-2">
         {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-        {savedFlash && !isPending && <Check className="h-4 w-4 text-emerald-500" />}
+        {savedFlash && !isPending && <Check className="h-4 w-4 text-[var(--pastel-green-ink)]" />}
       </div>
     </div>
   );

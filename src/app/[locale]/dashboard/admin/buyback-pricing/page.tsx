@@ -19,7 +19,7 @@ export default async function AdminBuybackPricingPage() {
         title="Inkooptarieven bulk"
         subtitle={`Prijs per stuk per categorie. Geldt voor nieuwe aanvragen; een ingediende aanvraag houdt de prijs van dat moment. Minimum per aanvraag €${MINIMUM_BULK_VALUE.toFixed(2)}, retourkosten €${RETURN_FEE_EUR.toFixed(2)} (vast in de code).`}
       />
-      <DashboardSection title="Tarieven" icon={<Coins className="size-5" />} contentClassName="p-0">
+      <DashboardSection title="Tarieven" icon={<Coins className="size-5" />} contentClassName="px-0 pb-0 pt-4 sm:px-0 sm:pb-0">
         <BulkPricingAdmin rows={rows} />
       </DashboardSection>
     </div>

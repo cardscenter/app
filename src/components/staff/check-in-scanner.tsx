@@ -5,6 +5,9 @@ import { useRouter } from "@/i18n/navigation";
 import { Camera, CameraOff, CheckCircle2, XCircle, AlertTriangle, Keyboard } from "lucide-react";
 import { checkInTicket } from "@/actions/staff/check-in";
 import type { CheckInResult } from "@/lib/shop-events/registrations";
+import { Callout } from "@/components/dashboard/ui/callout";
+import { INPUT, PILL_BTN, PILL_INK, PILL_RED } from "@/components/ploy/tile-styles";
+import { cn } from "@/lib/utils";
 
 /**
  * QR-scanner voor de deur. Gebruikt de BarcodeDetector-API (Chrome/Edge/
@@ -114,7 +117,7 @@ export function CheckInScanner({ eventId, eventTitle }: { eventId: string; event
 
       {supported ? (
         <div className="space-y-2">
-          <div className="relative aspect-square overflow-hidden rounded-xl bg-black">
+          <div className="relative aspect-square overflow-hidden rounded-[12px] bg-[var(--cc-dark)]">
             <video ref={videoRef} className={`h-full w-full object-cover ${scanning ? "" : "hidden"}`} muted playsInline />
             {!scanning && (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-white/70">
@@ -122,22 +125,22 @@ export function CheckInScanner({ eventId, eventTitle }: { eventId: string; event
                 <span className="text-sm">Camera staat uit</span>
               </div>
             )}
-            {scanning && <div className="pointer-events-none absolute inset-8 rounded-xl border-2 border-white/70" />}
+            {scanning && <div className="pointer-events-none absolute inset-8 rounded-[12px] border-2 border-white/70" />}
           </div>
           <button
             type="button"
             onClick={scanning ? stopCamera : startCamera}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted"
+            className={cn(PILL_BTN, "w-full justify-center py-2.5")}
           >
             {scanning ? <CameraOff className="size-4" /> : <Camera className="size-4" />}
             {scanning ? "Camera stoppen" : "Camera starten"}
           </button>
-          {cameraError && <p className="text-xs text-rose-600">{cameraError}</p>}
+          {cameraError && <p className="text-xs text-destructive">{cameraError}</p>}
         </div>
       ) : supported === false ? (
-        <p className="rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+        <Callout tone="blue">
           Deze browser kan geen QR-codes scannen (BarcodeDetector ontbreekt). Gebruik Chrome of Edge op een telefoon, of typ de code hieronder.
-        </p>
+        </Callout>
       ) : null}
 
       <form
@@ -154,57 +157,39 @@ export function CheckInScanner({ eventId, eventTitle }: { eventId: string; event
             onChange={(e) => setManual(e.target.value.toUpperCase())}
             placeholder="CC-XXXXXX"
             autoComplete="off"
-            className="glass-input w-full rounded-xl py-2.5 pl-9 pr-3 font-mono text-sm uppercase tracking-wider"
+            className={cn(INPUT, "py-2.5 pl-9 font-mono uppercase tracking-wider")}
           />
         </div>
-        <button type="submit" disabled={pending || !manual.trim()} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
+        <button type="submit" disabled={pending || !manual.trim()} className={cn(PILL_RED, "disabled:opacity-60")}>
           Check in
         </button>
       </form>
 
-      {result && (
-        <div
-          className={`rounded-xl border p-4 ${
-            "ok" in result
-              ? result.already
-                ? "border-amber-500/40 bg-amber-500/10"
-                : "border-emerald-500/40 bg-emerald-500/10"
-              : result.code === "window"
-                ? "border-amber-500/40 bg-amber-500/10"
-                : "border-rose-500/40 bg-rose-500/10"
-          }`}
-        >
-          {"ok" in result ? (
-            <div className="flex items-start gap-3">
-              {result.already ? <AlertTriangle className="mt-0.5 size-5 text-amber-600" /> : <CheckCircle2 className="mt-0.5 size-5 text-emerald-600" />}
-              <div>
-                <p className="font-semibold text-foreground">{result.already ? "Al ingecheckt" : "Ingecheckt"}</p>
-                <p className="text-sm text-foreground/80">
-                  {result.registration.displayName}
-                  {result.registration.divisionKey && <> · {result.registration.divisionKey}</>}
-                  <span className="ml-2 font-mono text-xs text-muted-foreground">{result.registration.ticketCode}</span>
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-start gap-3">
-              <XCircle className={`mt-0.5 size-5 ${result.code === "window" ? "text-amber-600" : "text-rose-600"}`} />
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">{result.error}</p>
-                {result.code === "window" && (
-                  <button
-                    type="button"
-                    onClick={() => submit(lastRef.current.value || manual, true)}
-                    className="mt-2 rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-700"
-                  >
-                    Toch inchecken
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {result &&
+        ("ok" in result ? (
+          <Callout
+            tone={result.already ? "yellow" : "green"}
+            icon={result.already ? AlertTriangle : CheckCircle2}
+            title={result.already ? "Al ingecheckt" : "Ingecheckt"}
+          >
+            {result.registration.displayName}
+            {result.registration.divisionKey && <> · {result.registration.divisionKey}</>}
+            <span className="ml-2 font-mono text-xs opacity-70">{result.registration.ticketCode}</span>
+          </Callout>
+        ) : (
+          <Callout
+            tone={result.code === "window" ? "yellow" : "pink"}
+            icon={XCircle}
+            title={result.error}
+            action={
+              result.code === "window" ? (
+                <button type="button" onClick={() => submit(lastRef.current.value || manual, true)} className={PILL_INK}>
+                  Toch inchecken
+                </button>
+              ) : undefined
+            }
+          />
+        ))}
     </div>
   );
 }

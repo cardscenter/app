@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Loader2, Check, X } from "lucide-react";
 import { approveEnterpriseRequest, rejectEnterpriseRequest } from "@/actions/enterprise";
 import { useRouter } from "@/i18n/navigation";
+import { PILL_BTN, PILL_RED, INPUT, TEXTAREA } from "@/components/ploy/tile-styles";
 
 interface Props {
   requestId: string;
@@ -52,7 +53,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
         <button
           type="button"
           onClick={() => setMode("approve")}
-          className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className={PILL_RED}
         >
           <Check className="h-4 w-4" />
           Goedkeuren
@@ -60,7 +61,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
         <button
           type="button"
           onClick={() => setMode("reject")}
-          className="inline-flex items-center gap-1.5 rounded-md border border-rose-500 bg-rose-500/5 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-500/10 dark:text-rose-400"
+          className="cc-pill inline-flex items-center gap-1.5 border border-[var(--destructive)]/30 bg-white px-4 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-[var(--pastel-pink)]/40"
         >
           <X className="h-4 w-4" />
           Afwijzen
@@ -71,7 +72,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
 
   if (mode === "approve") {
     return (
-      <div className="space-y-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4">
+      <div className="space-y-3 rounded-[14px] bg-[var(--pastel-green)]/50 p-4">
         <h4 className="text-sm font-semibold text-foreground">Goedkeuren</h4>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -82,7 +83,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
               step={1}
               value={monthlyPrice}
               onChange={(e) => setMonthlyPrice(parseInt(e.target.value) || 0)}
-              className="mt-1 w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+              className={`${INPUT} mt-1`}
             />
           </div>
           <div>
@@ -90,20 +91,20 @@ export function EnterpriseRequestActions({ requestId }: Props) {
             <select
               value={billingCycle}
               onChange={(e) => setBillingCycle(e.target.value as "MONTHLY" | "YEARLY")}
-              className="mt-1 w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+              className={`${INPUT} mt-1`}
             >
               <option value="MONTHLY">Maandelijks</option>
               <option value="YEARLY">Jaarlijks</option>
             </select>
           </div>
         </div>
-        {error && <p className="text-xs text-rose-600">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-2">
           <button
             type="button"
             onClick={handleApprove}
             disabled={isPending}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className={`${PILL_RED} disabled:opacity-50`}
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Bevestig goedkeuring"}
           </button>
@@ -111,7 +112,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
             type="button"
             onClick={() => setMode("none")}
             disabled={isPending}
-            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            className={PILL_BTN}
           >
             Annuleren
           </button>
@@ -121,7 +122,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-4">
+    <div className="space-y-3 rounded-[14px] bg-[var(--pastel-pink)]/50 p-4">
       <h4 className="text-sm font-semibold text-foreground">Afwijzen</h4>
       <textarea
         value={rejectionReason}
@@ -130,15 +131,15 @@ export function EnterpriseRequestActions({ requestId }: Props) {
         minLength={5}
         maxLength={500}
         placeholder="Reden voor afwijzing (zichtbaar voor de aanvrager)..."
-        className="w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm"
+        className={TEXTAREA}
       />
-      {error && <p className="text-xs text-rose-600">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex gap-2">
         <button
           type="button"
           onClick={handleReject}
           disabled={isPending}
-          className="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+          className={`${PILL_RED} disabled:opacity-50`}
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Bevestig afwijzing"}
         </button>
@@ -146,7 +147,7 @@ export function EnterpriseRequestActions({ requestId }: Props) {
           type="button"
           onClick={() => setMode("none")}
           disabled={isPending}
-          className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          className={PILL_BTN}
         >
           Annuleren
         </button>

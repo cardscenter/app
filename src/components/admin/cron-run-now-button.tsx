@@ -4,6 +4,7 @@ import { useTransition, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { runCronManually } from "@/actions/admin/crons";
 import { Play, Lock, Loader2 } from "lucide-react";
+import { PILL_RED_SM } from "@/components/ploy/tile-styles";
 
 export function CronRunNowButton({
   jobName,
@@ -26,7 +27,7 @@ export function CronRunNowButton({
       <div className="space-y-1">
         <span
           title={runWarning ?? "Deze cron mag alleen door de scheduler gedraaid worden."}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
+          className="cc-pill inline-flex items-center gap-1.5 bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground"
         >
           <Lock className="h-3 w-3" />
           Alleen scheduler
@@ -39,8 +40,8 @@ export function CronRunNowButton({
     return (
       <div className="space-y-1">
         <span
-          title="Deze job draait op dit moment — wacht tot de run klaar is."
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
+          title="Deze job draait op dit moment. Wacht tot de run klaar is."
+          className="cc-pill inline-flex items-center gap-1.5 bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground"
         >
           <Loader2 className="h-3 w-3 animate-spin" />
           Draait nu…
@@ -67,12 +68,12 @@ export function CronRunNowButton({
       <button
         onClick={run}
         disabled={pending}
-        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-50"
+        className={`${PILL_RED_SM} disabled:opacity-50`}
       >
         <Play className="h-3 w-3" />
         {pending ? "Bezig…" : "Run nu"}
       </button>
-      {error && <p className="text-xs text-rose-600">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
