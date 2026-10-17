@@ -96,7 +96,7 @@ function StampMark({ src }: { src: string }) {
     return (
       <span className="relative mr-[0.14em] inline-block h-[0.86em] w-[1em] -rotate-[8deg] align-middle" aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" className="absolute left-0 top-[-0.07em] h-[1em] w-[1em] max-w-none" />
+        <img src={src} alt="" className="absolute -left-[0.04em] top-[-0.22em] h-[1.3em] w-[1.3em] max-w-none" />
       </span>
     );
   }
@@ -111,14 +111,14 @@ function StampMark({ src }: { src: string }) {
     >
       {/* Inktring die bij de landing uitdijt en vervaagt. */}
       <motion.span
-        className="pointer-events-none absolute left-0 top-[-0.07em] h-[1em] w-[1em] rounded-full border-[0.06em] border-[var(--primary)]"
+        className="pointer-events-none absolute -left-[0.04em] top-[-0.22em] h-[1.3em] w-[1.3em] rounded-full border-[0.06em] border-[var(--primary)]"
         initial={{ scale: 0.8, opacity: 0 }}
         whileInView={{ scale: [0.8, 0.8, 1.45], opacity: [0, 0.55, 0] }}
         viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.55, times: [0, 0.05, 1], ease: "easeOut" }}
       />
       <motion.span
-        className="absolute left-0 top-[-0.07em] block h-[1em] w-[1em]"
+        className="absolute -left-[0.04em] top-[-0.22em] block h-[1.3em] w-[1.3em]"
         initial={{ scale: 2.4, rotate: -38, opacity: 0, y: "-30%" }}
         whileInView={{ scale: [2.4, 0.86, 1.06, 1], rotate: [-38, -6, -10, -8], opacity: [0, 1, 1, 1], y: ["-30%", "0%", "0%", "0%"] }}
         viewport={{ once: true }}
