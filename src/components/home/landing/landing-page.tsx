@@ -191,7 +191,7 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
             : { title: t("pillarCollectTitle"), text: t("pillarCollectTextSell"), href: "/verkopen/losse-kaarten", linkLabel: t("pillarCollectLinkSell"), color: "blue", animation: "rain" },
         ]}
       />
-      <StatsPanel titleLine1={t("statsTitle1")} titleLine2={t("statsTitle2")} description={t("statsDesc")} cards={statCards} color="pink" balloon="red" />
+      <StatsPanel titleLine1={t("statsTitle1")} titleLine2={t("statsTitle2")} description={t("statsDesc")} cards={statCards} color="pink" balloon="red" stampSrc="/images/sections/stempel.webp" />
       <ActivityPanel titleTop={t("activityTop")} titleBottom={t("activityBottom")} items={feed} />
       <EventsPanel
         titleParts={[t("eventsTitle1"), `${t("eventsTitle2")} ${t("eventsTitle3")}`]}
