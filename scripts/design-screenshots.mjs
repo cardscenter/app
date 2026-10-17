@@ -72,6 +72,7 @@ const chrome = spawn(CHROME, [
   "--no-first-run",
   "--no-default-browser-check",
   "--hide-scrollbars",
+  "--window-size=1440,900",
   `--user-data-dir=${path.join(process.env.TEMP || "/tmp", `cc-design-shots-${PORT}`)}`,
   "about:blank",
 ]);
@@ -113,11 +114,13 @@ async function shoot(send, url, width, height, file, full) {
   await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: Number(process.env.DSF || 1), mobile: width < 700 });
   await send("Page.navigate", { url });
   await sleep(6500);
+  await send("Page.bringToFront");
   // Scroll één keer door de pagina zodat in-view-animaties hun eindstand halen.
   await send("Runtime.evaluate", {
     expression: "new Promise(r => { let y = 0; const t = setInterval(() => { y += 600; scrollTo(0, y); if (y > document.documentElement.scrollHeight) { clearInterval(t); scrollTo(0, 0); setTimeout(r, 900); } }, 120); })",
     awaitPromise: true,
   });
+  if (process.env.DEBUG) console.log("debug", JSON.stringify((await send("Runtime.evaluate", { expression: "location.href + ' | ' + document.title + ' | ' + document.documentElement.scrollHeight", returnByValue: true })).result));
   const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: full });
   writeFileSync(file, Buffer.from(shot.result.data, "base64"));
   console.log("ok", path.relative(process.cwd(), file));
@@ -125,7 +128,8 @@ async function shoot(send, url, width, height, file, full) {
 
 try {
   const { ws, send } = await connect();
-  const single = opt("url");
+  // Git Bash maakt van "/nl/x" een Windows-pad ("C:/Program Files/Git/nl/x"); draai dat terug.
+  const single = opt("url")?.replace(/\\/g, "/").replace(/^[A-Za-z]:\/.*?\/Git(?=\/)/, "");
   if (single) {
     const width = Number(opt("width", "1440"));
     await shoot(send, BASE + single, width, width < 700 ? 844 : 900, path.resolve(opt("out", "screenshot.png")), flag("full"));
