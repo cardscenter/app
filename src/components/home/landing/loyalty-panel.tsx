@@ -89,15 +89,15 @@ export function LoyaltyPanel({
     <div className="px-0 pb-6 sm:px-5 lg:px-6">
       <div className="relative w-full rounded-[20px] bg-[var(--cc-pink)] px-5 pb-0 pt-14 sm:px-8 lg:px-10 lg:pt-[76px]">
         <div className="relative mx-auto w-full max-w-6xl">
-          <h2 className="cc-display text-[44px] text-[var(--cc-ink)] md:text-[64px] lg:text-7xl">
-            <span className="block">{titleLine1}</span>
-            <span className="block">
-              <StampMark src={stampSrc} />
-              {titleLine2}
-            </span>
-          </h2>
-          <div className="mb-10 mt-6 flex w-full justify-end lg:mb-14">
-            <div className="w-full max-w-[36rem]">
+          <div className="mb-10 flex flex-col gap-6 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+            <h2 className="cc-display shrink-0 text-[44px] text-[var(--cc-ink)] md:text-[64px] lg:text-7xl">
+              <span className="block">{titleLine1}</span>
+              <span className="block">
+                <StampMark src={stampSrc} />
+                {titleLine2}
+              </span>
+            </h2>
+            <div className="w-full max-w-[30rem]">
               <p className="cc-prose text-base">{description}</p>
               {action && <div className="mt-6">{action}</div>}
             </div>
