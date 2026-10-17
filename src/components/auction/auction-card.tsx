@@ -161,9 +161,12 @@ export function AuctionCard({ auction, sponsored, buyer, initialWatched = false,
   );
 }
 
+// Buiten de render-scope: Date.now() is impuur (react-hooks/purity).
+const nowMs = () => Date.now();
+
 function ScheduledStartPill({ startTime }: { startTime: Date | string }) {
   const start = typeof startTime === "string" ? new Date(startTime) : startTime;
-  const diff = start.getTime() - Date.now();
+  const diff = start.getTime() - nowMs();
   if (diff <= 0) {
     // Edge-case: scheduled-status maar startTime al gepasseerd (cron heeft 'm
     // nog niet geflipt). Toon "start nu" zodat het niet raar leeg blijft.
@@ -193,7 +196,7 @@ function ScheduledStartPill({ startTime }: { startTime: Date | string }) {
 
 function CountdownPill({ endTime }: { endTime: Date | string }) {
   const end = typeof endTime === "string" ? new Date(endTime) : endTime;
-  const diff = end.getTime() - Date.now();
+  const diff = end.getTime() - nowMs();
   if (diff <= 0)
     return (
       <span className="rounded-md bg-red-500/90 px-2 py-1 text-xs font-medium text-white">

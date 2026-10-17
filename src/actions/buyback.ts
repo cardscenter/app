@@ -19,7 +19,7 @@ import { submitCollectionBuybackSchema, submitBulkBuybackSchema } from "@/lib/va
 import { getCardImageUrl } from "@/lib/card-image";
 import { encryptIban, decryptIban, maskStoredIban } from "@/lib/iban-crypto";
 import { ADMIN_TRANSITIONS, canMarkPaid, canAcceptAdjusted, canRequestReturn, decisionDeadlineFrom, RETURN_FEE_EUR } from "@/lib/buyback-status";
-import { createProviderPayment } from "@/lib/mollie";
+import { createProviderPayment, PAYMENTS_UNAVAILABLE_ERROR } from "@/lib/mollie";
 
 // Community Hub (Fase 6): uitbetaling alleen nog naar een bankrekening. Het
 // IBAN gaat versleuteld de database in (`encryptIban`); lezen via
@@ -399,14 +399,21 @@ export async function requestBuybackReturn(requestId: string) {
       metadata: JSON.stringify({ buybackRequestId: requestId, returnPath: `/${locale}/dashboard/inkoop/${requestId}` }),
     },
   });
-  const created = await createProviderPayment({
-    paymentId: payment.id,
-    amount: RETURN_FEE_EUR,
-    description: payment.description,
-    redirectPath: `/${locale}/dashboard/inkoop/${requestId}?retour=1`,
-    metadata: { buybackRequestId: requestId },
-    locale,
-  });
+  let created: Awaited<ReturnType<typeof createProviderPayment>>;
+  try {
+    created = await createProviderPayment({
+      paymentId: payment.id,
+      amount: RETURN_FEE_EUR,
+      description: payment.description,
+      redirectPath: `/${locale}/dashboard/inkoop/${requestId}?retour=1`,
+      metadata: { buybackRequestId: requestId },
+      locale,
+    });
+  } catch (err) {
+    console.error("[buyback] retourbetaling starten mislukt", err);
+    await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED", failedAt: new Date() } }).catch(() => {});
+    return { error: err instanceof Error && err.message === PAYMENTS_UNAVAILABLE_ERROR ? err.message : "De betaling kon niet gestart worden. Probeer het zo nog eens." };
+  }
   await prisma.payment.update({ where: { id: payment.id }, data: { provider: created.provider, providerPaymentId: created.providerPaymentId, checkoutUrl: created.checkoutUrl } });
   await prisma.buybackRequest.update({ where: { id: requestId }, data: { returnPaymentId: payment.id } });
   return { success: true, checkoutUrl: created.checkoutUrl };

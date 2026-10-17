@@ -121,17 +121,19 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
   const canPickupPlatform = selected.length > 0 && allSelectedSupportPickup && allSelectedAllowPlatformPickup;
   const canPickupExternal = selected.length > 0 && allSelectedSupportPickup && allSelectedAllowExternalPickup;
 
-  // Auto-fallback bij niet-mogelijke keuze
-  useEffect(() => {
-    if (selected.length === 0) return;
+  // Auto-fallback bij niet-mogelijke keuze — tijdens de render bijgesteld
+  // ("adjust state while rendering"), alleen als de keuze echt verandert.
+  if (selected.length > 0) {
+    let fallback: DeliveryChoice = deliveryChoice;
     if (deliveryChoice === "SHIP" && !canShip) {
-      setDeliveryChoice(canPickupPlatform ? "PICKUP_PLATFORM" : canPickupExternal ? "PICKUP_EXTERNAL" : "SHIP");
+      fallback = canPickupPlatform ? "PICKUP_PLATFORM" : canPickupExternal ? "PICKUP_EXTERNAL" : "SHIP";
     } else if (deliveryChoice === "PICKUP_PLATFORM" && !canPickupPlatform) {
-      setDeliveryChoice(canShip ? "SHIP" : canPickupExternal ? "PICKUP_EXTERNAL" : "SHIP");
+      fallback = canShip ? "SHIP" : canPickupExternal ? "PICKUP_EXTERNAL" : "SHIP";
     } else if (deliveryChoice === "PICKUP_EXTERNAL" && !canPickupExternal) {
-      setDeliveryChoice(canShip ? "SHIP" : canPickupPlatform ? "PICKUP_PLATFORM" : "SHIP");
+      fallback = canShip ? "SHIP" : canPickupPlatform ? "PICKUP_PLATFORM" : "SHIP";
     }
-  }, [canShip, canPickupPlatform, canPickupExternal, selected.length, deliveryChoice]);
+    if (fallback !== deliveryChoice) setDeliveryChoice(fallback);
+  }
 
   function toggleListing(id: string) {
     setSelectedIds((prev) => {

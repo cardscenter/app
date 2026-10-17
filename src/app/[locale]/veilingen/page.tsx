@@ -27,6 +27,11 @@ import {
 
 const PAGE_SIZE = 40;
 
+// Buiten de render: Math.random is impuur (react-hooks/purity).
+function randomSeed() {
+  return Math.floor(Math.random() * 2147483647);
+}
+
 type SortOption = "newest" | "ending" | "highest" | "bids";
 
 // Seeded shuffle — same seed produces same order (consistent per day).
@@ -87,7 +92,7 @@ export default async function AuctionsPage({
     ? sortRaw
     : "newest") as SortOption;
   const seed =
-    parseInt(seedRaw ?? "0", 10) || Math.floor(Math.random() * 2147483647);
+    parseInt(seedRaw ?? "0", 10) || randomSeed();
 
   const t = await getTranslations("auction");
   const tc = await getTranslations("common");

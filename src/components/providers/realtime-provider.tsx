@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import type { RealtimeEvent } from "@/lib/realtime";
 
@@ -29,10 +29,11 @@ export function RealtimeProvider({
   // Set van actieve auction-channels die geregistreerd zijn door consumers.
   // Wordt doorgegeven aan de hook zodat de SSE-URL ze meeneemt.
   const [activeChannels, setActiveChannels] = useState<string[]>([]);
-  const refCounts = useMemo(() => new Map<string, number>(), []);
+  const refCountsRef = useRef(new Map<string, number>());
 
   const registerChannels = useCallback<RegisterChannels>(
     (channels) => {
+      const refCounts = refCountsRef.current;
       for (const ch of channels) {
         refCounts.set(ch, (refCounts.get(ch) ?? 0) + 1);
       }
@@ -46,7 +47,7 @@ export function RealtimeProvider({
         setActiveChannels(Array.from(refCounts.keys()));
       };
     },
-    [refCounts],
+    [],
   );
 
   const { subscribe } = useRealtimeEvents({

@@ -53,12 +53,12 @@ if (!g.__auctionActivator) {
 const state = g.__auctionActivator;
 
 function log(msg: string) {
-  // eslint-disable-next-line no-console
+
   console.log(`[auction-activator] ${msg}`);
 }
 
 function logError(msg: string, err: unknown) {
-  // eslint-disable-next-line no-console
+
   console.error(`[auction-activator] ${msg}`, err);
 }
 

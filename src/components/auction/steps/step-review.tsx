@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useNow, useTranslations } from "next-intl";
 import {
   ChevronLeft,
   ChevronRight,
@@ -151,7 +151,8 @@ export function AuctionPreview({
   const images = form.images;
 
   const auctionWindow = { startTime: form.startTime, endTime: form.endTime };
-  const isScheduled = auctionWindow.startTime.getTime() > Date.now() + SCHEDULED_THRESHOLD_MS;
+  const nowMs = useNow({ updateInterval: 30_000 }).getTime();
+  const isScheduled = auctionWindow.startTime.getTime() > nowMs + SCHEDULED_THRESHOLD_MS;
   const durationDays = deriveDurationDays(auctionWindow.startTime, auctionWindow.endTime);
 
   const startBid = form.startingBid ?? 0;

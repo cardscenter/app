@@ -54,12 +54,12 @@ if (!g.__claimsaleActivator) {
 const state = g.__claimsaleActivator;
 
 function log(msg: string) {
-  // eslint-disable-next-line no-console
+
   console.log(`[claimsale-activator] ${msg}`);
 }
 
 function logError(msg: string, err: unknown) {
-  // eslint-disable-next-line no-console
+
   console.error(`[claimsale-activator] ${msg}`, err);
 }
 

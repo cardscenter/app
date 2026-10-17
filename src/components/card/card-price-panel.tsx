@@ -90,6 +90,8 @@ function formatEur(n: number | null) {
 
 export function CardPricePanel({ variants, history, updated, extraVariants, canExtendedHistory = false }: Props) {
   const [activeKey, setActiveKey] = useState(variants[0]?.key ?? "normal");
+  // Tijdstip van mounten als "nu" voor het periodevenster (render blijft puur).
+  const [nowMs] = useState(() => Date.now());
   // Default 30d zodra er genoeg historie is, anders 14d. Span uit de ruwe
   // history (variant-onafhankelijk) zodat deze initializer stabiel is.
   const overallSpanDays = history.length >= 2
@@ -151,7 +153,7 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
     return fallback?.days ?? 14;
   })();
 
-  const cutoffMs = Date.now() - effectivePeriodDays * 86400000;
+  const cutoffMs = nowMs - effectivePeriodDays * 86400000;
   const windowed = fullSeries.filter((p) => Date.parse(p.date) >= cutoffMs);
   const series = windowed.length >= 2 ? windowed : fullSeries;
 

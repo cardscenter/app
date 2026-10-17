@@ -176,7 +176,19 @@ export function PricingHelperModal({ open, onClose, onApply, defaultValue }: Pri
   // Reset bij elke open-event. Marktwaarde pre-fillt uit `defaultValue` als die
   // beschikbaar is (bv. CardMarket-avg van de gekozen TCGdex-kaart), afgerond
   // op hele euro's zodat het voelt als een ronde marktwaarde.
-  useEffect(() => {
+  // State bijstellen tijdens het renderen (i.p.v. in een effect): we bewaren
+  // de vorige open/defaultValue en resetten zodra die wijzigen. `null` =
+  // eerste render, zodat een modal die al open mount ook reset.
+  const [resetKey, setResetKey] = useState<{
+    open: boolean;
+    defaultValue: number | null | undefined;
+  } | null>(null);
+  if (
+    resetKey === null ||
+    resetKey.open !== open ||
+    resetKey.defaultValue !== defaultValue
+  ) {
+    setResetKey({ open, defaultValue });
     if (open) {
       const initialStrategy: Strategy = "standard";
       const cfg = STRATEGY_CONFIG[initialStrategy];
@@ -192,19 +204,32 @@ export function PricingHelperModal({ open, onClose, onApply, defaultValue }: Pri
       setDuration(cfg.duration);
       setDurationManuallySet(false);
     }
-  }, [open, defaultValue]);
+  }
 
   // Tier-wissel her-synct alle downstream-keuzes naar de aanbevelingen van
   // de gekozen strategie: looptijd, reserve aan/uit, Direct Kopen aan/uit.
   // Predictable wizard-gedrag: ga je terug naar stap 1 en kies je een andere
   // strategie, dan zie je op de volgende stappen meteen de juiste defaults.
-  useEffect(() => {
-    if (!open) return;
-    const cfg = STRATEGY_CONFIG[strategy];
-    if (!durationManuallySet) setDuration(cfg.duration);
-    setWantReserve(cfg.reserveRecommended);
-    setWantBuyNow(cfg.buyNowRecommended);
-  }, [strategy, open, durationManuallySet]);
+  // Ook hier: bijstellen tijdens het renderen op basis van de vorige waarden.
+  const [syncKey, setSyncKey] = useState<{
+    strategy: Strategy;
+    open: boolean;
+    durationManuallySet: boolean;
+  } | null>(null);
+  if (
+    syncKey === null ||
+    syncKey.strategy !== strategy ||
+    syncKey.open !== open ||
+    syncKey.durationManuallySet !== durationManuallySet
+  ) {
+    setSyncKey({ strategy, open, durationManuallySet });
+    if (open) {
+      const cfg = STRATEGY_CONFIG[strategy];
+      if (!durationManuallySet) setDuration(cfg.duration);
+      setWantReserve(cfg.reserveRecommended);
+      setWantBuyNow(cfg.buyNowRecommended);
+    }
+  }
 
   // DOM-event publishen op open/close zodat de parent-form de sticky bottom-
   // bar tijdelijk kan verbergen — op mobile zou die anders door de modal-

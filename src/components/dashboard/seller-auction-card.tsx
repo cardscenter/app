@@ -59,6 +59,9 @@ interface SellerAuctionCardProps {
   auction: SellerAuctionCardData;
 }
 
+// Buiten de render-scope: Date.now() is impuur (react-hooks/purity).
+const nowMs = () => Date.now();
+
 export function SellerAuctionCard({ auction }: SellerAuctionCardProps) {
   const [editOpen, setEditOpen] = useState(false);
   const images = parseImageUrls(auction.imageUrls);
@@ -73,7 +76,7 @@ export function SellerAuctionCard({ auction }: SellerAuctionCardProps) {
 
   // Countdown-target: SCHEDULED telt naar startTime, ACTIVE naar endTime.
   const countdownTarget = isScheduled && auction.startTime ? auction.startTime : auction.endTime;
-  const timeRemainingMs = countdownTarget.getTime() - Date.now();
+  const timeRemainingMs = countdownTarget.getTime() - nowMs();
   const isUrgent = timeRemainingMs > 0 && timeRemainingMs < 60 * 60 * 1000; // <1u
 
   return (

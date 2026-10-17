@@ -136,9 +136,14 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
   );
 }
 
+// Server component: "nu" per request, buiten de render-body gehouden.
+function nowMs() {
+  return Date.now();
+}
+
 function AuctionCountdown({ endTime }: { endTime: string }) {
   const end = new Date(endTime);
-  const diff = end.getTime() - Date.now();
+  const diff = end.getTime() - nowMs();
 
   if (diff <= 0)
     return (

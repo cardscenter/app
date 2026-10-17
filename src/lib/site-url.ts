@@ -14,7 +14,7 @@ export function getSiteUrl(): string {
   if (url) return url.replace(/\/+$/, "");
   if (process.env.NODE_ENV === "production" && typeof window === "undefined" && !warned) {
     warned = true;
-    // eslint-disable-next-line no-console
+
     console.warn(
       "[site-url] NEXT_PUBLIC_SITE_URL én NEXTAUTH_URL ontbreken — absolute links vallen terug op localhost",
     );

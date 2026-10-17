@@ -50,20 +50,18 @@ export function BulkCalculator({ pricing, defaultIban = "", defaultAccountHolder
   const [actionState, formAction] = useActionState(
     async (_prev: { error?: string } | null, formData: FormData) => {
       const result = await submitBulkBuyback(formData);
+      // Uitkomst direct hier afhandelen (i.p.v. in een effect op actionState).
+      if (result?.success && result.requestId) {
+        setSuccessId(result.requestId);
+        setStep(3);
+        toast.success(t("successTitle"));
+      } else if (result?.error) {
+        toast.error(result.error);
+      }
       return result ?? null;
     },
     null
   );
-
-  useEffect(() => {
-    if (actionState?.success && actionState.requestId) {
-      setSuccessId(actionState.requestId);
-      setStep(3);
-      toast.success(t("successTitle"));
-    } else if (actionState?.error) {
-      toast.error(actionState.error);
-    }
-  }, [actionState, t]);
 
   // Bij elke stap-overgang naar boven scrollen — relevant op step 2/3 omdat
   // de gebruiker anders nog onderaan de calculator-tabel staat.

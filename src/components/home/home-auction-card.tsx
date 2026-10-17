@@ -58,6 +58,11 @@ function determineStatusBadge(args: {
   return { label: "LIVE", tone: "slate" };
 }
 
+// Server component: "nu" per request, buiten de render-body gehouden.
+function nowMs() {
+  return Date.now();
+}
+
 interface HomeAuctionCardProps {
   auction: AuctionCardData & {
     sellerId: string;
@@ -80,7 +85,7 @@ export function HomeAuctionCard({ auction }: HomeAuctionCardProps) {
   const isHot = bidCount >= HOT_BIDS_THRESHOLD;
 
   const endTimeDate = typeof auction.endTime === "string" ? new Date(auction.endTime) : auction.endTime;
-  const minutesLeft = (endTimeDate.getTime() - Date.now()) / (1000 * 60);
+  const minutesLeft = (endTimeDate.getTime() - nowMs()) / (1000 * 60);
   const isUrgent = minutesLeft > 0 && minutesLeft <= URGENT_MINUTES;
 
   const hasBuyNow = !!auction.buyNowPrice && auction.buyNowPrice > 0;

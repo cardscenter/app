@@ -6,6 +6,11 @@ import { SellerLocationLine } from "@/components/ui/seller-location-line";
 import { WatchlistButton } from "@/components/ui/watchlist-button";
 import { ClaimsalePreviewCarousel } from "./claimsale-preview-carousel";
 
+// Server component: "nu" per request, buiten de render-body gehouden.
+function nowMs() {
+  return Date.now();
+}
+
 // Standaard (gratis) preview-strip: 5 kaart-thumbnails — voor iedereen.
 const PREVIEW_THUMBNAILS = 5;
 // Geavanceerde Kaart-Preview-Rij (betaalde ITEM_PREVIEW-upsell): 2-rijs
@@ -115,7 +120,7 @@ export function ClaimsaleListRow({
 
   // Geavanceerde Kaart-Preview-Rij = betaalde ITEM_PREVIEW-upsell (2-rijs
   // carousel, tot 50 kaarten). Zonder upsell tonen we de gratis 5-item strip.
-  const now = Date.now();
+  const now = nowMs();
   const hasAdvancedPreview = (claimsale.upsells ?? []).some(
     (u) =>
       u.type === "ITEM_PREVIEW" &&

@@ -11,6 +11,34 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
+function ToolbarButton({
+  command,
+  icon: Icon,
+  label,
+  onExec,
+}: {
+  command: string;
+  icon: typeof Bold;
+  label: string;
+  onExec: (command: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onExec(command);
+      }}
+      className={`rounded-md p-1.5 transition-colors hover:bg-muted ${
+        document.queryCommandState(command) ? "bg-secondary text-foreground" : "text-muted-foreground"
+      }`}
+      title={label}
+    >
+      <Icon className="h-4 w-4" />
+    </button>
+  );
+}
+
 export function RichTextEditor({ value, onChange, rows = 4, placeholder }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
@@ -43,33 +71,13 @@ export function RichTextEditor({ value, onChange, rows = 4, placeholder }: RichT
     document.execCommand("insertText", false, text);
   }, []);
 
-  const isActive = useCallback((command: string) => {
-    return document.queryCommandState(command);
-  }, []);
-
-  const ToolbarButton = ({ command, icon: Icon, label }: { command: string; icon: typeof Bold; label: string }) => (
-    <button
-      type="button"
-      onMouseDown={(e) => {
-        e.preventDefault();
-        exec(command);
-      }}
-      className={`rounded-md p-1.5 transition-colors hover:bg-muted ${
-        isActive(command) ? "bg-secondary text-foreground" : "text-muted-foreground"
-      }`}
-      title={label}
-    >
-      <Icon className="h-4 w-4" />
-    </button>
-  );
-
   return (
     <div className="mt-1 glass-input overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 border-b border-border/30 px-2 py-1.5">
-        <ToolbarButton command="bold" icon={Bold} label="Vet" />
-        <ToolbarButton command="italic" icon={Italic} label="Cursief" />
-        <ToolbarButton command="underline" icon={Underline} label="Onderstreept" />
+        <ToolbarButton command="bold" icon={Bold} label="Vet" onExec={exec} />
+        <ToolbarButton command="italic" icon={Italic} label="Cursief" onExec={exec} />
+        <ToolbarButton command="underline" icon={Underline} label="Onderstreept" onExec={exec} />
         <div className="mx-1 h-4 w-px bg-border/30" />
         <button
           type="button"

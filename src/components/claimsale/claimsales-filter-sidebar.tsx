@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { FilterSection, CheckboxRow, RadioRow } from "@/components/ui/filter-section";
@@ -36,10 +36,13 @@ export function ClaimsalesFilterSidebar({
   const [priceMin, setPriceMin] = useState(filters.priceMin?.toString() ?? "");
   const [priceMax, setPriceMax] = useState(filters.priceMax?.toString() ?? "");
 
-  useEffect(() => {
+  // Velden synchroniseren als de URL-filters wijzigen (state bijwerken tijdens render).
+  const [syncedPrice, setSyncedPrice] = useState({ min: filters.priceMin, max: filters.priceMax });
+  if (syncedPrice.min !== filters.priceMin || syncedPrice.max !== filters.priceMax) {
+    setSyncedPrice({ min: filters.priceMin, max: filters.priceMax });
     setPriceMin(filters.priceMin?.toString() ?? "");
     setPriceMax(filters.priceMax?.toString() ?? "");
-  }, [filters.priceMin, filters.priceMax]);
+  }
 
   function updateParams(mutator: (params: URLSearchParams) => void) {
     const next = new URLSearchParams(sp.toString());

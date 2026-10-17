@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireNotSuspended } from "@/lib/suspension";
-import { isMollieConfigured } from "@/lib/mollie";
+import { isMollieConfigured, isPaymentSimulationAllowed } from "@/lib/mollie";
 import {
   applyPaymentStatus,
   cancelRegistration,
@@ -101,7 +101,7 @@ export async function refreshRegistrationStatus(registrationId: string) {
  * Alleen de eigenaar van de betaling mag dit, en alleen zonder Mollie-key.
  */
 export async function simulatePayment(paymentId: string, outcome: "paid" | "failed" | "canceled", guestToken?: string | null) {
-  if (isMollieConfigured()) return { error: "Simulatie is uitgeschakeld zodra Mollie geconfigureerd is." };
+  if (!isPaymentSimulationAllowed()) return { error: "Simulatie is uitgeschakeld." };
   const session = await auth();
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },

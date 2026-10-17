@@ -26,7 +26,7 @@ interface SchedulerHandle {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
+
   var __pokewalletScheduler: SchedulerHandle | undefined;
 }
 
@@ -57,7 +57,7 @@ async function tick() {
   } catch (err) {
     // Niet fataal — volgende dag opnieuw. CronRun-rij toont FAILED zodat
     // admin het ziet in /dashboard/admin/crons.
-    // eslint-disable-next-line no-console
+
     console.error("[pokewallet-scheduler] tick faalde:", err);
   } finally {
     // Altijd doorplannen, ook na crash, zodat de scheduler blijft leven.
@@ -73,7 +73,7 @@ function scheduleNextTick(reason: string) {
   const delayMs = Math.min(fireAt.getTime() - Date.now(), MAX_TIMEOUT_MS);
   const timeoutId = setTimeout(tick, delayMs);
   globalThis.__pokewalletScheduler = { timeoutId, fireAt };
-  // eslint-disable-next-line no-console
+
   console.log(
     `[pokewallet-scheduler] next fire @ ${fireAt.toISOString()} ` +
       `(reason="${reason}", in ${Math.round(delayMs / 1000 / 60)}m)`,

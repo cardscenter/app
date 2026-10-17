@@ -1,10 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { X, PartyPopper, Plus } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 
 const STORAGE_KEY = "events-launch-banner-dismissed";
+
+// localStorage lezen via useSyncExternalStore (geen setState in een effect).
+// Geen abonnement nodig: de waarde verandert alleen via onze eigen dismiss().
+const subscribeNoop = () => () => {};
+function readDismissed(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    // localStorage niet beschikbaar — banner blijft staan
+    return false;
+  }
+}
 
 /** Launch-banner voor de jonge kalender — dismissible, en de page rendert 'm
  *  alleen zolang er nog weinig live events zijn (drempel in page.tsx).
@@ -13,18 +25,12 @@ export function EventsLaunchBanner({ tab }: { tab: "beurzen" | "events" }) {
   const isBeurzen = tab === "beurzen";
   // Standaard zichtbaar (SSR rendert mee — geen layout-pop-in voor nieuwe
   // bezoekers); alleen wie 'm wegklikte ziet heel kort een flash bij hydration.
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(STORAGE_KEY) === "1") setVisible(false);
-    } catch {
-      // localStorage niet beschikbaar — banner blijft staan
-    }
-  }, []);
+  const [dismissedNow, setDismissedNow] = useState(false);
+  const storedDismissed = useSyncExternalStore(subscribeNoop, readDismissed, () => false);
+  const visible = !dismissedNow && !storedDismissed;
 
   function dismiss() {
-    setVisible(false);
+    setDismissedNow(true);
     try {
       window.localStorage.setItem(STORAGE_KEY, "1");
     } catch {

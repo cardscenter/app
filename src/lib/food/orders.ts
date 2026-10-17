@@ -1,7 +1,7 @@
 import "server-only";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { createProviderPayment } from "@/lib/mollie";
+import { createProviderPayment, PAYMENTS_UNAVAILABLE_ERROR } from "@/lib/mollie";
 import { dayKey as shopDayKey, SHOP_TIMEZONE } from "@/lib/shop-events/format";
 import { mapProviderStatus, type PaymentStatus } from "@/lib/shop-events/config";
 import { getMenu, getWaitMinutes, toPricedLookup, type MenuView } from "./menu-server";
@@ -276,7 +276,7 @@ async function startOnlinePayment(args: { orderId: string; amount: number; numbe
     console.error("[food] betaling aanmaken mislukt", err);
     await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED", failedAt: new Date() } }).catch(() => {});
     await prisma.foodOrder.updateMany({ where: { id: args.orderId, status: "AWAITING_PAYMENT" }, data: { status: "PAYMENT_FAILED" } });
-    return { error: "De betaling kon niet gestart worden. Probeer het opnieuw of betaal aan de bar.", code: "payment" };
+    return { error: err instanceof Error && err.message === PAYMENTS_UNAVAILABLE_ERROR ? err.message : "De betaling kon niet gestart worden. Probeer het opnieuw of betaal aan de bar.", code: "payment" };
   }
 }
 

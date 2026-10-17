@@ -56,7 +56,7 @@ export function ListingViewToggle() {
         }`}
       >
         <LayoutGrid className="size-3.5" />
-        Foto's
+        Foto&apos;s
       </button>
     </div>
   );

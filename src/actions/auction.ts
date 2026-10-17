@@ -1957,7 +1957,7 @@ export async function updateAuction(
   //    startTime is locked. Maar voor toekomstige flexibiliteit accepteren we
   //    beide. Recompute `duration` afgeleid + status-flip naar ACTIVE als
   //    startTime intussen voorbij de threshold ligt.
-  let timingPatch: { startTime?: Date; endTime?: Date; duration?: number; status?: "ACTIVE" } = {};
+  const timingPatch: { startTime?: Date; endTime?: Date; duration?: number; status?: "ACTIVE" } = {};
   if (scope === "FULL" && (data.startTime !== undefined || data.endTime !== undefined)) {
     const newStart = data.startTime ?? auction.startTime ?? new Date();
     const newEnd = data.endTime ?? auction.endTime;

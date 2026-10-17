@@ -139,7 +139,7 @@ export function ClaimsaleItemsFilter({
     }
 
     return result;
-  }, [items, search, conditionFilter, sortBy]);
+  }, [items, isOwner, search, conditionFilter, sortBy]);
 
   return (
     <div>

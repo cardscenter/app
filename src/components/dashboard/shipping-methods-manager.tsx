@@ -11,6 +11,7 @@ import { getCountryName } from "@/lib/shipping/countries";
 import { PRICE_OVERRIDE_TOLERANCE, type ShippingService, type ShippingZone } from "@/lib/shipping/tariffs";
 import { isRequiredSlot, zonesInScope, type SellingScope } from "@/lib/shipping/static-methods";
 import { CountryFlag } from "@/components/ui/country-flag";
+import { Link } from "@/i18n/navigation";
 
 const ZONE_ORDER: Record<string, number> = {
   DOMESTIC: 0,
@@ -47,9 +48,9 @@ export function ShippingMethodsManager({ methods, availableCarriers, hasCountry,
     return (
       <div className="dash-card p-5 text-center">
         <p className="text-sm text-muted-foreground">{t("noCountrySetMessage")}</p>
-        <a href="/dashboard/profiel" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
+        <Link href="/dashboard/profiel" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
           {t("noCountrySetCta")}
-        </a>
+        </Link>
       </div>
     );
   }
@@ -278,13 +279,17 @@ function PricePopover({ method, isPending, open, onOpenChange, onSave }: PricePo
   const minPrice = Math.round(method.basePrice * (1 - PRICE_OVERRIDE_TOLERANCE) * 100) / 100;
   const maxPrice = Math.round(method.basePrice * (1 + PRICE_OVERRIDE_TOLERANCE) * 100) / 100;
 
-  // Sync input wanneer popover opent of method-data verandert (na save)
-  useEffect(() => {
-    if (open) {
+  // Sync input wanneer popover opent of method-data verandert (na save).
+  // "Adjust state while rendering": vergelijk met de vorige sleutel.
+  const syncKey = open ? `${method.priceOverride}|${method.basePrice}` : null;
+  const [prevSyncKey, setPrevSyncKey] = useState(syncKey);
+  if (syncKey !== prevSyncKey) {
+    setPrevSyncKey(syncKey);
+    if (syncKey !== null) {
       setPriceInput((method.priceOverride ?? method.basePrice).toFixed(2));
       setLocalError(null);
     }
-  }, [open, method.priceOverride, method.basePrice]);
+  }
 
   // Click-outside + Escape sluiten
   useEffect(() => {

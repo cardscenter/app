@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { EMPTY_SESSION, type FoodSession } from "./food-types";
 
 const KEY = "cc-session-v2";
+
+const noopSubscribe = () => () => {};
 
 function read(): FoodSession {
   try {
@@ -25,16 +27,25 @@ function read(): FoodSession {
 /**
  * Sessie van de bestelapp in localStorage (tafel, naam, mand, opmerking,
  * code, eigen bestellingen, geschiedenis). Hydratie-veilig: eerst de lege
- * sessie, na mount de opgeslagen; `ready` zegt of die geladen is.
+ * sessie, na hydratie de opgeslagen; `ready` zegt of die geladen is.
  */
 export function useFoodSession() {
   const [session, setSessionState] = useState<FoodSession>(EMPTY_SESSION);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    setSessionState(read());
+  // false tijdens server- en hydratie-render, daarna true.
+  const hydrated = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  );
+
+  // Eenmalig de opgeslagen sessie laden zodra we gehydrateerd zijn
+  // ("adjust state while rendering", geen effect nodig).
+  if (hydrated && !ready) {
     setReady(true);
-  }, []);
+    setSessionState(read());
+  }
 
   const setSession = useCallback((patch: Partial<FoodSession> | ((s: FoodSession) => Partial<FoodSession>)) => {
     setSessionState((prev) => {

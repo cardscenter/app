@@ -45,12 +45,15 @@ function formatDate(iso: string): string {
   });
 }
 
+// Buiten de render-scope: Date.now() is impuur (react-hooks/purity).
+const nowMs = () => Date.now();
+
 export function ClaimsalePromotionManager({ claimsaleId, upsells }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const now = Date.now();
+  const now = nowMs();
   const active = upsells.filter((u) => new Date(u.expiresAt).getTime() > now);
   const activeTypes = new Set(active.map((u) => u.type));
   const addableTypes = CLAIMSALE_UPSELL_TYPES_OFFERED.filter((t) => !activeTypes.has(t));

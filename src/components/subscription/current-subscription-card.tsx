@@ -21,6 +21,9 @@ interface Props {
   subscription: Subscription | null;
 }
 
+// Buiten de render-scope: Date.now() is impuur (react-hooks/purity).
+const nowMs = () => Date.now();
+
 export async function CurrentSubscriptionCard({
   accountType,
   isAdmin,
@@ -40,7 +43,7 @@ export async function CurrentSubscriptionCard({
     } else if (subscription.paymentStatus === "GRACE" && subscription.gracePeriodEnd) {
       const daysLeft = Math.max(
         0,
-        Math.ceil((subscription.gracePeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+        Math.ceil((subscription.gracePeriodEnd.getTime() - nowMs()) / (1000 * 60 * 60 * 24))
       );
       statusLine = t("subscriptionStatusGrace", { days: String(daysLeft) });
       statusColor = "text-rose-600";

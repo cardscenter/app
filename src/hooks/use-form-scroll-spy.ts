@@ -28,10 +28,7 @@ const ANCHOR_OFFSET = 140;
 
 export function useFormScrollSpy<K extends string>(keys: readonly K[]) {
   const [active, setActive] = useState<K>(keys[0]);
-  const activeRef = useRef<K>(keys[0]);
   const frameRef = useRef<number | null>(null);
-
-  activeRef.current = active;
 
   useEffect(() => {
     const measure = () => {
@@ -56,7 +53,8 @@ export function useFormScrollSpy<K extends string>(keys: readonly K[]) {
         }
       }
 
-      if (next !== activeRef.current) setActive(next);
+      // Zelfde waarde = React slaat de update over.
+      setActive(next);
     };
 
     const onScroll = () => {

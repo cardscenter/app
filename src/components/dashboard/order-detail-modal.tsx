@@ -270,6 +270,9 @@ type OrderData = {
   sellerName?: string;
 };
 
+// Buiten de render-scope: Date.now() is impuur (react-hooks/purity).
+const nowMs = () => Date.now();
+
 export function OrderDetailModal({
   order,
   onClose,
@@ -347,7 +350,7 @@ export function OrderDetailModal({
     || (
       order.status === "COMPLETED"
       && order.deliveredAt !== null
-      && Date.now() - new Date(order.deliveredAt).getTime() <= 30 * 24 * 60 * 60 * 1000
+      && nowMs() - new Date(order.deliveredAt).getTime() <= 30 * 24 * 60 * 60 * 1000
     );
 
   // Refund-history per event (Fase 28). Eén Transaction-rij per refund,

@@ -36,6 +36,14 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
   const [actionState, formAction] = useActionState(
     async (_prev: { error?: string } | null, formData: FormData) => {
       const result = await submitCollectionBuyback(formData);
+      // Uitkomst direct hier afhandelen (i.p.v. in een effect op actionState).
+      if (result?.success && result.requestId) {
+        setSuccessId(result.requestId);
+        setStep(3);
+        toast.success(t("successTitle"));
+      } else if (result?.error) {
+        toast.error(result.error);
+      }
       return result ?? null;
     },
     null
@@ -48,16 +56,6 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [step]);
-
-  useEffect(() => {
-    if (actionState?.success && actionState.requestId) {
-      setSuccessId(actionState.requestId);
-      setStep(3);
-      toast.success(t("successTitle"));
-    } else if (actionState?.error) {
-      toast.error(actionState.error);
-    }
-  }, [actionState, t]);
 
   // Only Near Mint cards count toward the total — other conditions are not bought
   const acceptedItems = items.filter((i) => i.condition === "NEAR_MINT");

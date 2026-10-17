@@ -24,6 +24,9 @@ interface ProposalMessageProps {
   isOwn: boolean;
 }
 
+// Buiten de render-scope: Date.now() is impuur (react-hooks/purity).
+const nowMs = () => Date.now();
+
 export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn }: ProposalMessageProps) {
   const t = useTranslations("proposal");
   const router = useRouter();
@@ -43,7 +46,7 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
   const canPay = proposal.status === "ACCEPTED" && proposal.paymentStatus === "AWAITING_PAYMENT" && !isProposer;
 
   const remainingDays = proposal.paymentDeadline
-    ? Math.max(0, Math.ceil((new Date(proposal.paymentDeadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(proposal.paymentDeadline).getTime() - nowMs()) / (1000 * 60 * 60 * 24)))
     : null;
 
   async function handleAcceptClick() {

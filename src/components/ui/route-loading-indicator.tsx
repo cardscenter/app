@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+// Hydratie-detectie: server-snapshot false, client-snapshot true.
+const noopSubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 // Pokémon- & TCG-weetjes om de wachttijd bij een cold load leuk te maken.
 // Verzamelaar-gericht en (waar relevant) actueel — prijzen verouderen, dus
@@ -52,7 +57,7 @@ export function RouteLoadingIndicator() {
   // balk volgt op alle browsers (Safari/Firefox animeren de CSS-counter niet).
   const [factIdx, setFactIdx] = useState(0);
   const [pct, setPct] = useState(4);
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useSyncExternalStore(noopSubscribe, getClientSnapshot, getServerSnapshot);
   const barRef = useRef<HTMLDivElement>(null);
 
   // Scroll naar boven zodra de loader verschijnt. De loader zit in een
@@ -63,11 +68,15 @@ export function RouteLoadingIndicator() {
   }, []);
 
   useEffect(() => {
-    setFactIdx(Math.floor(Math.random() * FACTS.length)); // willekeurig startweetje
+    // willekeurig startweetje (na mount, zodat SSR en hydratie gelijk blijven)
+    const first = requestAnimationFrame(() => setFactIdx(Math.floor(Math.random() * FACTS.length)));
     const id = setInterval(() => {
       setFactIdx((i) => (i + 1) % FACTS.length);
     }, 4000);
-    return () => clearInterval(id);
+    return () => {
+      cancelAnimationFrame(first);
+      clearInterval(id);
+    };
   }, []);
 
   // Na hydratie: neem het getal over en laat het 4% → 92% lopen, maar gekoppeld
@@ -75,7 +84,6 @@ export function RouteLoadingIndicator() {
   // een eigen klok. Zo springt het getal niet terug naar 4% als hydratie laat
   // komt bij een cold load — het pakt direct de stand van de balk op.
   useEffect(() => {
-    setHydrated(true);
     const DURATION = 9000;
     const start = performance.now();
     let raf = 0;

@@ -38,7 +38,7 @@ export const BULK_FAQ_ITEMS: BuybackFaqItem[] = [
         >
           bekijk de verpakkingsinstructies
         </Link>
-        . Korte samenvatting: stevige doos, kaarten in plastic zakjes per categorie (geen sleeves nodig voor commons/uncommons/rares/holo's/reverse holo's), lege ruimte opvullen, stevig dichttapen.
+        . Korte samenvatting: stevige doos, kaarten in plastic zakjes per categorie (geen sleeves nodig voor commons/uncommons/rares/holo&apos;s/reverse holo&apos;s), lege ruimte opvullen, stevig dichttapen.
       </p>
     ),
   },

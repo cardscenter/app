@@ -40,12 +40,12 @@ export function MessageIcon() {
   // Initial load + 30s polling als fallback
   useEffect(() => {
     getUnreadConversationCount().then(setCount);
-    fetchRecent();
+    getRecentConversations(4).then(setRecent);
     const interval = setInterval(() => {
       getUnreadConversationCount().then(setCount);
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchRecent]);
+  }, []);
 
   // SSE: nieuw bericht → count update + shake + single-flash
   useEffect(() => {

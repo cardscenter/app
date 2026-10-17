@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 // Avatar met afgeronde hoeken (site-breed sinds sept 2026) en initiaal-fallback; valt óók terug op de initiaal als de
 // afbeelding niet laadt (verwijderde upload, seed-URL), zodat er nooit een
@@ -19,11 +19,14 @@ export function ChatAvatar({
   emphasis?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-  useEffect(() => {
-    const el = imgRef.current;
-    if (el && el.complete && el.naturalWidth === 0) setFailed(true);
-  }, [src]);
+  // Callback-ref: check bij koppelen (en bij een nieuwe src) of de SSR-<img>
+  // al vóór hydratie gefaald is.
+  const imgRef = useCallback(
+    (el: HTMLImageElement | null) => {
+      if (src && el && el.complete && el.naturalWidth === 0) setFailed(true);
+    },
+    [src],
+  );
 
   const sizeClass = size === "sm" ? "size-9 text-sm" : "size-10 text-sm";
   if (src && !failed) {

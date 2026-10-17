@@ -5,7 +5,7 @@ import { createNotification } from "@/actions/notification";
 import { getBookingEligibility } from "@/lib/event-eligibility";
 import { ageOn, needsSupervision } from "@/lib/age";
 import { getMaxOccupancy } from "@/lib/app-config";
-import { createProviderPayment, fetchProviderPayment, refundProviderPayment } from "@/lib/mollie";
+import { createProviderPayment, fetchProviderPayment, refundProviderPayment, PAYMENTS_UNAVAILABLE_ERROR } from "@/lib/mollie";
 import { newQrSecret, verifyTicketSignature } from "./tickets";
 import { onFoodOrderPaymentStatus } from "@/lib/food/orders";
 import { onCheckIn } from "@/lib/community/loyalty";
@@ -368,7 +368,7 @@ async function attachProviderPayment(args: {
       data: { status: "EXPIRED", paymentId: null },
     });
     await promoteWaitlist(args.eventId);
-    return { error: "De betaling kon niet gestart worden. Probeer het zo nog eens." };
+    return { error: err instanceof Error && err.message === PAYMENTS_UNAVAILABLE_ERROR ? err.message : "De betaling kon niet gestart worden. Probeer het zo nog eens." };
   }
 }
 
@@ -454,7 +454,7 @@ async function attachProviderPaymentKeepStatus(
   } catch (err) {
     console.error("[shop-events] betaling aanmaken mislukt", err);
     await prisma.payment.update({ where: { id: args.paymentId }, data: { status: "FAILED", failedAt: new Date() } }).catch(() => {});
-    return { error: "De betaling kon niet gestart worden. Probeer het zo nog eens." };
+    return { error: err instanceof Error && err.message === PAYMENTS_UNAVAILABLE_ERROR ? err.message : "De betaling kon niet gestart worden. Probeer het zo nog eens." };
   }
 }
 

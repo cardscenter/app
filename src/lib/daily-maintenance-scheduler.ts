@@ -47,7 +47,7 @@ interface SchedulerHandle {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
+
   var __dailyMaintenanceScheduler: SchedulerHandle | undefined;
 }
 
@@ -78,7 +78,7 @@ async function runJob(name: CronJobName) {
     );
   } catch (err) {
     // CronRun-rij staat al op FAILED; volgende dag opnieuw.
-    // eslint-disable-next-line no-console
+
     console.error(`[daily-maintenance] ${name} failed:`, err);
   }
 }
@@ -109,7 +109,7 @@ function scheduleNextTick(reason: string) {
   const delayMs = Math.min(fireAt.getTime() - Date.now(), MAX_TIMEOUT_MS);
   const timeoutId = setTimeout(tick, delayMs);
   globalThis.__dailyMaintenanceScheduler = { timeoutId, fireAt };
-  // eslint-disable-next-line no-console
+
   console.log(
     `[daily-maintenance] next fire @ ${fireAt.toISOString()} ` +
       `(reason="${reason}", in ${Math.round(delayMs / 1000 / 60)}m, jobs=${DAILY_JOBS.join(", ")}${

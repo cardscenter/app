@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { Switch } from "@/components/ui/switch";
-import { getLocalPref, setLocalPref } from "@/lib/local-preferences";
+import {
+  getLocalPref,
+  onLocalPrefChange,
+  setLocalPref,
+} from "@/lib/local-preferences";
+
+const noopSubscribe = () => () => {};
 
 /**
  * Switch gebonden aan een localStorage-voorkeur (Fase 44). Gebruikt binnen
@@ -18,18 +24,24 @@ export function LocalPrefToggle({
   defaultValue: boolean;
   id?: string;
 }) {
-  // Start op default en lees localStorage pas na mount — voorkomt
-  // hydration-mismatch tussen server- en client-render.
-  const [checked, setChecked] = useState(defaultValue);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setChecked(getLocalPref(prefKey, defaultValue));
-    setMounted(true);
-  }, [prefKey, defaultValue]);
+  // Server- en hydratie-render gebruiken de default; daarna leest de
+  // store localStorage — voorkomt hydration-mismatch.
+  const subscribe = useCallback(
+    (onChange: () => void) => onLocalPrefChange(prefKey, onChange),
+    [prefKey]
+  );
+  const checked = useSyncExternalStore(
+    subscribe,
+    () => getLocalPref(prefKey, defaultValue),
+    () => defaultValue
+  );
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  );
 
   function handleChange(value: boolean) {
-    setChecked(value);
     setLocalPref(prefKey, value);
   }
 

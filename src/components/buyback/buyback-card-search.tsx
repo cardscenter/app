@@ -70,10 +70,8 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (query.length < 2) {
-      setResults([]);
-      return;
-    }
+    // Resultaten leegmaken bij een te korte query gebeurt in onChange.
+    if (query.length < 2) return;
 
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
@@ -128,7 +126,11 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            setQuery(next);
+            if (next.length < 2) setResults([]);
+          }}
           placeholder={t("searchPlaceholder")}
           className="glass-input w-full rounded-full py-3 pl-10 pr-4 text-base sm:text-sm"
         />

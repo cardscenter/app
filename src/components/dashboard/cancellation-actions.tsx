@@ -49,15 +49,23 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
   // Bumpen na een mutatie zodat de useEffect opnieuw fetcht — router.refresh()
   // re-fetcht alleen RSC-payload, deze client-component re-runt niet vanzelf.
   const [refreshKey, setRefreshKey] = useState(0);
+  // "Nu" voor de verloop-tekst, vastgelegd buiten de render (render blijft puur).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  // Nieuwe fetch-sleutel (bundle/status/refresh): laadstatus direct bijwerken
+  // tijdens render i.p.v. synchroon in de effect.
+  const fetchKey = `${bundleId}|${bundleStatus}|${refreshKey}`;
+  const [loadedKey, setLoadedKey] = useState(fetchKey);
+  if (loadedKey !== fetchKey) {
+    setLoadedKey(fetchKey);
+    setLoading(bundleStatus === "PAID");
+    if (bundleStatus !== "PAID") setRequest(null);
+  }
 
   useEffect(() => {
-    if (bundleStatus !== "PAID") {
-      setLoading(false);
-      setRequest(null);
-      return;
-    }
-    setLoading(true);
+    if (bundleStatus !== "PAID") return;
     getActiveCancellationRequest(bundleId).then((r) => {
+      setNowMs(Date.now());
       if (r) {
         setRequest({
           id: r.id,
@@ -130,7 +138,7 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
   // Format helper voor "Verloopt over X dagen/uur/minuten" — i18n-vriendelijk
   // doordat we per granulariteit een aparte key gebruiken
   function formatExpiresIn(expiresAt: Date): string {
-    const ms = expiresAt.getTime() - Date.now();
+    const ms = expiresAt.getTime() - nowMs;
     if (ms <= 0) return t("expiresInExpired");
     const minutes = Math.ceil(ms / (1000 * 60));
     if (minutes < 60) return t("expiresInMinutes", { count: minutes });

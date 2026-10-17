@@ -68,6 +68,8 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
   const [selectedShippingId, setSelectedShippingId] = useState<string>("");
   const [showCounterModal, setShowCounterModal] = useState(false);
   const [counterAmount, setCounterAmount] = useState<string>("");
+  // Tijdstip van mounten voor de resterende-dagen-tellers (render blijft puur).
+  const [nowMs] = useState(() => Date.now());
 
   const isBuyer = bp.buyerId === currentUserId;
   // Wie de proposer was bepalen we via isOwn (senderId van het chat-bericht).
@@ -89,10 +91,10 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
   }
 
   const remainingPaymentDays = bp.paymentDeadline
-    ? Math.max(0, Math.ceil((new Date(bp.paymentDeadline).getTime() - Date.now()) / (86400_000)))
+    ? Math.max(0, Math.ceil((new Date(bp.paymentDeadline).getTime() - nowMs) / (86400_000)))
     : null;
   const remainingPickupDays = bp.pickupReservationExpiresAt
-    ? Math.max(0, Math.ceil((new Date(bp.pickupReservationExpiresAt).getTime() - Date.now()) / (86400_000)))
+    ? Math.max(0, Math.ceil((new Date(bp.pickupReservationExpiresAt).getTime() - nowMs) / (86400_000)))
     : null;
 
   const statusColor =

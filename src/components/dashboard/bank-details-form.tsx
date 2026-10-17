@@ -18,6 +18,9 @@ interface BankDetailsFormProps {
   cooldownDays: number;
 }
 
+// Buiten de render-scope: Date.now() is impuur (react-hooks/purity).
+const nowMs = () => Date.now();
+
 export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, cooldownDays }: BankDetailsFormProps) {
   const t = useTranslations("profile");
   const router = useRouter();
@@ -31,7 +34,7 @@ export function BankDetailsForm({ iban, accountHolderName, lastIbanChange, coold
 
   const lastChangeDate = lastIbanChange ? new Date(lastIbanChange) : null;
   const daysSinceChange = lastChangeDate
-    ? (Date.now() - lastChangeDate.getTime()) / (1000 * 60 * 60 * 24)
+    ? (nowMs() - lastChangeDate.getTime()) / (1000 * 60 * 60 * 24)
     : null;
   const cooldownActive = daysSinceChange !== null && daysSinceChange < cooldownDays;
   const daysRemaining = cooldownActive && daysSinceChange !== null ? Math.ceil(cooldownDays - daysSinceChange) : 0;

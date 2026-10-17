@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Gavel, Tag, ShoppingBag, Clock } from "lucide-react";
 import Image from "next/image";
@@ -151,7 +151,8 @@ function CarouselCard({ item }: { item: CarouselItem }) {
 
 function MiniCountdown({ endTime }: { endTime: Date | string }) {
   const end = typeof endTime === "string" ? new Date(endTime) : endTime;
-  const diff = end.getTime() - Date.now();
+  const [now] = useState(() => Date.now());
+  const diff = end.getTime() - now;
   if (diff <= 0) return null;
 
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));

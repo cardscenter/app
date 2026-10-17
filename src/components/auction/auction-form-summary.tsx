@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useNow, useTranslations } from "next-intl";
 import { Clock, Image as ImageIcon, ListChecks } from "lucide-react";
 import { deriveDurationDays, formatNLDateTime, SCHEDULED_THRESHOLD_MS } from "@/lib/auction/timing";
 import type { AuctionType } from "@/types";
@@ -87,7 +87,8 @@ export function AuctionFormSummary({
   upsellsCount,
 }: AuctionFormSummaryProps) {
   const t = useTranslations("auction");
-  const isScheduled = startTime.getTime() > Date.now() + SCHEDULED_THRESHOLD_MS;
+  const nowMs = useNow({ updateInterval: 30_000 }).getTime();
+  const isScheduled = startTime.getTime() > nowMs + SCHEDULED_THRESHOLD_MS;
   const duration = deriveDurationDays(startTime, endTime);
   const firstImage = images[0];
 

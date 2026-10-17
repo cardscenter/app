@@ -3,13 +3,17 @@
 import { Link } from "@/i18n/navigation";
 import { HEADER_PILL_GHOST } from "./header-styles";
 import { useSession } from "next-auth/react";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import { useRealtime } from "@/components/providers/realtime-provider";
 import {
   PREF_HIDE_BALANCE,
   getLocalPref,
   onLocalPrefChange,
 } from "@/lib/local-preferences";
+
+function subscribeHideBalance(onChange: () => void) {
+  return onLocalPrefChange(PREF_HIDE_BALANCE, onChange);
+}
 
 export function UserBalance() {
   const { status } = useSession();
@@ -23,11 +27,12 @@ export function UserBalance() {
   // "Saldo verbergen"-voorkeur (Fase 44, /dashboard/instellingen) — device-
   // gebonden localStorage-pref; live gesynchroniseerd via CustomEvent zodat
   // de header direct maskeert zodra de toggle omgaat.
-  const [hideBalance, setHideBalance] = useState(false);
-  useEffect(() => {
-    setHideBalance(getLocalPref(PREF_HIDE_BALANCE, false));
-    return onLocalPrefChange(PREF_HIDE_BALANCE, setHideBalance);
-  }, []);
+  // Server/hydratie-render = false; daarna de opgeslagen waarde.
+  const hideBalance = useSyncExternalStore(
+    subscribeHideBalance,
+    () => getLocalPref(PREF_HIDE_BALANCE, false),
+    () => false
+  );
 
   const fetchBalance = useCallback(() => {
     fetch("/api/balance")

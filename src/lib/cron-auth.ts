@@ -27,7 +27,7 @@ export async function resolveCronTrigger(request: Request): Promise<string | nul
     if (!isProduction) return "cron";
     if (!warnedMissingSecret) {
       warnedMissingSecret = true;
-      // eslint-disable-next-line no-console
+
       console.error(
         "[cron-auth] CRON_SECRET ontbreekt in productie — /api/cron/* weigert externe calls (admin-sessie werkt nog).",
       );

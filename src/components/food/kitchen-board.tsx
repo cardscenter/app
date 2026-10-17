@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Bell, Clock, Ban, BarChart3, Plus, Table2, Check, RefreshCw, MonitorSmartphone, ChevronDown, ChevronUp } from "lucide-react";
 import { getKitchenBoard, kitchenAdvance, kitchenClearOld, kitchenDemoOrder, kitchenMarkPaid, kitchenSetSoldOut, kitchenSetWait } from "@/actions/staff/kitchen";
@@ -26,6 +26,17 @@ const POLL_MS = 5000;
  * wachttijd-chips, uitverkocht-paneel, geluid bij nieuwe bestelling, dag-
  * overzicht, voorbeeldbestelling, Wake Lock. Pollt elke 5 seconden.
  */
+// Geluidsvoorkeur uit localStorage via useSyncExternalStore (geen setState in
+// een effect). Geen abonnement nodig: alleen de knop hieronder schrijft 'm.
+const subscribeNoop = () => () => {};
+function readStoredSound(): boolean {
+  try {
+    return localStorage.getItem("cc-ksound") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function KitchenBoard({ locale, menu }: { locale: string; menu: MenuData }) {
   const t = useTranslations("food");
   const lang = locale === "en" ? "en" : "nl";
@@ -34,10 +45,14 @@ export function KitchenBoard({ locale, menu }: { locale: string; menu: MenuData 
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [soldOpen, setSoldOpen] = useState(false);
   const [dayOpen, setDayOpen] = useState(false);
-  const [sound, setSound] = useState(false);
+  const storedSound = useSyncExternalStore(subscribeNoop, readStoredSound, () => false);
+  const [soundOverride, setSound] = useState<boolean | null>(null);
+  const sound = soundOverride ?? storedSound;
   const [wake, setWake] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [, setTick] = useState(0);
+  // "Nu" als state (Date.now() mag niet tijdens het renderen); de klok tikt
+  // elke 15s en elke poll ververst 'm ook.
+  const [now, setNow] = useState(() => Date.now());
   const lastNew = useRef<number | null>(null);
   const audioCtx = useRef<AudioContext | null>(null);
   const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
@@ -76,6 +91,7 @@ export function KitchenBoard({ locale, menu }: { locale: string; menu: MenuData 
       setBoard(r);
       setOffline(false);
       setUpdatedAt(new Date());
+      setNow(Date.now());
       const n = r.open.filter((o) => o.status === "NEW").length;
       if (lastNew.current !== null && n > lastNew.current && sound) beep();
       lastNew.current = n;
@@ -85,14 +101,11 @@ export function KitchenBoard({ locale, menu }: { locale: string; menu: MenuData 
   }, [sound, beep]);
 
   useEffect(() => {
-    try {
-      setSound(localStorage.getItem("cc-ksound") === "1");
-    } catch {
-      // niets
-    }
-    void load();
+    // Eerste poll via een microtask: load() zet pas state na een await, maar
+    // zo roept het effect zelf geen setState-functie synchroon aan.
+    void Promise.resolve().then(load);
     const id = setInterval(() => void load(), POLL_MS);
-    const clock = setInterval(() => setTick((x) => x + 1), 15000);
+    const clock = setInterval(() => setNow(Date.now()), 15000);
     return () => {
       clearInterval(id);
       clearInterval(clock);
@@ -139,7 +152,7 @@ export function KitchenBoard({ locale, menu }: { locale: string; menu: MenuData 
         <div className="space-y-3">
           {list.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] p-6 text-center text-sm text-[var(--ink-3)]">{t("kEmptyCol")}</div>}
           {list.map((o) => (
-            <OrderCard key={o.id} o={o} menu={menu} lang={lang} t={t} fmt={fmt} pending={pending} onAdvance={(to) => act(() => kitchenAdvance(o.id, to))} onPaid={() => act(() => kitchenMarkPaid(o.id))} />
+            <OrderCard key={o.id} o={o} now={now} menu={menu} lang={lang} t={t} fmt={fmt} pending={pending} onAdvance={(to) => act(() => kitchenAdvance(o.id, to))} onPaid={() => act(() => kitchenMarkPaid(o.id))} />
           ))}
         </div>
       </section>
@@ -246,12 +259,28 @@ function ChipBtn({ children, active, onClick, disabled, tone }: { children: Reac
   );
 }
 
-function OrderCard({ o, menu, lang, t, fmt, pending, onAdvance, onPaid }: { o: OrderView; menu: MenuData; lang: string; t: ReturnType<typeof useTranslations<"food">>; fmt: (n: number) => string; pending: boolean; onAdvance: (to: OrderView["status"]) => void; onPaid: () => void }) {
+type KitchenRow = { q: number; n: string; s: Array<{ x: string; mod?: boolean }> };
+
+// Buiten OrderCard gedeclareerd (react-hooks/static-components).
+function List({ title, rows }: { title: string; rows: KitchenRow[] }) {
+  return (
+    <div className="mt-2">
+      <small className="block text-[11px] font-bold uppercase tracking-[.12em] text-[var(--ink-3)]">{title}</small>
+      <ul className="mt-1 space-y-1 text-sm">
+        {rows.map((r, i) => (
+          <li key={i} className="flex gap-2"><b className="w-7 shrink-0 tabular-nums">{r.q}×</b><span>{r.n}{r.s.map((x, j) => <em key={j} className={`ml-1.5 rounded px-1.5 text-xs not-italic ${x.mod ? "bg-[var(--red-soft)] font-bold text-[var(--red-dark)]" : "bg-[var(--wash)] text-[var(--ink-2)]"}`}>{x.x}</em>)}</span></li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function OrderCard({ o, now, menu, lang, t, fmt, pending, onAdvance, onPaid }: { o: OrderView; now: number; menu: MenuData; lang: string; t: ReturnType<typeof useTranslations<"food">>; fmt: (n: number) => string; pending: boolean; onAdvance: (to: OrderView["status"]) => void; onPaid: () => void }) {
   const tb = o.mode === "TABLE";
   const nm = (it: MenuItemView) => (lang === "nl" ? it.name : it.nameEn);
   const startTs = new Date(o.paidAt ?? o.createdAt).getTime();
-  const mins = (Date.now() - startTs) / 60000;
-  const ageMin = Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000);
+  const mins = (now - startTs) / 60000;
+  const ageMin = Math.floor((now - new Date(o.createdAt).getTime()) / 60000);
   const late = o.paid && mins >= (o.waitMinutes || WAIT_DEFAULT) && o.status !== "READY";
   const awaiting = o.status === "NEW" && !o.paid;
   const food: Array<{ q: number; n: string; s: Array<{ x: string; mod?: boolean }> }> = [];
@@ -270,16 +299,6 @@ function OrderCard({ o, menu, lang, t, fmt, pending, onAdvance, onPaid }: { o: O
     food.push({ q: l.qty, n: nm(it), s });
   }
   const btn = { NEW: ["PREPARING", t("kStart"), "btn-grad"], PREPARING: ["READY", t("kDoneBtn"), "btn-grad"], READY: ["DONE", t(tb ? "kServed" : "kPicked"), "border border-[var(--line)] bg-white"] }[o.status as "NEW" | "PREPARING" | "READY"];
-  const List = ({ title, rows }: { title: string; rows: typeof food }) => (
-    <div className="mt-2">
-      <small className="block text-[11px] font-bold uppercase tracking-[.12em] text-[var(--ink-3)]">{title}</small>
-      <ul className="mt-1 space-y-1 text-sm">
-        {rows.map((r, i) => (
-          <li key={i} className="flex gap-2"><b className="w-7 shrink-0 tabular-nums">{r.q}×</b><span>{r.n}{r.s.map((x, j) => <em key={j} className={`ml-1.5 rounded px-1.5 text-xs not-italic ${x.mod ? "bg-[var(--red-soft)] font-bold text-[var(--red-dark)]" : "bg-[var(--wash)] text-[var(--ink-2)]"}`}>{x.x}</em>)}</span></li>
-        ))}
-      </ul>
-    </div>
-  );
   return (
     <article className={`rounded-xl border-2 p-3 ${o.status === "NEW" ? "border-[var(--red)]" : "border-[var(--line)]"} ${late ? "bg-[var(--red-soft)]" : "bg-white"}`}>
       <div className="flex items-center gap-2">

@@ -36,18 +36,21 @@ export function UsernameAvailabilityIndicator({
   debounceMs = 500,
 }: UsernameAvailabilityIndicatorProps) {
   const t = useTranslations("auth");
-  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  // Onder de minimum-lengte tonen we niets — gebruiker is nog aan het typen.
+  const initialStatus = (name: string): Status =>
+    name.trim().length < 3 ? { kind: "idle" } : { kind: "checking" };
+  const [status, setStatus] = useState<Status>(() => initialStatus(displayName));
+  const [prevDisplayName, setPrevDisplayName] = useState(displayName);
+
+  // Nieuwe invoer: status direct terugzetten (state bijwerken tijdens render).
+  if (displayName !== prevDisplayName) {
+    setPrevDisplayName(displayName);
+    setStatus(initialStatus(displayName));
+  }
 
   useEffect(() => {
     const trimmed = displayName.trim();
-
-    // Onder de minimum-lengte tonen we niets — gebruiker is nog aan het typen.
-    if (trimmed.length < 3) {
-      setStatus({ kind: "idle" });
-      return;
-    }
-
-    setStatus({ kind: "checking" });
+    if (trimmed.length < 3) return;
 
     const timer = setTimeout(async () => {
       try {

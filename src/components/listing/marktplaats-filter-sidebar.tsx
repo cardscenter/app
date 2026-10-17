@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { FilterSection, CheckboxRow, RadioRow } from "@/components/ui/filter-section";
@@ -47,10 +47,17 @@ export function MarktplaatsFilterSidebar({
   const [priceMax, setPriceMax] = useState(filters.priceMax?.toString() ?? "");
 
   // Sync local state als de URL extern verandert (bv. wis-knop).
-  useEffect(() => {
+  // Bijstellen tijdens het renderen (geen effect): vergelijk met de vorige
+  // URL-waarden en neem de nieuwe over zodra die wijzigen.
+  const [prevPrice, setPrevPrice] = useState({
+    min: filters.priceMin,
+    max: filters.priceMax,
+  });
+  if (prevPrice.min !== filters.priceMin || prevPrice.max !== filters.priceMax) {
+    setPrevPrice({ min: filters.priceMin, max: filters.priceMax });
     setPriceMin(filters.priceMin?.toString() ?? "");
     setPriceMax(filters.priceMax?.toString() ?? "");
-  }, [filters.priceMin, filters.priceMax]);
+  }
 
   function updateParams(mutator: (params: URLSearchParams) => void) {
     const next = new URLSearchParams(sp.toString());

@@ -371,6 +371,8 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
   const t = useTranslations("sales");
   const [expanded, setExpanded] = useState(false);
   const [showOrderDetail, setShowOrderDetail] = useState(false);
+  // Tijdstip van mounten voor de verzend-deadline-teller (render blijft puur).
+  const [nowMs] = useState(() => Date.now());
 
   const date = new Date(bundle.createdAt);
   const formattedDate = date.toLocaleDateString(locale === "nl" ? "nl-NL" : "en-GB", {
@@ -543,7 +545,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
         }
         const STALE_PAID_DAYS = 14;
         const paid = new Date(bundle.createdAt);
-        const daysSincePaid = (Date.now() - paid.getTime()) / (1000 * 60 * 60 * 24);
+        const daysSincePaid = (nowMs - paid.getTime()) / (1000 * 60 * 60 * 24);
         const daysLeft = Math.max(0, Math.ceil(STALE_PAID_DAYS - daysSincePaid));
         const tone =
           daysLeft <= 2 ? "rose" : daysLeft <= 7 ? "amber" : "blue";

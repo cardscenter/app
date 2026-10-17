@@ -19,6 +19,9 @@ interface CartContentProps {
   combinableBundles: Record<string, CombinableBundle>;
 }
 
+// Buiten de render-scope: Date.now() is impuur (react-hooks/purity).
+const nowMs = () => Date.now();
+
 export function CartContent({ groups, buyerCountry, hasAddress, availableBalance, combinableBundles }: CartContentProps) {
   const t = useTranslations("cart");
   const router = useRouter();
@@ -58,7 +61,7 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
       // Only count CLAIMED items (active claims, not deleted/sold/expired)
       const activeItems = group.items.filter((i) => {
         if (i.status !== "CLAIMED") return false;
-        if (i.expiresAt && new Date(i.expiresAt).getTime() < Date.now()) return false;
+        if (i.expiresAt && new Date(i.expiresAt).getTime() < nowMs()) return false;
         return true;
       });
       const itemTotal = activeItems.reduce((sum, i) => sum + i.price, 0);
@@ -219,7 +222,7 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
           {groups.map((group) => {
             const totals = groupTotals.get(group.sellerId)!;
             const activeCount = group.items.filter((i) =>
-              i.status === "CLAIMED" && (!i.expiresAt || new Date(i.expiresAt).getTime() > Date.now())
+              i.status === "CLAIMED" && (!i.expiresAt || new Date(i.expiresAt).getTime() > nowMs())
             ).length;
             if (activeCount === 0) return null;
             return (

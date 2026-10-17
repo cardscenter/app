@@ -3,7 +3,7 @@ import { setRequestLocale } from "next-intl/server";
 import { FlaskConical } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isMollieConfigured } from "@/lib/mollie";
+import { isPaymentSimulationAllowed } from "@/lib/mollie";
 import { PageContainer } from "@/components/layout/page-container";
 import { SimulatePaymentButtons } from "@/components/shop-events/simulate-payment-buttons";
 import { formatPrice } from "@/lib/shop-events/format";
@@ -27,7 +27,7 @@ export default async function SimulatePaymentPage({
   const { locale, paymentId } = await params;
   const { t: guestToken } = await searchParams;
   setRequestLocale(locale);
-  if (isMollieConfigured()) notFound();
+  if (!isPaymentSimulationAllowed()) notFound();
   const session = await auth();
 
   const payment = await prisma.payment.findUnique({

@@ -70,12 +70,12 @@ if (!g.__auctionScheduler) {
 const state = g.__auctionScheduler;
 
 function log(msg: string) {
-  // eslint-disable-next-line no-console
+
   console.log(`[auction-scheduler] ${msg}`);
 }
 
 function logError(msg: string, err: unknown) {
-  // eslint-disable-next-line no-console
+
   console.error(`[auction-scheduler] ${msg}`, err);
 }
 

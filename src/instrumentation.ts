@@ -18,7 +18,7 @@ export async function register() {
   const auctionsOn = isFeatureEnabled("FEATURE_AUCTIONS");
   const claimsalesOn = isFeatureEnabled("FEATURE_CLAIMSALES");
   const walletOn = isFeatureEnabled("FEATURE_WALLET");
-  // eslint-disable-next-line no-console
+
   console.log(
     "[instrumentation] feature flags: " +
       FEATURE_FLAG_KEYS.map((k) => `${k}=${isFeatureEnabled(k) ? "aan" : "uit"}`).join(", "),
@@ -33,7 +33,7 @@ export async function register() {
       await scheduleNextAuctionFinalize("boot");
     } catch (err) {
       // Niet fataal — de 5-min cron `auction-finalize` is de safety-net.
-      // eslint-disable-next-line no-console
+
       console.error("[instrumentation] auction-finalize scheduler boot failed", err);
     }
 
@@ -41,7 +41,7 @@ export async function register() {
       await scheduleNextAuctionActivation("boot");
     } catch (err) {
       // Niet fataal — de 1-min cron `auction-activate` is de safety-net.
-      // eslint-disable-next-line no-console
+
       console.error("[instrumentation] auction-activator scheduler boot failed", err);
     }
   }
@@ -52,7 +52,7 @@ export async function register() {
       await scheduleNextClaimsaleActivation("boot");
     } catch (err) {
       // Niet fataal — de 1-min cron `claimsale-activate` is de safety-net.
-      // eslint-disable-next-line no-console
+
       console.error("[instrumentation] claimsale-activator scheduler boot failed", err);
     }
 
@@ -62,7 +62,7 @@ export async function register() {
       const { startEventMaintenanceScheduler } = await import("@/lib/event-maintenance-scheduler");
       startEventMaintenanceScheduler("boot");
     } catch (err) {
-      // eslint-disable-next-line no-console
+
       console.error("[instrumentation] event-maintenance scheduler boot failed", err);
     }
 
@@ -74,7 +74,7 @@ export async function register() {
       const { startExpireClaimsScheduler } = await import("@/lib/expire-claims-scheduler");
       startExpireClaimsScheduler("boot");
     } catch (err) {
-      // eslint-disable-next-line no-console
+
       console.error("[instrumentation] expire-claims scheduler boot failed", err);
     }
   }
@@ -88,7 +88,7 @@ export async function register() {
     const { startPokewalletScheduler } = await import("@/lib/pokewallet-scheduler");
     startPokewalletScheduler("boot");
   } catch (err) {
-    // eslint-disable-next-line no-console
+
     console.error("[instrumentation] pokewallet scheduler boot failed", err);
   }
 
@@ -99,7 +99,7 @@ export async function register() {
     const { startUnreadEmailScheduler } = await import("@/lib/unread-email-scheduler");
     startUnreadEmailScheduler("boot");
   } catch (err) {
-    // eslint-disable-next-line no-console
+
     console.error("[instrumentation] unread-email scheduler boot failed", err);
   }
 
@@ -115,7 +115,7 @@ export async function register() {
       const { startOrderMaintenanceScheduler } = await import("@/lib/order-maintenance-scheduler");
       startOrderMaintenanceScheduler("boot");
     } catch (err) {
-      // eslint-disable-next-line no-console
+
       console.error("[instrumentation] order-maintenance scheduler boot failed", err);
     }
   }
@@ -128,14 +128,14 @@ export async function register() {
     const { startDailyMaintenanceScheduler } = await import("@/lib/daily-maintenance-scheduler");
     startDailyMaintenanceScheduler("boot");
   } catch (err) {
-    // eslint-disable-next-line no-console
+
     console.error("[instrumentation] daily-maintenance scheduler boot failed", err);
   }
 
   // Route-hardening: zonder CRON_SECRET weigert /api/cron/* in productie alle
   // externe calls (zie src/lib/cron-auth.ts). Eén keer luid loggen bij boot.
   if (process.env.NODE_ENV === "production" && !process.env.CRON_SECRET) {
-    // eslint-disable-next-line no-console
+
     console.error(
       "[instrumentation] CRON_SECRET ontbreekt — /api/cron/* is dicht voor externe calls; zet de Railway service-var.",
     );

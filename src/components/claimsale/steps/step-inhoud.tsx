@@ -84,6 +84,11 @@ function DuplicateButton({
   );
 }
 
+// Buiten de render-scope: Date.now()/Math.random() zijn impuur (react-hooks/purity).
+function makeCopyId(i: number): string {
+  return `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
 export function StepInhoud({ type, items, maxItems, onItemsChange }: StepInhoudProps) {
   const t = useTranslations("claimsale");
 
@@ -104,7 +109,7 @@ export function StepInhoud({ type, items, maxItems, onItemsChange }: StepInhoudP
     for (let i = 0; i < toAdd; i++) {
       copies.push({
         ...item,
-        id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        id: makeCopyId(i),
         frontImage: null,
         backImage: null,
         itemImages: [],

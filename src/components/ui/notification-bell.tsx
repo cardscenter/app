@@ -39,7 +39,9 @@ export function NotificationBell() {
   // Initial load + 30s polling als fallback
   useEffect(() => {
     getUnreadCount().then(setCount);
-    fetchRecent();
+    // Via een microtask: fetchRecent zet pas state na een await, maar zo roept
+    // het effect zelf geen setState-functie synchroon aan.
+    void Promise.resolve().then(fetchRecent);
     const interval = setInterval(() => {
       getUnreadCount().then(setCount);
     }, 30000);

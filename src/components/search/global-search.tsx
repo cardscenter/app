@@ -35,15 +35,23 @@ function useSuggest(value: string) {
   const [data, setData] = useState<SearchSuggestions | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const q = value.trim();
-    if (q.length < MIN_QUERY) {
+  // Synchrone state-reset bij een nieuwe zoekterm tijdens het renderen (i.p.v.
+  // in het effect); het effect hieronder doet alleen nog de debounced fetch.
+  const [prevValue, setPrevValue] = useState<string | null>(null);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    if (value.trim().length < MIN_QUERY) {
       setData(null);
       setLoading(false);
-      return;
+    } else {
+      setLoading(true);
     }
+  }
+
+  useEffect(() => {
+    const q = value.trim();
+    if (q.length < MIN_QUERY) return;
     const ctrl = new AbortController();
-    setLoading(true);
     const id = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search/suggest?q=${encodeURIComponent(q)}`, {
@@ -106,10 +114,12 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
       ]
     : [];
 
-  // Nieuwe data = selectie resetten.
-  useEffect(() => {
+  // Nieuwe data = selectie resetten (bijstellen tijdens het renderen).
+  const [prevData, setPrevData] = useState(data);
+  if (prevData !== data) {
+    setPrevData(data);
     setActiveIndex(-1);
-  }, [data]);
+  }
 
   useEffect(() => {
     if (variant === "desktop" && open) inputRef.current?.focus();

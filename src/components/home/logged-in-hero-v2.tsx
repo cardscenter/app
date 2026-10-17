@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -17,6 +17,17 @@ interface LoggedInHeroV2Props {
   actionItems: ActionItemsCounts | null;
 }
 
+const NEW_USER_KEY = "cards-center-new-user";
+const subscribeNoop = () => () => {};
+function readNewUserFlag(): boolean {
+  try {
+    return window.localStorage.getItem(NEW_USER_KEY) === "1";
+  } catch {
+    // Stille faal — localStorage kan disabled zijn.
+    return false;
+  }
+}
+
 function formatNumber(n: number): string {
   return new Intl.NumberFormat("nl-NL").format(Math.round(n));
 }
@@ -29,17 +40,19 @@ export function LoggedInHeroV2({ userName, stats, bannerSrc, actionItems }: Logg
 
   // Fase 37: éénmalige "Welkom," ipv "Welkom terug," direct na registratie.
   // localStorage-flag wordt door register-form.tsx gezet en hier consumed+gewist.
+  // Lezen via useSyncExternalStore; de vlag wordt in state vastgehouden zodat
+  // "Welkom," blijft staan nadat het effect de localStorage-vlag wist.
+  const storedNewUser = useSyncExternalStore(subscribeNoop, readNewUserFlag, () => false);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
+  if (storedNewUser && !isFirstVisit) setIsFirstVisit(true);
   useEffect(() => {
+    if (!storedNewUser) return;
     try {
-      if (window.localStorage.getItem("cards-center-new-user") === "1") {
-        setIsFirstVisit(true);
-        window.localStorage.removeItem("cards-center-new-user");
-      }
+      window.localStorage.removeItem(NEW_USER_KEY);
     } catch {
       // Stille faal — localStorage kan disabled zijn.
     }
-  }, []);
+  }, [storedNewUser]);
 
   return (
     <section className="relative overflow-hidden bg-slate-950 text-white">

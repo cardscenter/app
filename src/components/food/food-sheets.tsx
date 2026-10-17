@@ -23,6 +23,58 @@ interface Props {
   onReorder: (i: number) => void;
 }
 
+function Head({ it, title, sub }: { it: MenuItemView; title: string; sub: string }) {
+  return (
+    <>
+      <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-[var(--line)]" />
+      <div className="mb-4 flex items-center gap-3">
+        <ItemArt item={it} size="sm" />
+        <div className="min-w-0">
+          <h3 className="text-lg font-bold leading-tight text-[var(--ink)]">{title}</h3>
+          <p className="text-[13px] text-[var(--ink-2)]">{sub}</p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function FriesOption({
+  name,
+  sub,
+  price,
+  out,
+  selected,
+  onSelect,
+  dealLabel,
+  soldOutLabel,
+}: {
+  name: string;
+  sub: string;
+  price: string;
+  out?: boolean;
+  selected: boolean;
+  onSelect: () => void;
+  dealLabel: string | null;
+  soldOutLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={out}
+      onClick={onSelect}
+      aria-checked={selected}
+      role="radio"
+      className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left disabled:opacity-40 ${selected ? "border-[var(--ink)] ring-1 ring-[var(--ink)]" : "border-[var(--line)]"}`}
+    >
+      <span>
+        <span className="flex items-center gap-2 text-sm font-semibold">{name}{dealLabel ? <span className="rounded-full bg-[var(--green-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--green)]">{dealLabel}</span> : null}</span>
+        <small className="block text-xs text-[var(--ink-2)]">{out ? soldOutLabel : sub}</small>
+      </span>
+      <span className="text-sm font-bold tabular-nums">{price}</span>
+    </button>
+  );
+}
+
 /** Bottom sheets: allergenen (info), ingrediënten (custom), combo-stappen, geschiedenis. */
 export function FoodSheets(p: Props) {
   const t = useTranslations("food");
@@ -43,19 +95,6 @@ export function FoodSheets(p: Props) {
   }, [sheet, p]);
 
   if (!sheet) return null;
-
-  const Head = ({ it, title, sub }: { it: MenuItemView; title: string; sub: string }) => (
-    <>
-      <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-[var(--line)]" />
-      <div className="mb-4 flex items-center gap-3">
-        <ItemArt item={it} size="sm" />
-        <div className="min-w-0">
-          <h3 className="text-lg font-bold leading-tight text-[var(--ink)]">{title}</h3>
-          <p className="text-[13px] text-[var(--ink-2)]">{sub}</p>
-        </div>
-      </div>
-    </>
-  );
 
   let body: React.ReactNode = null;
 
@@ -143,29 +182,20 @@ export function FoodSheets(p: Props) {
 
       if (step === "fries") {
         const fries = ["friet-k", "friet-m", "friet-g"].map((id) => p.menu.byId[id]).filter(Boolean);
-        const Opt = ({ v, name, sub, price, deal, out }: { v: string; name: string; sub: string; price: string; deal?: number; out?: boolean }) => (
-          <button
-            type="button"
-            disabled={out}
-            onClick={() => p.setSheet({ ...s, fries: v === "none" ? null : v })}
-            aria-checked={(s.fries ?? "none") === v}
-            role="radio"
-            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left disabled:opacity-40 ${(s.fries ?? "none") === v ? "border-[var(--ink)] ring-1 ring-[var(--ink)]" : "border-[var(--line)]"}`}
-          >
-            <span>
-              <span className="flex items-center gap-2 text-sm font-semibold">{name}{deal && !out ? <span className="rounded-full bg-[var(--green-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--green)]">{t("deal", { amt: fmt(deal) })}</span> : null}</span>
-              <small className="block text-xs text-[var(--ink-2)]">{out ? t("soldOut") : sub}</small>
-            </span>
-            <span className="text-sm font-bold tabular-nums">{price}</span>
-          </button>
-        );
+        const optProps = (v: string, deal?: number, out?: boolean) => ({
+          out,
+          selected: (s.fries ?? "none") === v,
+          onSelect: () => p.setSheet({ ...s, fries: v === "none" ? null : v }),
+          dealLabel: deal && !out ? t("deal", { amt: fmt(deal) }) : null,
+          soldOutLabel: t("soldOut"),
+        });
         body = (
           <>
             <Head it={it} title={t("friesTitle")} sub={`${nm(it)} · ${t("friesSub")}`} />
             <div className="space-y-2" role="radiogroup">
-              <Opt v="none" name={t("noFries")} sub={fmt(it.price)} price="" />
+              <FriesOption {...optProps("none")} name={t("noFries")} sub={fmt(it.price)} price="" />
               {fries.map((f) => (
-                <Opt key={f.id} v={f.id} name={nm(f)} sub={t("loose", { amt: fmt(f.price) })} price={"+ " + fmt(f.price - DEAL.fries)} deal={DEAL.fries} out={p.isOut(f.id)} />
+                <FriesOption key={f.id} {...optProps(f.id, DEAL.fries, p.isOut(f.id))} name={nm(f)} sub={t("loose", { amt: fmt(f.price) })} price={"+ " + fmt(f.price - DEAL.fries)} />
               ))}
             </div>
             {next(t("next"))}

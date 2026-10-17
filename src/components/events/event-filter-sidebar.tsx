@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { FilterSection, CheckboxRow, RadioRow } from "@/components/ui/filter-section";
@@ -41,10 +41,13 @@ export function EventFilterSidebar({
   // Lokale custom-datum-state (alleen toegepast op blur/change).
   const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? "");
   const [dateTo, setDateTo] = useState(filters.dateTo ?? "");
-  useEffect(() => {
+  // Velden synchroniseren als de URL-filters wijzigen (state bijwerken tijdens render).
+  const [syncedDates, setSyncedDates] = useState({ from: filters.dateFrom, to: filters.dateTo });
+  if (syncedDates.from !== filters.dateFrom || syncedDates.to !== filters.dateTo) {
+    setSyncedDates({ from: filters.dateFrom, to: filters.dateTo });
     setDateFrom(filters.dateFrom ?? "");
     setDateTo(filters.dateTo ?? "");
-  }, [filters.dateFrom, filters.dateTo]);
+  }
 
   function updateParams(mutator: (params: URLSearchParams) => void) {
     const next = new URLSearchParams(sp.toString());

@@ -42,6 +42,8 @@ export function CartItemRow({
   const t = useTranslations("cart");
   const [removing, setRemoving] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  // Resterende ms bij de laatste timer-tick (voor de timerkleur; render blijft puur).
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const [expired, setExpired] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [checkoutLocked, setCheckoutLocked] = useState(false);
@@ -73,6 +75,7 @@ export function CartItemRow({
 
     const update = () => {
       const remaining = new Date(expiresAt).getTime() - Date.now();
+      setRemainingMs(remaining);
       if (remaining <= 0) {
         setExpired(true);
         setTimeLeft("0:00");
@@ -115,8 +118,8 @@ export function CartItemRow({
 
   // Timer color: green > 5min, orange 1-5min, red < 1min
   const timerColor = (() => {
-    if (!expiresAt) return "";
-    const remaining = new Date(expiresAt).getTime() - Date.now();
+    if (!expiresAt || remainingMs === null) return "";
+    const remaining = remainingMs;
     if (remaining <= 60000) return "text-red-500";
     if (remaining <= 300000) return "text-amber-500";
     return "text-green-600";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations, useLocale } from "next-intl";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { confirmDelivery } from "@/actions/purchase";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
@@ -218,11 +218,10 @@ export function PurchasesContent({
   // Safety-net: als de huidige activeTab niet meer in visibleTabs zit (bv. na
   // payment verdwijnt PENDING uit visibleTabs), schakel automatisch naar de
   // eerste zichtbare tab. Voorkomt een lege body met "geen tab actief".
-  useEffect(() => {
-    if (!visibleTabs.includes(activeTab)) {
-      setActiveTab(visibleTabs[0] ?? "PAID");
-    }
-  }, [visibleTabs, activeTab]);
+  // Bijstellen tijdens het renderen i.p.v. in een effect.
+  if (!visibleTabs.includes(activeTab)) {
+    setActiveTab(visibleTabs[0] ?? "PAID");
+  }
 
   const filtered = searchedBundles.filter((b) => b.status === activeTab);
 
@@ -507,7 +506,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
        * staat al in de header. autoExpiredAt-bundles renderen in CANCELLED. */}
       {!expanded && bundle.status === "PAID" && !bundle.hasActiveCancellation && (() => {
         const paidDate = new Date(bundle.createdAt);
-        const daysSincePaid = (Date.now() - paidDate.getTime()) / (1000 * 60 * 60 * 24);
+        const daysSincePaid = (nowMs() - paidDate.getTime()) / (1000 * 60 * 60 * 24);
         const daysUntilBuyerCancel = Math.max(0, Math.ceil(STALE_PAID_DAYS - daysSincePaid));
         const daysUntilAutoCancel = Math.max(
           1,
@@ -577,7 +576,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
 
       {!expanded && bundle.status === "SHIPPED" && (() => {
         const daysSinceShipped = bundle.shippedAt
-          ? (Date.now() - new Date(bundle.shippedAt).getTime()) / (1000 * 60 * 60 * 24)
+          ? (nowMs() - new Date(bundle.shippedAt).getTime()) / (1000 * 60 * 60 * 24)
           : 0;
         const trackingStuck = daysSinceShipped >= TRACKING_STUCK_AFTER_DAYS;
         return (
@@ -745,7 +744,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                   {/* Dispute button: only after 10 days since shipment */}
                   {(() => {
                     const daysSinceShipped = bundle.shippedAt
-                      ? (Date.now() - new Date(bundle.shippedAt).getTime()) / (1000 * 60 * 60 * 24)
+                      ? (nowMs() - new Date(bundle.shippedAt).getTime()) / (1000 * 60 * 60 * 24)
                       : 0;
                     const canDispute = daysSinceShipped >= DISPUTE_OPEN_AFTER_DAYS;
                     const daysUntilDispute = Math.ceil(DISPUTE_OPEN_AFTER_DAYS - daysSinceShipped);

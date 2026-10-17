@@ -99,7 +99,9 @@ export function LiveAuctionContent({
   const [lastBidId, setLastBidId] = useState(initialBids[0]?.id ?? null);
   const prevBidRef = useRef(initialCurrentBid ?? startingBid);
   // Track whether the user was ever the highest bidder (to detect being outbid)
-  const wasHighestBidderRef = useRef(initialHighestBidderId === currentUserId);
+  const [wasHighestBidder, setWasHighestBidder] = useState(
+    initialHighestBidderId === currentUserId,
+  );
 
   const isHighestBidder =
     currentUserId !== null && bidData.highestBidderId === currentUserId;
@@ -108,12 +110,10 @@ export function LiveAuctionContent({
   const isActive =
     !isScheduled && bidData.status === "ACTIVE" && new Date(bidData.endTime) > new Date();
 
-  // Update the ref when isHighestBidder changes
-  useEffect(() => {
-    if (isHighestBidder) {
-      wasHighestBidderRef.current = true;
-    }
-  }, [isHighestBidder]);
+  // Onthoud dat de gebruiker ooit hoogste bieder was (state bijwerken tijdens render)
+  if (isHighestBidder && !wasHighestBidder) {
+    setWasHighestBidder(true);
+  }
 
   const fetchBids = useCallback(async () => {
     try {
@@ -246,7 +246,7 @@ export function LiveAuctionContent({
     !isOwner &&
     currentUserId !== null &&
     !isHighestBidder &&
-    wasHighestBidderRef.current;
+    wasHighestBidder;
 
   return (
     <>

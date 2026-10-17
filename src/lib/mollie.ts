@@ -6,7 +6,10 @@ import { toMollieAmount } from "@/lib/shop-events/config";
 /**
  * Mollie-wrapper (Community Hub, Fase 3). Eén profiel voor tickets én eten.
  *
- * - `MOLLIE_API_KEY` leeg → **simulatiemodus** (provider "FAKE"): er wordt
+ * - `MOLLIE_API_KEY` leeg → **simulatiemodus** (provider "FAKE"), maar in
+ *   productie alleen met `PAYMENT_SIMULATION=true` (anders kan iedereen op de
+ *   live site gratis "betalen"); zonder die vlag faalt het starten van een
+ *   betaling netjes met een foutmelding. Lokaal altijd aan. Er wordt
  *   geen externe call gedaan; de checkout-URL wijst naar `/betalen/simuleer/<id>`
  *   waar je lokaal "geslaagd" of "mislukt" kiest. Zo is de hele flow te
  *   testen zonder Mollie-account of publieke webhook-URL.
@@ -23,6 +26,19 @@ let client: MollieClient | null = null;
 export function isMollieConfigured(): boolean {
   return !!process.env.MOLLIE_API_KEY?.trim();
 }
+
+/**
+ * Mag de betaalsimulatie gebruikt worden? Nooit zodra Mollie geconfigureerd is;
+ * lokaal altijd; in productie alleen met `PAYMENT_SIMULATION=true|1|on`.
+ */
+export function isPaymentSimulationAllowed(): boolean {
+  if (isMollieConfigured()) return false;
+  if (process.env.NODE_ENV !== "production") return true;
+  const v = process.env.PAYMENT_SIMULATION?.trim().toLowerCase();
+  return v === "true" || v === "1" || v === "on";
+}
+
+export const PAYMENTS_UNAVAILABLE_ERROR = "Online betalen is nog niet beschikbaar.";
 
 export function mollieMode(): "fake" | "test" | "live" {
   const key = process.env.MOLLIE_API_KEY?.trim();
@@ -58,6 +74,7 @@ export async function createProviderPayment(args: {
 }): Promise<CreatedProviderPayment> {
   const siteUrl = getSiteUrl();
   if (!isMollieConfigured()) {
+    if (!isPaymentSimulationAllowed()) throw new Error(PAYMENTS_UNAVAILABLE_ERROR);
     const id = `fake_${args.paymentId}`;
     return {
       provider: "FAKE",
