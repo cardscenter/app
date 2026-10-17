@@ -654,7 +654,7 @@
       "pillarCollectLink": "Open the card database",
       "statsTitle1": "You play.",
       "statsTitle2": "We keep count.",
-      "statsDesc": "Every check-in at an event earns you a stamp and points. A full card gets you a reward, and you redeem your points at the counter.",
+      "statsDesc": "Every check-in at an event earns you a stamp and points. A full card earns bonus points, and every point is 1 cent off food.",
       "loyaltyCtaGuest": "Log in to see your card",
       "loyaltyCtaMember": "Go to my card",
       "loyaltyStampBadge": "Stamp card",
@@ -663,13 +663,13 @@
       "loyaltyStampRewardEmpty": "A full card gets you a reward.",
       "loyaltyStampStatus": "One stamp per check-in. Scan your ticket at the door.",
       "loyaltyPointsBadge": "Points",
-      "loyaltyPointsLabelGuest": "points from one full card",
+      "loyaltyPointsLabelGuest": "points from one full card, worth {amt} in food",
       "loyaltyPointsLabelMember": "points on your card",
       "loyaltyEarnCheckIn": "Per check-in",
       "loyaltyEarnFullCard": "Full stamp card",
       "loyaltyRedeemTitle": "Redeem",
-      "loyaltyRedeemText": "You redeem points at the counter. Ask about it on your next visit.",
-      "loyaltyPointsStatus": "Points add up automatically with every check-in",
+      "loyaltyRedeemText": "1 point = 1 cent off food. Use them when you order at your table or at the bar.",
+      "loyaltyPointsStatus": "Points add up automatically with every check-in and order",
       "activityTop": "There is always",
       "activityBottom": "something going on",
       "badgeNews": "News",
@@ -751,7 +751,11 @@
       "testimonialsAll": "All stories",
       "pillarCollectTextSell": "See what your single cards are worth at current market prices, or sell your bulk to us at a fixed price per category.",
       "pillarCollectLinkSell": "Calculate what your cards are worth",
-      "audCollectorsB1Sell": "Current market prices in the sell calculator"
+      "audCollectorsB1Sell": "Current market prices in the sell calculator",
+      "loyaltyStampReward": "Full card: {reward}",
+      "loyaltyFullCardPoints": "+{points} points, worth {euro} off food",
+      "loyaltyEarnFood": "Per euro spent on food",
+      "loyaltyRedeemMember": "Your {n} points are {amt} off food. Use them when you order at your table or at the bar."
     }
   },
   "auction": {

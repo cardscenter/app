@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { getLandingData } from "@/lib/landing-data";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { formatEventDateShort, formatEventTime, formatPrice } from "@/lib/shop-events/format";
+import { fullCardReward, pointsToEuro, rewardSentence } from "@/lib/community/config";
 import { PLATFORM, formatShopAddress } from "@/lib/platform-config";
 import { LandingHero } from "./hero";
 import { Marquee } from "@/components/ploy/marquee";
@@ -65,9 +66,16 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
   const earn = [
     { label: t("loyaltyEarnCheckIn"), points: settings.pointsPerCheckIn },
     { label: t("loyaltyEarnFullCard"), points: settings.pointsPerFullCard },
+    { label: t("loyaltyEarnFood"), points: settings.pointsPerEuroFood },
   ].filter((e) => e.points > 0);
   // Wat één volle kaart aan punten oplevert: het voorbeeldgetal voor gasten.
   const fullCardPoints = settings.stampsPerCard * settings.pointsPerCheckIn + settings.pointsPerFullCard;
+  const stampReward = t("loyaltyStampReward", {
+    reward: rewardSentence(fullCardReward(settings), {
+      points: (points, euro) => t("loyaltyFullCardPoints", { points, euro: formatPrice(euro, locale) }),
+      none: t("loyaltyStampRewardEmpty"),
+    }),
+  });
 
   // Activiteitenfeed: nieuws, events, league-stand en een paar vaste kaarten.
   const feed: ActivityItem[] = [
@@ -173,16 +181,20 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
           filled={stampsFilled}
           total={settings.stampsPerCard}
           seed={viewer?.id ?? "cards-center"}
-          reward={settings.stampReward || t("loyaltyStampRewardEmpty")}
+          reward={stampReward}
           status={t("loyaltyStampStatus")}
         />
         <PointsTile
           badge={t("loyaltyPointsBadge")}
           value={loyalty ? loyalty.points.balance : fullCardPoints}
-          label={loyalty ? t("loyaltyPointsLabelMember") : t("loyaltyPointsLabelGuest")}
+          label={loyalty ? t("loyaltyPointsLabelMember") : t("loyaltyPointsLabelGuest", { amt: formatPrice(pointsToEuro(fullCardPoints), locale) })}
           earn={earn}
           redeemTitle={t("loyaltyRedeemTitle")}
-          redeemText={t("loyaltyRedeemText")}
+          redeemText={
+            loyalty && loyalty.points.balance > 0
+              ? t("loyaltyRedeemMember", { n: loyalty.points.balance, amt: formatPrice(pointsToEuro(loyalty.points.balance), locale) })
+              : t("loyaltyRedeemText")
+          }
           status={t("loyaltyPointsStatus")}
         />
       </LoyaltyPanel>
