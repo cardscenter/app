@@ -142,7 +142,7 @@ export function PickupActions({
       {/* Schedule informatie — toont 'om X' voor exact moment, 'tussen X en Y'
           voor tijdspan. Backend slaat windowStart === windowEnd voor exact. */}
       {schedule && (schedule.status === "ACCEPTED" || schedule.status === "PROPOSED") && (
-        <div className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-xs text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+        <div className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-xs text-blue-800">
           <CalendarClock className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
           <span>
             {schedule.windowStart === schedule.windowEnd
@@ -209,15 +209,15 @@ export function PickupActions({
 
       {/* Buyer-code-display (alleen PLATFORM) */}
       {showBuyerCode && schedule && (
-        <div className="rounded-md border border-blue-300 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-950/40">
-          <div className="flex items-center gap-2 text-xs font-medium text-blue-800 dark:text-blue-200">
+        <div className="rounded-md border border-blue-300 bg-blue-50 p-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-blue-800">
             <Key className="h-3.5 w-3.5" />
             {t("codeForBuyer")}
           </div>
-          <div className="mt-1 font-mono text-2xl font-bold tracking-widest text-blue-900 dark:text-blue-100">
+          <div className="mt-1 font-mono text-2xl font-bold tracking-widest text-blue-900">
             {schedule.pickupCode}
           </div>
-          <p className="mt-2 text-[11px] leading-tight text-red-700 dark:text-red-300">
+          <p className="mt-2 text-[11px] leading-tight text-red-700">
             ⚠ {t("codeWarning")}
           </p>
         </div>
@@ -244,7 +244,7 @@ export function PickupActions({
       {canConfirmCode && schedule && (
         <div className="space-y-2">
           {schedule.pickupLockedUntil && new Date(schedule.pickupLockedUntil) > new Date() ? (
-            <div className="flex items-center gap-2 rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
+            <div className="flex items-center gap-2 rounded-md bg-red-50 p-2 text-xs text-red-700">
               <AlertTriangle className="h-3.5 w-3.5" />
               {t("tooManyAttempts")}
             </div>
@@ -292,7 +292,7 @@ export function PickupActions({
             }
           }}
           disabled={pending}
-          className="w-full rounded-md border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30 disabled:opacity-50"
+          className="w-full rounded-md border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
         >
           <X className="inline h-3.5 w-3.5 mr-1" />
           {t("cancelReservation")}

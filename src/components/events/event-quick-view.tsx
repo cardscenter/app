@@ -43,7 +43,7 @@ export function EventQuickViewPanel({ event }: { event: EventListItem }) {
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Calendar className="h-3 w-3 shrink-0" /> {dateLabel}
           {event.earlyAccessTime && (
-            <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+            <span className="font-semibold text-indigo-600">
               · VT{" "}
               {new Intl.DateTimeFormat("nl-NL", { timeZone: event.timezone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(event.earlyAccessTime))}
             </span>

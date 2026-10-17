@@ -387,13 +387,13 @@ export default function VeilingenVoorwaardenPage() {
                   <td className="border border-border px-2 py-1.5">Je wordt overboden</td>
                   <td className="border border-border px-2 py-1.5">Valt direct vrij</td>
                   <td className="border border-border px-2 py-1.5">n.v.t.</td>
-                  <td className="border border-border px-2 py-1.5 text-emerald-700 dark:text-emerald-400">Niets verloren</td>
+                  <td className="border border-border px-2 py-1.5 text-emerald-700">Niets verloren</td>
                 </tr>
                 <tr>
                   <td className="border border-border px-2 py-1.5">Veiling eindigt zonder dat je hebt gewonnen</td>
                   <td className="border border-border px-2 py-1.5">Valt vrij bij ENDED</td>
                   <td className="border border-border px-2 py-1.5">n.v.t.</td>
-                  <td className="border border-border px-2 py-1.5 text-emerald-700 dark:text-emerald-400">Niets verloren</td>
+                  <td className="border border-border px-2 py-1.5 text-emerald-700">Niets verloren</td>
                 </tr>
                 <tr>
                   <td className="border border-border px-2 py-1.5">Je wint en betaalt 100% direct</td>
@@ -417,13 +417,13 @@ export default function VeilingenVoorwaardenPage() {
                   <td className="border border-border px-2 py-1.5">
                     Je wint maar mist de 5-dagen-betaaltermijn
                   </td>
-                  <td className="border border-border px-2 py-1.5 font-semibold text-red-700 dark:text-red-400">
+                  <td className="border border-border px-2 py-1.5 font-semibold text-red-700">
                     Verbeurt als borg
                   </td>
-                  <td className="border border-border px-2 py-1.5 font-semibold text-red-700 dark:text-red-400">
+                  <td className="border border-border px-2 py-1.5 font-semibold text-red-700">
                     {RESERVE_PERCENTAGE_DISPLAY} van bod + veilingkosten
                   </td>
-                  <td className="border border-border px-2 py-1.5 text-red-700 dark:text-red-400">
+                  <td className="border border-border px-2 py-1.5 text-red-700">
                     Borg + {FAILURE_FEE_DISPLAY} kosten afgeboekt, +1 strike
                   </td>
                 </tr>
@@ -433,7 +433,7 @@ export default function VeilingenVoorwaardenPage() {
                   </td>
                   <td className="border border-border px-2 py-1.5">Valt vrij</td>
                   <td className="border border-border px-2 py-1.5">n.v.t.</td>
-                  <td className="border border-border px-2 py-1.5 text-emerald-700 dark:text-emerald-400">
+                  <td className="border border-border px-2 py-1.5 text-emerald-700">
                     Niets verloren
                   </td>
                 </tr>

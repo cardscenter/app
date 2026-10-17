@@ -76,7 +76,7 @@ export function ListingCard({ listing, locale, buyer, isSponsored = false }: Lis
         hasSpotlight ? "ring-2 ring-yellow-400/50 shadow-yellow-400/10" : ""
       } ${hasHighlight ? "bg-primary/[0.02]" : ""} ${
         isSponsored
-          ? "border border-amber-300 bg-amber-50/40 dark:border-amber-800/60 dark:bg-amber-950/10"
+          ? "border border-amber-300 bg-amber-50/40"
           : ""
       }`}
     >
@@ -136,7 +136,7 @@ export function ListingCard({ listing, locale, buyer, isSponsored = false }: Lis
               }
             </span>
             {listing.freeShipping ? (
-              <span className="text-xs font-medium text-green-600 dark:text-green-400">Gratis verzending</span>
+              <span className="text-xs font-medium text-green-600">Gratis verzending</span>
             ) : (
               <span className="text-xs text-muted-foreground">+ €{listing.shippingCost.toFixed(2)}</span>
             )}

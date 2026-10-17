@@ -105,7 +105,7 @@ export function PickupReserveButton({ listingId, listingTitle, price, available 
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
           <span>{error}</span>
         </div>

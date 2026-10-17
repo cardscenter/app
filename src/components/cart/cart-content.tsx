@@ -91,7 +91,7 @@ export function CartContent({ groups, buyerCountry, hasAddress, availableBalance
   return (
     <div className="mt-6 space-y-6">
       {/* Claim timer info banner */}
-      <div className="flex items-start gap-2 rounded-xl bg-blue-50/80 p-3 text-sm text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+      <div className="flex items-start gap-2 rounded-xl bg-blue-50/80 p-3 text-sm text-blue-700">
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <p>{t("claimWarning")}</p>
       </div>

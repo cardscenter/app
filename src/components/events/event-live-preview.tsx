@@ -53,7 +53,7 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Voorbeeld</p>
 
         {form.eventType && (
-          <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+          <span className="inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
             {EVENT_TYPE_LABELS_NL[form.eventType as EventType]}
           </span>
         )}
@@ -61,7 +61,7 @@ export function EventLivePreview({ form, accountType }: { form: EventFormState; 
 
         {form.description && (
           <div
-            className="prose prose-sm max-w-none text-sm text-muted-foreground dark:prose-invert line-clamp-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+            className="prose prose-sm max-w-none text-sm text-muted-foreground line-clamp-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
             dangerouslySetInnerHTML={{ __html: form.description }}
           />
         )}

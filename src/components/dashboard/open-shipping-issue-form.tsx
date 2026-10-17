@@ -42,12 +42,12 @@ export function OpenShippingIssueForm({
   }
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 space-y-3 dark:border-sky-900 dark:bg-sky-950/30">
+    <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Truck className="h-4 w-4 text-sky-700 dark:text-sky-300" />
-        <p className="text-sm font-medium text-sky-900 dark:text-sky-200">Meld een trackingprobleem</p>
+        <Truck className="h-4 w-4 text-sky-700" />
+        <p className="text-sm font-medium text-sky-900">Meld een trackingprobleem</p>
       </div>
-      <p className="text-xs text-sky-800 dark:text-sky-300">
+      <p className="text-xs text-sky-800">
         Voor lichtere problemen waar een vol geschil disproportioneel is. Admin onderzoekt en kan goodwill-vergoeding toekennen (tot €50), het ticket sluiten, of het omzetten naar een geschil.
       </p>
 

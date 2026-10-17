@@ -20,9 +20,9 @@ export type VendorRequestRow = {
 };
 
 const STATUS_PILL: Record<string, { label: string; cls: string }> = {
-  PENDING: { label: "In behandeling", cls: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" },
-  APPROVED: { label: "Goedgekeurd", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" },
-  REJECTED: { label: "Afgewezen", cls: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" },
+  PENDING: { label: "In behandeling", cls: "bg-amber-100 text-amber-700" },
+  APPROVED: { label: "Goedgekeurd", cls: "bg-emerald-100 text-emerald-700" },
+  REJECTED: { label: "Afgewezen", cls: "bg-rose-100 text-rose-700" },
 };
 
 /** Uitklapbaar paneel onder een event-rij in /dashboard/beurzen: de

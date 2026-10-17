@@ -151,9 +151,9 @@ export function StepTiming({ startDate, startTimeOfDay, onChange }: StepTimingPr
             <p className="mt-1 text-xs text-muted-foreground">{t("startDateHelp")}</p>
           </div>
 
-          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800/50 dark:bg-amber-950/20">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            <p className="text-amber-800 dark:text-amber-300">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-amber-800">
               {t("scheduledStartHint", { date: formatNLDateTime(startTime) })}
             </p>
           </div>
@@ -162,9 +162,9 @@ export function StepTiming({ startDate, startTimeOfDay, onChange }: StepTimingPr
 
       {/* Instant-bevestiging — kleine groene reassurance. */}
       {mode === "instant" && (
-        <div className="flex items-start gap-2 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm dark:border-emerald-800/50 dark:bg-emerald-950/20">
-          <Zap className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <p className="text-emerald-800 dark:text-emerald-300">{t("instantStartHint")}</p>
+        <div className="flex items-start gap-2 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm">
+          <Zap className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          <p className="text-emerald-800">{t("instantStartHint")}</p>
         </div>
       )}
     </div>

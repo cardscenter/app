@@ -44,7 +44,7 @@ const FACILITY_ORDER: FacilityKey[] = [
 function SectionHeading({ kicker, title }: { kicker: string; title: string }) {
   return (
     <div className="mb-4">
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400">{kicker}</p>
+      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600">{kicker}</p>
       <h2 className="mt-0.5 text-xl font-bold tracking-tight text-foreground">{title}</h2>
     </div>
   );
@@ -62,7 +62,7 @@ function HeroMetaTile({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600">
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0">
@@ -241,7 +241,7 @@ export default async function EventDetailPage({
           <div className={panelCard}>
             <SectionHeading kicker="Beschrijving" title="Over dit evenement" />
             <div
-              className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+              className="prose prose-sm max-w-none text-foreground [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
               dangerouslySetInnerHTML={{ __html: event.description }}
             />
           </div>
@@ -262,12 +262,12 @@ export default async function EventDetailPage({
           </div>
         )}
         {hasTournamentInfo && (
-          <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-950/30">
+          <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground"><Trophy className="h-5 w-5" /> Toernooi-informatie</h2>
             <dl className="mt-2 space-y-1 text-sm">
               {event.tournamentFormat && <div><dt className="inline font-medium text-foreground">Format: </dt><dd className="inline text-muted-foreground">{event.tournamentFormat}</dd></div>}
               {event.prizePool && <div><dt className="inline font-medium text-foreground">Prijzenpot: </dt><dd className="inline text-muted-foreground">{event.prizePool}</dd></div>}
-              {event.isSanctioned && <p className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><ShieldCheck className="h-4 w-4" /> Officieel gesanctioneerd (TCG+)</p>}
+              {event.isSanctioned && <p className="inline-flex items-center gap-1 text-emerald-600"><ShieldCheck className="h-4 w-4" /> Officieel gesanctioneerd (TCG+)</p>}
             </dl>
           </div>
         )}
@@ -448,7 +448,7 @@ export default async function EventDetailPage({
             <HeroMetaTile icon={Calendar} label="Datum & tijd">
               <p>{dateLabel}</p>
               {event.earlyAccessTime && (
-                <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-indigo-600">
                   <Clock className="h-3 w-3" /> Vroege toegang vanaf {formatEventTime(event.earlyAccessTime, event.timezone, locale === "en" ? "en-GB" : "nl-NL")}
                 </p>
               )}
@@ -502,12 +502,12 @@ export default async function EventDetailPage({
         {/* Main */}
         <div className="space-y-6">
           {/* ── Entree: eigen getinte sectie ── */}
-          <section className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/70 via-card to-card p-5 shadow-card dark:border-indigo-800/40 dark:from-indigo-950/30 sm:p-6">
+          <section className="rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/70 via-card to-card p-5 shadow-card sm:p-6">
             <SectionHeading kicker="Toegang" title="Tickets & entree" />
 
             {event.entryType === "FREE" ? (
-              <div className="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700">
                   <Ticket className="h-5 w-5" />
                 </span>
                 <div>
@@ -567,7 +567,7 @@ export default async function EventDetailPage({
 
             {/* Capaciteit (tafels staan bij "Standhouders") */}
             {(event.maxVisitors || event.venueSizeM2) && (
-              <div className="mt-4 flex flex-wrap gap-2 border-t border-indigo-200/60 pt-4 dark:border-indigo-800/40">
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-indigo-200/60 pt-4">
                 {event.maxVisitors && (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm text-foreground">
                     <Users className="h-4 w-4 text-muted-foreground" /> Max. {event.maxVisitors} bezoekers
@@ -600,7 +600,7 @@ export default async function EventDetailPage({
           {event.flyerImage && (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               <div className="border-b border-border bg-muted/40 px-4 py-2.5">
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400">Flyer</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600">Flyer</p>
               </div>
               <div className="p-4">
                 <EventFlyer src={event.flyerImage} title={event.title} />
@@ -610,7 +610,7 @@ export default async function EventDetailPage({
 
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="border-b border-border bg-muted/40 px-4 py-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400">Organisator</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600">Organisator</p>
             </div>
             <div className="p-4">
             <div className="flex items-center gap-3">
@@ -632,12 +632,12 @@ export default async function EventDetailPage({
                 )}
                 <div className="mt-0.5 flex flex-wrap gap-1.5">
                   {event.organizer.isTrustedEventOrganizer && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
                       <Star className="h-3 w-3" /> Vertrouwd
                     </span>
                   )}
                   {event.organizer.isVerified && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
                       <ShieldCheck className="h-3 w-3" /> ID
                     </span>
                   )}
@@ -697,7 +697,7 @@ export default async function EventDetailPage({
           {otherEvents.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               <div className="border-b border-border bg-muted/40 px-4 py-2.5">
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600 dark:text-indigo-400">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-600">
                   Meer van {organizerDisplay}
                 </p>
               </div>

@@ -142,7 +142,7 @@ export function UserBalance() {
                 Saldo-overzicht
               </p>
               {hasReserve && (
-                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600">
                   {reservedLabel} gereserveerd
                 </span>
               )}
@@ -154,10 +154,10 @@ export function UserBalance() {
                 <div className="flex items-start gap-2">
                   <span className="mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
                       Beschikbaar om uit te geven
                     </p>
-                    <p className="mt-0.5 text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    <p className="mt-0.5 text-lg font-bold tabular-nums text-emerald-700">
                       {availableLabel}
                     </p>
                   </div>
@@ -170,7 +170,7 @@ export function UserBalance() {
                   <div className="flex items-start gap-2">
                     <span className="mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
                         Vastgehouden voor biedingen
                       </p>
                       <p className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">

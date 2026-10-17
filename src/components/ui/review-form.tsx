@@ -52,7 +52,7 @@ export function ReviewForm({ sellerId, auctionId, claimsaleItemId, listingId, on
 
   if (success) {
     return (
-      <div className="glass-subtle rounded-xl p-4 text-center text-green-600 dark:text-green-400">
+      <div className="glass-subtle rounded-xl p-4 text-center text-green-600">
         {t("reviewSubmitted")}
       </div>
     );

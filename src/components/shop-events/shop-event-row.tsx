@@ -49,7 +49,7 @@ export function ShopEventRow({ event, locale }: { event: ShopEventListItem; loca
             <Clock className="size-3.5" />
             {formatEventTime(start, locale)} - {formatEventTime(end, locale)}
           </span>
-          <span className={`inline-flex items-center gap-1.5 ${a.full ? "text-amber-600 dark:text-amber-400" : ""}`}>
+          <span className={`inline-flex items-center gap-1.5 ${a.full ? "text-amber-600" : ""}`}>
             <Users className="size-3.5" />
             {spots}
           </span>

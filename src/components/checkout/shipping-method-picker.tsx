@@ -51,7 +51,7 @@ export function ShippingMethodPicker({
 
   if (available.length === 0) {
     return (
-      <p className="text-xs text-amber-600 dark:text-amber-400">
+      <p className="text-xs text-amber-600">
         {ts("noMethodsForCountry")}
       </p>
     );
@@ -62,13 +62,13 @@ export function ShippingMethodPicker({
       <p className="text-xs font-medium text-muted-foreground">{ts("chooseShippingMethod")}</p>
 
       {signedRequired && (
-        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
+        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-2.5 text-xs text-red-700">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{ts("signedRequiredThreshold", { amount: SIGNED_REQUIRED_THRESHOLD })}</span>
         </div>
       )}
       {signedRecommended && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700">
           <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{ts("signedRecommended")}</span>
         </div>
@@ -100,13 +100,13 @@ export function ShippingMethodPicker({
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               {method.service === "PARCEL_SIGNED" && (
-                <span className="inline-flex items-center gap-0.5 text-xs text-purple-600 dark:text-purple-400">
+                <span className="inline-flex items-center gap-0.5 text-xs text-purple-600">
                   <ShieldCheck className="h-3 w-3" />
                   {ts("signed")}
                 </span>
               )}
               {method.service !== "PARCEL_SIGNED" && (
-                <span className="inline-flex items-center gap-0.5 text-xs text-amber-600 dark:text-amber-400">
+                <span className="inline-flex items-center gap-0.5 text-xs text-amber-600">
                   <Shield className="h-3 w-3" />
                   {ts("tracked")}
                 </span>

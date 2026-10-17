@@ -83,7 +83,7 @@ export function EnterpriseRequestForm() {
       </Field>
 
       {error && (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-sm text-rose-600 dark:text-rose-400">
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-sm text-rose-600">
           {error}
         </div>
       )}

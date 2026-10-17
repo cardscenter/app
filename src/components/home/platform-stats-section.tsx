@@ -18,20 +18,20 @@ export function PlatformStatsSection({ stats }: PlatformStatsSectionProps) {
       icon: ShoppingBag,
       value: stats.totalCompletedSales,
       label: t("totalSalesCompleted"),
-      color: "bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+      color: "bg-blue-50 text-blue-700",
     },
     {
       icon: TrendingUp,
       value: stats.totalValueTraded,
       label: t("totalValueTraded"),
       prefix: "\u20AC",
-      color: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+      color: "bg-emerald-50 text-emerald-700",
     },
     {
       icon: Users,
       value: stats.totalMembers,
       label: t("totalMembers"),
-      color: "bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+      color: "bg-purple-50 text-purple-700",
     },
     {
       icon: Star,
@@ -39,7 +39,7 @@ export function PlatformStatsSection({ stats }: PlatformStatsSectionProps) {
       label: t("avgRating"),
       decimals: 1,
       suffix: "/5",
-      color: "bg-amber-50 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+      color: "bg-amber-50 text-amber-700",
     },
   ];
 

@@ -30,7 +30,7 @@ export function EscrowInfoModal({ onClose }: EscrowInfoModalProps) {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10">
-              <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <ShieldCheck className="h-5 w-5 text-amber-600" />
             </div>
             <h2 className="text-lg font-bold text-foreground">{t("escrow.title")}</h2>
           </div>
@@ -55,19 +55,19 @@ export function EscrowInfoModal({ onClose }: EscrowInfoModalProps) {
             {/* Left: icons + arrows column */}
             <div className="flex flex-col items-center">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/10">
-                <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <User className="h-5 w-5 text-blue-600" />
               </div>
               <ArrowDown className="my-1.5 h-4 w-4 text-muted-foreground/40" />
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
-                <Landmark className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <Landmark className="h-5 w-5 text-amber-600" />
               </div>
               <ArrowDown className="my-1.5 h-4 w-4 text-muted-foreground/40" />
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/10">
-                <Store className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <Store className="h-5 w-5 text-purple-600" />
               </div>
               <ArrowDown className="my-1.5 h-4 w-4 text-muted-foreground/40" />
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
-                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
             </div>
 
@@ -94,11 +94,11 @@ export function EscrowInfoModal({ onClose }: EscrowInfoModalProps) {
         </div>
 
         {/* Dispute note */}
-        <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/10">
-          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+        <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-amber-700 dark:text-amber-300">{t("escrow.disputeTitle")}</p>
-            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">{t("escrow.disputeDesc")}</p>
+            <p className="text-sm font-medium text-amber-700">{t("escrow.disputeTitle")}</p>
+            <p className="text-xs text-amber-600/80 mt-0.5">{t("escrow.disputeDesc")}</p>
           </div>
         </div>
 

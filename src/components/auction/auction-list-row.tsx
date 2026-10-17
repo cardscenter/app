@@ -54,19 +54,19 @@ interface AuctionListRowProps {
 
 const CONDITION_COLORS: Record<string, string> = {
   Mint:
-    "bg-emerald-100 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:ring-emerald-800",
+    "bg-emerald-100 text-emerald-800 ring-emerald-200",
   "Near Mint":
-    "bg-emerald-100 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:ring-emerald-800",
+    "bg-emerald-100 text-emerald-800 ring-emerald-200",
   Excellent:
-    "bg-blue-100 text-blue-800 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-blue-800",
+    "bg-blue-100 text-blue-800 ring-blue-200",
   Good:
-    "bg-blue-100 text-blue-800 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-blue-800",
+    "bg-blue-100 text-blue-800 ring-blue-200",
   "Light Played":
-    "bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:ring-amber-800",
+    "bg-amber-100 text-amber-800 ring-amber-200",
   Played:
-    "bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:ring-amber-800",
+    "bg-amber-100 text-amber-800 ring-amber-200",
   Poor:
-    "bg-rose-100 text-rose-800 ring-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:ring-rose-800",
+    "bg-rose-100 text-rose-800 ring-rose-200",
 };
 
 function stripHtml(s: string): string {
@@ -133,7 +133,7 @@ export function AuctionListRow({
     <article
       className={`group relative flex flex-row gap-3 sm:gap-5 rounded-2xl border p-3 sm:p-4 shadow-card transition-shadow hover:shadow-card-hover ${
         isSponsored
-          ? "border-amber-300 bg-amber-50/40 dark:border-amber-800/60 dark:bg-amber-950/10"
+          ? "border-amber-300 bg-amber-50/40"
           : "border-border bg-card"
       }`}
     >
@@ -237,7 +237,7 @@ export function AuctionListRow({
               </p>
             </div>
             <p
-              className={`text-xs ${isHot ? "font-medium text-orange-600 dark:text-orange-400" : "text-muted-foreground"}`}
+              className={`text-xs ${isHot ? "font-medium text-orange-600" : "text-muted-foreground"}`}
             >
               {isHot && <span className="mr-0.5">🔥</span>}
               {bidCount} {bidCount === 1 ? "bod" : "biedingen"}
@@ -301,12 +301,12 @@ export function AuctionListRow({
               €{currentPrice.toFixed(2)}
             </p>
             {isScheduled ? (
-              <p className="text-xs text-indigo-600 dark:text-indigo-400">
+              <p className="text-xs text-indigo-600">
                 Nog niet biedbaar
               </p>
             ) : (
               <p
-                className={`text-xs ${isHot ? "font-medium text-orange-600 dark:text-orange-400" : "text-muted-foreground"}`}
+                className={`text-xs ${isHot ? "font-medium text-orange-600" : "text-muted-foreground"}`}
               >
                 {isHot && <span className="mr-0.5">🔥</span>}
                 {bidCount} {bidCount === 1 ? "bod" : "biedingen"}
@@ -354,7 +354,7 @@ function DeliveryBadges({
     <div className="flex flex-wrap items-center gap-1.5">
       {allowsShip && (
         <span
-          className={`inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-800 ${sizeClasses}`}
+          className={`inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset bg-sky-50 text-sky-800 ring-sky-200 ${sizeClasses}`}
         >
           <Truck className={iconSize} />
           Verzenden
@@ -362,7 +362,7 @@ function DeliveryBadges({
       )}
       {allowsPickup && (
         <span
-          className={`inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-800 ${sizeClasses}`}
+          className={`inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-200 ${sizeClasses}`}
         >
           <Package className={iconSize} />
           Ophalen

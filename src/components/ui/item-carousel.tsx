@@ -99,7 +99,7 @@ function CarouselCard({ item }: { item: CarouselItem }) {
       className="group glass flex-shrink-0 w-48 overflow-hidden rounded-2xl transition-all hover:shadow-lg hover:scale-[1.02]"
     >
       {/* Image */}
-      <div className="relative h-32 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+      <div className="relative h-32 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
         {firstImage ? (
           <Image
             src={firstImage}
@@ -109,7 +109,7 @@ function CarouselCard({ item }: { item: CarouselItem }) {
             sizes="192px"
           />
         ) : (
-          <TypeIcon className="size-8 text-slate-300 dark:text-slate-600" />
+          <TypeIcon className="size-8 text-slate-300" />
         )}
 
         {/* Type badge */}

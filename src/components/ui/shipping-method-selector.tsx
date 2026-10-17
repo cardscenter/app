@@ -73,7 +73,7 @@ export function ShippingMethodSelector({ methods, selected, onChange, context, f
             key={method.id}
             className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
               isSelected
-                ? "border-primary/40 bg-primary/5 dark:bg-primary/10"
+                ? "border-primary/40 bg-primary/5"
                 : "border-border hover:bg-muted/30"
             }`}
           >
@@ -91,7 +91,7 @@ export function ShippingMethodSelector({ methods, selected, onChange, context, f
                 </div>
                 <p className="text-sm font-medium text-primary">
                   {freeShipping ? (
-                    <span className="text-green-600 dark:text-green-400">{t("free")}</span>
+                    <span className="text-green-600">{t("free")}</span>
                   ) : (
                     <>€{method.effectivePrice.toFixed(2)}</>
                   )}
@@ -101,7 +101,7 @@ export function ShippingMethodSelector({ methods, selected, onChange, context, f
                 {t(`zone.${method.zone}`)}
               </p>
               {isMailbox && isSelected && context === "claimsale" && (
-                <div className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                <div className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-600">
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                   <span>{t("mailboxWarning")}</span>
                 </div>
@@ -112,7 +112,7 @@ export function ShippingMethodSelector({ methods, selected, onChange, context, f
       })}
 
       {hasMailboxSelected && context === "claimsale" && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{t("mailboxWarningDetail")}</span>
         </div>

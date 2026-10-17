@@ -34,7 +34,7 @@ export function FaqSection({ bgClass = "bg-background" }: { bgClass?: string }) 
         <AnimatedSection>
           {/* Header */}
           <div className="text-center">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/30">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-slate-200">
               <HelpCircle className="size-3" />
               {t("faqEyebrow")}
             </div>
@@ -76,14 +76,14 @@ export function FaqSection({ bgClass = "bg-background" }: { bgClass?: string }) 
 
           {/* Support CTA */}
           <div className="mt-10 rounded-2xl border border-dashed border-border bg-card/40 p-6 text-center">
-            <div className="mx-auto inline-flex size-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+            <div className="mx-auto inline-flex size-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
               <MessageSquare className="size-5" />
             </div>
             <h3 className="mt-3 text-base font-semibold text-foreground">{t("faqSupportTitle")}</h3>
             <p className="mt-1.5 text-sm text-muted-foreground">{t("faqSupportDesc")}</p>
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700 hover:text-sky-800"
             >
               {t("faqSupportCta")}
               <ChevronDown className="size-4 -rotate-90" />

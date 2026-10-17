@@ -18,7 +18,7 @@ export function TopSellersSection({ sellers }: TopSellersSectionProps) {
       <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
         <AnimatedSection>
           <div className="flex items-center gap-3 mb-8">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-700">
               <Users className="size-4" />
             </div>
             <div>

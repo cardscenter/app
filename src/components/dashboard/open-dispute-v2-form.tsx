@@ -67,14 +67,14 @@ export function OpenDisputeV2Form({
   }
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3 dark:border-amber-900 dark:bg-amber-950/30">
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-        <p className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("openDispute")}</p>
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <p className="text-sm font-medium text-amber-700">{t("openDispute")}</p>
       </div>
       <p className="text-xs text-muted-foreground">{t("openDisputeDescriptionV2")}</p>
       {postDelivery && (
-        <p className="rounded-md border border-amber-300/60 bg-amber-100/60 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+        <p className="rounded-md border border-amber-300/60 bg-amber-100/60 px-3 py-2 text-xs text-amber-800">
           Je hebt de ontvangst al bevestigd, dus het bedrag is al aan de verkoper uitbetaald. Een geschil na ontvangst is bedoeld voor problemen die pas bij nakijken opvallen (namaak, verborgen schade, verkeerd item). Minimaal één foto is verplicht. Bij een terugbetaling wordt het bedrag bij de verkoper teruggehaald.
         </p>
       )}

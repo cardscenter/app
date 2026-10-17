@@ -152,22 +152,22 @@ export function LiveBidCard({ auction }: { auction: LiveBidCardData }) {
             <div className="flex shrink-0 items-center gap-1">
               {/* Status-pill — 4 mogelijke states */}
               {auction.yourBid === 0 ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30">
+                <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-700 ring-1 ring-sky-200">
                   <Heart className="h-3 w-3 fill-current" />
                   {t("trackingOnly")}
                 </span>
               ) : auction.isHighestBidder ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200">
                   <Trophy className="h-3 w-3" />
                   {t("highest")}
                 </span>
               ) : auction.autoBidMax !== null ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-700 ring-1 ring-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:ring-violet-500/30">
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-700 ring-1 ring-violet-200">
                   <Zap className="h-3 w-3" />
                   {t("autobidArmed")}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200">
                   <AlertCircle className="h-3 w-3" />
                   {t("outbid")}
                 </span>
@@ -189,7 +189,7 @@ export function LiveBidCard({ auction }: { auction: LiveBidCardData }) {
             <p
               className={`text-2xl font-bold tabular-nums sm:text-3xl ${
                 auction.isHighestBidder && auction.yourBid > 0
-                  ? "text-emerald-600 dark:text-emerald-400"
+                  ? "text-emerald-600"
                   : "text-foreground"
               }`}
             >
@@ -225,9 +225,9 @@ export function LiveBidCard({ auction }: { auction: LiveBidCardData }) {
                     {(auction.yourBid > 0 || auction.reserveAmount > 0) && (
                       <span className="text-border">·</span>
                     )}
-                    <Zap className="h-3 w-3 text-violet-600 dark:text-violet-400" />
+                    <Zap className="h-3 w-3 text-violet-600" />
                     {t("autobidMaxLabel")}:{" "}
-                    <span className="font-semibold text-violet-700 tabular-nums dark:text-violet-300">
+                    <span className="font-semibold text-violet-700 tabular-nums">
                       {formatEuro(auction.autoBidMax)}
                     </span>
                   </span>
@@ -278,7 +278,7 @@ export function LiveBidCard({ auction }: { auction: LiveBidCardData }) {
             onClick={() => setShowAutobid((s) => !s)}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
               auction.autoBidMax !== null
-                ? "border-violet-300 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-300"
+                ? "border-violet-300 bg-violet-50 text-violet-700 hover:bg-violet-100"
                 : "border-border bg-card text-foreground hover:bg-muted"
             }`}
           >
@@ -297,14 +297,14 @@ export function LiveBidCard({ auction }: { auction: LiveBidCardData }) {
 
         {/* Autobid expand-panel met uitleg */}
         {showAutobid && (
-          <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50/50 p-3 dark:border-violet-800/50 dark:bg-violet-950/20">
+          <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50/50 p-3">
             {/* Algemene uitleg — kort, voor de gebruiker die nog niet weet wat autobid is */}
-            <div className="mb-3 flex items-start gap-2 rounded-md bg-violet-100/60 px-2.5 py-2 text-[11px] leading-relaxed text-violet-800 dark:bg-violet-900/30 dark:text-violet-200">
+            <div className="mb-3 flex items-start gap-2 rounded-md bg-violet-100/60 px-2.5 py-2 text-[11px] leading-relaxed text-violet-800">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{t("autobidExplainer")}</span>
             </div>
             {auction.autoBidMax !== null && (
-              <p className="mb-2 text-xs text-violet-700 dark:text-violet-300">
+              <p className="mb-2 text-xs text-violet-700">
                 {t("autobidActiveHint", { max: auction.autoBidMax.toFixed(2) })}
               </p>
             )}
@@ -348,7 +348,7 @@ export function LiveBidCard({ auction }: { auction: LiveBidCardData }) {
         )}
 
         {error && (
-          <div className="mt-2 flex items-start gap-1.5 text-xs text-rose-600 dark:text-rose-400">
+          <div className="mt-2 flex items-start gap-1.5 text-xs text-rose-600">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>{error}</span>
           </div>

@@ -7,9 +7,9 @@ import { FallbackImage } from "@/components/ui/fallback-image";
 import type { SellerOfferRow } from "@/lib/seller-profile-data";
 
 const TYPE_STYLE: Record<SellerOfferRow["type"], { pill: string; tint: string }> = {
-  auction: { pill: "bg-blue-600 text-white", tint: "from-blue-100/80 to-sky-50 dark:from-blue-950/40 dark:to-slate-900" },
-  listing: { pill: "bg-emerald-600 text-white", tint: "from-emerald-100/80 to-teal-50 dark:from-emerald-950/40 dark:to-slate-900" },
-  claimsale: { pill: "bg-amber-500 text-white", tint: "from-amber-100/80 to-orange-50 dark:from-amber-950/40 dark:to-slate-900" },
+  auction: { pill: "bg-blue-600 text-white", tint: "from-blue-100/80 to-sky-50" },
+  listing: { pill: "bg-emerald-600 text-white", tint: "from-emerald-100/80 to-teal-50" },
+  claimsale: { pill: "bg-amber-500 text-white", tint: "from-amber-100/80 to-orange-50" },
 };
 
 /**

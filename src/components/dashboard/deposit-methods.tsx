@@ -67,7 +67,7 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
               </div>
               <button
                 onClick={() => copyToClipboard(PLATFORM.bank.iban, "iban")}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
               >
                 {copied === "iban" ? t("copied") : t("copy")}
               </button>
@@ -83,7 +83,7 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
               </div>
               <button
                 onClick={() => copyToClipboard(PLATFORM.bank.bic, "bic")}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
               >
                 {copied === "bic" ? t("copied") : t("copy")}
               </button>
@@ -99,7 +99,7 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
               </div>
               <button
                 onClick={() => copyToClipboard(PLATFORM.bank.accountHolder, "name")}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
               >
                 {copied === "name" ? t("copied") : t("copy")}
               </button>
@@ -107,16 +107,16 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
 
             {/* Reference code */}
             {bankTransferReference && (
-              <div className="flex items-center justify-between rounded-md bg-blue-50 px-4 py-3 dark:bg-blue-900/20">
+              <div className="flex items-center justify-between rounded-md bg-blue-50 px-4 py-3">
                 <div>
-                  <p className="text-xs text-blue-600 dark:text-blue-400">{t("referenceCode")}</p>
-                  <p className="font-mono text-sm font-bold text-blue-700 dark:text-blue-300">
+                  <p className="text-xs text-blue-600">{t("referenceCode")}</p>
+                  <p className="font-mono text-sm font-bold text-blue-700">
                     {bankTransferReference}
                   </p>
                 </div>
                 <button
                   onClick={() => copyToClipboard(bankTransferReference, "ref")}
-                  className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                  className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-100"
                 >
                   {copied === "ref" ? t("copied") : t("copy")}
                 </button>
@@ -124,8 +124,8 @@ export function DepositMethods({ bankTransferReference }: DepositMethodsProps) {
             )}
           </div>
 
-          <div className="mt-4 rounded-md bg-amber-50 px-4 py-3 dark:bg-amber-900/10">
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+          <div className="mt-4 rounded-md bg-amber-50 px-4 py-3">
+            <p className="text-xs text-amber-700">
               ⚠ {t("referenceWarning")}
             </p>
           </div>

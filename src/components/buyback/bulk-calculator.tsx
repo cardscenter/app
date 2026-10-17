@@ -464,7 +464,7 @@ function CategoryGroup({ section, onChange, isFirst }: CategoryGroupProps) {
         return (
           <tr
             key={cat.key}
-            className={`transition-colors ${hasItems ? "bg-emerald-50/40 dark:bg-emerald-900/10" : "hover:bg-muted/30"}`}
+            className={`transition-colors ${hasItems ? "bg-emerald-50/40" : "hover:bg-muted/30"}`}
           >
             <td className="truncate px-4 py-3 text-sm font-medium">
               <span className="inline-flex items-center gap-1.5">
@@ -535,18 +535,18 @@ function ShippingAdvice({ totalWeightKg, packagesNeeded, weightPerPackageKg, fil
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-200 text-sky-800 dark:bg-sky-800 dark:text-sky-200">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-200 text-sky-800">
               <Package2 className="h-4 w-4" />
             </div>
             <h2 className="text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">{t("shippingAdviceTitle")}</h2>
-            <span className="rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-800 dark:bg-sky-800 dark:text-sky-200">
+            <span className="rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-800">
               {t("shippingAdviceBadge")}
             </span>
           </div>
-          <p className="mt-1 text-xs text-sky-800/80 dark:text-sky-200/80">
+          <p className="mt-1 text-xs text-sky-800/80">
             {t("shippingAdviceDesc", { max: `${MAX_SHIPPING_WEIGHT_KG} kg` })}
           </p>
-          <p className="mt-1 text-xs italic text-sky-700/70 dark:text-sky-300/70">
+          <p className="mt-1 text-xs italic text-sky-700/70">
             {t("shippingAdviceNotRequired")}
           </p>
         </div>
@@ -555,11 +555,11 @@ function ShippingAdvice({ totalWeightKg, packagesNeeded, weightPerPackageKg, fil
       {/* Summary numbers */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex items-center gap-3 rounded-[12px] bg-white/70 p-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
             <Weight className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-sky-800/70 dark:text-sky-300/70">{t("shippingTotalWeight")}</p>
+            <p className="text-xs text-sky-800/70">{t("shippingTotalWeight")}</p>
             <p className="cc-display text-3xl tabular-nums text-[var(--foreground)]">
               {formatKg(totalWeightKg)} kg
             </p>
@@ -567,11 +567,11 @@ function ShippingAdvice({ totalWeightKg, packagesNeeded, weightPerPackageKg, fil
         </div>
 
         <div className="flex items-center gap-3 rounded-[12px] bg-white/70 p-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
             <Package2 className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-sky-800/70 dark:text-sky-300/70">{t("shippingPackages")}</p>
+            <p className="text-xs text-sky-800/70">{t("shippingPackages")}</p>
             <p className="cc-display text-3xl tabular-nums text-[var(--foreground)]">
               {packagesNeeded.toLocaleString("nl-NL")}
             </p>
@@ -582,7 +582,7 @@ function ShippingAdvice({ totalWeightKg, packagesNeeded, weightPerPackageKg, fil
       {/* Visual package tiles */}
       {hasContents && (
         <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-sky-800 dark:text-sky-200">
+          <p className="mb-2 text-xs font-medium text-sky-800">
             {t("shippingPackageBreakdown", {
               n: packagesNeeded,
               weight: `${formatKg(weightPerPackageKg)} kg`,
@@ -621,7 +621,7 @@ function PackageTile({ index, weightKg, fillPct, weightLabel }: PackageTileProps
   const nearFull = fillPct > 95;
   return (
     <div className="flex min-w-[88px] flex-col items-center gap-1.5 rounded-[12px] bg-white p-3">
-      <div className="relative flex h-14 w-14 items-end justify-center overflow-hidden rounded-lg bg-sky-100 dark:bg-sky-900/60">
+      <div className="relative flex h-14 w-14 items-end justify-center overflow-hidden rounded-lg bg-sky-100">
         {/* Fill level as a rising background */}
         <div
           className={`absolute inset-x-0 bottom-0 transition-all duration-300 ${
@@ -630,15 +630,15 @@ function PackageTile({ index, weightKg, fillPct, weightLabel }: PackageTileProps
           style={{ height: `${Math.max(6, fillPct)}%` }}
           aria-hidden
         />
-        <Package2 className="relative z-10 h-7 w-7 text-sky-700 dark:text-sky-300" />
+        <Package2 className="relative z-10 h-7 w-7 text-sky-700" />
       </div>
-      <p className="text-[10px] font-medium uppercase tracking-wider text-sky-700/70 dark:text-sky-300/70">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-sky-700/70">
         Pakket {index}
       </p>
       <p className="text-sm font-bold tabular-nums text-[var(--foreground)]">
         {weightLabel} kg
       </p>
-      <p className="text-[10px] tabular-nums text-sky-700/70 dark:text-sky-300/70">
+      <p className="text-[10px] tabular-nums text-sky-700/70">
         {Math.round(fillPct)}% {weightKg > 0 ? "vol" : ""}
       </p>
     </div>

@@ -68,25 +68,25 @@ const ACCENT_CLASSES: Record<
   { iconBg: string; iconText: string; ring: string; cta: string; countText: string }
 > = {
   blue: {
-    iconBg: "bg-blue-50 dark:bg-blue-900/40",
-    iconText: "text-blue-600 dark:text-blue-300",
-    ring: "ring-blue-100 dark:ring-blue-900",
-    cta: "text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200",
-    countText: "text-blue-700 dark:text-blue-300",
+    iconBg: "bg-blue-50",
+    iconText: "text-blue-600",
+    ring: "ring-blue-100",
+    cta: "text-blue-600 hover:text-blue-700",
+    countText: "text-blue-700",
   },
   amber: {
-    iconBg: "bg-amber-50 dark:bg-amber-900/40",
-    iconText: "text-amber-600 dark:text-amber-300",
-    ring: "ring-amber-100 dark:ring-amber-900",
-    cta: "text-amber-600 hover:text-amber-700 dark:text-amber-300 dark:hover:text-amber-200",
-    countText: "text-amber-700 dark:text-amber-300",
+    iconBg: "bg-amber-50",
+    iconText: "text-amber-600",
+    ring: "ring-amber-100",
+    cta: "text-amber-600 hover:text-amber-700",
+    countText: "text-amber-700",
   },
   emerald: {
-    iconBg: "bg-emerald-50 dark:bg-emerald-900/40",
-    iconText: "text-emerald-600 dark:text-emerald-300",
-    ring: "ring-emerald-100 dark:ring-emerald-900",
-    cta: "text-emerald-600 hover:text-emerald-700 dark:text-emerald-300 dark:hover:text-emerald-200",
-    countText: "text-emerald-700 dark:text-emerald-300",
+    iconBg: "bg-emerald-50",
+    iconText: "text-emerald-600",
+    ring: "ring-emerald-100",
+    cta: "text-emerald-600 hover:text-emerald-700",
+    countText: "text-emerald-700",
   },
 };
 

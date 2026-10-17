@@ -27,11 +27,11 @@ export function LiveAuctionsZone({ endingSoon, trending, recent }: LiveAuctionsZ
   }
 
   return (
-    <section className="relative overflow-hidden bg-background text-foreground dark:bg-slate-950 dark:text-white">
+    <section className="relative overflow-hidden bg-background text-foreground">
       {/* Subtiele radial glow — alleen zichtbaar in dark mode */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 hidden dark:block"
+        className="pointer-events-none absolute inset-0 hidden"
         style={{
           background:
             "radial-gradient(ellipse 60% 40% at 85% 0%, rgba(59, 130, 246, 0.08), transparent 60%), radial-gradient(ellipse 50% 40% at 10% 100%, rgba(139, 92, 246, 0.06), transparent 60%)",
@@ -43,16 +43,16 @@ export function LiveAuctionsZone({ endingSoon, trending, recent }: LiveAuctionsZ
         <AnimatedSection>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl dark:text-white">
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 {t("liveAuctionsZoneTitle")}
               </h2>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base dark:text-slate-400">
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
                 {t("liveAuctionsZoneSubtitle")}
               </p>
             </div>
             <Link
               href="/veilingen"
-              className="inline-flex items-center gap-1.5 rounded-md bg-card px-4 py-2 text-sm font-medium text-foreground ring-1 ring-border transition-colors hover:bg-muted dark:bg-white/5 dark:text-white dark:ring-white/15 dark:hover:bg-white/10"
+              className="inline-flex items-center gap-1.5 rounded-md bg-card px-4 py-2 text-sm font-medium text-foreground ring-1 ring-border transition-colors hover:bg-muted"
             >
               {t("liveAuctionsViewAll")}
               <ArrowRight className="size-4" />
@@ -66,7 +66,7 @@ export function LiveAuctionsZone({ endingSoon, trending, recent }: LiveAuctionsZ
             <div className="mt-12">
               <SubRowHeader Icon={Clock} title={t("liveAuctionsRowEnding")} accent="rose" />
               <div className="mt-5">
-                <HomeCarousel fadeFromClass="from-background dark:from-slate-950">
+                <HomeCarousel fadeFromClass="from-background">
                   {endingSoon.map((auction) => (
                     <CarouselSlide key={auction.id}>
                       <HomeAuctionCard auction={auction} />
@@ -84,7 +84,7 @@ export function LiveAuctionsZone({ endingSoon, trending, recent }: LiveAuctionsZ
             <div className="mt-12">
               <SubRowHeader Icon={TrendingUp} title={t("liveAuctionsRowTrending")} accent="amber" />
               <div className="mt-5">
-                <HomeCarousel fadeFromClass="from-background dark:from-slate-950">
+                <HomeCarousel fadeFromClass="from-background">
                   {trending.map((auction) => (
                     <CarouselSlide key={auction.id}>
                       <HomeAuctionCard auction={auction} />
@@ -102,7 +102,7 @@ export function LiveAuctionsZone({ endingSoon, trending, recent }: LiveAuctionsZ
             <div className="mt-12">
               <SubRowHeader Icon={Sparkles} title={t("liveAuctionsRowRecent")} accent="sky" />
               <div className="mt-5">
-                <HomeCarousel fadeFromClass="from-background dark:from-slate-950">
+                <HomeCarousel fadeFromClass="from-background">
                   {recent.map((auction) => (
                     <CarouselSlide key={auction.id}>
                       <HomeAuctionCard auction={auction} />
@@ -128,9 +128,9 @@ function SubRowHeader({
   accent: "rose" | "amber" | "sky";
 }) {
   const accentBg: Record<typeof accent, string> = {
-    rose: "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30",
-    amber: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
-    sky: "bg-sky-100 text-sky-700 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30",
+    rose: "bg-rose-100 text-rose-700 ring-rose-200",
+    amber: "bg-amber-100 text-amber-700 ring-amber-200",
+    sky: "bg-sky-100 text-sky-700 ring-sky-200",
   };
 
   return (
@@ -138,7 +138,7 @@ function SubRowHeader({
       <span className={`inline-flex size-8 items-center justify-center rounded-lg ring-1 ${accentBg[accent]}`}>
         <Icon className="size-4" />
       </span>
-      <h3 className="text-lg font-semibold text-foreground dark:text-white">{title}</h3>
+      <h3 className="text-lg font-semibold text-foreground">{title}</h3>
     </div>
   );
 }

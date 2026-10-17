@@ -30,7 +30,7 @@ export function SellerLevelBadge({ xp, showProgress = false, size = "md" }: Sell
 
       {showProgress && nextLevel && (
         <div className="flex items-center gap-2">
-          <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+          <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-200">
             <div
               className={`h-full rounded-full bg-gradient-to-r from-primary to-primary/70 transition-all`}
               style={{ width: `${progress}%` }}

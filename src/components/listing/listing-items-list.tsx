@@ -60,18 +60,18 @@ export async function ListingItemsList({ items }: Props) {
           {t("itemsList.title")} ({items.length})
         </h2>
         <div className="flex items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
             <Check className="h-3 w-3" />
             {totalAvailable}
           </span>
           {totalReserved > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
               <Clock className="h-3 w-3" />
               {totalReserved}
             </span>
           )}
           {totalSold > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 font-medium text-violet-800 dark:bg-violet-950/40 dark:text-violet-300">
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 font-medium text-violet-800">
               <ShoppingBasket className="h-3 w-3" />
               {totalSold}
             </span>
@@ -95,17 +95,17 @@ export async function ListingItemsList({ items }: Props) {
               </span>
               <div className="flex items-center gap-1.5 text-xs">
                 {g.available > 0 && (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
                     {g.available} {t("itemsList.statusAvailable").toLowerCase()}
                   </span>
                 )}
                 {g.reserved > 0 && (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
                     {g.reserved} {t("itemsList.statusReserved").toLowerCase()}
                   </span>
                 )}
                 {g.sold > 0 && (
-                  <span className="rounded-full bg-violet-100 px-2 py-0.5 font-medium text-violet-800 dark:bg-violet-950/40 dark:text-violet-300">
+                  <span className="rounded-full bg-violet-100 px-2 py-0.5 font-medium text-violet-800">
                     {g.sold} {t("itemsList.statusSold").toLowerCase()}
                   </span>
                 )}

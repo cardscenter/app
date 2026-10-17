@@ -226,8 +226,8 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
       icon: Truck,
       deliveryLabel: t("deliveryLabels.ship"),
       paymentLabel: t("paymentLabels.now"),
-      paymentBg: "bg-emerald-100 dark:bg-emerald-950/40",
-      paymentText: "text-emerald-800 dark:text-emerald-200",
+      paymentBg: "bg-emerald-100",
+      paymentText: "text-emerald-800",
       enabled: selected.length === 0 || canShip,
     },
     {
@@ -235,8 +235,8 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
       icon: MapPin,
       deliveryLabel: t("deliveryLabels.pickup"),
       paymentLabel: t("paymentLabels.now"),
-      paymentBg: "bg-blue-100 dark:bg-blue-950/40",
-      paymentText: "text-blue-800 dark:text-blue-200",
+      paymentBg: "bg-blue-100",
+      paymentText: "text-blue-800",
       enabled: selected.length > 0 && canPickupPlatform,
     },
     {
@@ -244,8 +244,8 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
       icon: MapPin,
       deliveryLabel: t("deliveryLabels.pickup"),
       paymentLabel: t("paymentLabels.atPickup"),
-      paymentBg: "bg-amber-100 dark:bg-amber-950/40",
-      paymentText: "text-amber-800 dark:text-amber-200",
+      paymentBg: "bg-amber-100",
+      paymentText: "text-amber-800",
       enabled: selected.length > 0 && canPickupExternal,
     },
   ];
@@ -479,7 +479,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">
             {error}
           </div>
         )}
@@ -567,7 +567,7 @@ export function BundleOfferForm({ conversationId, sellerId, onClose }: Props) {
               <div className="mt-3 border-t border-border pt-3">
                 <p className="text-xs font-medium text-muted-foreground mb-1">{t("details.description")}</p>
                 <div
-                  className="prose prose-sm dark:prose-invert max-h-32 overflow-y-auto text-xs text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                  className="prose prose-sm max-h-32 overflow-y-auto text-xs text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                   dangerouslySetInnerHTML={{ __html: detailListing.description }}
                 />
               </div>

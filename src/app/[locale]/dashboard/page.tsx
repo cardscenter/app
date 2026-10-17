@@ -117,7 +117,7 @@ export default async function DashboardPage({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <HomeKpiCard
           icon={Wallet}
-          iconClass="text-emerald-600 dark:text-emerald-400"
+          iconClass="text-emerald-600"
           label={th("available")}
           hint={th("now")}
           value={formatCurrency(balance.available)}
@@ -126,7 +126,7 @@ export default async function DashboardPage({
         />
         <HomeKpiCard
           icon={ShieldCheck}
-          iconClass="text-amber-600 dark:text-amber-400"
+          iconClass="text-amber-600"
           label={th("escrow")}
           hint={th("now")}
           value={formatCurrency(balance.escrow)}
@@ -135,7 +135,7 @@ export default async function DashboardPage({
         />
         <HomeKpiCard
           icon={Lock}
-          iconClass="text-sky-600 dark:text-sky-400"
+          iconClass="text-sky-600"
           label={th("reserved")}
           hint={th("now")}
           value={formatCurrency(balance.reserved)}

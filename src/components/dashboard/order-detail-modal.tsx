@@ -169,7 +169,7 @@ function OrderTimeline({ order }: { order: OrderData }) {
           const labelClass = step.state === "pending"
             ? "text-muted-foreground"
             : step.state === "danger"
-              ? "text-rose-600 dark:text-rose-400"
+              ? "text-rose-600"
               : "text-foreground";
           const connectorClass = step.state === "complete"
             ? "bg-emerald-600"
@@ -532,14 +532,14 @@ export function OrderDetailModal({
         {isSeller && order.sourceType === "claimsale" && (
           <>
             {order.status === "PAID" && !order.lockedForPackingAt && (
-              <div className="mb-4 flex flex-col gap-3 rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-950/30 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mb-4 flex flex-col gap-3 rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-2">
-                  <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+                  <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
                   <div>
-                    <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                    <p className="text-sm font-medium text-amber-900">
                       {tc("orderDetail.lockTitle")}
                     </p>
-                    <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                    <p className="text-xs text-amber-800/80">
                       {tc("orderDetail.lockDescription")}
                     </p>
                   </div>
@@ -547,7 +547,7 @@ export function OrderDetailModal({
                 <button
                   onClick={handleLock}
                   disabled={locking}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-60 dark:bg-amber-700 dark:hover:bg-amber-600"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   {tc("orderDetail.lockButton")}
@@ -555,9 +555,9 @@ export function OrderDetailModal({
               </div>
             )}
             {order.lockedForPackingAt && order.status === "PAID" && (
-              <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-300/60 bg-slate-50 p-3 text-sm dark:border-slate-700/60 dark:bg-slate-900/40">
-                <Lock className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-300" />
-                <span className="text-slate-700 dark:text-slate-200">
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-300/60 bg-slate-50 p-3 text-sm">
+                <Lock className="h-4 w-4 shrink-0 text-slate-600" />
+                <span className="text-slate-700">
                   {tc("orderDetail.lockedAt", { date: new Date(order.lockedForPackingAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}
                 </span>
               </div>
@@ -660,7 +660,7 @@ export function OrderDetailModal({
                         </span>
                       )}
                       {isRefunded && (
-                        <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                        <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                           {tc("orderDetail.refundBadge")}
                         </span>
                       )}
@@ -668,7 +668,7 @@ export function OrderDetailModal({
                     <div className="flex items-center gap-2 mt-0.5">
                       {item.condition && <p className="text-xs text-muted-foreground">{item.condition}</p>}
                       {item.sellerNote && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">{item.sellerNote}</p>
+                        <p className="text-xs text-amber-600">{item.sellerNote}</p>
                       )}
                     </div>
                   </div>
@@ -704,7 +704,7 @@ export function OrderDetailModal({
             <span>&euro;{order.shippingCost.toFixed(2)}</span>
           </div>
           {order.refundedAmount > 0 && (
-            <div className="flex justify-between text-sm text-emerald-700 dark:text-emerald-400">
+            <div className="flex justify-between text-sm text-emerald-700">
               <span>{tc("orderDetail.refundRow")}</span>
               <span>−&euro;{order.refundedAmount.toFixed(2)}</span>
             </div>
@@ -724,9 +724,9 @@ export function OrderDetailModal({
 
         {/* Refund-historie (zichtbaar voor beide partijen) — één regel per refund-event */}
         {order.refundedAmount > 0 && (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
             <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
-              <RotateCcw className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+              <RotateCcw className="h-4 w-4 text-emerald-700" />
               {tc("orderDetail.refundHistoryTitle")}
             </h3>
             <div className="space-y-2">
@@ -741,7 +741,7 @@ export function OrderDetailModal({
                         <span className="ml-2 text-foreground italic">&ldquo;{ev.reason}&rdquo;</span>
                       )}
                     </div>
-                    <span className="text-emerald-700 dark:text-emerald-400 shrink-0 tabular-nums">
+                    <span className="text-emerald-700 shrink-0 tabular-nums">
                       −&euro;{ev.amount.toFixed(2)}
                     </span>
                   </div>
@@ -750,15 +750,15 @@ export function OrderDetailModal({
                 // Fallback voor pre-Fase-28 refunds zonder Transaction-event
                 <div className="flex justify-between gap-3 text-xs">
                   <span className="text-muted-foreground">{tc("orderDetail.refundBundle")}</span>
-                  <span className="text-emerald-700 dark:text-emerald-400 tabular-nums">
+                  <span className="text-emerald-700 tabular-nums">
                     −&euro;{order.refundedAmount.toFixed(2)}
                   </span>
                 </div>
               )}
             </div>
-            <div className="mt-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-900/50 flex justify-between text-sm font-semibold">
+            <div className="mt-2 pt-2 border-t border-emerald-200/60 flex justify-between text-sm font-semibold">
               <span className="text-foreground">{tc("orderDetail.refundTotal")}</span>
-              <span className="text-emerald-700 dark:text-emerald-400 tabular-nums">
+              <span className="text-emerald-700 tabular-nums">
                 &euro;{order.refundedAmount.toFixed(2)}
               </span>
             </div>

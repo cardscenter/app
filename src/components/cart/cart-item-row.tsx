@@ -119,7 +119,7 @@ export function CartItemRow({
     const remaining = new Date(expiresAt).getTime() - Date.now();
     if (remaining <= 60000) return "text-red-500";
     if (remaining <= 300000) return "text-amber-500";
-    return "text-green-600 dark:text-green-400";
+    return "text-green-600";
   })();
 
   return (
@@ -200,7 +200,7 @@ export function CartItemRow({
       {/* Timer — toont "Vastgezet" tijdens checkout-modal ipv aftellende klok
           zodat de buyer niet zenuwachtig wordt door 0:00 in de achtergrond. */}
       {checkoutLocked && !isDeleted ? (
-        <div className="flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+        <div className="flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-600">
           <ShieldCheck className="h-3.5 w-3.5" />
           Vastgezet
         </div>
@@ -222,7 +222,7 @@ export function CartItemRow({
       <button
         onClick={handleRemove}
         disabled={removing}
-        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 disabled:opacity-50"
+        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
         title={t("remove")}
       >
         <Trash2 className="h-4 w-4" />

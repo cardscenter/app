@@ -40,7 +40,7 @@ export function BuyerProtectionSection({ bgClass = "bg-card" }: { bgClass?: stri
         <AnimatedSection>
           {/* Header */}
           <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-sky-700 ring-1 ring-sky-200">
               <ShieldCheck className="size-3" />
               {t("buyerProtectionEyebrow")}
             </div>
@@ -112,7 +112,7 @@ export function BuyerProtectionSection({ bgClass = "bg-card" }: { bgClass?: stri
                 key={g.titleKey}
                 className="rounded-xl border border-border bg-background p-5"
               >
-                <div className="inline-flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                <div className="inline-flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
                   <g.Icon className="size-4" />
                 </div>
                 <h4 className="mt-3 text-sm font-semibold text-foreground">{t(g.titleKey)}</h4>

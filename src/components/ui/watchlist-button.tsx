@@ -51,7 +51,7 @@ export function WatchlistButton({ auctionId, claimsaleId, listingId, initialWatc
       onClick={handleToggle}
       disabled={loading}
       whileTap={{ scale: 0.9 }}
-      className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+      className="rounded-full p-2 transition-colors hover:bg-gray-100 disabled:opacity-50"
       title={watched ? `Verwijderen van ${destination}` : `Toevoegen aan ${destination}`}
     >
       <motion.div

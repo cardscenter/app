@@ -121,7 +121,7 @@ export function WelcomeOnboarding({
           <div className="rounded-[16px] bg-[var(--background)] p-6">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
-                <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <MapPin className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-foreground">
@@ -150,7 +150,7 @@ export function WelcomeOnboarding({
           <div className="rounded-[16px] bg-[var(--background)] p-6">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/10">
-                <Truck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <Truck className="h-5 w-5 text-purple-600" />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-foreground">
@@ -184,7 +184,7 @@ export function WelcomeOnboarding({
           <div className="rounded-[16px] bg-[var(--background)] p-6">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-                <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <ShieldCheck className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
                 <h2 className="text-base font-semibold text-foreground">

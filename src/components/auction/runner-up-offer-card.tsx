@@ -116,7 +116,7 @@ export function RunnerUpOfferCard({ offer, availableBalance }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-card dark:border-amber-900 dark:bg-amber-950/30 sm:p-5">
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-card sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         {imageUrl && (
           <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-border bg-card sm:h-32 sm:w-32">
@@ -126,7 +126,7 @@ export function RunnerUpOfferCard({ offer, availableBalance }: Props) {
 
         <div className="flex flex-1 flex-col gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">
               Aanbod om veiling over te nemen
             </p>
             <Link
@@ -155,7 +155,7 @@ export function RunnerUpOfferCard({ offer, availableBalance }: Props) {
           <div
             className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
               countdown.urgent
-                ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
+                ? "bg-red-100 text-red-700"
                 : "bg-card text-muted-foreground"
             }`}
           >
@@ -164,16 +164,16 @@ export function RunnerUpOfferCard({ offer, availableBalance }: Props) {
           </div>
 
           {blockedByAddress && (
-            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm dark:border-red-900 dark:bg-red-950/30">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-red-700 dark:text-red-400" />
+            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-red-700" />
               <div className="flex-1">
-                <p className="font-medium text-red-900 dark:text-red-200">Adres ontbreekt</p>
-                <p className="mt-0.5 text-xs text-red-800 dark:text-red-300">
+                <p className="font-medium text-red-900">Adres ontbreekt</p>
+                <p className="mt-0.5 text-xs text-red-800">
                   Voeg je adres toe op /dashboard/profiel om dit aanbod te accepteren.
                 </p>
                 <Link
                   href="/dashboard/profiel"
-                  className="mt-1 inline-block text-xs font-semibold text-red-900 underline dark:text-red-200"
+                  className="mt-1 inline-block text-xs font-semibold text-red-900 underline"
                 >
                   Naar adresgegevens →
                 </Link>
@@ -182,19 +182,19 @@ export function RunnerUpOfferCard({ offer, availableBalance }: Props) {
           )}
 
           {!blockedByAddress && insufficientBalance && (
-            <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-100 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/50">
-              <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+            <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-100 p-3 text-sm">
+              <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
               <div className="flex-1">
-                <p className="font-medium text-amber-900 dark:text-amber-200">
+                <p className="font-medium text-amber-900">
                   Saldo onvoldoende (beschikbaar €{availableBalance.toFixed(2)})
                 </p>
-                <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">
+                <p className="mt-0.5 text-xs text-amber-800">
                   Je kunt nog accepteren — bij accept krijg je 5 dagen om te betalen. Mis je die deadline, dan
                   verbeurt de 10%-reservering als borg + 2,9% boete + strike.
                 </p>
                 <Link
                   href="/dashboard/saldo"
-                  className="mt-1 inline-block text-xs font-semibold text-amber-900 underline dark:text-amber-200"
+                  className="mt-1 inline-block text-xs font-semibold text-amber-900 underline"
                 >
                   Naar saldo →
                 </Link>

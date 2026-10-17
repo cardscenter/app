@@ -181,7 +181,7 @@ export function BuyQuantityForm({
           </div>
         )}
         {isPickup && (
-          <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
+          <div className="flex items-center gap-1.5 text-xs text-blue-700">
             <MapPin className="h-3 w-3" /> {t("directBuy.pickupHint")}
           </div>
         )}
@@ -192,7 +192,7 @@ export function BuyQuantityForm({
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -244,7 +244,7 @@ export function BuyQuantityForm({
                 </span>
               </div>
               {isPickup ? (
-                <div className="rounded-md bg-blue-50 p-2 text-xs text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+                <div className="rounded-md bg-blue-50 p-2 text-xs text-blue-800">
                   {t("directBuy.pickupModalHint")}
                 </div>
               ) : (

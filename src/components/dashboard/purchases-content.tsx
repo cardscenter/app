@@ -123,21 +123,21 @@ const TAB_ICONS: Record<Tab, typeof Package> = {
 };
 
 const TAB_COLORS: Record<Tab, string> = {
-  PENDING: "text-orange-600 dark:text-orange-400",
-  PAID: "text-blue-600 dark:text-blue-400",
-  SHIPPED: "text-purple-600 dark:text-purple-400",
-  COMPLETED: "text-green-600 dark:text-green-400",
-  CANCELLED: "text-red-600 dark:text-red-400",
-  DISPUTED: "text-amber-600 dark:text-amber-400",
+  PENDING: "text-orange-600",
+  PAID: "text-blue-600",
+  SHIPPED: "text-purple-600",
+  COMPLETED: "text-green-600",
+  CANCELLED: "text-red-600",
+  DISPUTED: "text-amber-600",
 };
 
 const STATUS_BADGE: Record<Tab, string> = {
-  PENDING: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400",
-  PAID: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
-  SHIPPED: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400",
-  COMPLETED: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
-  CANCELLED: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-  DISPUTED: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
+  PENDING: "bg-orange-100 text-orange-700",
+  PAID: "bg-blue-100 text-blue-700",
+  SHIPPED: "bg-purple-100 text-purple-700",
+  COMPLETED: "bg-green-100 text-green-700",
+  CANCELLED: "bg-red-100 text-red-700",
+  DISPUTED: "bg-amber-100 text-amber-700",
 };
 
 const AUTO_CONFIRM_DAYS = 30;
@@ -401,7 +401,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                   | "statusPaid" | "statusShipped" | "statusCompleted" | "statusCancelled" | "statusDisputed")}
               </span>
               {bundle.hasActiveCancellation && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                   <Ban className="h-3 w-3" />
                   {t("cancellationPending")}
                 </span>
@@ -431,7 +431,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                 <span className="text-sm font-bold text-foreground tabular-nums">
                   &euro;{(bundle.totalCost - bundle.refundedAmount).toFixed(2)}
                 </span>
-                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 tabular-nums dark:bg-emerald-950 dark:text-emerald-400">
+                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 tabular-nums">
                   &minus;&euro;{bundle.refundedAmount.toFixed(2)}
                 </span>
               </div>
@@ -525,14 +525,14 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
         // 'ie 7 dagen niets, dan annuleert de cron automatisch (Fase 44).
         if (isOverdue) {
           return (
-            <div className="border-t border-red-200/60 bg-red-50/60 px-4 py-2.5 dark:border-red-900/40 dark:bg-red-950/30">
+            <div className="border-t border-red-200/60 bg-red-50/60 px-4 py-2.5">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-                <div className="flex-1 min-w-0 text-xs text-red-900 dark:text-red-200">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+                <div className="flex-1 min-w-0 text-xs text-red-900">
                   <p className="font-medium">
                     {t("staleWarningTitle", { days: Math.floor(daysSincePaid) })}
                   </p>
-                  <p className="mt-0.5 text-red-800/80 dark:text-red-300/80">
+                  <p className="mt-0.5 text-red-800/80">
                     {t("staleOverdueBody", { daysLeft: daysUntilAutoCancel })}
                   </p>
                 </div>
@@ -544,14 +544,14 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
 
         if (showWarning) {
           return (
-            <div className="border-t border-amber-200/60 bg-amber-50/60 px-4 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+            <div className="border-t border-amber-200/60 bg-amber-50/60 px-4 py-2.5">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <div className="flex-1 min-w-0 text-xs text-amber-900 dark:text-amber-200">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div className="flex-1 min-w-0 text-xs text-amber-900">
                   <p className="font-medium">
                     {t("staleWarningTitle", { days: Math.floor(daysSincePaid) })}
                   </p>
-                  <p className="mt-0.5 text-amber-800/80 dark:text-amber-300/80">
+                  <p className="mt-0.5 text-amber-800/80">
                     {t("staleWarningBody", { daysLeft: daysUntilBuyerCancel })}
                   </p>
                 </div>
@@ -606,7 +606,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                   setExpanded(true);
                   setShowShippingIssueForm(true);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
+                className="inline-flex items-center gap-1.5 rounded-md bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200"
               >
                 <AlertTriangle className="h-3 w-3" />
                 {t("trackingStuckCta")}
@@ -618,12 +618,12 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
 
       {/* (Fase 40) auto-cancel banner voor system-canceled bundles */}
       {!expanded && bundle.status === "CANCELLED" && bundle.autoExpiredAt && (
-        <div className="border-t border-amber-200/60 bg-amber-50/60 px-4 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+        <div className="border-t border-amber-200/60 bg-amber-50/60 px-4 py-2.5">
           <div className="flex items-start gap-2">
-            <Ban className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            <div className="flex-1 min-w-0 text-xs text-amber-900 dark:text-amber-200">
+            <Ban className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div className="flex-1 min-w-0 text-xs text-amber-900">
               <p className="font-medium">{t("autoCancelledTitle")}</p>
-              <p className="mt-0.5 text-amber-800/80 dark:text-amber-300/80">
+              <p className="mt-0.5 text-amber-800/80">
                 {t("autoCancelledBody")}
               </p>
             </div>
@@ -754,7 +754,7 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
                       return (
                         <button
                           onClick={() => setShowDisputeForm(true)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-400 dark:hover:bg-amber-950"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100"
                         >
                           <AlertTriangle className="h-4 w-4" />
                           {t("openDispute")}
@@ -797,12 +797,12 @@ function BundleCard({ bundle, locale, currentUserId }: { bundle: PurchaseBundle;
           {/* DISPUTED: show link to dispute */}
           {bundle.status === "DISPUTED" && (
             <div className="border-t border-border/50 px-4 py-3">
-              <p className="text-sm text-amber-700 dark:text-amber-400 mb-2">
+              <p className="text-sm text-amber-700 mb-2">
                 {t("statusDisputed")}
               </p>
               <Link
                 href={bundle.disputeInfo ? `/dashboard/geschillen/${bundle.disputeInfo.id}` : "/dashboard/geschillen"}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:hover:bg-amber-900"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-200"
               >
                 <AlertTriangle className="h-4 w-4" />
                 {t("viewDispute")}

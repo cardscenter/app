@@ -22,7 +22,7 @@ function AvatarBubble({ user }: { user: RsvpUserLite }) {
   ) : (
     <span
       title={user.displayName ?? undefined}
-      className="flex h-7 w-7 items-center justify-center rounded-[22%] bg-indigo-100 text-xs font-bold text-indigo-700 ring-2 ring-card dark:bg-indigo-900 dark:text-indigo-300"
+      className="flex h-7 w-7 items-center justify-center rounded-[22%] bg-indigo-100 text-xs font-bold text-indigo-700 ring-2 ring-card"
     >
       {(user.displayName ?? "?").charAt(0).toUpperCase()}
     </span>

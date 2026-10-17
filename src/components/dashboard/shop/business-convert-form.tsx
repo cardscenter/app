@@ -40,7 +40,7 @@ export function BusinessConvertForm() {
 
   return (
     <form onSubmit={submit} className="max-w-lg space-y-4">
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-300">
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-800">
         Als bedrijf krijgt je winkelpagina een <span className="font-medium">bedrijfsnaam, KvK-/btw-regel, fotogalerij,
         standplaats en openingstijden</span>. Omzetten kan niet ongedaan gemaakt worden.
       </div>
@@ -64,7 +64,7 @@ export function BusinessConvertForm() {
           <input id="vatNumber" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} className={input} placeholder="NL123456789B01" />
         </div>
       </div>
-      {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p className="text-sm text-rose-600">{error}</p>}
       <button
         type="submit"
         disabled={pending}

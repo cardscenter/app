@@ -125,7 +125,7 @@ export function ClaimsalesScrollStory() {
       {/* Header — scrolt normaal boven de sticky scroll-story */}
       <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)] pt-20 lg:pt-24">
         <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200">
             <Tag className="size-3" />
             {t("claimsalesStoryEyebrow")}
           </span>
@@ -284,7 +284,7 @@ function ChapterLayer({
       className="col-start-1 row-start-1 transition-opacity duration-500 ease-out"
       style={{ opacity }}
     >
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-600">
         {t(labelKey)}
       </p>
       <h3
@@ -320,8 +320,8 @@ function ChapterLayer({
             <span
               className={
                 compact
-                  ? "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
-                  : "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                  ? "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700"
+                  : "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700"
               }
             >
               <Check className={compact ? "size-2.5" : "size-3"} strokeWidth={3} />
@@ -365,9 +365,9 @@ function ProgressBar({
 
 function ProgressSegment({ fillPct }: { fillPct: number }) {
   return (
-    <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-amber-100 dark:bg-amber-500/20">
+    <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-amber-100">
       <div
-        className="absolute inset-y-0 left-0 bg-amber-500 transition-[width] duration-200 dark:bg-amber-400"
+        className="absolute inset-y-0 left-0 bg-amber-500 transition-[width] duration-200"
         style={{ width: `${fillPct}%` }}
       />
     </div>

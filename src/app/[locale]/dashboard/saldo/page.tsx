@@ -60,11 +60,11 @@ export default async function BalancePage({
       <PendingFeesBanner />
 
       {pendingAuctions.length > 0 && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
             <div className="flex-1">
-              <p className="font-semibold text-amber-900 dark:text-amber-200">
+              <p className="font-semibold text-amber-900">
                 {pendingAuctions.length === 1
                   ? "1 veiling wacht op je betaling"
                   : `${pendingAuctions.length} veilingen wachten op je betaling`}{" "}
@@ -72,7 +72,7 @@ export default async function BalancePage({
               </p>
               <Link
                 href="/dashboard/aankopen"
-                className="mt-1 inline-block text-sm font-medium text-amber-900 underline dark:text-amber-200"
+                className="mt-1 inline-block text-sm font-medium text-amber-900 underline"
               >
                 Betaal via je aankopen →
               </Link>

@@ -52,7 +52,7 @@ export function HomeCarousel({ children, className, fadeFromClass = "from-backgr
       {canScrollLeft && (
         <button
           onClick={() => scroll("left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 dark:bg-slate-800/90 shadow-lg backdrop-blur-sm border border-border transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur-sm border border-border transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
           aria-label="Scroll left"
         >
           <ChevronLeft className="size-5 text-foreground" />
@@ -61,7 +61,7 @@ export function HomeCarousel({ children, className, fadeFromClass = "from-backgr
       {canScrollRight && (
         <button
           onClick={() => scroll("right")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 dark:bg-slate-800/90 shadow-lg backdrop-blur-sm border border-border transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur-sm border border-border transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
           aria-label="Scroll right"
         >
           <ChevronRight className="size-5 text-foreground" />

@@ -258,7 +258,7 @@ export function CardSearchSelect({
             alt={value.name}
             width={140}
             height={196}
-            className="shrink-0 rounded-lg object-cover ring-1 ring-black/5 dark:ring-white/10"
+            className="shrink-0 rounded-lg object-cover ring-1 ring-black/5"
             unoptimized
           />
         ) : (
@@ -375,7 +375,7 @@ export function CardSearchSelect({
                             alt={r.name}
                             width={112}
                             height={156}
-                            className="shrink-0 rounded-md object-cover ring-1 ring-black/5 dark:ring-white/10"
+                            className="shrink-0 rounded-md object-cover ring-1 ring-black/5"
                             unoptimized
                           />
                         ) : (

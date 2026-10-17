@@ -46,11 +46,11 @@ export function StepTiming({ startTime, endTime, onChange }: StepTimingProps) {
 
   const rating = rateAuctionEndTime(endTime);
   const ratingClasses = {
-    emerald: "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-200",
-    sky: "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/50 dark:bg-sky-950/30 dark:text-sky-200",
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    sky: "border-sky-200 bg-sky-50 text-sky-900",
     slate: "border-border bg-muted/40 text-foreground",
-    amber: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200",
-    rose: "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800/50 dark:bg-rose-950/30 dark:text-rose-200",
+    amber: "border-amber-300 bg-amber-50 text-amber-900",
+    rose: "border-rose-300 bg-rose-50 text-rose-900",
   }[rating.tone];
   const RatingIcon = rating.score >= 4 ? ThumbsUp : rating.score === 3 ? Info : AlertTriangle;
 
@@ -129,12 +129,12 @@ export function StepTiming({ startTime, endTime, onChange }: StepTimingProps) {
         </p>
 
         {tooShort && (
-          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
+          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
             De veiling moet minstens een uur duren.
           </div>
         )}
         {tooLong && (
-          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
+          <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
             Een veiling mag niet 15 dagen of langer duren.
           </div>
         )}

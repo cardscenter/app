@@ -191,8 +191,8 @@ export function BuybackCardSearch({ onAdd, selectedKeys }: BuybackCardSearchProp
                           {/* Variant label */}
                           <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
                             variant.isReverse
-                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                              : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                              ? "bg-purple-100 text-purple-700"
+                              : "bg-gray-100 text-gray-700"
                           }`}>
                             {variant.label}
                           </span>

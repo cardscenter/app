@@ -64,8 +64,8 @@ export function BuybackCart({ items, onUpdateQuantity, onUpdateCondition, onRemo
                   </p>
                   <span className={`inline-flex w-fit rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
                     item.isReverse
-                      ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                      : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-gray-100 text-gray-600"
                   }`}>
                     {item.variantLabel}
                   </span>
@@ -108,7 +108,7 @@ export function BuybackCart({ items, onUpdateQuantity, onUpdateCondition, onRemo
                     <button
                       type="button"
                       onClick={() => onRemove(key)}
-                      className="ml-1 rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+                      className="ml-1 rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-500"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

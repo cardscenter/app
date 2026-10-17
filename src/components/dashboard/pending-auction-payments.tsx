@@ -69,13 +69,13 @@ export function PendingAuctionPayments({
 
   return (
     <div className="mt-6 space-y-4">
-      <div className="flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-        <CreditCard className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4">
+        <CreditCard className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
         <div className="flex-1">
-          <h3 className="font-semibold text-amber-900 dark:text-amber-200">
+          <h3 className="font-semibold text-amber-900">
             {t("pendingPayments")} ({remaining.length})
           </h3>
-          <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-300">
+          <p className="mt-0.5 text-sm text-amber-800">
             Je hebt veilingen gewonnen waarvoor de restbetaling nog open staat.
             Vul je saldo aan en betaal voor de deadline.
           </p>
@@ -83,7 +83,7 @@ export function PendingAuctionPayments({
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -114,7 +114,7 @@ export function PendingAuctionPayments({
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-foreground">{auction.title}</p>
                   {auction.paymentDeadline && (
-                    <div className={`mt-0.5 flex items-center gap-1 text-xs ${isUrgent ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>
+                    <div className={`mt-0.5 flex items-center gap-1 text-xs ${isUrgent ? "text-red-600" : "text-muted-foreground"}`}>
                       <Clock className="h-3 w-3" />
                       {days !== null && days > 0
                         ? `Nog ${days} dag${days === 1 ? "" : "en"} (tot ${new Date(auction.paymentDeadline).toLocaleDateString("nl-NL")})`
@@ -143,14 +143,14 @@ export function PendingAuctionPayments({
                   <p className="mt-0.5 font-semibold text-foreground">€{stillNeeded.toFixed(2)}</p>
                   <p className="text-[11px] text-muted-foreground">Wordt afgeschreven</p>
                 </div>
-                <div className={`rounded-lg px-3 py-2 ${shortage > 0 ? "bg-red-50 dark:bg-red-950/30" : "bg-emerald-50 dark:bg-emerald-950/30"}`}>
-                  <div className={`text-xs ${shortage > 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+                <div className={`rounded-lg px-3 py-2 ${shortage > 0 ? "bg-red-50" : "bg-emerald-50"}`}>
+                  <div className={`text-xs ${shortage > 0 ? "text-red-700" : "text-emerald-700"}`}>
                     {shortage > 0 ? "Tekort op je saldo" : "Beschikbaar saldo"}
                   </div>
-                  <p className={`mt-0.5 font-semibold ${shortage > 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+                  <p className={`mt-0.5 font-semibold ${shortage > 0 ? "text-red-700" : "text-emerald-700"}`}>
                     €{shortage > 0 ? shortage.toFixed(2) : availableBalance.toFixed(2)}
                   </p>
-                  <p className={`text-[11px] ${shortage > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                  <p className={`text-[11px] ${shortage > 0 ? "text-red-600" : "text-emerald-600"}`}>
                     {shortage > 0 ? "Vul saldo aan" : "Klaar om te betalen"}
                   </p>
                 </div>
@@ -159,7 +159,7 @@ export function PendingAuctionPayments({
               {/* Actie */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-3">
                 {!canPay && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                  <div className="flex items-center gap-1.5 text-xs text-amber-700">
                     <AlertCircle className="h-3.5 w-3.5" />
                     Vul minimaal €{shortage.toFixed(2)} aan voor je kunt betalen
                   </div>

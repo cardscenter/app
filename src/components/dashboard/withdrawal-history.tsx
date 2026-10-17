@@ -33,7 +33,7 @@ export function WithdrawalHistory({ requests }: { requests: WithdrawalRow[] }) {
         return (
           <li
             key={r.id}
-            className="rounded-lg border border-border bg-white/40 px-4 py-3 text-sm dark:bg-white/5"
+            className="rounded-lg border border-border bg-white/40 px-4 py-3 text-sm"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -66,7 +66,7 @@ function StatusBadge({ status }: { status: string }) {
 
   if (status === "PENDING") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400">
+      <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
         <Clock className="h-3 w-3" />
         {t("statusPending")}
       </span>
@@ -74,7 +74,7 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === "APPROVED") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-400">
+      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
         <Check className="h-3 w-3" />
         {t("statusApproved")}
       </span>
@@ -82,7 +82,7 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === "PAID") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-400">
+      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
         <CheckCircle2 className="h-3 w-3" />
         {t("statusPaid")}
       </span>
@@ -90,7 +90,7 @@ function StatusBadge({ status }: { status: string }) {
   }
   if (status === "REJECTED") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-400">
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
         <XCircle className="h-3 w-3" />
         {t("statusRejected")}
       </span>

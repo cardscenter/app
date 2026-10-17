@@ -82,9 +82,9 @@ export default async function ClaimsaleDetailPage({
       </div>
 
       {isScheduled && claimsale.startTime && (
-        <div className="mt-4 flex items-start gap-3 rounded-xl border border-indigo-300 bg-indigo-50 p-3 text-sm dark:border-indigo-800/50 dark:bg-indigo-950/20">
-          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
-          <p className="text-indigo-800 dark:text-indigo-300">
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-indigo-300 bg-indigo-50 p-3 text-sm">
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
+          <p className="text-indigo-800">
             {t("scheduledStartHint", { date: formatNLDateTime(claimsale.startTime) })}
           </p>
         </div>
@@ -96,7 +96,7 @@ export default async function ClaimsaleDetailPage({
         </p>
       )}
 
-      <div className="mt-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+      <div className="mt-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
         {t("shippingNote")}
       </div>
 

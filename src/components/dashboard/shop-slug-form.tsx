@@ -77,17 +77,17 @@ export function ShopSlugForm({ currentSlug }: Props) {
       </div>
 
       {!looksValid && !isEmpty && (
-        <p className="text-xs text-rose-600 dark:text-rose-400">
+        <p className="text-xs text-rose-600">
           Alleen kleine letters, cijfers en koppelteken (3-32 tekens). Mag niet beginnen of eindigen met een koppelteken.
         </p>
       )}
 
       {error && (
-        <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p>
+        <p className="text-xs text-rose-600">{error}</p>
       )}
 
       {savedFlash && (
-        <p className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+        <p className="inline-flex items-center gap-1 text-xs text-emerald-600">
           <Check className="h-3 w-3" />
           Opgeslagen
         </p>

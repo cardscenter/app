@@ -34,9 +34,9 @@ const STATUS_ICON: Record<
   CellStatus,
   { Icon: typeof Check; iconClass: string }
 > = {
-  yes: { Icon: Check, iconClass: "text-emerald-600 dark:text-emerald-400" },
+  yes: { Icon: Check, iconClass: "text-emerald-600" },
   no: { Icon: X, iconClass: "text-muted-foreground/40" },
-  partial: { Icon: CircleDashed, iconClass: "text-amber-600 dark:text-amber-400" },
+  partial: { Icon: CircleDashed, iconClass: "text-amber-600" },
   na: { Icon: Minus, iconClass: "text-muted-foreground/40" },
 };
 
@@ -70,7 +70,7 @@ export function CompetitorComparisonSection({
         <AnimatedSection>
           {/* Header */}
           <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200">
               <Trophy className="size-3" />
               {t("competitorComparisonEyebrow")}
             </div>
@@ -99,7 +99,7 @@ export function CompetitorComparisonSection({
                       scope="col"
                       className={`w-1/6 px-3 py-3 text-center text-xs font-bold uppercase tracking-wider ${
                         c.isUs
-                          ? "bg-emerald-50/60 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                          ? "bg-emerald-50/60 text-emerald-700"
                           : "text-muted-foreground"
                       }`}
                     >
@@ -110,14 +110,14 @@ export function CompetitorComparisonSection({
                             alt="Cards Center"
                             width={143}
                             height={40}
-                            className="h-10 w-auto dark:hidden"
+                            className="h-10 w-auto"
                           />
                           <Image
                             src="/images/logo-dark-mode.png"
                             alt="Cards Center"
                             width={143}
                             height={40}
-                            className="hidden h-10 w-auto dark:block"
+                            className="hidden h-10 w-auto"
                           />
                         </span>
                       ) : (
@@ -167,7 +167,7 @@ export function CompetitorComparisonSection({
                               key={c.key}
                               className={`px-3 py-2.5 text-center align-middle ${
                                 c.isUs
-                                  ? "bg-emerald-50/60 dark:bg-emerald-500/[0.06]"
+                                  ? "bg-emerald-50/60"
                                   : ""
                               }`}
                             >

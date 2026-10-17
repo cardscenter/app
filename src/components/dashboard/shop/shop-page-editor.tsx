@@ -279,7 +279,7 @@ export function ShopPageEditor({ initial, isBusiness, hasSlug, shopSlug }: Props
               Opslaan
             </button>
           </div>
-          {error && <p className="w-full text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+          {error && <p className="w-full text-sm text-rose-600">{error}</p>}
         </div>
       </div>
     </div>

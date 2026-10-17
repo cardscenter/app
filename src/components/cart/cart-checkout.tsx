@@ -103,7 +103,7 @@ export function CartCheckout({ totalCost, shippingSelections, mergeIntoBundles, 
       )}
 
       {!hasAddress && (
-        <div className="flex items-start gap-2 rounded-xl bg-amber-50/80 p-3 text-sm text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+        <div className="flex items-start gap-2 rounded-xl bg-amber-50/80 p-3 text-sm text-amber-700">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <div>
             <p>{ts("addressRequired")}</p>

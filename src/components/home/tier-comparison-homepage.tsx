@@ -31,17 +31,17 @@ const TIER_ICON: Record<TierKey, typeof Sparkles> = {
 };
 
 const TIER_ACCENT: Record<TierKey, string> = {
-  FREE: "text-slate-500 dark:text-slate-400",
-  PRO: "text-sky-600 dark:text-sky-400",
-  UNLIMITED: "text-amber-600 dark:text-amber-400",
-  ENTERPRISE: "text-violet-600 dark:text-violet-400",
+  FREE: "text-slate-500",
+  PRO: "text-sky-600",
+  UNLIMITED: "text-amber-600",
+  ENTERPRISE: "text-violet-600",
 };
 
 const TIER_RING: Record<TierKey, string> = {
   FREE: "ring-border",
-  PRO: "ring-sky-300 dark:ring-sky-500/40",
-  UNLIMITED: "ring-amber-300 dark:ring-amber-500/40",
-  ENTERPRISE: "ring-violet-300 dark:ring-violet-500/40",
+  PRO: "ring-sky-300",
+  UNLIMITED: "ring-amber-300",
+  ENTERPRISE: "ring-violet-300",
 };
 
 interface TierComparisonHomepageProps {
@@ -62,7 +62,7 @@ export function TierComparisonHomepage({ bgClass = "section-gradient", isLoggedI
         <AnimatedSection>
           {/* Header */}
           <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200">
               <Crown className="size-3" />
               {t("home.tierBenefitsHomepageEyebrow")}
             </div>
@@ -98,7 +98,7 @@ export function TierComparisonHomepage({ bgClass = "section-gradient", isLoggedI
                 }`}
               >
                 {t("subscription.billingToggleYearly")}
-                <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
                   −{Math.round(YEARLY_DISCOUNT * 100)}%
                 </span>
               </button>
@@ -250,7 +250,7 @@ function TierCard({
             }`}
           >
             {f.on ? (
-              <Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
             ) : (
               <Minus className="mt-0.5 size-4 shrink-0 text-muted-foreground/40" />
             )}

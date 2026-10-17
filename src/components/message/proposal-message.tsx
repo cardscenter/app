@@ -95,10 +95,10 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
   }
 
   const statusColor =
-    proposal.status === "ACCEPTED" ? "text-green-600 dark:text-green-400" :
+    proposal.status === "ACCEPTED" ? "text-green-600" :
     proposal.status === "REJECTED" ? "text-red-500" :
     proposal.status === "WITHDRAWN" ? "text-muted-foreground" :
-    "text-yellow-600 dark:text-yellow-400";
+    "text-yellow-600";
 
   const statusIcon =
     proposal.status === "ACCEPTED" ? <Check className="h-4 w-4" /> :
@@ -132,7 +132,7 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
 
           {/* Awaiting payment info */}
           {proposal.paymentStatus === "AWAITING_PAYMENT" && remainingDays !== null && (
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-2">
+            <p className="text-xs text-yellow-600 mb-2">
               {t("awaitingPayment", { days: remainingDays.toString() })}
             </p>
           )}
@@ -144,7 +144,7 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
           )}
 
           {proposal.paymentStatus === "PAID" && (
-            <p className="text-xs text-green-600 dark:text-green-400 mb-2">
+            <p className="text-xs text-green-600 mb-2">
               {t("paymentComplete")}
             </p>
           )}
@@ -228,21 +228,21 @@ export function ProposalMessage({ proposal, currentUserId, conversationId, isOwn
 
             {/* Sufficient balance message */}
             {balanceInfo.hasSufficientBalance ? (
-              <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 mb-4">
-                <p className="text-sm text-green-700 dark:text-green-400 flex items-start gap-2">
+              <div className="rounded-md bg-green-50 border border-green-200 p-3 mb-4">
+                <p className="text-sm text-green-700 flex items-start gap-2">
                   <Check className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   {t("balanceSufficient")}
                 </p>
               </div>
             ) : (
-              <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 mb-4">
-                <p className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+              <div className="rounded-md bg-amber-50 border border-amber-200 p-3 mb-4">
+                <p className="text-sm text-amber-700 flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   {t("balanceInsufficient")}
                 </p>
                 <Link
                   href="/dashboard/saldo"
-                  className="mt-2 inline-block text-xs font-medium text-amber-700 dark:text-amber-400 underline hover:no-underline"
+                  className="mt-2 inline-block text-xs font-medium text-amber-700 underline hover:no-underline"
                 >
                   {t("topUpBalance")}
                 </Link>

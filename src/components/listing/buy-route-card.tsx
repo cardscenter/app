@@ -21,15 +21,15 @@ interface Props {
 export function BuyRouteCard({ variant, title, subtitle, children }: Props) {
   const styles = {
     ship: {
-      border: "border-emerald-200 dark:border-emerald-900",
-      headerBg: "bg-emerald-50 dark:bg-emerald-950/30",
-      headerText: "text-emerald-900 dark:text-emerald-200",
+      border: "border-emerald-200",
+      headerBg: "bg-emerald-50",
+      headerText: "text-emerald-900",
       icon: <Truck className="h-6 w-6" />,
     },
     pickup_platform: {
-      border: "border-blue-200 dark:border-blue-900",
-      headerBg: "bg-blue-50 dark:bg-blue-950/30",
-      headerText: "text-blue-900 dark:text-blue-200",
+      border: "border-blue-200",
+      headerBg: "bg-blue-50",
+      headerText: "text-blue-900",
       icon: (
         <span className="flex flex-col items-center gap-0.5">
           <MapPin className="h-5 w-5" />
@@ -38,9 +38,9 @@ export function BuyRouteCard({ variant, title, subtitle, children }: Props) {
       ),
     },
     pickup_external: {
-      border: "border-amber-200 dark:border-amber-900",
-      headerBg: "bg-amber-50 dark:bg-amber-950/30",
-      headerText: "text-amber-900 dark:text-amber-200",
+      border: "border-amber-200",
+      headerBg: "bg-amber-50",
+      headerText: "text-amber-900",
       icon: (
         <span className="flex flex-col items-center gap-0.5">
           <MapPin className="h-5 w-5" />

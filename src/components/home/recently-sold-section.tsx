@@ -14,10 +14,10 @@ interface RecentlySoldSectionProps {
 }
 
 const KIND_META = {
-  auction: { Icon: Gavel, labelKey: "recentlySoldKindAuction", color: "text-sky-600 dark:text-sky-400" },
-  listing: { Icon: Store, labelKey: "recentlySoldKindListing", color: "text-emerald-600 dark:text-emerald-400" },
-  bundle: { Icon: Package, labelKey: "recentlySoldKindBundle", color: "text-violet-600 dark:text-violet-400" },
-  claimsale: { Icon: Tag, labelKey: "recentlySoldKindClaimsale", color: "text-amber-600 dark:text-amber-400" },
+  auction: { Icon: Gavel, labelKey: "recentlySoldKindAuction", color: "text-sky-600" },
+  listing: { Icon: Store, labelKey: "recentlySoldKindListing", color: "text-emerald-600" },
+  bundle: { Icon: Package, labelKey: "recentlySoldKindBundle", color: "text-violet-600" },
+  claimsale: { Icon: Tag, labelKey: "recentlySoldKindClaimsale", color: "text-amber-600" },
 } as const;
 
 export function RecentlySoldSection({ items, bgClass = "bg-card" }: RecentlySoldSectionProps) {
@@ -34,7 +34,7 @@ export function RecentlySoldSection({ items, bgClass = "bg-card" }: RecentlySold
         <AnimatedSection>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200">
                 <TrendingUp className="size-3" />
                 {t("recentlySoldEyebrow")}
               </div>
@@ -83,7 +83,7 @@ export function RecentlySoldSection({ items, bgClass = "bg-card" }: RecentlySold
                           <p className="mt-1 truncate text-xs text-muted-foreground">{item.sellerDisplayName}</p>
                         </div>
                         <div className="mt-3 flex items-end justify-between gap-2">
-                          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 sm:text-xl">
+                          <div className="text-lg font-bold text-emerald-600 sm:text-xl">
                             {format.number(item.soldPrice, { style: "currency", currency: "EUR" })}
                           </div>
                           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">

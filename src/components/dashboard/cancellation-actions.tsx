@@ -144,8 +144,8 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
   if (request && request.proposedBy.id === currentUserId) {
     const expires = new Date(request.expiresAt);
     return (
-      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
-        <p className="font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+        <p className="font-medium text-amber-700 flex items-center gap-1.5">
           <Clock className="h-4 w-4" />
           {t("waitingForResponse")}
         </p>
@@ -165,12 +165,12 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
         </dl>
 
         {/* Wat de wederpartij gaat doen */}
-        <p className="mt-2 text-xs text-amber-700/90 dark:text-amber-300/90">
+        <p className="mt-2 text-xs text-amber-700/90">
           {t("proposerExplain")}
         </p>
 
         {/* Countdown */}
-        <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400 tabular-nums">
+        <p className="mt-2 text-xs font-medium text-amber-700 tabular-nums">
           {formatExpiresIn(expires)}
         </p>
       </div>
@@ -181,8 +181,8 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
   if (request) {
     const expires = new Date(request.expiresAt);
     return (
-      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
-        <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+        <p className="text-sm font-medium text-amber-700">
           {t("incomingRequest", { name: request.proposedBy.displayName })}
         </p>
         <dl className="mt-2 space-y-1 text-xs">
@@ -199,10 +199,10 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
         </dl>
 
         {/* Countdown + uitleg wat-bij-niet-reageren */}
-        <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400 tabular-nums">
+        <p className="mt-2 text-xs font-medium text-amber-700 tabular-nums">
           {formatExpiresIn(expires)}
         </p>
-        <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-300/80">
+        <p className="mt-0.5 text-xs text-amber-700/80">
           {t("responderExplain")}
         </p>
 
@@ -244,7 +244,7 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
             <button
               onClick={() => setShowRejectForm(true)}
               disabled={pending}
-              className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+              className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
             >
               {t("rejectCancellation")}
             </button>
@@ -260,7 +260,7 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
       <button
         onClick={() => setShowRequestForm((s) => !s)}
         disabled={pending}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
       >
         <Ban className="h-3.5 w-3.5" />
         {t("requestCancellation")}
@@ -269,7 +269,7 @@ export function CancellationActions({ bundleId, currentUserId, bundleStatus, use
       {showRequestForm && (
         <form
           onSubmit={handleRequest}
-          className="mt-3 space-y-2 rounded-lg border border-amber-300 bg-amber-50/50 p-3 dark:border-amber-800 dark:bg-amber-950/30"
+          className="mt-3 space-y-2 rounded-lg border border-amber-300 bg-amber-50/50 p-3"
         >
           <p className="text-xs text-muted-foreground">{t("requestExplain")}</p>
           <div>

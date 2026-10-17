@@ -31,7 +31,7 @@ export function CancellationsSection({ currentUserId, paidBundles, userRole }: C
         {paidBundles.map((b) => (
           <li
             key={b.id}
-            className="rounded-lg border border-border bg-white/40 p-3 text-sm dark:bg-white/5"
+            className="rounded-lg border border-border bg-white/40 p-3 text-sm"
           >
             <div className="mb-2 flex items-center justify-between">
               <div>

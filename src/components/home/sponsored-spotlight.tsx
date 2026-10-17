@@ -60,7 +60,7 @@ export function SponsoredSpotlight({ auctions, listings, locale, buyer }: Sponso
       <div className="mx-auto max-w-[1880px] px-[clamp(1rem,3vw,4rem)]">
         <AnimatedSection>
           <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-700">
               <Sparkles className="size-4" />
             </div>
             <h2 className="text-xl font-bold text-foreground">{t("featured")}</h2>

@@ -41,7 +41,7 @@ export function EventVendorRequestCta({
 
   if (viewerStatus === "APPROVED") {
     return (
-      <p className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+      <p className="flex items-center gap-2 text-sm font-medium text-emerald-600">
         <CircleCheck className="h-4 w-4 shrink-0" /> Je staat in de standhouderslijst van dit evenement.
       </p>
     );
@@ -50,7 +50,7 @@ export function EventVendorRequestCta({
   if (viewerStatus === "PENDING") {
     return (
       <div className="flex flex-wrap items-center gap-3">
-        <p className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+        <p className="flex items-center gap-2 text-sm font-medium text-amber-600">
           <Clock className="h-4 w-4 shrink-0" /> Aanvraag in behandeling bij de organisator.
         </p>
         <button

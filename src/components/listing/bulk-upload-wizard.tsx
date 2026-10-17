@@ -108,7 +108,7 @@ export function BulkUploadWizard() {
           </label>
         </div>
 
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700">
           <p className="font-medium">Wat NIET via CSV gaat:</p>
           <ul className="mt-2 list-inside list-disc space-y-0.5 text-xs">
             <li>Foto&apos;s — voeg per listing toe via de bewerk-knop na import</li>
@@ -131,11 +131,11 @@ export function BulkUploadWizard() {
           <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Geldige rijen</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{rows.length}</p>
+              <p className="text-2xl font-bold text-emerald-600">{rows.length}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Fouten</p>
-              <p className={`text-2xl font-bold ${errors.length > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground"}`}>
+              <p className={`text-2xl font-bold ${errors.length > 0 ? "text-rose-600" : "text-foreground"}`}>
                 {errors.length}
               </p>
             </div>
@@ -144,11 +144,11 @@ export function BulkUploadWizard() {
 
         {errors.length > 0 && (
           <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
-            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-rose-700 dark:text-rose-400">
+            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-rose-700">
               <AlertCircle className="h-4 w-4" />
               {errors.length} {errors.length === 1 ? "fout" : "fouten"}
             </h3>
-            <ul className="space-y-1 text-xs text-rose-700 dark:text-rose-400">
+            <ul className="space-y-1 text-xs text-rose-700">
               {errors.slice(0, 20).map((e, i) => (
                 <li key={i}>
                   Rij {e.row}{e.field ? ` · ${e.field}` : ""}: {e.message}
@@ -199,7 +199,7 @@ export function BulkUploadWizard() {
         )}
 
         {submitError && (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-sm text-rose-600 dark:text-rose-400">
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-sm text-rose-600">
             {submitError}
           </div>
         )}
@@ -244,7 +244,7 @@ export function BulkUploadWizard() {
           {result?.createdCount ?? 0} {result?.createdCount === 1 ? "listing" : "listings"} aangemaakt
         </h2>
         {result && result.errors.length > 0 && (
-          <p className="mt-1 text-sm text-rose-600 dark:text-rose-400">
+          <p className="mt-1 text-sm text-rose-600">
             {result.errors.length} {result.errors.length === 1 ? "rij overgeslagen" : "rijen overgeslagen"}
           </p>
         )}
@@ -278,10 +278,10 @@ export function BulkUploadWizard() {
 
       {result && result.errors.length > 0 && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
-          <h3 className="mb-2 text-sm font-semibold text-rose-700 dark:text-rose-400">
+          <h3 className="mb-2 text-sm font-semibold text-rose-700">
             Overgeslagen rijen
           </h3>
-          <ul className="space-y-1 text-xs text-rose-700 dark:text-rose-400">
+          <ul className="space-y-1 text-xs text-rose-700">
             {result.errors.slice(0, 30).map((e, i) => (
               <li key={i}>
                 Rij {e.row}{e.field ? ` · ${e.field}` : ""}: {e.message}

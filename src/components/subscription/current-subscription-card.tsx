@@ -36,20 +36,20 @@ export async function CurrentSubscriptionCard({
   if (subscription) {
     if (subscription.status === "PENDING") {
       statusLine = t("subscriptionStatusPending");
-      statusColor = "text-amber-600 dark:text-amber-400";
+      statusColor = "text-amber-600";
     } else if (subscription.paymentStatus === "GRACE" && subscription.gracePeriodEnd) {
       const daysLeft = Math.max(
         0,
         Math.ceil((subscription.gracePeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       );
       statusLine = t("subscriptionStatusGrace", { days: String(daysLeft) });
-      statusColor = "text-rose-600 dark:text-rose-400";
+      statusColor = "text-rose-600";
     } else if (subscription.status === "CANCELLED") {
       statusLine = t("cancelledNotice");
-      statusColor = "text-amber-600 dark:text-amber-400";
+      statusColor = "text-amber-600";
     } else if (subscription.status === "ACTIVE") {
       statusLine = t("subscriptionStatusActive");
-      statusColor = "text-emerald-600 dark:text-emerald-400";
+      statusColor = "text-emerald-600";
     }
   }
 
@@ -97,7 +97,7 @@ export async function CurrentSubscriptionCard({
           </>
         )}
         {isAdmin && (
-          <span className="text-violet-600 dark:text-violet-400">
+          <span className="text-violet-600">
             ADMIN: alle features ontgrendeld
           </span>
         )}

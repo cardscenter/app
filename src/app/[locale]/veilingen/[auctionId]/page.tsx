@@ -109,7 +109,7 @@ export default async function AuctionDetailPage({
           <div>
             <div className="flex items-start justify-between">
               <div>
-                <span className="rounded-full bg-primary-light px-2.5 py-0.5 text-xs font-medium text-primary dark:bg-red-950 dark:text-red-400">
+                <span className="rounded-full bg-primary-light px-2.5 py-0.5 text-xs font-medium text-primary">
                   {auction.auctionType === "SINGLE_CARD"
                     ? t("singleCard")
                     : auction.auctionType === "COLLECTION"

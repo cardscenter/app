@@ -243,7 +243,7 @@ function SlotRow({ method, availableCarriers, isPending, required, onToggle, onU
             disabled={isPending}
             className={`rounded-lg px-3 py-1 text-sm font-medium transition-colors disabled:opacity-50 ${
               method.isActive
-                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400"
+                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                 : "bg-muted text-muted-foreground hover:bg-muted/70"
             }`}
           >
@@ -372,8 +372,8 @@ function PricePopover({ method, isPending, open, onOpenChange, onSave }: PricePo
 
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 ring-1 ring-amber-500/10">
                 <div className="flex items-start gap-2">
-                  <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <p className="text-[11px] leading-snug text-amber-700 dark:text-amber-400">
+                  <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+                  <p className="text-[11px] leading-snug text-amber-700">
                     {t("priceTipBuyerAttractive")}
                   </p>
                 </div>

@@ -119,7 +119,7 @@ export function ClaimsalePromotionManager({ claimsaleId, upsells }: Props) {
               onClick={() => run(() => cancelClaimsaleUpsell(u.id), "Promotie gestopt")}
               disabled={pending}
               title="Promotie stoppen (pro-rata terugbetaling)"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-red-300 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-red-300 text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -137,7 +137,7 @@ export function ClaimsalePromotionManager({ claimsaleId, upsells }: Props) {
                 type="button"
                 onClick={() => run(() => addClaimsaleUpsell(claimsaleId, t), "Promotie toegevoegd")}
                 disabled={pending}
-                className="flex items-center gap-1 rounded-md border border-amber-300 px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                className="flex items-center gap-1 rounded-md border border-amber-300 px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
               >
                 <Plus className="h-3 w-3" />
                 Toevoegen ({formatPrice(CLAIMSALE_UPSELL_PRICING[t].flatPrice)})

@@ -59,7 +59,7 @@ export function DescriptionEditor({ listingId, initialDescription }: Props) {
       />
       <p className="text-xs text-muted-foreground">{value.length}/2000</p>
       {error && (
-        <div className="rounded-lg bg-red-50 p-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <div className="rounded-lg bg-red-50 p-2 text-sm text-red-600">
           {error}
         </div>
       )}

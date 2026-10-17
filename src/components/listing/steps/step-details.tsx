@@ -59,7 +59,7 @@ export function StepDetails({
       <div>
         <div className="flex items-center justify-between">
           <label htmlFor="title" className="block text-sm font-medium text-foreground">{t("title")}</label>
-          <span className={`text-xs ${titleCharsLeft < 10 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+          <span className={`text-xs ${titleCharsLeft < 10 ? "text-amber-600" : "text-muted-foreground"}`}>
             {titleCharsLeft}/100
           </span>
         </div>
@@ -77,7 +77,7 @@ export function StepDetails({
       <div>
         <div className="flex items-center justify-between">
           <label className="block text-sm font-medium text-foreground">{t("description")}</label>
-          <span className={`text-xs ${descCharsLeft < 100 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+          <span className={`text-xs ${descCharsLeft < 100 ? "text-amber-600" : "text-muted-foreground"}`}>
             {descTextLength}/2000
           </span>
         </div>
@@ -177,7 +177,7 @@ export function StepDetails({
           kaart wil verkopen is een claimsale de juiste route. Kaartlijst hoort
           in de beschrijving. */}
       {listingType === "MULTI_CARD" && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <Layers className="mt-0.5 h-4 w-4 shrink-0" />
           <p>{t("multiCardBundleHint")}</p>
         </div>

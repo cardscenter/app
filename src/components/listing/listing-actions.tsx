@@ -46,7 +46,7 @@ export function ListingActions({ listingId, status }: Props) {
         <button
           onClick={() => run(() => updateListingStatus(listingId, "DELETED"), "actions.confirmDelete")}
           disabled={loading}
-          className={`${baseBtn} border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30`}
+          className={`${baseBtn} border border-red-300 text-red-600 hover:bg-red-50`}
         >
           {t("deleteListing")}
         </button>
@@ -58,7 +58,7 @@ export function ListingActions({ listingId, status }: Props) {
     // Geen acties — listing is gekoppeld aan een bundle-offer of partial-balance
     // proposal en wordt automatisch teruggezet via cron of completion.
     return (
-      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
         {t("actions.reservedHint")}
       </div>
     );
@@ -77,14 +77,14 @@ export function ListingActions({ listingId, status }: Props) {
         <button
           onClick={() => run(() => pauseListing(listingId), "actions.confirmPause")}
           disabled={loading}
-          className={`${baseBtn} border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30`}
+          className={`${baseBtn} border border-amber-300 text-amber-700 hover:bg-amber-50`}
         >
           {t("actions.pause")}
         </button>
         <button
           onClick={() => run(() => updateListingStatus(listingId, "DELETED"), "actions.confirmDelete")}
           disabled={loading}
-          className={`${baseBtn} border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30`}
+          className={`${baseBtn} border border-red-300 text-red-600 hover:bg-red-50`}
         >
           {t("deleteListing")}
         </button>
@@ -104,14 +104,14 @@ export function ListingActions({ listingId, status }: Props) {
       <button
         onClick={() => run(() => pauseListing(listingId), "actions.confirmPause")}
         disabled={loading}
-        className={`${baseBtn} border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30`}
+        className={`${baseBtn} border border-amber-300 text-amber-700 hover:bg-amber-50`}
       >
         {t("actions.pause")}
       </button>
       <button
         onClick={() => run(() => updateListingStatus(listingId, "DELETED"), "actions.confirmDelete")}
         disabled={loading}
-        className={`${baseBtn} border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30`}
+        className={`${baseBtn} border border-red-300 text-red-600 hover:bg-red-50`}
       >
         {t("deleteListing")}
       </button>

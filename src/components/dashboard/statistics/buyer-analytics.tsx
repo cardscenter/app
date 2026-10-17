@@ -54,7 +54,7 @@ export function BuyerAnalytics({ data }: { data: BuyerAnalyticsData }) {
           label={t("totalSpent")}
           value={`€${data.totalSpent.toFixed(2)}`}
           icon={ShoppingBag}
-          iconColor="text-emerald-600 dark:text-emerald-400"
+          iconColor="text-emerald-600"
           iconBg="bg-emerald-500/10"
           comparison={spentComp}
         />
@@ -62,7 +62,7 @@ export function BuyerAnalytics({ data }: { data: BuyerAnalyticsData }) {
           label={t("itemsPurchased")}
           value={String(data.itemsPurchased)}
           icon={Package}
-          iconColor="text-blue-600 dark:text-blue-400"
+          iconColor="text-blue-600"
           iconBg="bg-blue-500/10"
           comparison={itemsComp}
         />

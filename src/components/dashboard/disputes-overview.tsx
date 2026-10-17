@@ -131,13 +131,13 @@ export function DisputesOverview({ disputes }: { disputes: DisputeListItem[] }) 
       <Link
         key={d.id}
         href={`/dashboard/geschillen/${d.id}`}
-        className={`block dash-card p-4 transition-colors hover:bg-muted/40 ${step?.urgent ? "border-l-4 border-l-amber-400 dark:border-l-amber-500" : ""}`}
+        className={`block dash-card p-4 transition-colors hover:bg-muted/40 ${step?.urgent ? "border-l-4 border-l-amber-400" : ""}`}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                open ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-muted text-muted-foreground"
+                open ? "bg-amber-500/10 text-amber-600" : "bg-muted text-muted-foreground"
               }`}
             >
               <Icon className="h-5 w-5" />
@@ -159,12 +159,12 @@ export function DisputesOverview({ disputes }: { disputes: DisputeListItem[] }) 
                 {d.finalRefund !== null && d.finalRefund > 0 && (
                   <>
                     <span>&middot;</span>
-                    <span className="text-emerald-700 dark:text-emerald-400">terugbetaald &euro;{d.finalRefund.toFixed(2)}</span>
+                    <span className="text-emerald-700">terugbetaald &euro;{d.finalRefund.toFixed(2)}</span>
                   </>
                 )}
               </div>
               {step && (
-                <p className={`mt-1.5 text-xs ${step.urgent ? "font-medium text-amber-700 dark:text-amber-400" : "text-muted-foreground"}`}>
+                <p className={`mt-1.5 text-xs ${step.urgent ? "font-medium text-amber-700" : "text-muted-foreground"}`}>
                   {step.urgent && <AlertTriangle className="mr-1 inline h-3 w-3" />}
                   {step.text}
                 </p>

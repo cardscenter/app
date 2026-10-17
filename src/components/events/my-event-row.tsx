@@ -7,9 +7,9 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { deleteEvent } from "@/actions/event";
 
 const STATUS_META: Record<string, { label: string; cls: string; icon: React.ComponentType<{ className?: string }> }> = {
-  PENDING: { label: "Wacht op goedkeuring", cls: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300", icon: Clock },
-  LIVE: { label: "Live", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300", icon: CheckCircle2 },
-  REJECTED: { label: "Afgewezen", cls: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300", icon: XCircle },
+  PENDING: { label: "Wacht op goedkeuring", cls: "bg-amber-100 text-amber-700", icon: Clock },
+  LIVE: { label: "Live", cls: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+  REJECTED: { label: "Afgewezen", cls: "bg-rose-100 text-rose-700", icon: XCircle },
   ENDED: { label: "Afgelopen", cls: "bg-muted text-muted-foreground", icon: CalendarOff },
 };
 
@@ -48,7 +48,7 @@ export function MyEventRow({ event }: { event: MyEvent }) {
           {event.city} · {new Date(event.startTime).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}
         </p>
         {event.status === "REJECTED" && event.rejectionReason && (
-          <p className="mt-1 text-sm text-rose-600 dark:text-rose-400">Reden: {event.rejectionReason}</p>
+          <p className="mt-1 text-sm text-rose-600">Reden: {event.rejectionReason}</p>
         )}
       </div>
 

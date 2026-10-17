@@ -93,9 +93,9 @@ interface SectionCardProps {
 function SectionCard({ icon: Icon, title, children, variant = "default" }: SectionCardProps) {
   const variantClasses =
     variant === "amber"
-      ? "border-amber-300 bg-amber-50/60 dark:border-amber-800/50 dark:bg-amber-950/20"
+      ? "border-amber-300 bg-amber-50/60"
       : variant === "emerald"
-        ? "border-emerald-300 bg-emerald-50/60 dark:border-emerald-800/50 dark:bg-emerald-950/20"
+        ? "border-emerald-300 bg-emerald-50/60"
         : "border-border bg-card";
   return (
     <div className={`rounded-2xl border p-5 ${variantClasses}`}>
@@ -195,7 +195,7 @@ export function AuctionPreview({
       </div>
 
       {error && (
-        <div className="mb-6 glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <div className="mb-6 glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600">
           {error}
         </div>
       )}
@@ -270,7 +270,7 @@ export function AuctionPreview({
           {/* Identiteit */}
           <div className="space-y-4">
             <div>
-              <span className="rounded-full bg-primary-light px-2.5 py-0.5 text-xs font-medium text-primary dark:bg-red-950 dark:text-red-400">
+              <span className="rounded-full bg-primary-light px-2.5 py-0.5 text-xs font-medium text-primary">
                 {t(TYPE_KEYS[form.auctionType])}
               </span>
               <h1 className="mt-2 text-2xl font-bold text-foreground">
@@ -303,7 +303,7 @@ export function AuctionPreview({
             {form.description && stripHtml(form.description).length > 0 && (
               <SectionCard icon={Tag} title={t("description")}>
                 <div
-                  className="prose prose-sm max-w-none text-sm text-foreground dark:prose-invert [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+                  className="prose prose-sm max-w-none text-sm text-foreground [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
                   dangerouslySetInnerHTML={{ __html: form.description }}
                 />
               </SectionCard>
@@ -331,21 +331,21 @@ export function AuctionPreview({
 
           {/* Sale-conditie: reserve aan/uit met expliciete uitleg */}
           {reserve !== null ? (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800/50 dark:bg-amber-950/20">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
               <div className="text-sm">
-                <p className="font-medium text-amber-900 dark:text-amber-200">{t("reviewReserveTitle")}</p>
-                <p className="mt-0.5 text-amber-800 dark:text-amber-300">
+                <p className="font-medium text-amber-900">{t("reviewReserveTitle")}</p>
+                <p className="mt-0.5 text-amber-800">
                   {t("reviewReserveExplain", { amount: `€${reserve.toFixed(2)}` })}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/20">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <div className="text-sm">
-                <p className="font-medium text-emerald-900 dark:text-emerald-200">{t("reviewNoReserveTitle")}</p>
-                <p className="mt-0.5 text-emerald-800 dark:text-emerald-300">{t("reviewNoReserveExplain")}</p>
+                <p className="font-medium text-emerald-900">{t("reviewNoReserveTitle")}</p>
+                <p className="mt-0.5 text-emerald-800">{t("reviewNoReserveExplain")}</p>
               </div>
             </div>
           )}
@@ -395,16 +395,16 @@ export function AuctionPreview({
           <div
             className={`mt-3 flex items-start gap-3 rounded-xl border p-3 text-sm ${
               isScheduled
-                ? "border-amber-300 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/20"
-                : "border-emerald-300 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-950/20"
+                ? "border-amber-300 bg-amber-50"
+                : "border-emerald-300 bg-emerald-50"
             }`}
           >
             <Clock
               className={`mt-0.5 h-4 w-4 shrink-0 ${
-                isScheduled ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+                isScheduled ? "text-amber-600" : "text-emerald-600"
               }`}
             />
-            <p className={isScheduled ? "text-amber-800 dark:text-amber-300" : "text-emerald-800 dark:text-emerald-300"}>
+            <p className={isScheduled ? "text-amber-800" : "text-emerald-800"}>
               {isScheduled
                 ? t("reviewScheduledExplain", { date: formatNLDateTime(auctionWindow.startTime) })
                 : t("reviewInstantExplain")}
@@ -433,7 +433,7 @@ export function AuctionPreview({
                     {userCity}
                   </span>
                 ) : (
-                  <span className="text-amber-700 dark:text-amber-400">{t("pickupLocationMissing")}</span>
+                  <span className="text-amber-700">{t("pickupLocationMissing")}</span>
                 )}
               </InfoRow>
             )}
@@ -468,7 +468,7 @@ export function AuctionPreview({
             <SectionCard icon={RotateCcw} title={t("reviewRunnerUpTitle")}>
               {maxRunnerUpAttempts > 0 && form.runnerUpEnabled ? (
                 <div className="flex items-start gap-2 text-sm text-foreground">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                   <span>{t("reviewRunnerUpEnabled", { count: maxRunnerUpAttempts })}</span>
                 </div>
               ) : (
@@ -610,12 +610,12 @@ function PromotionCostBlock({
               </div>
               <div className="text-right">
                 <span
-                  className={`font-medium ${isFree ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}
+                  className={`font-medium ${isFree ? "text-emerald-600" : "text-foreground"}`}
                 >
                   {formatPrice(cost)}
                 </span>
                 {isFree && (
-                  <div className="text-[10px] uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80">
+                  <div className="text-[10px] uppercase tracking-wider text-emerald-600/80">
                     Gratis quota
                   </div>
                 )}

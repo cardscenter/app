@@ -140,24 +140,24 @@ export function StepPricing({
             }}
             aria-invalid={startBidTooLow ? true : undefined}
             className={`block w-48 glass-input px-3 py-2.5 text-foreground ${
-              startBidTooLow ? "border-amber-400 dark:border-amber-700" : ""
+              startBidTooLow ? "border-amber-400" : ""
             }`}
           />
         </div>
         <p className="mt-1 text-xs text-muted-foreground">{t("startingBidMinHint", { min: MIN_STARTING_BID })}</p>
         {startBidTooLow && (
-          <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-700/40 dark:bg-amber-500/10">
-            <Tag className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs">
+            <Tag className="mt-0.5 size-4 shrink-0 text-amber-600" />
             <div className="flex-1">
-              <p className="font-medium text-amber-900 dark:text-amber-200">
+              <p className="font-medium text-amber-900">
                 {t("startingBidTooLowTitle", { min: MIN_STARTING_BID })}
               </p>
-              <p className="mt-0.5 text-amber-800/90 dark:text-amber-300/90">
+              <p className="mt-0.5 text-amber-800/90">
                 {t("startingBidTooLowBody")}
               </p>
               <Link
                 href="/claimsales/nieuw"
-                className="mt-1.5 inline-block font-semibold text-amber-900 underline-offset-2 hover:underline dark:text-amber-200"
+                className="mt-1.5 inline-block font-semibold text-amber-900 underline-offset-2 hover:underline"
               >
                 {t("startingBidTooLowCta")}
               </Link>
@@ -195,12 +195,12 @@ export function StepPricing({
                 onChange={(e) => onChange("reservePrice", e.target.value ? parseFloat(e.target.value) : null)}
                 aria-invalid={reserveError ? true : undefined}
                 className={`block w-48 glass-input px-3 py-2.5 text-foreground ${
-                  reserveError ? "border-red-400 dark:border-red-700" : ""
+                  reserveError ? "border-red-400" : ""
                 }`}
               />
             </div>
             {reserveError && (
-              <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-red-400">{reserveError}</p>
+              <p className="mt-1.5 text-xs font-medium text-red-600">{reserveError}</p>
             )}
           </div>
         )}
@@ -235,12 +235,12 @@ export function StepPricing({
                 onChange={(e) => onChange("buyNowPrice", e.target.value ? parseFloat(e.target.value) : null)}
                 aria-invalid={buyNowError ? true : undefined}
                 className={`block w-48 glass-input px-3 py-2.5 text-foreground ${
-                  buyNowError ? "border-red-400 dark:border-red-700" : ""
+                  buyNowError ? "border-red-400" : ""
                 }`}
               />
             </div>
             {buyNowError && (
-              <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-red-400">{buyNowError}</p>
+              <p className="mt-1.5 text-xs font-medium text-red-600">{buyNowError}</p>
             )}
           </div>
         )}

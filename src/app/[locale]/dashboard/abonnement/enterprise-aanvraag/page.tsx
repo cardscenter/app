@@ -61,14 +61,14 @@ export default async function EnterpriseAanvraagPage({
       </div>
 
       {alreadyEnterprise ? (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-700 dark:text-emerald-400">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-700">
           Je hebt al toegang tot Enterprise.{" "}
           <Link href="/dashboard/abonnement" className="underline">
             Terug naar abonnement
           </Link>
         </div>
       ) : pending ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700">
           <div className="flex items-start gap-2">
             <Clock className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <div>

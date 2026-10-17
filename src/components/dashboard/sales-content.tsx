@@ -128,21 +128,21 @@ const TAB_ICONS: Record<Tab, typeof Package> = {
 };
 
 const TAB_COLORS: Record<Tab, string> = {
-  AWAITING_PAYMENT: "text-orange-600 dark:text-orange-400",
-  PAID: "text-blue-600 dark:text-blue-400",
-  SHIPPED: "text-purple-600 dark:text-purple-400",
-  COMPLETED: "text-green-600 dark:text-green-400",
-  CANCELLED: "text-red-600 dark:text-red-400",
-  DISPUTED: "text-amber-600 dark:text-amber-400",
+  AWAITING_PAYMENT: "text-orange-600",
+  PAID: "text-blue-600",
+  SHIPPED: "text-purple-600",
+  COMPLETED: "text-green-600",
+  CANCELLED: "text-red-600",
+  DISPUTED: "text-amber-600",
 };
 
 const STATUS_BADGE: Record<Tab, string> = {
-  AWAITING_PAYMENT: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400",
-  PAID: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
-  SHIPPED: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400",
-  COMPLETED: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
-  CANCELLED: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-  DISPUTED: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
+  AWAITING_PAYMENT: "bg-orange-100 text-orange-700",
+  PAID: "bg-blue-100 text-blue-700",
+  SHIPPED: "bg-purple-100 text-purple-700",
+  COMPLETED: "bg-green-100 text-green-700",
+  CANCELLED: "bg-red-100 text-red-700",
+  DISPUTED: "bg-amber-100 text-amber-700",
 };
 
 const AUTO_CONFIRM_DAYS = 30;
@@ -283,9 +283,9 @@ export function SalesContent({
           <div className="space-y-4">
             {/* (Fase 40) Heldere uitleg-banner zodat seller weet dat ze niets
              *  hoeven te doen — de payment-deadline-cron handelt non-pay af. */}
-            <div className="rounded-xl border border-sky-200/60 bg-sky-50/60 p-3 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/30 dark:text-sky-200">
+            <div className="rounded-xl border border-sky-200/60 bg-sky-50/60 p-3 text-sm text-sky-900">
               <p className="font-medium">{t("awaitingPaymentSectionTitle")}</p>
-              <p className="mt-0.5 text-xs text-sky-800/80 dark:text-sky-300/80">
+              <p className="mt-0.5 text-xs text-sky-800/80">
                 {t("awaitingPaymentSectionBody")}
               </p>
             </div>
@@ -353,7 +353,7 @@ function PendingAuctionCard({ auction, locale }: { auction: PendingAuction; loca
         </span>
       </div>
       <div className="border-t border-border/50 px-4 py-2">
-        <div className="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400">
+        <div className="flex items-center gap-1.5 text-xs text-orange-600">
           <Clock className="h-3.5 w-3.5" />
           <span>{t("awaitingPaymentInfo")}</span>
         </div>
@@ -421,7 +421,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
                 {t(STATUS_KEYS[statusTab] ?? "statusPaid")}
               </span>
               {bundle.hasActiveCancellation && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                   <Ban className="h-3 w-3" />
                   {t("cancellationPending")}
                 </span>
@@ -429,7 +429,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
               {bundle.disputeInfo && (
                 <Link
                   href={`/dashboard/geschillen/${bundle.disputeInfo.id}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:hover:bg-amber-900"
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-200"
                 >
                   <AlertTriangle className="h-3 w-3" />
                   {t("viewDispute")}
@@ -460,7 +460,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
                 <span className="text-sm font-bold text-foreground tabular-nums">
                   &euro;{(bundle.totalCost - bundle.refundedAmount).toFixed(2)}
                 </span>
-                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 tabular-nums dark:bg-emerald-950 dark:text-emerald-400">
+                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 tabular-nums">
                   &minus;&euro;{bundle.refundedAmount.toFixed(2)}
                 </span>
               </div>
@@ -534,7 +534,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
         if (!isShip) {
           return (
             <div className="border-t border-border/50 px-4 py-2">
-              <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+              <div className="flex items-center gap-1.5 text-xs text-blue-600">
                 <Package className="h-3.5 w-3.5" />
                 <span>{t("statusPaid")}</span>
               </div>
@@ -549,10 +549,10 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
           daysLeft <= 2 ? "rose" : daysLeft <= 7 ? "amber" : "blue";
         const toneClass =
           tone === "rose"
-            ? "border-rose-200/60 bg-rose-50/60 text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"
+            ? "border-rose-200/60 bg-rose-50/60 text-rose-900"
             : tone === "amber"
-            ? "border-amber-200/60 bg-amber-50/60 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200"
-            : "border-border/50 text-blue-600 dark:text-blue-400";
+            ? "border-amber-200/60 bg-amber-50/60 text-amber-900"
+            : "border-border/50 text-blue-600";
         const Icon = tone === "rose" || tone === "amber" ? AlertTriangle : Package;
         return (
           <div className={`border-t px-4 py-2 ${toneClass}`}>
@@ -569,7 +569,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
       {/* Active cancellation badge fallback voor PAID met actieve cancel */}
       {!expanded && bundle.status === "PAID" && bundle.hasActiveCancellation && (
         <div className="border-t border-border/50 px-4 py-2">
-          <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+          <div className="flex items-center gap-1.5 text-xs text-blue-600">
             <Package className="h-3.5 w-3.5" />
             <span>{t("statusPaid")}</span>
           </div>
@@ -602,11 +602,11 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
         <div className="border-t border-border/50">
           {/* Buyer address — shown prominently for PAID status */}
           {hasAddress && (bundle.status === "PAID" || bundle.status === "SHIPPED" || bundle.status === "DISPUTED") && (
-            <div className="px-4 py-3 border-b border-border/50 bg-blue-50/50 dark:bg-blue-950/20">
+            <div className="px-4 py-3 border-b border-border/50 bg-blue-50/50">
               <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                <MapPin className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">{t("shippingAddress")}</p>
+                  <p className="text-xs font-medium text-blue-600 mb-1">{t("shippingAddress")}</p>
                   {buyerFullName && (
                     <p className="text-sm font-semibold text-foreground">{buyerFullName}</p>
                   )}
@@ -759,7 +759,7 @@ function SaleBundleCard({ bundle, locale, currentUserId }: { bundle: SaleBundle;
             <div className="border-t border-border/50 px-4 py-3">
               <Link
                 href={`/dashboard/geschillen/${bundle.disputeInfo.id}`}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:hover:bg-amber-900"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-200"
               >
                 <AlertTriangle className="h-4 w-4" />
                 {t("viewDispute")}

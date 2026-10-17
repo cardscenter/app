@@ -180,8 +180,8 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
 
   const trendColor =
     activeDelta === null ? "text-muted-foreground" :
-    activeDelta > 0.5 ? "text-emerald-600 dark:text-emerald-400" :
-    activeDelta < -0.5 ? "text-red-600 dark:text-red-400" :
+    activeDelta > 0.5 ? "text-emerald-600" :
+    activeDelta < -0.5 ? "text-red-600" :
     "text-muted-foreground";
 
   const hasRealHistory = series.length >= 2;
@@ -319,8 +319,8 @@ export function CardPricePanel({ variants, history, updated, extraVariants, canE
                     strokeWidth={subtleTrendLine ? 1.5 : 2}
                     strokeDasharray="6 4"
                     className={subtleTrendLine
-                      ? "text-slate-400/70 dark:text-slate-500/70"
-                      : "text-amber-500 dark:text-amber-400"}
+                      ? "text-slate-400/70"
+                      : "text-amber-500"}
                     dot={false}
                     activeDot={false}
                   />

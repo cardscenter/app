@@ -54,7 +54,7 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
         {firstImage ? (
           <Image src={firstImage} alt={result.title} fill className="object-cover" />
         ) : (
-          <TypeIcon className="h-10 w-10 text-slate-300 dark:text-slate-600" />
+          <TypeIcon className="h-10 w-10 text-slate-300" />
         )}
 
         {/* Type badge */}

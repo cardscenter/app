@@ -30,7 +30,7 @@ export function SpotlightEvents({
         <AnimatedSection>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="flex size-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+              <span className="flex size-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
                 <CalendarDays className="size-4" />
               </span>
               <div>
@@ -52,7 +52,7 @@ export function SpotlightEvents({
                 <CarouselSlide key={event.id}>
                   <Link
                     href={`/beurzen/${event.id}`}
-                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-amber-300 bg-card shadow-card ring-1 ring-amber-300 transition hover:shadow-card-hover dark:border-amber-500/60 dark:ring-amber-500/40"
+                    className="group flex h-full flex-col overflow-hidden rounded-xl border border-amber-300 bg-card shadow-card ring-1 ring-amber-300 transition hover:shadow-card-hover"
                   >
                     <div className="relative aspect-[16/9] w-full bg-muted">
                       {event.coverImage ? (
@@ -80,7 +80,7 @@ export function SpotlightEvents({
                       </p>
                       <p className="mt-auto flex items-center gap-1.5 pt-1 text-xs">
                         <Ticket className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className={event.entryType === "FREE" ? "font-medium text-emerald-600 dark:text-emerald-400" : "text-foreground"}>
+                        <span className={event.entryType === "FREE" ? "font-medium text-emerald-600" : "text-foreground"}>
                           {event.entryType === "FREE" ? "Gratis entree" : event.entryPrice != null ? formatEuro(event.entryPrice) : "Tickets"}
                         </span>
                       </p>

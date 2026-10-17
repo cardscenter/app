@@ -195,7 +195,7 @@ export function MultiStepClaimsaleForm({
           <ClaimsaleFormProgress completed={completedSteps} />
 
           {actionState?.error && (
-            <div className="glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+            <div className="glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600">
               {actionState.error}
             </div>
           )}
@@ -262,12 +262,12 @@ export function MultiStepClaimsaleForm({
         <div className="glass flex flex-col items-center gap-3 rounded-2xl p-4 shadow-lg sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
             {missing.length === 0 ? (
-              <span className="text-sm text-emerald-700 dark:text-emerald-300">{t("readyToPreview")}</span>
+              <span className="text-sm text-emerald-700">{t("readyToPreview")}</span>
             ) : (
               missing.map((m) => (
                 <span
                   key={m.key}
-                  className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800"
                 >
                   {m.label}
                 </span>

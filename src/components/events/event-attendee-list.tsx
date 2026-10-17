@@ -62,7 +62,7 @@ export function EventAttendeeList({
     <div className="grid gap-6 sm:grid-cols-2">
       <section>
         <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          <CircleCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Aanwezig ({goingTotal})
+          <CircleCheck className="h-4 w-4 text-emerald-600" /> Aanwezig ({goingTotal})
         </h3>
         {going.length > 0 ? (
           <ul className="space-y-0.5">
@@ -78,7 +78,7 @@ export function EventAttendeeList({
 
       <section>
         <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          <Star className="h-4 w-4 text-indigo-600 dark:text-indigo-400" /> Geïnteresseerd ({interestedTotal})
+          <Star className="h-4 w-4 text-indigo-600" /> Geïnteresseerd ({interestedTotal})
         </h3>
         {interested.length > 0 ? (
           <ul className="space-y-0.5">

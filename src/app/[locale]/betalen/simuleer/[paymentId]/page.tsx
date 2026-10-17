@@ -55,7 +55,7 @@ export default async function SimulatePaymentPage({
   return (
     <PageContainer width="narrow" className="py-10 sm:py-16">
       <div className="rounded-2xl border border-amber-500/30 bg-card p-8 shadow-card">
-        <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+        <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
           <FlaskConical className="size-3.5" /> Simulatie (geen Mollie-key)
         </div>
         <h1 className="mt-4 text-2xl font-bold text-foreground">Betaling simuleren</h1>

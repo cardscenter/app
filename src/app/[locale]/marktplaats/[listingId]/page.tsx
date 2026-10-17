@@ -178,7 +178,7 @@ export default async function ListingDetailPage({
                 <DescriptionEditor listingId={listing.id} initialDescription={listing.description} />
               )}
             </div>
-            <div className="mt-2 whitespace-pre-wrap text-muted-foreground prose prose-sm dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5" dangerouslySetInnerHTML={{ __html: listing.description }} />
+            <div className="mt-2 whitespace-pre-wrap text-muted-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5" dangerouslySetInnerHTML={{ __html: listing.description }} />
           </div>
         </div>
 
@@ -208,7 +208,7 @@ export default async function ListingDetailPage({
 
             <div className="mt-3 text-center text-sm">
               {listing.freeShipping ? (
-                <span className="font-medium text-green-600 dark:text-green-400">{t("freeShipping")}</span>
+                <span className="font-medium text-green-600">{t("freeShipping")}</span>
               ) : (
                 <span className="text-muted-foreground">+ &euro;{listing.shippingCost.toFixed(2)} {t("shippingCost").toLowerCase()}</span>
               )}
@@ -226,7 +226,7 @@ export default async function ListingDetailPage({
             {/* PARTIALLY_SOLD-banner — voor MULTI_CARD partial-sale alleen
                 (chat-only). Stocked SEALED/OTHER blijven direct koopbaar. */}
             {isPartiallySold && !isStockedListing && (
-              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center text-xs text-blue-800">
                 {t("partiallySoldHint", { available: availableItems, total: totalItems })}
               </div>
             )}

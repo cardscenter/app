@@ -155,10 +155,10 @@ export async function PokedexProfile({ pokemon, species, flavorText }: Props) {
                   <div className="bg-pink-400" style={{ width: `${femalePct}%` }} />
                 </div>
                 <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                  <span className="text-sky-600 dark:text-sky-400">
+                  <span className="text-sky-600">
                     ♂ {(100 - femalePct).toFixed(1).replace(/\.0$/, "")}%
                   </span>
-                  <span className="text-pink-600 dark:text-pink-400">
+                  <span className="text-pink-600">
                     ♀ {femalePct.toFixed(1).replace(/\.0$/, "")}%
                   </span>
                 </div>

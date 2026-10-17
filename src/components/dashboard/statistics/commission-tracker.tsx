@@ -19,14 +19,14 @@ export function CommissionTracker({ data }: { data: CommissionTrackerData }) {
           label={t("commissionSaved")}
           value={`€${data.commissionSaved.toFixed(2)}`}
           icon={PiggyBank}
-          iconColor="text-green-600 dark:text-green-400"
+          iconColor="text-green-600"
           iconBg="bg-green-500/10"
         />
         <StatCard
           label={t("projectedSavings")}
           value={`€${data.projectedAnnualSavings.toFixed(2)}`}
           icon={TrendingDown}
-          iconColor="text-emerald-600 dark:text-emerald-400"
+          iconColor="text-emerald-600"
           iconBg="bg-emerald-500/10"
         />
       </div>

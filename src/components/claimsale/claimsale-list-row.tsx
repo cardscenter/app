@@ -153,7 +153,7 @@ export function ClaimsaleListRow({
           <div className="relative shrink-0">
             <Link
               href={`/${locale}/claimsales/${claimsale.id}`}
-              className="block relative w-24 h-32 sm:w-40 sm:h-48 overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 to-slate-100 dark:from-slate-800 dark:to-slate-900"
+              className="block relative w-24 h-32 sm:w-40 sm:h-48 overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 to-slate-100"
             >
               <Image
                 src={claimsale.coverImage}
@@ -289,7 +289,7 @@ export function ClaimsaleListRow({
             <span className="text-[10px] text-muted-foreground">per kaart</span>
           </div>
           <div className="flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 font-medium text-sky-800 ring-1 ring-inset ring-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-800">
+            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
               <Truck className="size-3.5" />
               €{claimsale.shippingCost.toFixed(2)}
             </span>
@@ -301,7 +301,7 @@ export function ClaimsaleListRow({
             adempauze tussen de pill en de scheidingslijn van de footer,
             ongeacht of mt-auto extra ruimte vult. */}
         <div className="hidden sm:flex mt-3 mb-3 items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-800">
+          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
             <Truck className="size-3.5" />
             Verzending €{claimsale.shippingCost.toFixed(2)}
           </span>

@@ -21,8 +21,8 @@ export default function AuctionDetailError({
   return (
     <div className="flex min-h-[40vh] items-center justify-center px-4">
       <div className="glass rounded-2xl p-8 max-w-md w-full text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-950">
-          <AlertTriangle className="size-7 text-red-600 dark:text-red-400" />
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+          <AlertTriangle className="size-7 text-red-600" />
         </div>
         <h2 className="mt-4 text-xl font-bold text-foreground">{t("title")}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t("description")}</p>

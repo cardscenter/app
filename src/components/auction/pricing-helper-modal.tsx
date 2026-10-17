@@ -767,8 +767,8 @@ function ProsConsCards({ prosKeys, consKeys }: { prosKeys: string[]; consKeys: s
   const t = useTranslations("auction");
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-700/40 dark:bg-emerald-500/5">
-        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700">
           <Check className="size-3.5" />
           {t("pricingHelperPros")}
         </div>
@@ -781,8 +781,8 @@ function ProsConsCards({ prosKeys, consKeys }: { prosKeys: string[]; consKeys: s
           ))}
         </ul>
       </div>
-      <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3 dark:border-rose-700/40 dark:bg-rose-500/5">
-        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+      <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3">
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-700">
           <AlertCircle className="size-3.5" />
           {t("pricingHelperCons")}
         </div>
@@ -817,7 +817,7 @@ function RecommendationBanner({
 }) {
   if (!recommended) return null;
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-700/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
       <Check className="size-4 shrink-0" />
       <span>
         {recommendedLabel} <span className="font-semibold">{strategyLabel}</span>

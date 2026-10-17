@@ -70,7 +70,7 @@ export function PaymentMethodModal({
         {/* Checkout-lock notice — alleen voor claimsale-flow, voorkomt dat
             de buyer in paniek raakt door de timer in de achtergrond. */}
         {checkoutLockMinutes && checkoutLockMinutes > 0 && (
-          <div className="mb-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
             <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
             <p>
               Je items zijn{" "}
@@ -97,7 +97,7 @@ export function PaymentMethodModal({
                 {t("availableBalance", { amount: availableBalance.toFixed(2) })}
               </p>
               {extraCredit > 0 && (
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                <p className="text-xs text-emerald-700 mt-0.5">
                   + €{extraCredit.toFixed(2)} reeds gereserveerd voor deze betaling
                 </p>
               )}

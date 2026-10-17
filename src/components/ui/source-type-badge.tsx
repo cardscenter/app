@@ -4,9 +4,9 @@ import { useTranslations } from "next-intl";
 import { Gavel, Tag, ShoppingBag } from "lucide-react";
 
 const CONFIG: Record<string, { icon: typeof Gavel; bg: string; text: string; key: string }> = {
-  auction: { icon: Gavel, bg: "bg-blue-100 dark:bg-blue-950", text: "text-blue-700 dark:text-blue-400", key: "sourceAuction" },
-  claimsale: { icon: Tag, bg: "bg-amber-100 dark:bg-amber-950", text: "text-amber-700 dark:text-amber-400", key: "sourceClaimsale" },
-  listing: { icon: ShoppingBag, bg: "bg-emerald-100 dark:bg-emerald-950", text: "text-emerald-700 dark:text-emerald-400", key: "sourceListing" },
+  auction: { icon: Gavel, bg: "bg-blue-100", text: "text-blue-700", key: "sourceAuction" },
+  claimsale: { icon: Tag, bg: "bg-amber-100", text: "text-amber-700", key: "sourceClaimsale" },
+  listing: { icon: ShoppingBag, bg: "bg-emerald-100", text: "text-emerald-700", key: "sourceListing" },
 };
 
 export function SourceTypeBadge({ type, namespace = "sales" }: { type: string; namespace?: string }) {

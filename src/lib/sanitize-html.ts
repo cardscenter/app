@@ -57,4 +57,4 @@ export function richTextLength(html: string): number {
 
 /** Zelfde klassen als de advertentie-/event-beschrijving zodat opmaak overal gelijk oogt. */
 export const richTextClassName =
-  "prose prose-sm max-w-none text-foreground dark:prose-invert [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline";
+  "prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline";

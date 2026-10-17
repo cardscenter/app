@@ -59,7 +59,7 @@ export function ClaimsaleCard({ claimsale, buyer, sponsored = false }: Claimsale
       {/* Image-zone — alleen wanneer er een cover is. Geen placeholder-tile
           voor claimsales zonder thumbnail; layout reflowt naar pure content. */}
       {hasCover && (
-        <div className="shrink-0 sm:relative sm:w-full sm:aspect-square bg-gradient-to-br from-blue-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+        <div className="shrink-0 sm:relative sm:w-full sm:aspect-square bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
           <Image
             src={claimsale.coverImage!}
             alt={claimsale.title}

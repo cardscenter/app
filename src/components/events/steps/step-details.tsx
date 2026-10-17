@@ -198,7 +198,7 @@ export function StepDetails({ form, set }: { form: EventFormState; set: EventFie
 
       {/* Toernooi-specifiek */}
       {form.eventType === "OP_TOERNOOI" && (
-        <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 dark:border-amber-700/40 dark:bg-amber-950/30">
+        <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4">
           <p className="text-sm font-medium text-foreground">Toernooi-informatie</p>
           <div className="mt-3 space-y-3">
             <div>

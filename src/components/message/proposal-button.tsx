@@ -157,7 +157,7 @@ export function ProposalButton({
 
             {/* Over-budget warning */}
             {overBudget && (
-              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                 <p className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                   {t("balanceInsufficient")}
@@ -166,7 +166,7 @@ export function ProposalButton({
             )}
 
             {error && (
-              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">
                 {error}
               </div>
             )}

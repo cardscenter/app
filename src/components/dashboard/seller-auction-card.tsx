@@ -105,29 +105,29 @@ export function SellerAuctionCard({ auction }: SellerAuctionCardProps) {
               <div className="flex shrink-0 flex-col items-end gap-1">
                 {/* Status-pill */}
                 {isScheduled ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-700 ring-1 ring-sky-200">
                     <Clock className="h-3 w-3" />
                     Wacht op start
                   </span>
                 ) : !hasBids ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200">
                     <AlertCircle className="h-3 w-3" />
                     Geen biedingen
                   </span>
                 ) : willSell ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200">
                     <Trophy className="h-3 w-3" />
                     Verkocht bij eind
                   </span>
                 ) : underReserve ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-rose-700 ring-1 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-rose-700 ring-1 ring-rose-200">
                     <AlertCircle className="h-3 w-3" />
                     Onder reserve
                   </span>
                 ) : null}
                 {/* Extra "Hot"-pill — bovenop andere status, niet exclusief */}
                 {isHot && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-700 ring-1 ring-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:ring-violet-500/30">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-700 ring-1 ring-violet-200">
                     <Zap className="h-3 w-3" />
                     Hot
                   </span>
@@ -143,7 +143,7 @@ export function SellerAuctionCard({ auction }: SellerAuctionCardProps) {
               </p>
               <p
                 className={`text-2xl font-bold tabular-nums sm:text-3xl ${
-                  willSell ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                  willSell ? "text-emerald-600" : "text-foreground"
                 }`}
               >
                 {hasBids ? formatEuro(auction.currentBid) : formatEuro(auction.startingBid)}

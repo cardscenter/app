@@ -264,10 +264,10 @@ export function EditAuctionDrawer({
           <div
             className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs ${
               scope === "NONE"
-                ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200"
+                ? "border-rose-200 bg-rose-50 text-rose-800"
                 : scope === "DESCRIPTION_ONLY"
-                ? "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
-                : "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-200"
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : "border-sky-200 bg-sky-50 text-sky-900"
             }`}
           >
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
@@ -545,7 +545,7 @@ export function EditAuctionDrawer({
               )}
 
               {error && (
-                <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300">
+                <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{error}</span>
                 </div>

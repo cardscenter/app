@@ -166,7 +166,7 @@ export function NotificationBell() {
                 {t("title")}
               </p>
               {count > 0 && (
-                <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+                <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">
                   {count} ongelezen
                 </span>
               )}

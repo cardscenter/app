@@ -106,7 +106,7 @@ export function ListingPreview({ form, accountType, freeUpsellsRemaining = 0, se
       </div>
 
       {error && (
-        <div className="mb-6 glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <div className="mb-6 glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600">
           {error}
         </div>
       )}
@@ -115,15 +115,15 @@ export function ListingPreview({ form, accountType, freeUpsellsRemaining = 0, se
           ze hier en blokkeer publish. Voorkomt dat de seller op publish klikt
           en pas dan een server-error krijgt. */}
       {hasMissing && (
-        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t("missingFields")}</p>
-              <ul className="mt-2 space-y-1 text-sm text-amber-700 dark:text-amber-300">
+              <p className="text-sm font-semibold text-amber-800">{t("missingFields")}</p>
+              <ul className="mt-2 space-y-1 text-sm text-amber-700">
                 {missingRequirements.map((r) => (
                   <li key={r.key} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400" />
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-600" />
                     {t(r.messageKey)}
                   </li>
                 ))}
@@ -280,7 +280,7 @@ export function ListingPreview({ form, accountType, freeUpsellsRemaining = 0, se
           {form.description && (
             <div>
               <h2 className="text-lg font-semibold text-foreground">{t("description")}</h2>
-              <div className="mt-2 whitespace-pre-wrap text-muted-foreground prose prose-sm dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5" dangerouslySetInnerHTML={{ __html: form.description }} />
+              <div className="mt-2 whitespace-pre-wrap text-muted-foreground prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5" dangerouslySetInnerHTML={{ __html: form.description }} />
             </div>
           )}
         </div>
@@ -306,7 +306,7 @@ export function ListingPreview({ form, accountType, freeUpsellsRemaining = 0, se
 
             {/* Shipping info */}
             {form.freeShipping ? (
-              <div className="mt-3 text-center text-sm font-medium text-green-600 dark:text-green-400">
+              <div className="mt-3 text-center text-sm font-medium text-green-600">
                 {t("freeShipping")}
               </div>
             ) : selectedShippingMethods.length > 0 ? (
@@ -327,7 +327,7 @@ export function ListingPreview({ form, accountType, freeUpsellsRemaining = 0, se
                   })}
               </div>
             ) : (
-              <div className="mt-3 text-center text-sm text-amber-600 dark:text-amber-400">
+              <div className="mt-3 text-center text-sm text-amber-600">
                 {t("noShippingSelected")}
               </div>
             )}
@@ -366,7 +366,7 @@ export function ListingPreview({ form, accountType, freeUpsellsRemaining = 0, se
                     <span className="text-foreground">{t(UPSELL_KEYS[entry.type])}</span>
                     <span className="text-muted-foreground">({entry.days}d)</span>
                     {cost === 0 ? (
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">{t("upsellFreeQuota")}</span>
+                      <span className="font-semibold text-emerald-600">{t("upsellFreeQuota")}</span>
                     ) : (
                       <span className="font-semibold text-foreground">€{cost.toFixed(2)}</span>
                     )}

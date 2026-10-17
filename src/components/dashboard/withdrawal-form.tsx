@@ -51,7 +51,7 @@ export function WithdrawalForm({ available, minAmount, disabled, disabledReason 
 
   if (disabled) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
         {disabledReason}
       </div>
     );

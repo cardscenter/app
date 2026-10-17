@@ -118,8 +118,8 @@ export function LoginStreak({
         </button>
 
         {/* Edge fades */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-8 bg-gradient-to-r from-[var(--glass-bg,rgba(255,255,255,0.65))] to-transparent dark:from-[rgba(30,41,59,0.6)]" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] w-8 bg-gradient-to-l from-[var(--glass-bg,rgba(255,255,255,0.65))] to-transparent dark:from-[rgba(30,41,59,0.6)]" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-8 bg-gradient-to-r from-[var(--glass-bg,rgba(255,255,255,0.65))] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] w-8 bg-gradient-to-l from-[var(--glass-bg,rgba(255,255,255,0.65))] to-transparent" />
 
         {/* Scrollable strip */}
         <div

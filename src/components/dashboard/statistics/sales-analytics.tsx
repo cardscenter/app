@@ -58,7 +58,7 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
           label={t("totalRevenue")}
           value={`€${data.totalRevenue.toFixed(2)}`}
           icon={TrendingUp}
-          iconColor="text-green-600 dark:text-green-400"
+          iconColor="text-green-600"
           iconBg="bg-green-500/10"
           comparison={revenueComp}
         />
@@ -66,7 +66,7 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
           label={t("itemsSold")}
           value={String(data.itemsSold)}
           icon={Package}
-          iconColor="text-blue-600 dark:text-blue-400"
+          iconColor="text-blue-600"
           iconBg="bg-blue-500/10"
           comparison={itemsComp}
         />
@@ -74,7 +74,7 @@ export function SalesAnalytics({ data }: { data: SalesAnalyticsData }) {
           label={t("avgSalePrice")}
           value={`€${data.avgSalePrice.toFixed(2)}`}
           icon={Receipt}
-          iconColor="text-purple-600 dark:text-purple-400"
+          iconColor="text-purple-600"
           iconBg="bg-purple-500/10"
           comparison={avgComp}
         />

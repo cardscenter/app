@@ -96,9 +96,9 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
     : null;
 
   const statusColor =
-    bp.status === "ACCEPTED" ? "text-green-600 dark:text-green-400" :
+    bp.status === "ACCEPTED" ? "text-green-600" :
     bp.status === "REJECTED" || bp.status === "WITHDRAWN" || bp.status === "EXPIRED" ? "text-red-500" :
-    "text-yellow-600 dark:text-yellow-400";
+    "text-yellow-600";
 
   const statusIcon =
     bp.status === "ACCEPTED" ? <Check className="h-4 w-4" /> :
@@ -145,7 +145,7 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
         {/* Verzekerd-verzonden badge — alleen bij SHIP-bundles waar
             buyer dit heeft aangevinkt (Fase 27.71) */}
         {bp.deliveryMethod === "SHIP" && bp.requestInsuredShipping && (
-          <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+          <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
             <ShieldCheck className="h-3 w-3" />
             {t("requestInsured.label")}
           </div>
@@ -157,17 +157,17 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
         </div>
 
         {bp.paymentStatus === "AWAITING_PAYMENT" && remainingPaymentDays !== null && (
-          <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-2">
+          <p className="text-xs text-yellow-600 mb-2">
             {t("paymentDeadline.ship", { days: remainingPaymentDays.toString() })}
           </p>
         )}
         {bp.paymentStatus === "EXTERNAL" && remainingPickupDays !== null && (
-          <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
+          <p className="text-xs text-blue-600 mb-2">
             {t("paymentDeadline.pickup", { days: remainingPickupDays.toString() })}
           </p>
         )}
         {bp.paymentStatus === "PAID" && (
-          <p className="text-xs text-green-600 dark:text-green-400 mb-2">{t("paymentComplete")}</p>
+          <p className="text-xs text-green-600 mb-2">{t("paymentComplete")}</p>
         )}
         {bp.paymentStatus === "PAYMENT_FAILED" && (
           <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
@@ -282,13 +282,13 @@ export function BundleOfferMessage({ bundleProposal: bp, currentUserId, isOwn, s
                 </div>
                 <p className="mb-3 text-sm text-muted-foreground">{t("acceptShipping.hint")}</p>
                 {insuredRequired && (
-                  <div className="mb-3 flex items-center gap-2 rounded-md bg-emerald-50 p-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                  <div className="mb-3 flex items-center gap-2 rounded-md bg-emerald-50 p-2 text-xs text-emerald-800">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     {t("acceptShipping.insuredBadge")}
                   </div>
                 )}
                 {visible.length === 0 ? (
-                  <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                  <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
                     {t.rich("acceptShipping.noMethods", {
                       link: (chunks) => (
                         <Link href="/dashboard/verzending" className="font-medium underline-offset-2 hover:underline">

@@ -43,14 +43,14 @@ export default async function PendingFeesPage({
           {open.length > 0 && (
             <section>
               <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-                <AlertCircle className="h-5 w-5 text-amber-700 dark:text-amber-400" />
+                <AlertCircle className="h-5 w-5 text-amber-700" />
                 Open ({open.length}) — €{openTotal.toFixed(2)}
               </h2>
               <div className="space-y-2">
                 {open.map((fee) => (
                   <div
                     key={fee.id}
-                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30"
+                    className="rounded-xl border border-amber-200 bg-amber-50 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -82,7 +82,7 @@ export default async function PendingFeesPage({
           {settled.length > 0 && (
             <section>
               <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-                <CheckCircle2 className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+                <CheckCircle2 className="h-5 w-5 text-emerald-700" />
                 Afgelost ({settled.length})
               </h2>
               <div className="space-y-2">

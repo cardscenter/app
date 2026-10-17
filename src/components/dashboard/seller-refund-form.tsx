@@ -60,7 +60,7 @@ export function SellerRefundForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 transition-colors hover:bg-orange-100 dark:border-orange-900 dark:bg-orange-950/50 dark:text-orange-400 dark:hover:bg-orange-950"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 transition-colors hover:bg-orange-100"
       >
         <RotateCcw className="h-4 w-4" />
         {t("refundButton")}
@@ -69,14 +69,14 @@ export function SellerRefundForm({
   }
 
   return (
-    <div className="rounded-lg border border-orange-200 bg-orange-50/50 p-4 dark:border-orange-900 dark:bg-orange-950/20">
+    <div className="rounded-lg border border-orange-200 bg-orange-50/50 p-4">
       <h4 className="text-sm font-semibold text-foreground">{t("refundTitle")}</h4>
       <p className="mt-1 text-xs text-muted-foreground">{t("refundDescription")}</p>
 
       <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span>{t("refundMaxAmount", { amount: maxRefundable.toFixed(2) })}</span>
         {refundedAmount > 0 && (
-          <span className="text-orange-600 dark:text-orange-400">
+          <span className="text-orange-600">
             {t("refundAlreadyRefunded", { amount: refundedAmount.toFixed(2) })}
           </span>
         )}
@@ -140,12 +140,12 @@ export function SellerRefundForm({
           </button>
         </div>
       ) : (
-        <div className="mt-4 rounded-lg border border-orange-300 bg-orange-100 p-3 dark:border-orange-800 dark:bg-orange-950/40">
-          <p className="text-sm text-orange-800 dark:text-orange-300">
+        <div className="mt-4 rounded-lg border border-orange-300 bg-orange-100 p-3">
+          <p className="text-sm text-orange-800">
             {t("refundConfirm", { amount: refundAmount.toFixed(2), buyer: buyerName })}
           </p>
           {reason.trim() && (
-            <p className="mt-1.5 text-xs text-orange-700/80 dark:text-orange-400/80 italic">
+            <p className="mt-1.5 text-xs text-orange-700/80 italic">
               &ldquo;{reason.trim()}&rdquo;
             </p>
           )}

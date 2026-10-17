@@ -237,7 +237,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
           <AuctionFormProgress completed={completedSteps} />
           {/* Error message */}
           {actionState?.error && (
-            <div className="glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+            <div className="glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600">
               {actionState.error}
             </div>
           )}
@@ -322,7 +322,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
                     {userCity}
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                     {t("pickupLocationMissing")}
                   </div>
                 )}
@@ -399,13 +399,13 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
         <div className="glass rounded-2xl p-4 flex flex-col items-center gap-3 shadow-lg sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
             {missing.length === 0 ? (
-              <span className="text-sm text-emerald-700 dark:text-emerald-300">{t("readyToPreview")}</span>
+              <span className="text-sm text-emerald-700">{t("readyToPreview")}</span>
             ) : (
               <>
                 {missing.map((m, i) => (
                   <span
                     key={m.key}
-                    className={`items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 ${
+                    className={`items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ${
                       i === 0 ? "inline-flex" : "hidden sm:inline-flex"
                     }`}
                   >
@@ -415,7 +415,7 @@ export function MultiStepAuctionForm({ shippingMethods, userBalance, accountType
                 {/* Mobile-only "+N meer" counter zodat seller weet dat er nog
                     open errors zijn buiten de eerste. */}
                 {missing.length > 1 && (
-                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 sm:hidden">
+                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-700 sm:hidden">
                     +{missing.length - 1}
                   </span>
                 )}

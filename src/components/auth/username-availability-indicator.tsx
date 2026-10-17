@@ -79,7 +79,7 @@ export function UsernameAvailabilityIndicator({
 
   if (status.kind === "available") {
     return (
-      <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+      <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
         <Check className="size-3.5" />
         {t("usernameAvailable")}
       </p>
@@ -87,7 +87,7 @@ export function UsernameAvailabilityIndicator({
   }
 
   return (
-    <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
+    <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
       <X className="size-3.5" />
       {t(REASON_KEY[status.reason])}
     </p>

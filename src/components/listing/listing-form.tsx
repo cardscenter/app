@@ -30,7 +30,7 @@ export function ListingForm({ seriesList }: { seriesList: SeriesWithSets[] }) {
   return (
     <form action={formAction} className="space-y-6">
       {state?.error && (
-        <div className="glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <div className="glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600">
           {state.error}
         </div>
       )}

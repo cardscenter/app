@@ -36,7 +36,7 @@ export function TrustBadges({
     <span className={`inline-flex flex-wrap items-center gap-1 ${className}`}>
       {isVerified && (
         <span
-          className={`inline-flex items-center gap-1 rounded-full bg-sky-100 ${padding} ${textSize} font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300`}
+          className={`inline-flex items-center gap-1 rounded-full bg-sky-100 ${padding} ${textSize} font-semibold text-sky-700`}
           title="Identiteit geverifieerd"
         >
           <ShieldCheck className={iconSize} />
@@ -45,7 +45,7 @@ export function TrustBadges({
       )}
       {isIbanVerified && (
         <span
-          className={`inline-flex items-center gap-1 rounded-full bg-emerald-100 ${padding} ${textSize} font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300`}
+          className={`inline-flex items-center gap-1 rounded-full bg-emerald-100 ${padding} ${textSize} font-semibold text-emerald-700`}
           title="Rekeningnummer geverifieerd"
         >
           <Landmark className={iconSize} />
@@ -54,7 +54,7 @@ export function TrustBadges({
       )}
       {isAddressVerified && (
         <span
-          className={`inline-flex items-center gap-1 rounded-full bg-violet-100 ${padding} ${textSize} font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-300`}
+          className={`inline-flex items-center gap-1 rounded-full bg-violet-100 ${padding} ${textSize} font-semibold text-violet-700`}
           title="Adres geverifieerd"
         >
           <MapPin className={iconSize} />

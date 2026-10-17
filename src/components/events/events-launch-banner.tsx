@@ -35,9 +35,9 @@ export function EventsLaunchBanner({ tab }: { tab: "beurzen" | "events" }) {
   if (!visible) return null;
 
   return (
-    <div className="relative mt-5 flex flex-col gap-3 rounded-xl border border-indigo-300 bg-indigo-50 p-4 pr-10 dark:border-indigo-700/60 dark:bg-indigo-950/40 sm:flex-row sm:items-center sm:justify-between">
+    <div className="relative mt-5 flex flex-col gap-3 rounded-xl border border-indigo-300 bg-indigo-50 p-4 pr-10 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-300">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-indigo-700">
           <PartyPopper className="h-5 w-5" />
         </span>
         <div>
@@ -58,7 +58,7 @@ export function EventsLaunchBanner({ tab }: { tab: "beurzen" | "events" }) {
       <button
         type="button"
         onClick={dismiss}
-        className="absolute right-2.5 top-2.5 rounded-full p-1 text-muted-foreground transition hover:bg-indigo-100 hover:text-foreground dark:hover:bg-indigo-900/50"
+        className="absolute right-2.5 top-2.5 rounded-full p-1 text-muted-foreground transition hover:bg-indigo-100 hover:text-foreground"
         aria-label="Sluit melding"
       >
         <X className="h-4 w-4" />

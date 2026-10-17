@@ -167,7 +167,7 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
                 </button>
               )}
               {hasRejectedCards && (
-                <p className="mt-3 text-center text-xs text-amber-600 dark:text-amber-400">
+                <p className="mt-3 text-center text-xs text-amber-600">
                   Verwijder eerst de niet-Near Mint kaarten om door te gaan
                 </p>
               )}
@@ -175,18 +175,18 @@ export function CollectionCalculator({ defaultIban = "", defaultAccountHolder = 
                 href="/verkopen/bulk"
                 className="mt-4 flex items-center gap-3 rounded-[12px] bg-[var(--pastel-yellow)] p-4 transition-opacity hover:opacity-90"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800">
                   <Package className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                  <p className="text-sm font-medium text-amber-900">
                     {t("bulkNoticeTitle")}
                   </p>
-                  <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                  <p className="text-xs text-amber-800/80">
                     {t("bulkNoticeDesc")}
                   </p>
                 </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-amber-800 dark:text-amber-300" />
+                <ArrowRight className="h-4 w-4 shrink-0 text-amber-800" />
               </Link>
             </div>
           </div>

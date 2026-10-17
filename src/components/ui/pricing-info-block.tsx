@@ -52,8 +52,8 @@ export function PricingInfoBlock({ pricing, variant = "compact", className, labe
         {delta7 && (
           <div className={cn(
             "flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold",
-            delta7.dir === "up" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-            delta7.dir === "down" && "bg-red-500/10 text-red-600 dark:text-red-400",
+            delta7.dir === "up" && "bg-emerald-500/10 text-emerald-600",
+            delta7.dir === "down" && "bg-red-500/10 text-red-600",
             delta7.dir === "flat" && "bg-muted text-muted-foreground",
           )}>
             {delta7.dir === "up" && <TrendingUp className="size-3" />}

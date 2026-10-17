@@ -126,7 +126,7 @@ export function ShipBundleForm({
     <div className="space-y-3">
       {/* Briefpost warning */}
       {isBriefpost && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-700">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{ts("proofPhotosHintBriefpost")}</span>
         </div>
@@ -150,7 +150,7 @@ export function ShipBundleForm({
             />
           </div>
           {showUrlWarning && (
-            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{ts("trackingNumberNotUrl")}</p>
+            <p className="mt-1 text-xs text-red-600">{ts("trackingNumberNotUrl")}</p>
           )}
           {!showUrlWarning && (
             <p className="mt-1 text-xs text-muted-foreground">{ts("trackingNumberHint")}</p>
@@ -163,11 +163,11 @@ export function ShipBundleForm({
        * ≥ €50; iedereen ziet de basis-hint. Foto's worden gemodereerd via
        * UploadContext "shipping" (claude-haiku vision check). */}
       {!isBriefpost && bundleValue !== undefined && bundleValue >= PROOF_RECOMMENDED_THRESHOLD && proofUrls.length === 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-sky-200/60 bg-sky-50/60 p-2.5 text-xs text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/30 dark:text-sky-200">
+        <div className="flex items-start gap-2 rounded-lg border border-sky-200/60 bg-sky-50/60 p-2.5 text-xs text-sky-900">
           <Camera className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div>
             <p className="font-medium">{ts("proofPromptStrongTitle")}</p>
-            <p className="mt-0.5 text-sky-800/80 dark:text-sky-300/80">
+            <p className="mt-0.5 text-sky-800/80">
               {ts("proofPromptStrongBody", { amount: bundleValue.toFixed(2) })}
             </p>
           </div>

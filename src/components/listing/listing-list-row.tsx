@@ -77,19 +77,19 @@ function relativeTime(date: Date): string {
 
 const CONDITION_COLORS: Record<string, string> = {
   Mint:
-    "bg-emerald-100 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:ring-emerald-800",
+    "bg-emerald-100 text-emerald-800 ring-emerald-200",
   "Near Mint":
-    "bg-emerald-100 text-emerald-800 ring-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:ring-emerald-800",
+    "bg-emerald-100 text-emerald-800 ring-emerald-200",
   Excellent:
-    "bg-blue-100 text-blue-800 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-blue-800",
+    "bg-blue-100 text-blue-800 ring-blue-200",
   Good:
-    "bg-blue-100 text-blue-800 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:ring-blue-800",
+    "bg-blue-100 text-blue-800 ring-blue-200",
   "Light Played":
-    "bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:ring-amber-800",
+    "bg-amber-100 text-amber-800 ring-amber-200",
   Played:
-    "bg-amber-100 text-amber-800 ring-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:ring-amber-800",
+    "bg-amber-100 text-amber-800 ring-amber-200",
   Poor:
-    "bg-rose-100 text-rose-800 ring-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:ring-rose-800",
+    "bg-rose-100 text-rose-800 ring-rose-200",
 };
 
 interface DeliveryBadgesProps {
@@ -122,7 +122,7 @@ function DeliveryBadges({
     <div className="flex flex-wrap items-center gap-1.5">
       {allowsShip && (
         <span
-          className={`inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-800 ${sizeClasses}`}
+          className={`inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset bg-sky-50 text-sky-800 ring-sky-200 ${sizeClasses}`}
         >
           <Truck className={iconSize} />
           {freeShipping
@@ -132,7 +132,7 @@ function DeliveryBadges({
       )}
       {allowsPickup && (
         <span
-          className={`inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-800 ${sizeClasses}`}
+          className={`inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset bg-amber-50 text-amber-800 ring-amber-200 ${sizeClasses}`}
         >
           <Package className={iconSize} />
           Ophalen
@@ -182,7 +182,7 @@ export function ListingListRow({
     <article
       className={`group relative flex flex-row gap-3 sm:gap-5 rounded-2xl border p-3 sm:p-4 shadow-card transition-shadow hover:shadow-card-hover ${
         isSponsored
-          ? "border-amber-300 bg-amber-50/40 dark:border-amber-800/60 dark:bg-amber-950/10"
+          ? "border-amber-300 bg-amber-50/40"
           : "border-border bg-card"
       }`}
     >
@@ -285,13 +285,13 @@ export function ListingListRow({
             <p className="text-xl font-bold text-foreground">{priceLabel}</p>
             <div className="flex shrink-0 items-center gap-1">
               {showsDirectBuy && (
-                <span className="inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-semibold text-emerald-700">
                   <Tag className="size-2.5" />
                   Direct
                 </span>
               )}
               {showsOffer && (
-                <span className="inline-flex items-center gap-0.5 rounded bg-blue-100 px-1 py-0.5 text-[9px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                <span className="inline-flex items-center gap-0.5 rounded bg-blue-100 px-1 py-0.5 text-[9px] font-semibold text-blue-700">
                   <Gavel className="size-2.5" />
                   Voorstel
                 </span>

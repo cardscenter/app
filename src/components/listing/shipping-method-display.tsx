@@ -222,7 +222,7 @@ export function ShippingMethodDisplay({
                       </div>
                       <p className="text-sm font-medium text-primary">
                         {freeShipping ? (
-                          <span className="text-green-600 dark:text-green-400">{t("free")}</span>
+                          <span className="text-green-600">{t("free")}</span>
                         ) : (
                           <>€{method.effectivePrice.toFixed(2)}</>
                         )}

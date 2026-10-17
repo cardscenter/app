@@ -304,8 +304,8 @@ export function LiveAuctionContent({
               <span
                 className={`rounded-full px-3 py-1 text-xs font-medium ${
                   (bidData.currentBid ?? 0) >= reservePrice
-                    ? "bg-success-light text-success dark:bg-green-950 dark:text-green-400"
-                    : "bg-warning-light text-warning dark:bg-yellow-950 dark:text-yellow-400"
+                    ? "bg-success-light text-success"
+                    : "bg-warning-light text-warning"
                 }`}
               >
                 {(bidData.currentBid ?? 0) >= reservePrice
@@ -325,7 +325,7 @@ export function LiveAuctionContent({
 
           {/* SCHEDULED banner — vervangt de bid-form met een wacht-uitleg */}
           {isScheduled && (
-            <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+            <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
               {t("auctionScheduledExplain")}
             </div>
           )}
@@ -333,15 +333,15 @@ export function LiveAuctionContent({
           {/* Highest bidder banner */}
           {isActive && !isOwner && currentUserId && isHighestBidder && (
             <div className="mt-4 space-y-2">
-              <div className="rounded-xl bg-green-50 px-4 py-3 text-center text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+              <div className="rounded-xl bg-green-50 px-4 py-3 text-center text-sm font-medium text-green-700">
                 {t("youAreHighestBidder")}
               </div>
               {bidData.currentBid !== null && bidData.currentBid > totalBalance && (
-                <div className="rounded-xl border border-dashed border-amber-400/60 bg-amber-50/50 px-4 py-3 dark:bg-amber-950/20">
-                  <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                <div className="rounded-xl border border-dashed border-amber-400/60 bg-amber-50/50 px-4 py-3">
+                  <p className="text-xs text-amber-600 text-center">
                     {t.rich("bidExceedsBalanceWarning", {
                       link: (chunks) => (
-                        <Link href="/dashboard/saldo" className="underline font-medium hover:text-amber-700 dark:hover:text-amber-300">
+                        <Link href="/dashboard/saldo" className="underline font-medium hover:text-amber-700">
                           {chunks}
                         </Link>
                       ),
@@ -354,7 +354,7 @@ export function LiveAuctionContent({
 
           {/* Outbid warning - only shows when user WAS highest bidder and now isn't */}
           {showOutbidWarning && (
-            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700 dark:bg-red-950/30 dark:text-red-400">
+            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700">
               {t("youAreOutbid")}
             </div>
           )}
@@ -427,7 +427,7 @@ export function LiveAuctionContent({
                       key={bid.id}
                       className={`flex items-center justify-between rounded-xl px-4 py-3 transition-all duration-300 ${
                         globalIndex === 0
-                          ? `glass bg-primary-light/50 dark:bg-primary/10 ${
+                          ? `glass bg-primary-light/50 ${
                               hasNewBid ? "ring-2 ring-primary/30" : ""
                             }`
                           : "glass-subtle"

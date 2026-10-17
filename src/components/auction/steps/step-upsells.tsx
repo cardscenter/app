@@ -139,7 +139,7 @@ export function StepUpsells({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-foreground">{t(keys.label)}</span>
-                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                       tot {ctrMultiplier}× meer klikken
                     </span>
                   </div>
@@ -202,7 +202,7 @@ export function StepUpsells({
                       )}
                     </span>
                     {isFree ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600">
                         <Gift className="h-3 w-3" />
                         Gratis
                       </span>
@@ -238,7 +238,7 @@ export function StepUpsells({
 
       {/* Free-quota notice */}
       {freeUpsellsRemaining > 0 && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700">
           <span className="inline-flex items-center gap-1.5">
             <Gift className="h-4 w-4" />
             Je hebt nog {freeQuotaLeft} van {freeUpsellsRemaining} gratis

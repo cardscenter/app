@@ -158,8 +158,8 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
                       href={`/beurzen/${e.id}`}
                       className={`flex items-center gap-1 rounded-md p-0.5 text-[10px] font-medium transition ${
                         e.featured
-                          ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-900"
-                          : "bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-200 dark:hover:bg-indigo-900"
+                          ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
+                          : "bg-indigo-50 text-indigo-800 hover:bg-indigo-100"
                       }`}
                     >
                       <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded bg-muted">
@@ -233,8 +233,8 @@ export function EventCalendarMonth({ events }: { events: EventListItem[] }) {
                         href={`/beurzen/${e.id}`}
                         className={`flex items-center gap-2.5 rounded-lg p-2 transition ${
                           e.featured
-                            ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:bg-amber-900"
-                            : "bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-200 dark:hover:bg-indigo-900"
+                            ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
+                            : "bg-indigo-50 text-indigo-800 hover:bg-indigo-100"
                         }`}
                       >
                         <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md bg-muted">

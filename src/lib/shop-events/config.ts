@@ -46,11 +46,11 @@ export type EventTypeColor = (typeof EVENT_TYPE_COLORS)[number];
 
 /** Tailwind-klassen per type-kleur (pill + kalender-stip). */
 export const EVENT_COLOR_CLASSES: Record<EventTypeColor, { pill: string; dot: string }> = {
-  blue: { pill: "border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-300", dot: "bg-blue-500" },
-  amber: { pill: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
-  emerald: { pill: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
-  violet: { pill: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300", dot: "bg-violet-500" },
-  rose: { pill: "border-rose-500/25 bg-rose-500/10 text-rose-700 dark:text-rose-300", dot: "bg-rose-500" },
+  blue: { pill: "border-blue-500/25 bg-blue-500/10 text-blue-700", dot: "bg-blue-500" },
+  amber: { pill: "border-amber-500/25 bg-amber-500/10 text-amber-700", dot: "bg-amber-500" },
+  emerald: { pill: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700", dot: "bg-emerald-500" },
+  violet: { pill: "border-violet-500/25 bg-violet-500/10 text-violet-700", dot: "bg-violet-500" },
+  rose: { pill: "border-rose-500/25 bg-rose-500/10 text-rose-700", dot: "bg-rose-500" },
   slate: { pill: "border-border bg-muted text-muted-foreground", dot: "bg-slate-500" },
 };
 

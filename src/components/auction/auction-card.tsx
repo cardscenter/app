@@ -119,7 +119,7 @@ export function AuctionCard({ auction, sponsored, buyer, initialWatched = false,
                 {typeLabel}
               </span>
               {sponsored && (
-                <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
+                <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[10px] font-medium text-yellow-600">
                   {t("sponsored")}
                 </span>
               )}
@@ -143,14 +143,14 @@ export function AuctionCard({ auction, sponsored, buyer, initialWatched = false,
           </div>
           <div className="text-right">
             {auction._count && (
-              <p className={`text-xs ${isHot ? "font-medium text-orange-600 dark:text-orange-400" : "text-muted-foreground"}`}>
+              <p className={`text-xs ${isHot ? "font-medium text-orange-600" : "text-muted-foreground"}`}>
                 {isHot && <span className="mr-0.5">🔥</span>}
                 {bidCount}{" "}
                 {bidCount === 1 ? "bod" : "biedingen"}
               </p>
             )}
             {auction.buyNowPrice != null && auction.buyNowPrice > 0 && (
-              <span className="mt-1 inline-block rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+              <span className="mt-1 inline-block rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
                 {t("buyNow")} &euro;{auction.buyNowPrice.toFixed(2)}
               </span>
             )}

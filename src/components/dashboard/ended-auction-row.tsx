@@ -30,42 +30,42 @@ interface EndedAuctionRowProps {
 const STATUS_META: Record<EndedAuctionStatus, { label: string; tone: string; Icon: typeof Trophy }> = {
   ENDED_SOLD: {
     label: "Verkocht",
-    tone: "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30",
+    tone: "bg-emerald-100 text-emerald-700 ring-emerald-200",
     Icon: Trophy,
   },
   BOUGHT_NOW: {
     label: "Direct gekocht",
-    tone: "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30",
+    tone: "bg-emerald-100 text-emerald-700 ring-emerald-200",
     Icon: Trophy,
   },
   ENDED_RESERVE_NOT_MET: {
     label: "Reserve niet gehaald",
-    tone: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
+    tone: "bg-amber-100 text-amber-700 ring-amber-200",
     Icon: AlertCircle,
   },
   ENDED_NO_BIDS: {
     label: "Geen biedingen",
-    tone: "bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/30",
+    tone: "bg-slate-100 text-slate-600 ring-slate-200",
     Icon: Clock,
   },
   CANCELLED: {
     label: "Geannuleerd",
-    tone: "bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:ring-slate-500/30",
+    tone: "bg-slate-100 text-slate-600 ring-slate-200",
     Icon: X,
   },
   AWAITING_PAYMENT: {
     label: "Wacht op betaling",
-    tone: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
+    tone: "bg-amber-100 text-amber-700 ring-amber-200",
     Icon: Clock,
   },
   AWAITING_RUNNER_UP_DECISION: {
     label: "Wacht op runner-up",
-    tone: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30",
+    tone: "bg-amber-100 text-amber-700 ring-amber-200",
     Icon: Clock,
   },
   PAYMENT_FAILED: {
     label: "Betaling mislukt",
-    tone: "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30",
+    tone: "bg-rose-100 text-rose-700 ring-rose-200",
     Icon: X,
   },
 };

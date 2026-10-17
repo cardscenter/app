@@ -148,7 +148,7 @@ export function BidSection({
   return (
     <div className="space-y-4">
       {error && (
-        <div className="glass-subtle rounded-2xl bg-red-50/50 p-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <div className="glass-subtle rounded-2xl bg-red-50/50 p-3 text-sm text-red-600">
           <p>{translateError(error)}</p>
           {error === "VERIFIED_REQUIRED_FOR_HIGH_BID" && (
             <Link
@@ -195,16 +195,16 @@ export function BidSection({
 
       {/* No balance: deposit prompt */}
       {!isHighestBidder && maxBid !== undefined && maxBid < minimumBid && (
-        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 p-4 text-sm space-y-2">
-          <p className="font-medium text-amber-700 dark:text-amber-400">
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-sm space-y-2">
+          <p className="font-medium text-amber-700">
             {t("noBalanceTitle")}
           </p>
-          <p className="text-xs text-amber-600 dark:text-amber-400/80">
+          <p className="text-xs text-amber-600">
             {t("noBalanceMessage")}
           </p>
           <Link
             href="/dashboard/saldo"
-            className="inline-block mt-1 text-xs font-medium text-amber-700 dark:text-amber-400 underline hover:no-underline"
+            className="inline-block mt-1 text-xs font-medium text-amber-700 underline hover:no-underline"
           >
             {t("topUpBalance")}
           </Link>
@@ -272,7 +272,7 @@ export function BidSection({
             />
           </div>
           {bidWarning && (
-            <p className="mt-2 text-xs text-red-500 dark:text-red-400">
+            <p className="mt-2 text-xs text-red-500">
               {bidWarning}
             </p>
           )}

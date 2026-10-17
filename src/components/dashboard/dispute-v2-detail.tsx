@@ -191,11 +191,11 @@ function phaseInfo(role: "buyer" | "seller" | "admin", d: DisputeV2DetailData): 
 }
 
 const TONE_BOX: Record<StatusTone, string> = {
-  warning: "border-amber-300/60 bg-amber-50/60 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100",
-  info: "border-sky-300/60 bg-sky-50/60 text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-100",
-  primary: "border-violet-300/60 bg-violet-50/60 text-violet-900 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-100",
-  danger: "border-rose-300/60 bg-rose-50/60 text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-100",
-  success: "border-emerald-300/60 bg-emerald-50/60 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100",
+  warning: "border-amber-300/60 bg-amber-50/60 text-amber-900",
+  info: "border-sky-300/60 bg-sky-50/60 text-sky-900",
+  primary: "border-violet-300/60 bg-violet-50/60 text-violet-900",
+  danger: "border-rose-300/60 bg-rose-50/60 text-rose-900",
+  success: "border-emerald-300/60 bg-emerald-50/60 text-emerald-900",
   neutral: "border-border bg-muted/40 text-foreground",
 };
 
@@ -270,7 +270,7 @@ export function DisputeV2Detail({
               <span className="ml-1 text-xs text-muted-foreground">(items €{dispute.bundle.totalItemCost.toFixed(2)} + verzending €{dispute.bundle.shippingCost.toFixed(2)})</span>
             </p>
             {dispute.bundle.refundedAmount > 0 && (
-              <p className="text-xs text-emerald-700 dark:text-emerald-400">€{dispute.bundle.refundedAmount.toFixed(2)} al terugbetaald · nog €{remainingRefundable.toFixed(2)} in het geding</p>
+              <p className="text-xs text-emerald-700">€{dispute.bundle.refundedAmount.toFixed(2)} al terugbetaald · nog €{remainingRefundable.toFixed(2)} in het geding</p>
             )}
           </div>
           <div>
@@ -294,16 +294,16 @@ export function DisputeV2Detail({
         </div>
 
         {dispute.bundle.shippingProofUrls.length > 0 && (
-          <div className="mt-3 rounded-md border border-sky-200/60 bg-sky-50/40 p-3 dark:border-sky-900/40 dark:bg-sky-950/20">
-            <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">Verzendbewijs van de verkoper ({dispute.bundle.shippingProofUrls.length})</p>
+          <div className="mt-3 rounded-md border border-sky-200/60 bg-sky-50/40 p-3">
+            <p className="text-xs font-semibold text-sky-700">Verzendbewijs van de verkoper ({dispute.bundle.shippingProofUrls.length})</p>
             <PhotoStrip urls={dispute.bundle.shippingProofUrls} altPrefix="Verzendbewijs" />
           </div>
         )}
       </section>
 
       {/* Buyer's statement */}
-      <section className="rounded-dash border border-amber-200/60 bg-amber-50/40 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
-        <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+      <section className="rounded-dash border border-amber-200/60 bg-amber-50/40 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
           Koper — {dispute.buyer.displayName}
         </p>
         <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{dispute.buyerStatement}</p>
@@ -316,8 +316,8 @@ export function DisputeV2Detail({
 
       {/* Seller's response */}
       {dispute.sellerStatement ? (
-        <section className="rounded-dash border border-blue-200/60 bg-blue-50/40 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+        <section className="rounded-dash border border-blue-200/60 bg-blue-50/40 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
             Verkoper — {dispute.seller.displayName}
           </p>
           <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{dispute.sellerStatement}</p>
@@ -338,10 +338,10 @@ export function DisputeV2Detail({
 
       {/* Admin decision (visible to all when resolved) */}
       {dispute.adminNotes && (
-        <section className="rounded-dash border border-violet-200/60 bg-violet-50/40 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
+        <section className="rounded-dash border border-violet-200/60 bg-violet-50/40 p-4">
           <div className="flex items-center gap-2">
-            <Gavel className="h-4 w-4 text-violet-700 dark:text-violet-300" />
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+            <Gavel className="h-4 w-4 text-violet-700" />
+            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">
               Beslissing beheerder — {DISPUTE_V2_RESOLUTION_LABELS[dispute.resolution as DisputeV2Resolution] ?? dispute.resolution}
               {dispute.finalRefund !== null && dispute.finalRefund > 0 && <> · €{dispute.finalRefund.toFixed(2)} terugbetaald</>}
             </p>
@@ -352,15 +352,15 @@ export function DisputeV2Detail({
 
       {/* Active proposal */}
       {dispute.status === "MEDIATION" && dispute.proposedRefund !== null && (
-        <section className="rounded-dash border border-violet-300/60 bg-violet-50/50 p-4 dark:border-violet-800 dark:bg-violet-950/30">
+        <section className="rounded-dash border border-violet-300/60 bg-violet-50/50 p-4">
           <div className="flex items-center gap-2">
-            <Scale className="h-4 w-4 text-violet-700 dark:text-violet-300" />
-            <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">
+            <Scale className="h-4 w-4 text-violet-700" />
+            <p className="text-sm font-semibold text-violet-900">
               Voorstel: €{dispute.proposedRefund.toFixed(2)} terugbetaling
               {dispute.proposedRefund >= remainingRefundable - 0.005 && <span className="ml-1 text-xs font-normal">(= volledig)</span>}
             </p>
           </div>
-          <p className="mt-1 text-xs text-violet-800 dark:text-violet-300">
+          <p className="mt-1 text-xs text-violet-800">
             Voorgesteld door {dispute.proposedById === dispute.buyer.id ? dispute.buyer.displayName : dispute.seller.displayName}.
             {dispute.proposedById !== currentUserId && isParty ? " Je kunt accepteren, afwijzen of een tegenvoorstel doen." : " Wacht op antwoord van de andere partij."}
           </p>
@@ -418,12 +418,12 @@ export function DisputeV2Detail({
             const internal = e.visibility === "INTERNAL";
             const isNote = e.type === "ADMIN_NOTE";
             return (
-              <li key={e.id} className={`flex items-start gap-2 text-sm ${internal ? "rounded-md border border-dashed border-violet-300/60 bg-violet-50/30 p-2 dark:border-violet-800 dark:bg-violet-950/20" : ""}`}>
+              <li key={e.id} className={`flex items-start gap-2 text-sm ${internal ? "rounded-md border border-dashed border-violet-300/60 bg-violet-50/30 p-2" : ""}`}>
                 <span className={`mt-1.5 inline-flex h-2 w-2 shrink-0 rounded-full ${e.actorType === "ADMIN" ? "bg-violet-500" : e.actorType === "SYSTEM" ? "bg-muted-foreground/40" : e.actorType === "BUYER" ? "bg-amber-500" : "bg-sky-500"}`} />
                 <div className="min-w-0 flex-1">
                   <p className={`text-foreground ${isNote ? "whitespace-pre-wrap" : ""}`}>
                     {isNote && (
-                      <span className="mr-1.5 inline-flex items-center gap-1 rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                      <span className="mr-1.5 inline-flex items-center gap-1 rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700">
                         {internal ? <><Lock className="h-2.5 w-2.5" /> intern</> : <><MessageSquareText className="h-2.5 w-2.5" /> beheerder</>}
                       </span>
                     )}
@@ -488,9 +488,9 @@ function SellerResponseForm({ disputeId, maxRefund, allowProposal }: { disputeId
   }
 
   return (
-    <section className="rounded-dash border border-sky-300/60 bg-sky-50/40 p-4 dark:border-sky-800 dark:bg-sky-950/30">
-      <p className="text-sm font-semibold text-sky-900 dark:text-sky-200">Reageer op het geschil</p>
-      <p className="mt-1 text-xs text-sky-800 dark:text-sky-300">
+    <section className="rounded-dash border border-sky-300/60 bg-sky-50/40 p-4">
+      <p className="text-sm font-semibold text-sky-900">Reageer op het geschil</p>
+      <p className="mt-1 text-xs text-sky-800">
         {allowProposal
           ? `Reageer binnen ${DISPUTE_V2_RESPONSE_DAYS} dagen — anders krijgt de koper automatisch het volledige bedrag terug. Foto's van het item vóór verzending en van de verpakking helpen enorm.`
           : "Het geschil ligt al bij de beheerder, maar je verklaring en foto's worden meegewogen."}
@@ -711,10 +711,10 @@ function AddEvidenceButton({ disputeId, existingCount, onUploaded }: { disputeId
 
 function AdminPanel({ dispute, maxRefund, isOpen }: { dispute: DisputeV2DetailData; maxRefund: number; isOpen: boolean }) {
   return (
-    <section className="space-y-4 rounded-dash border border-violet-300/60 bg-violet-50/30 p-4 dark:border-violet-800 dark:bg-violet-950/20">
+    <section className="space-y-4 rounded-dash border border-violet-300/60 bg-violet-50/30 p-4">
       <div className="flex items-center gap-2">
-        <ShieldCheck className="h-4 w-4 text-violet-700 dark:text-violet-300" />
-        <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">Beheerder</p>
+        <ShieldCheck className="h-4 w-4 text-violet-700" />
+        <p className="text-sm font-semibold text-violet-900">Beheerder</p>
       </div>
 
       {isOpen && dispute.status !== "ESCALATED" && <TakeOverButton disputeId={dispute.id} />}
@@ -837,7 +837,7 @@ function AdminResolveForm({ disputeId, maxRefund, fundingSource, status }: { dis
   return (
     <div className="rounded-md border border-border bg-card p-3">
       <div className="flex items-center gap-2">
-        <Gavel className="h-4 w-4 text-violet-700 dark:text-violet-300" />
+        <Gavel className="h-4 w-4 text-violet-700" />
         <p className="text-sm font-medium text-foreground">Beslissen{status !== "ESCALATED" ? " (neemt het geschil direct over)" : ""}</p>
       </div>
       <div className="mt-3">

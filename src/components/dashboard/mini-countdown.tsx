@@ -37,7 +37,7 @@ export function MiniCountdown({ endTime, urgent }: { endTime: Date; urgent?: boo
   const isUrgent = urgent || (parts.d === 0 && parts.h < 1);
 
   return (
-    <span className={`font-mono tabular-nums ${isUrgent ? "text-rose-600 dark:text-rose-400" : ""}`}>
+    <span className={`font-mono tabular-nums ${isUrgent ? "text-rose-600" : ""}`}>
       {parts.d > 0 && <>{parts.d}d </>}
       {String(parts.h).padStart(2, "0")}u {String(parts.m).padStart(2, "0")}m
       {showSeconds && <> {String(parts.s).padStart(2, "0")}s</>}

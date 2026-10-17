@@ -80,7 +80,7 @@ export function BidConfirmationModal({
         </div>
 
         {isFirstBid && !isBuyNow && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-700 dark:text-sky-400">
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-700">
             <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <span>
               Dit is je eerste bod op deze veiling. We tonen je éénmaal het overzicht — bij volgende bids gaat het direct.
@@ -132,7 +132,7 @@ export function BidConfirmationModal({
         </p>
 
         {insufficient && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-600 dark:text-rose-400">
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-600">
             <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <span>Onvoldoende saldo voor de reserve. Top je saldo op of plaats een lager bod.</span>
           </div>
@@ -179,7 +179,7 @@ function Row({
       <span className={muted ? "text-muted-foreground" : "text-foreground"}>{label}</span>
       <span
         className={`tabular-nums ${
-          bold ? "font-bold text-foreground" : danger ? "font-semibold text-rose-600 dark:text-rose-400" : "text-foreground"
+          bold ? "font-bold text-foreground" : danger ? "font-semibold text-rose-600" : "text-foreground"
         }`}
       >
         {value}

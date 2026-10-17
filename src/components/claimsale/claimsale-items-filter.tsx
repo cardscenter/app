@@ -350,7 +350,7 @@ export function ClaimsaleItemsFilter({
                         <button
                           onClick={() => handleDeleteItem(item.id)}
                           disabled={deletingItemId === item.id}
-                          className="rounded-md p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                          className="rounded-md p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -360,7 +360,7 @@ export function ClaimsaleItemsFilter({
                     {item.status === "AVAILABLE" && isLive && !isOwner && hasSession ? (
                       <AddToCartButton itemId={item.id} cardName={item.cardName} />
                     ) : item.status === "CLAIMED" ? (
-                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
                         {t("claimed")}
                       </span>
                     ) : item.status === "SOLD" ? (
@@ -368,11 +368,11 @@ export function ClaimsaleItemsFilter({
                         {t("sold")}
                       </span>
                     ) : item.status === "DELETED" && isOwner ? (
-                      <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                      <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">
                         {t("deleted")}
                       </span>
                     ) : item.status !== "DELETED" ? (
-                      <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
+                      <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
                         {t("available")}
                       </span>
                     ) : null}
@@ -525,7 +525,7 @@ export function ClaimsaleItemsFilter({
                     {item.status === "AVAILABLE" && isLive && !isOwner && hasSession ? (
                       <AddToCartButton itemId={item.id} cardName={item.cardName} />
                     ) : item.status === "CLAIMED" ? (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                         {t("claimed")}
                       </span>
                     ) : item.status === "SOLD" ? (
@@ -533,11 +533,11 @@ export function ClaimsaleItemsFilter({
                         {t("sold")}
                       </span>
                     ) : item.status === "DELETED" && isOwner ? (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
                         {t("deleted")}
                       </span>
                     ) : item.status !== "DELETED" ? (
-                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                         {t("available")}
                       </span>
                     ) : null}
@@ -555,7 +555,7 @@ export function ClaimsaleItemsFilter({
                           <button
                             onClick={() => handleDeleteItem(item.id)}
                             disabled={deletingItemId === item.id}
-                            className="rounded-md p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                            className="rounded-md p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

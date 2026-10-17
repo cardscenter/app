@@ -237,7 +237,7 @@ export function MultiStepEventForm({
       {/* Linkerkolom: stepper + actieve stap + navigatie */}
       <div>
         {!emailVerified && (
-          <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+          <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
             <MailWarning className="h-4 w-4 shrink-0" />
             <span>Bevestig eerst je e-mailadres — anders kun je dit evenement niet publiceren.</span>
             <Link href="/dashboard" className="font-semibold underline underline-offset-2">Naar dashboard</Link>
@@ -263,7 +263,7 @@ export function MultiStepEventForm({
                     current
                       ? "bg-primary text-primary-foreground"
                       : done
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                        ? "bg-emerald-100 text-emerald-700"
                         : reachable
                           ? "bg-muted text-muted-foreground hover:bg-muted/70"
                           : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
@@ -278,16 +278,16 @@ export function MultiStepEventForm({
         </div>
 
         {duplicates && (
-          <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/40">
-            <p className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-200">
+          <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <p className="flex items-center gap-2 font-semibold text-amber-800">
               <AlertTriangle className="h-4 w-4" /> Mogelijk al bestaand evenement
             </p>
-            <ul className="mt-2 space-y-1 text-sm text-amber-700 dark:text-amber-300">
+            <ul className="mt-2 space-y-1 text-sm text-amber-700">
               {duplicates.map((d) => (
                 <li key={d.id}>• {d.title} — {d.city} ({new Date(d.startTime).toLocaleDateString("nl-NL")})</li>
               ))}
             </ul>
-            <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">Is dit een ander evenement? Dan kun je hieronder toch publiceren.</p>
+            <p className="mt-2 text-sm text-amber-700">Is dit een ander evenement? Dan kun je hieronder toch publiceren.</p>
           </div>
         )}
 

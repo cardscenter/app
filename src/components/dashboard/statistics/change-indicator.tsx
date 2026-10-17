@@ -23,7 +23,7 @@ export function ChangeIndicator({ change, direction, invert = false }: ChangeInd
   return (
     <span
       className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-        isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+        isPositive ? "text-green-600" : "text-red-600"
       }`}
     >
       {direction === "up" ? (

@@ -171,7 +171,7 @@ export function ClaimsalePreview({
       </div>
 
       {error && (
-        <div className="mb-6 glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <div className="mb-6 glass-subtle rounded-2xl bg-red-50/50 p-4 text-sm text-red-600">
           {error}
         </div>
       )}
@@ -245,7 +245,7 @@ export function ClaimsalePreview({
           {/* Identiteit */}
           <div className="space-y-4">
             <div>
-              <span className="rounded-full bg-primary-light px-2.5 py-0.5 text-xs font-medium text-primary dark:bg-red-950 dark:text-red-400">
+              <span className="rounded-full bg-primary-light px-2.5 py-0.5 text-xs font-medium text-primary">
                 {form.type === "CARDS" ? t("typeCards") : t("typeItems")}
               </span>
               <h1 className="mt-2 text-2xl font-bold text-foreground">
@@ -338,22 +338,22 @@ export function ClaimsalePreview({
           <div
             className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${
               scheduled
-                ? "border-amber-300 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/20"
-                : "border-emerald-300 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-950/20"
+                ? "border-amber-300 bg-amber-50"
+                : "border-emerald-300 bg-emerald-50"
             }`}
           >
             <Clock
               className={`mt-0.5 h-4 w-4 shrink-0 ${
                 scheduled
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-emerald-600 dark:text-emerald-400"
+                  ? "text-amber-600"
+                  : "text-emerald-600"
               }`}
             />
             <p
               className={
                 scheduled
-                  ? "text-amber-800 dark:text-amber-300"
-                  : "text-emerald-800 dark:text-emerald-300"
+                  ? "text-amber-800"
+                  : "text-emerald-800"
               }
             >
               {scheduled
@@ -492,7 +492,7 @@ function PromotionCostBlock({
                 </div>
               </div>
               <span
-                className={`font-medium ${isFree ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}
+                className={`font-medium ${isFree ? "text-emerald-600" : "text-foreground"}`}
               >
                 {formatPrice(cost)}
               </span>

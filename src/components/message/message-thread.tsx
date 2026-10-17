@@ -563,7 +563,7 @@ export function MessageThread({
       {pickupCodeWarning && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4">
           <div className="w-full max-w-md rounded-dash border border-red-500/40 bg-card p-5 shadow-2xl">
-            <h3 className="flex items-center gap-2 text-base font-bold text-red-700 dark:text-red-300">
+            <h3 className="flex items-center gap-2 text-base font-bold text-red-700">
               <AlertTriangle className="size-5 shrink-0" />
               {t("pickupCodeWarning.title")}
             </h3>

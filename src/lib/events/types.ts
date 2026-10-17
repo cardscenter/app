@@ -46,11 +46,11 @@ export function isEventType(value: string): value is EventType {
 
 // Per-type accentkleur voor pills (Tailwind statische strings).
 export const EVENT_TYPE_PILL_CLASSES: Record<EventType, string> = {
-  BEURS: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
-  TRADE_NIGHT: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
-  OP_TOERNOOI: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  RELEASE_EVENT: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-  MEETUP: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+  BEURS: "bg-indigo-100 text-indigo-700",
+  TRADE_NIGHT: "bg-violet-100 text-violet-700",
+  OP_TOERNOOI: "bg-amber-100 text-amber-700",
+  RELEASE_EVENT: "bg-emerald-100 text-emerald-700",
+  MEETUP: "bg-sky-100 text-sky-700",
 };
 
 // Event-status (= publicatie-/approval-status).

@@ -73,7 +73,7 @@ export function SellerPerformance({ data }: { data: SellerPerformanceData }) {
           label={t("avgTimeToShip")}
           value={data.avgShipDays > 0 ? `${data.avgShipDays.toFixed(1)} ${t("days")}` : "-"}
           icon={Truck}
-          iconColor="text-blue-600 dark:text-blue-400"
+          iconColor="text-blue-600"
           iconBg="bg-blue-500/10"
           comparison={{ ...shipComp, invert: true }}
         />
@@ -81,7 +81,7 @@ export function SellerPerformance({ data }: { data: SellerPerformanceData }) {
           label={t("avgDeliveryTime")}
           value={data.avgDeliveryDays > 0 ? `${data.avgDeliveryDays.toFixed(1)} ${t("days")}` : "-"}
           icon={Clock}
-          iconColor="text-amber-600 dark:text-amber-400"
+          iconColor="text-amber-600"
           iconBg="bg-amber-500/10"
           comparison={{ ...deliveryComp, invert: true }}
         />
@@ -89,7 +89,7 @@ export function SellerPerformance({ data }: { data: SellerPerformanceData }) {
           label={t("overallRating")}
           value={data.overallRating > 0 ? `${data.overallRating.toFixed(1)} / 5` : "-"}
           icon={Star}
-          iconColor="text-yellow-600 dark:text-yellow-400"
+          iconColor="text-yellow-600"
           iconBg="bg-yellow-500/10"
           comparison={ratingComp}
         />
