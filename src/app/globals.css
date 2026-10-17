@@ -63,9 +63,9 @@
   --sidebar-border: #2e3a47;
   --sidebar-ring: #3b82f6;
 
-  /* Card-elevation shadows (Fase 26) */
-  --shadow-card:       0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.05);
-  --shadow-card-hover: 0 4px 8px -2px rgb(15 23 42 / 0.06), 0 2px 4px -1px rgb(15 23 42 / 0.04);
+  /* Kaartschaduw: zacht, zonder rand (= SHADOW / SHADOW_HOVER in tile-styles.ts) */
+  --shadow-card:       0 2px 8px 0 rgba(32, 32, 32, 0.08);
+  --shadow-card-hover: 0 18px 40px -24px rgba(32, 32, 32, 0.35);
 
   /* ── Design-pass 2026-10 (Ploy-stijl) ──
      Pastels voor panelen/pillen + inkt-tinten voor tekst op die pastels. */
@@ -161,9 +161,9 @@
   --sidebar-border: #2e3a47;
   --sidebar-ring: #3b82f6;
 
-  /* Card-elevation shadows — diepere variant voor dark-mode */
-  --shadow-card:       0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.25);
-  --shadow-card-hover: 0 4px 8px -2px rgb(0 0 0 / 0.4), 0 2px 4px -1px rgb(0 0 0 / 0.3);
+  /* Kaartschaduw binnen de donkere zijbalk: geen. */
+  --shadow-card:       none;
+  --shadow-card-hover: none;
 }
 
 @theme inline {
@@ -420,167 +420,68 @@ body {
   }
 }
 
-/* ── Dashboard-kaart (TailAdmin-stijl, sept 2026) ──
-   Dé kaart voor /dashboard/*: vlak, 6px radius, 1px rand, nauwelijks schaduw.
-   Eén bron zodat radius/schaduw later in één regel te tunen zijn. */
+/* ── Kaarten en velden (design-pass, licht-only) ──
+   Eén kaarttaal voor de hele site: wit, 12px radius, zachte schaduw zonder
+   rand (zelfde als `CARD` in src/components/ploy/tile-styles.ts). De oude
+   class-namen (`glass`, `glass-subtle`, `glass-nav`, `glass-soft-card`) blijven
+   bestaan zodat oudere componenten meteen goed renderen, maar nieuwe code
+   gebruikt `dash-card` (dashboard) of de ploy-bouwstenen. Zie docs/design/DESIGN.md. */
 @utility dash-card {
   border-radius: var(--radius-dash);
   background: var(--card);
-  box-shadow: 0 2px 8px 0 var(--cc-border-subtle);
-}
-.dark .dash-card {
-  box-shadow: none;
-}
-
-/* ── Card / Panel Styling ──
-   Fase 26: light-mode = solide card-look (page-bg is grijs, dus opake witte
-   cards geven beste depth-cue). Dark-mode behoudt het glass-effect. */
-
-/* Main card/panel surface */
-.glass {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
   box-shadow: var(--shadow-card);
 }
 
-/* ── Glass-Soft Card (drijvende cards voor homepage marketing-secties)
-   Geen border, alleen subtiele shadow + 1px ring voor definitie.
-   Wordt op `bg-card` of `bg-background` parents geplaatst (Fase 36 ritme). */
-
+.glass,
+.glass-nav,
 .glass-soft-card {
   background: var(--card);
-  border-radius: 1.25rem;
+  border-radius: var(--radius-dash);
   box-shadow: var(--shadow-card);
-  /* Hairline ring ipv border voor schoner randje */
-  outline: 1px solid rgba(15, 23, 42, 0.04);
-  outline-offset: -1px;
-  transition: box-shadow 200ms ease, transform 200ms ease, outline-color 200ms ease;
+}
+.glass-soft-card {
+  transition: box-shadow 200ms ease, transform 200ms ease;
 }
 .glass-soft-card:hover {
   box-shadow: var(--shadow-card-hover);
-  outline-color: rgba(15, 23, 42, 0.08);
   transform: translateY(-1px);
 }
-.dark .glass-soft-card {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  outline: 1px solid rgba(148, 163, 184, 0.1);
-  outline-offset: -1px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-}
-.dark .glass-soft-card:hover {
-  outline-color: rgba(148, 163, 184, 0.2);
-}
 
-/* Nested panel binnen een glass-soft-card (zoals "134,536 mi" boxen in UniteCar) */
-.glass-soft-nested {
-  background: rgba(15, 23, 42, 0.025);
-  border-radius: 0.75rem;
-}
-.dark .glass-soft-nested {
-  background: rgba(15, 23, 42, 0.4);
-}
-
-.dark .glass {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-}
-
-.glass-sponsored {
-  border: 1px solid rgba(250, 204, 21, 0.5);
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.12), var(--shadow-card);
-}
-
-.dark .glass-sponsored {
-  border: 1px solid rgba(250, 204, 21, 0.3);
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.1), 0 4px 30px rgba(0, 0, 0, 0.2);
-}
-
-/* Subtle card — nested panels (panel-in-card) */
+/* Rustig vlak (lijsten, nested panelen): wit met dunne rand, geen schaduw.
+   Werkt zowel op de grijze pagina als binnen een witte kaart. */
 .glass-subtle {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: 10px;
+}
+.glass-soft-nested {
+  background: var(--background);
+  border-radius: 10px;
 }
 
-.dark .glass-subtle {
-  background: rgba(30, 41, 59, 0.35);
-  backdrop-filter: blur(10px) saturate(150%);
-  -webkit-backdrop-filter: blur(10px) saturate(150%);
-  border: 1px solid rgba(148, 163, 184, 0.08);
+/* Uitgelicht (gesponsord): pastel-gele rand. */
+.glass-sponsored,
+.glass-sponsored-glow {
+  box-shadow: 0 0 0 2px var(--pastel-yellow), var(--shadow-card);
 }
 
-/* Nav-style card — header/sidebar containers */
-.glass-nav {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-card);
-}
-
-.dark .glass-nav {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(20px) saturate(200%);
-  -webkit-backdrop-filter: blur(20px) saturate(200%);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
-}
-
-/* Form-field input style */
+/* Invoerveld: wit, 1px rand, 10px radius, donkere rand bij focus (= `INPUT` in tile-styles). */
 .glass-input {
-  background: var(--card);
+  background: #fff;
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  transition: all 0.2s ease;
+  border-radius: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-
 .glass-input:focus {
-  background: var(--card);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(242, 32, 43, 0.12);
+  border-color: var(--foreground);
+  outline: none;
 }
 
-.dark .glass-input {
-  background: rgba(30, 41, 59, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-color: rgba(51, 65, 85, 0.6);
-}
-
-.dark .glass-input:focus {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-/* Gradient section backgrounds — Fase 26: neutrale grey i.p.v. blauw-tinted */
-.section-gradient {
-  background: linear-gradient(135deg, #f4f4f4 0%, #fafafa 50%, #f4f4f4 100%);
-  background-size: 200% 200%;
-  animation: gradient-shift 8s ease infinite;
-}
-
-.dark .section-gradient {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-  background-size: 200% 200%;
-  animation: gradient-shift 8s ease infinite;
-}
-
+/* Oude sectie-achtergronden (alleen nog in de legacy marketing-homepage achter
+   de handel-flags): vlak, geen animatie meer. */
+.section-gradient,
 .section-gradient-alt {
-  background: linear-gradient(135deg, #fafafa 0%, #f4f4f4 50%, #fafafa 100%);
-  background-size: 200% 200%;
-  animation: gradient-shift 12s ease infinite;
-}
-
-.dark .section-gradient-alt {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 30%, #172554 70%, #1e293b 100%);
-  background-size: 200% 200%;
-  animation: gradient-shift 12s ease infinite;
+  background: var(--background);
 }
 
 /* ── Skeleton Loading ── */
@@ -592,18 +493,7 @@ body {
   border-radius: 0.5rem;
 }
 
-/* ── Sponsored Glow ── */
 
-.glass-sponsored-glow {
-  border: 1px solid rgba(250, 204, 21, 0.4);
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.08), 0 4px 30px rgba(0, 0, 0, 0.05);
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-.dark .glass-sponsored-glow {
-  border: 1px solid rgba(250, 204, 21, 0.3);
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.1), 0 4px 30px rgba(0, 0, 0, 0.2);
-}
 
 /* ── Section Divider ── */
 
@@ -615,10 +505,6 @@ body {
   opacity: 0.6;
 }
 
-.dark .section-divider {
-  opacity: 0.4;
-  filter: brightness(0.8);
-}
 
 /* ── Scrollbar Hide ── */
 

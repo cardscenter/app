@@ -40,10 +40,10 @@ function datePart(d: Date, locale: string, opts: Intl.DateTimeFormatOptions) {
 
 /**
  * Nieuwe homepage van de Community Hub (design-pass 2026-10, naar de
- * Ploy-referentie): eigen pil-navigatie, donkere hero met ballonnen,
- * gekleurde panelen met echte data (events, nieuws, league, spaarkaart) en
- * een eigen donkere footer. De site-header en -footer worden hier verborgen;
- * de vorige homepage staat ongewijzigd in `hub-homepage.tsx` (HOMEPAGE_LEGACY=true).
+ * Ploy-referentie): donkere hero met ballonnen,
+ * gekleurde panelen met echte data (events, nieuws, league, spaarkaart),
+ * de site-brede pil-navigatie en footer. Dit is de enige homepage; bouwstenen
+ * en regels staan in docs/design/DESIGN.md.
  */
 export async function LandingPage({ locale, viewer }: { locale: string; viewer: { id: string; name: string; image: string | null } | null }) {
   const [t, tc, data] = await Promise.all([getTranslations("home.landing"), getTranslations("community"), getLandingData(viewer?.id ?? null)]);
