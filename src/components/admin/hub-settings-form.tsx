@@ -53,14 +53,17 @@ export function HubSettingsForm({ initial }: { initial: HubSettings }) {
       <FieldRow label="Stempels per kaart" hint="Een stempel per check-in op een event dat meetelt." htmlFor="stampsPerCard">
         <input id="stampsPerCard" name="stampsPerCard" type="number" min="1" max="100" defaultValue={initial.stampsPerCard} className={cn(INPUT, "w-32")} required />
       </FieldRow>
-      <FieldRow label="Beloning volle kaart" hint="Tekst die de speler ziet bij een volle kaart. Staff levert in aan de bar." htmlFor="stampReward">
-        <input id="stampReward" name="stampReward" defaultValue={initial.stampReward} maxLength={500} className={INPUT} required />
-      </FieldRow>
-      <FieldRow label="Punten per check-in" hint="0 = geen spaarpunten bij check-in." htmlFor="pointsPerCheckIn">
+      <FieldRow label="Punten per check-in" hint="1 punt = 1 cent korting op eten. 0 = geen spaarpunten bij check-in." htmlFor="pointsPerCheckIn">
         <input id="pointsPerCheckIn" name="pointsPerCheckIn" type="number" min="0" max="1000" defaultValue={initial.pointsPerCheckIn} className={cn(INPUT, "w-32")} required />
       </FieldRow>
-      <FieldRow label="Bonuspunten volle kaart" hint="Extra spaarpunten zodra een stempelkaart vol is. 0 = uit." htmlFor="pointsPerFullCard">
-        <input id="pointsPerFullCard" name="pointsPerFullCard" type="number" min="0" max="1000" defaultValue={initial.pointsPerFullCard} className={cn(INPUT, "w-32")} required />
+      <FieldRow label="Bonuspunten volle kaart" hint="De beloning voor een volle stempelkaart, bv. 500 = €5 aan eten. 0 = uit." htmlFor="pointsPerFullCard">
+        <input id="pointsPerFullCard" name="pointsPerFullCard" type="number" min="0" max="5000" defaultValue={initial.pointsPerFullCard} className={cn(INPUT, "w-32")} required />
+      </FieldRow>
+      <FieldRow label="Punten per euro aan eten" hint="Spaarpunten per betaalde euro bij een eetbestelling, bv. 5 = 5% terug. Alleen voor ingelogde spelers. 0 = uit." htmlFor="pointsPerEuroFood">
+        <input id="pointsPerEuroFood" name="pointsPerEuroFood" type="number" min="0" max="100" defaultValue={initial.pointsPerEuroFood} className={cn(INPUT, "w-32")} required />
+      </FieldRow>
+      <FieldRow label="Extra beloning (optioneel)" hint="Iets naast de bonuspunten dat staff aan de kassa geeft, bv. een booster. Leeg = alleen punten." htmlFor="stampReward">
+        <input id="stampReward" name="stampReward" defaultValue={initial.stampReward} maxLength={500} className={INPUT} />
       </FieldRow>
       <div className="flex justify-end border-t border-border pt-4">
         <button type="submit" disabled={pending} className={cn(PILL_RED, "disabled:opacity-60")}>

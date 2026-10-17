@@ -112,7 +112,11 @@ export async function HubHome({
           label={t("stampCard")}
           title={t("stampsOnCard", { n: data.stamps.onCard, per: data.stamps.perCard })}
           display
-          hint={data.stamps.reward ? t("stampsLeft", { left: stampsLeft, reward: data.stamps.reward }) : undefined}
+          hint={
+            data.stamps.reward.points > 0 || data.stamps.reward.extra
+              ? t("stampsLeft", { left: stampsLeft, reward: data.stamps.reward.points > 0 ? t("fullCardShort", { points: data.stamps.reward.points }) : data.stamps.reward.extra })
+              : undefined
+          }
         >
           <StampCardVisual total={data.stamps.perCard} filled={data.stamps.onCard} seed={stampSeed} className="mt-auto max-w-[220px] gap-1.5" />
         </DashTile>

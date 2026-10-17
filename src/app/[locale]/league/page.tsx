@@ -4,8 +4,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureLeagueDefaults, getActiveSeason, getStandings } from "@/lib/community/league";
 import { getHubSettings } from "@/lib/app-config";
-import { BADGE_CRITERION_LABEL, LOYALTY_DEFAULTS, type BadgeCriterion } from "@/lib/community/config";
-import { formatEventDateShort } from "@/lib/shop-events/format";
+import { BADGE_CRITERION_LABEL, LOYALTY_DEFAULTS, fullCardReward, rewardSentence, type BadgeCriterion } from "@/lib/community/config";
+import { formatEventDateShort, formatPrice } from "@/lib/shop-events/format";
 import { typePastel } from "@/components/shop-events/event-type-pill";
 import { CenteredHero } from "@/components/ploy/centered-hero";
 import { CtaButton } from "@/components/ploy/cta-button";
@@ -176,7 +176,12 @@ export default async function LeaguePage({ params }: { params: Promise<{ locale:
             <Pill color="yellow">{t("stampCardTitle")}</Pill>
             <DisplayHeading tag="h2" size={3} text={t("stampCardHeading", { n: stampsPerCard })} className="mt-5 max-w-[26rem]" />
             <p className="cc-prose mt-5 max-w-[28rem] text-base">{t("stampCardIntro", { per: stampsPerCard })}</p>
-            {settings.stampReward && <p className="mt-3 text-base font-semibold text-[var(--foreground)]">{settings.stampReward}</p>}
+            <p className="mt-3 text-base font-semibold text-[var(--foreground)]">
+              {rewardSentence(fullCardReward(settings), {
+                points: (points, euro) => t("fullCardRewardPoints", { points, euro: formatPrice(euro, locale) }),
+                none: t("fullCardRewardNone"),
+              })}
+            </p>
             {settings.pointsPerCheckIn > 0 && <p className="cc-prose mt-2 text-sm">{t("pointsIntro", { points: settings.pointsPerCheckIn })}</p>}
             <div className="mt-7">
               <CtaButton href={myCardHref} variant="dark">

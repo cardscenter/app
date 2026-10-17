@@ -84,7 +84,43 @@ export interface LoyaltyDefaults {
   pointsPerCheckIn: number;
   pointsPerFullCard: number;
 }
-export const LOYALTY_DEFAULTS: LoyaltyDefaults = { stampsPerCard: 10, pointsPerCheckIn: 10, pointsPerFullCard: 25 };
+export const LOYALTY_DEFAULTS: LoyaltyDefaults = { stampsPerCard: 10, pointsPerCheckIn: 50, pointsPerFullCard: 500 };
+
+/** Eén spaarpunt is één cent korting op eten. */
+export const POINT_VALUE_EUR = 0.01;
+
+/** Punten → euro (op centen afgerond). */
+export function pointsToEuro(points: number): number {
+  return Math.round(Math.max(0, points)) / 100;
+}
+
+export interface FullCardReward {
+  /** Bonuspunten bij een volle kaart (0 = geen). */
+  points: number;
+  /** Wat die punten waard zijn aan eten. */
+  euro: number;
+  /** Optionele extra beloning uit de hub-instellingen (leeg = geen). */
+  extra: string;
+}
+
+/**
+ * Wat een volle stempelkaart oplevert: bonuspunten (= korting op eten) plus
+ * een eventuele extra uit de instellingen. Elke plek maakt er zelf een zin van
+ * in zijn eigen vertaling.
+ */
+export function fullCardReward(s: { pointsPerFullCard: number; stampReward: string }): FullCardReward {
+  const points = Math.max(0, Math.round(s.pointsPerFullCard));
+  return { points, euro: pointsToEuro(points), extra: s.stampReward.trim() };
+}
+
+/**
+ * Eén zin voor de beloning: "<punten-tekst> + <extra>". De punten-tekst komt
+ * uit de vertaling van de aanroeper; `none` als er geen punten en geen extra is.
+ */
+export function rewardSentence(r: FullCardReward, text: { points: (points: number, euro: number) => string; none: string }): string {
+  const parts = [r.points > 0 ? text.points(r.points, r.euro) : null, r.extra || null].filter((p): p is string => !!p);
+  return parts.length ? parts.join(" + ") : text.none;
+}
 
 /** Stempelkaart-weergave uit het totaal aantal stempels. */
 export function stampCardState(totalStamps: number, stampsPerCard: number): { onCard: number; completedCards: number; remaining: number } {

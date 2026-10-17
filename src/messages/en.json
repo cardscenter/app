@@ -1463,7 +1463,7 @@
       "stampsOnCard": "{n} of {per}",
       "stampsLeft": "{left} to go: {reward}",
       "points": "Loyalty points",
-      "pointsHint": "Redeem them at the counter",
+      "pointsHint": "1 point = 1 cent off food",
       "league": "League",
       "leagueRank": "#{rank}",
       "leagueRankHint": "{points} points in {season}",
@@ -1485,7 +1485,8 @@
       "buybackOpen": "View request",
       "twoFaTitle": "Secure your account with 2FA",
       "twoFaText": "An extra code from an authenticator app when you log in. Set up in a minute.",
-      "twoFaAction": "Set up"
+      "twoFaAction": "Set up",
+      "fullCardShort": "+{points} points"
     }
   },
   "settings": {
@@ -3992,7 +3993,7 @@
     "badgesIntro": "The gates of Hulst: earn them by playing and showing up.",
     "stampCardTitle": "Stamp card",
     "stampCardIntro": "Every check-in at a qualifying event is a stamp. After {per} stamps your card is full.",
-    "pointsIntro": "You also get {points} loyalty points per check-in. Redeem them at the counter.",
+    "pointsIntro": "You also get {points} points per check-in. Every point is 1 cent off food in the shop.",
     "viewMyCard": "My stamp card",
     "loginToSee": "Log in to see your card",
     "howTitle": "How it works",
@@ -4027,9 +4028,9 @@
     "stampsOnCard": "{n} of {per} stamps",
     "cardsCompleted": "{count, plural, =1 {1 full card} other {# full cards}}",
     "reward": "Reward",
-    "stampsHint": "You get a stamp at every check-in at a qualifying event. Hand in a full card at the bar.",
+    "stampsHint": "You get a stamp at every check-in at a qualifying event. A full card earns bonus points.",
     "pointsBalance": "Loyalty points",
-    "pointsHint": "Redeem at the counter; staff deducts them.",
+    "pointsHint": "1 point = 1 cent off food. Use them when you order.",
     "myBadges": "My badges",
     "noBadges": "No badges yet. You get the first one after your first league night.",
     "recentResults": "Recent results",
@@ -4052,7 +4053,7 @@
     "infoFaq3Q": "Can I order food and drinks?",
     "infoFaq3A": "Yes, via the QR code on your table or at the bar. We bring it to your table. Your own food and drinks are not allowed.",
     "infoFaq4Q": "How does the stamp card work?",
-    "infoFaq4A": "Every check-in at an event is a stamp. After {n} stamps your card is full and you get {reward}.",
+    "infoFaq4A": "Every check-in at an event is a stamp. After {n} stamps your card is full and you get {reward}. You use points as a discount when ordering food (1 point = 1 cent).",
     "infoFaq4Fallback": "a reward at the bar",
     "infoClosingTitle": "Come by in Hulst.",
     "infoClosingText": "Dubbele Poort 7. Play tables, bar and kitchen, and a community that knows you by name.",
@@ -4137,7 +4138,9 @@
     "profileJoinNote": "Free, set up in two minutes.",
     "profileJoinCta": "Create account",
     "profileNoBio": "This player has not written anything about themselves yet.",
-    "profileRank": "Rank"
+    "profileRank": "Rank",
+    "fullCardRewardPoints": "{points} points, worth {euro} off food",
+    "fullCardRewardNone": "a reward in the shop"
   },
   "nav": {
     "cta": "Create account",

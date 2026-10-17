@@ -8,6 +8,8 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { StampCardVisual } from "@/components/community/stamp-card-visual";
 import { INPUT, LABEL, PILL_BTN, PILL_INK, PILL_RED } from "@/components/ploy/tile-styles";
 import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/shop-events/format";
+import { pointsToEuro } from "@/lib/community/config";
 
 type Hit = { id: string; displayName: string; fullName: string; avatarUrl: string | null; stamps: number; points: number };
 type Detail = NonNullable<Awaited<ReturnType<typeof getPlayerLoyalty>>>;
@@ -94,7 +96,10 @@ export function LoyaltyDesk() {
                 {detail.stamps.onCard} van {detail.stamps.perCard} stempels · {detail.stamps.completedCards} volle kaart(en)
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">Beloning volle kaart: {detail.stamps.reward}</p>
+            <p className="text-sm text-muted-foreground">
+              Beloning volle kaart: {[detail.stamps.reward.points > 0 ? `${detail.stamps.reward.points} bonuspunten (${formatPrice(detail.stamps.reward.euro)} korting op eten)` : null, detail.stamps.reward.extra || null].filter(Boolean).join(" + ") || "geen"}
+              {detail.points.balance > 0 && ` · saldo is ${formatPrice(pointsToEuro(detail.points.balance))} korting op eten`}
+            </p>
 
             <div className="space-y-3 border-t border-border pt-4">
               <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={120} placeholder="Reden (optioneel), bv. gratis drankje, Pokémon-avond" className={cn(INPUT, "py-2.5")} aria-label="Reden" />

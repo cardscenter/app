@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getHubSettings } from "@/lib/app-config";
-import { stampCardState } from "@/lib/community/config";
+import { fullCardReward, stampCardState, type FullCardReward } from "@/lib/community/config";
 import { getActiveSeason, getStandings } from "@/lib/community/league";
 
 /**
@@ -14,7 +14,7 @@ export interface HubDashboardData {
   nextTicket: { code: string; eventId: string; title: string; startsAt: string; status: string } | null;
   ticketCount: number;
   nextEvent: { id: string; title: string; startsAt: string } | null;
-  stamps: { onCard: number; perCard: number; completedCards: number; reward: string };
+  stamps: { onCard: number; perCard: number; completedCards: number; reward: FullCardReward };
   points: number;
   league: { seasonName: string; rank: number | null; points: number; players: number } | null;
   recentOrders: { id: string; number: number; status: string; total: number; createdAt: string }[];
@@ -72,7 +72,7 @@ export const getHubDashboardData = cache(async (userId: string): Promise<HubDash
       : null,
     ticketCount,
     nextEvent: nextEvent ? { id: nextEvent.id, title: nextEvent.title, startsAt: nextEvent.startsAt.toISOString() } : null,
-    stamps: { onCard: card.onCard, perCard: settings.stampsPerCard, completedCards: card.completedCards, reward: settings.stampReward },
+    stamps: { onCard: card.onCard, perCard: settings.stampsPerCard, completedCards: card.completedCards, reward: fullCardReward(settings) },
     points: Math.max(0, points),
     league,
     recentOrders: orders.map((o) => ({ id: o.id, number: o.number, status: o.status, total: o.total + o.tip, createdAt: o.createdAt.toISOString() })),

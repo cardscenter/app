@@ -5,7 +5,8 @@ import { Link } from "@/i18n/navigation";
 import { auth } from "@/lib/auth";
 import { getUserLeagueSummary } from "@/lib/community/league";
 import { getLoyaltySummary } from "@/lib/community/loyalty";
-import { formatEventDateShort } from "@/lib/shop-events/format";
+import { formatEventDateShort, formatPrice } from "@/lib/shop-events/format";
+import { rewardSentence } from "@/lib/community/config";
 import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
 import { DashboardSection } from "@/components/dashboard/ui/section";
 import { StatCard } from "@/components/dashboard/ui/stat-card";
@@ -61,7 +62,11 @@ export default async function MyLeaguePage({ params }: { params: Promise<{ local
           <p className="mt-4 text-sm font-semibold">{t("stampsOnCard", { n: loyalty.stamps.onCard, per: loyalty.stamps.perCard })}</p>
           <p className="mt-1 text-sm opacity-80">{t("stampsHint")}</p>
           <p className="mt-3 text-sm">
-            <span className="font-semibold">{t("reward")}:</span> {loyalty.stamps.reward}
+            <span className="font-semibold">{t("reward")}:</span>{" "}
+            {rewardSentence(loyalty.stamps.reward, {
+              points: (points, euro) => t("fullCardRewardPoints", { points, euro: formatPrice(euro, locale) }),
+              none: t("fullCardRewardNone"),
+            })}
           </p>
         </DashboardSection>
 

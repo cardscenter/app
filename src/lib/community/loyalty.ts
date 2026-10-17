@@ -2,18 +2,21 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/actions/notification";
 import { getHubSettings } from "@/lib/app-config";
-import { completesCard, stampCardState } from "./config";
+import { completesCard, fullCardReward, stampCardState, type FullCardReward } from "./config";
 import { awardBadgesFor } from "./league";
+import { formatPrice } from "@/lib/shop-events/format";
 
 /**
  * Stempelkaart + spaarpunten (Fase 5). Eén grootboek `LoyaltyEntry`:
- * saldo = som van `delta` per `kind`. Nooit geld: punten worden door staff
- * aan de kassa ingewisseld (negatieve entry met source REDEEM).
+ * saldo = som van `delta` per `kind`. 1 punt = 1 cent korting op eten: de
+ * bestelapp schrijft af (FOOD_SPEND), zet terug (FOOD_REFUND) en schrijft bij
+ * (FOOD_EARN), zie `src/lib/food/orders.ts`. Staff kan aan de kassa nog
+ * handmatig bijschrijven of inwisselen (REDEEM).
  */
 
 export interface LoyaltySummary {
-  stamps: { total: number; onCard: number; completedCards: number; remaining: number; perCard: number; reward: string };
-  points: { balance: number; perCheckIn: number; perFullCard: number };
+  stamps: { total: number; onCard: number; completedCards: number; remaining: number; perCard: number; reward: FullCardReward };
+  points: { balance: number; perCheckIn: number; perFullCard: number; perEuroFood: number };
   recent: Array<{ id: string; kind: "STAMP" | "POINTS"; delta: number; reason: string; source: string; createdAt: string }>;
 }
 
@@ -31,8 +34,8 @@ export async function getLoyaltySummary(userId: string): Promise<LoyaltySummary>
   ]);
   const card = stampCardState(t.stamps, settings.stampsPerCard);
   return {
-    stamps: { total: t.stamps, ...card, perCard: settings.stampsPerCard, reward: settings.stampReward },
-    points: { balance: t.points, perCheckIn: settings.pointsPerCheckIn, perFullCard: settings.pointsPerFullCard },
+    stamps: { total: t.stamps, ...card, perCard: settings.stampsPerCard, reward: fullCardReward(settings) },
+    points: { balance: t.points, perCheckIn: settings.pointsPerCheckIn, perFullCard: settings.pointsPerFullCard, perEuroFood: settings.pointsPerEuroFood },
     recent: recent.map((r) => ({ id: r.id, kind: r.kind as "STAMP" | "POINTS", delta: r.delta, reason: r.reason, source: r.source, createdAt: r.createdAt.toISOString() })),
   };
 }
@@ -58,13 +61,11 @@ export async function addStamp(args: { userId: string; reason: string; source: "
     if (settings.pointsPerFullCard > 0) {
       await prisma.loyaltyEntry.create({ data: { userId: args.userId, kind: "POINTS", delta: settings.pointsPerFullCard, reason: "Volle stempelkaart", source: "FULL_CARD", eventId: args.eventId ?? null, staffId: args.staffId ?? null } });
     }
-    await createNotification(
-      args.userId,
-      "LOYALTY_FULL_CARD",
-      "Je stempelkaart is vol!",
-      `${settings.stampsPerCard} stempels verzameld. ${settings.stampReward}${settings.pointsPerFullCard > 0 ? ` Plus ${settings.pointsPerFullCard} spaarpunten erbij.` : ""}`,
-      "/dashboard/league",
-    );
+    const reward = fullCardReward(settings);
+    const parts = [`${settings.stampsPerCard} stempels verzameld.`];
+    if (reward.points > 0) parts.push(`Je krijgt ${reward.points} spaarpunten erbij, goed voor ${formatPrice(reward.euro)} korting op eten.`);
+    if (reward.extra) parts.push(`Extra: ${reward.extra}`);
+    await createNotification(args.userId, "LOYALTY_FULL_CARD", "Je stempelkaart is vol!", parts.join(" "), "/dashboard/league");
   }
   await awardBadgesFor(args.userId, null);
   return { added: true, fullCard: full, total };

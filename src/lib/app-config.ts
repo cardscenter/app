@@ -21,6 +21,7 @@ export const HUB_SETTING_KEYS = {
   pointsPerCheckIn: "hub.pointsPerCheckIn",
   pointsPerFullCard: "hub.pointsPerFullCard",
   stampReward: "hub.stampReward",
+  pointsPerEuroFood: "hub.pointsPerEuroFood",
 } as const;
 
 export interface HubSettings {
@@ -38,12 +39,14 @@ export interface HubSettings {
   directions: string;
   /** Stempels per volle kaart. */
   stampsPerCard: number;
-  /** Spaarpunten per check-in (0 = uit). */
+  /** Spaarpunten per check-in (0 = uit). 1 punt = 1 cent korting op eten. */
   pointsPerCheckIn: number;
   /** Bonuspunten bij een volle stempelkaart (0 = uit). */
   pointsPerFullCard: number;
-  /** Wat je krijgt bij een volle kaart (tekst, bv. "een gratis drankje aan de bar"). */
+  /** Optionele extra beloning bij een volle kaart naast de bonuspunten (tekst, leeg = geen). */
   stampReward: string;
+  /** Spaarpunten per betaalde euro aan eten (0 = uit). */
+  pointsPerEuroFood: number;
 }
 
 export const DEFAULT_HUB_SETTINGS: HubSettings = {
@@ -71,9 +74,10 @@ export const DEFAULT_HUB_SETTINGS: HubSettings = {
     "Vanuit België: Hulst ligt vlak over de grens bij Sint-Gillis-Waas en Kieldrecht, ongeveer een halfuur rijden vanaf Antwerpen.",
   ].join("\n\n"),
   stampsPerCard: 10,
-  pointsPerCheckIn: 10,
-  pointsPerFullCard: 25,
-  stampReward: "Bij een volle kaart krijg je een gratis drankje aan de bar.",
+  pointsPerCheckIn: 50,
+  pointsPerFullCard: 500,
+  stampReward: "",
+  pointsPerEuroFood: 5,
 };
 
 const TTL_MS = 30_000;
@@ -107,6 +111,7 @@ export async function getHubSettings(): Promise<HubSettings> {
     pointsPerCheckIn: parseJson<number>(byKey[HUB_SETTING_KEYS.pointsPerCheckIn], DEFAULT_HUB_SETTINGS.pointsPerCheckIn),
     pointsPerFullCard: parseJson<number>(byKey[HUB_SETTING_KEYS.pointsPerFullCard], DEFAULT_HUB_SETTINGS.pointsPerFullCard),
     stampReward: parseJson<string>(byKey[HUB_SETTING_KEYS.stampReward], DEFAULT_HUB_SETTINGS.stampReward),
+    pointsPerEuroFood: parseJson<number>(byKey[HUB_SETTING_KEYS.pointsPerEuroFood], DEFAULT_HUB_SETTINGS.pointsPerEuroFood),
   };
   cache = { at: Date.now(), value };
   return value;

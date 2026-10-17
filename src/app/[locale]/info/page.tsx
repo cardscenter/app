@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ExternalLink, Mail, MapPin } from "lucide-react";
 import { getHubSettings } from "@/lib/app-config";
+import { fullCardReward, rewardSentence } from "@/lib/community/config";
+import { formatPrice } from "@/lib/shop-events/format";
 import { toParagraphs } from "@/lib/community/config";
 import { formatShopAddress, PLATFORM } from "@/lib/platform-config";
 import { CenteredHero, TileQuad, FeatureRows, FaqSection, BannerPromo, ClosingCta, CtaButton } from "@/components/ploy";
@@ -115,7 +117,16 @@ export default async function InfoPage({ params }: { params: Promise<{ locale: s
           { q: t("infoFaq1Q"), a: s.cancellationPolicy },
           { q: t("infoFaq2Q"), a: `${te("underTwelveLine")} ${te("guardianLine")}` },
           { q: t("infoFaq3Q"), a: t("infoFaq3A") },
-          { q: t("infoFaq4Q"), a: t("infoFaq4A", { n: s.stampsPerCard, reward: s.stampReward || t("infoFaq4Fallback") }) },
+          {
+            q: t("infoFaq4Q"),
+            a: t("infoFaq4A", {
+              n: s.stampsPerCard,
+              reward: rewardSentence(fullCardReward(s), {
+                points: (points, euro) => t("fullCardRewardPoints", { points, euro: formatPrice(euro, locale) }),
+                none: t("infoFaq4Fallback"),
+              }),
+            }),
+          },
         ]}
       />
 
