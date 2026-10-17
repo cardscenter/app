@@ -41,6 +41,20 @@ describe("isFeatureEnabled", () => {
     expect(isFeatureEnabled("FEATURE_AUCTIONS", { FEATURE_WALLET: "true" })).toBe(false);
   });
 
+  it("kaartendatabase komt vanzelf terug met de handel (enabledBy)", () => {
+    expect(isFeatureEnabled("FEATURE_CARD_DATABASE", {})).toBe(false);
+    expect(isFeatureEnabled("FEATURE_CARD_DATABASE", { FEATURE_WALLET: "true" })).toBe(false);
+    // Handel-flag zonder wallet telt niet: die is zelf effectief uit.
+    expect(isFeatureEnabled("FEATURE_CARD_DATABASE", { FEATURE_MARKETPLACE: "true" })).toBe(false);
+    expect(
+      isFeatureEnabled("FEATURE_CARD_DATABASE", { FEATURE_WALLET: "true", FEATURE_MARKETPLACE: "true" }),
+    ).toBe(true);
+    expect(
+      isFeatureEnabled("FEATURE_CARD_DATABASE", { FEATURE_WALLET: "on", FEATURE_AUCTIONS: "1" }),
+    ).toBe(true);
+    expect(isFeatureEnabled("FEATURE_CARD_DATABASE", { FEATURE_CARD_DATABASE: "true" })).toBe(true);
+  });
+
   it("community-events staat los van wallet", () => {
     expect(isFeatureEnabled("FEATURE_COMMUNITY_EVENTS", { FEATURE_COMMUNITY_EVENTS: "true" })).toBe(
       true,

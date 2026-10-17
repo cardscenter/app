@@ -38,6 +38,10 @@ describe("featureForPath", () => {
     ["/nl/beurzen/nieuw", "FEATURE_COMMUNITY_EVENTS"],
     ["/nl/dashboard/beurzen", "FEATURE_COMMUNITY_EVENTS"],
     ["/nl/dashboard/reviews", "FEATURE_WALLET"],
+    ["/nl/kaarten", "FEATURE_CARD_DATABASE"],
+    ["/nl/kaarten/base1/charizard-4", "FEATURE_CARD_DATABASE"],
+    ["/en/pokedex", "FEATURE_CARD_DATABASE"],
+    ["/nl/pokedex/pikachu", "FEATURE_CARD_DATABASE"],
   ] as const)("%s → %s", (path, flag) => {
     expect(featureForPath(path)).toBe(flag);
   });
@@ -54,7 +58,8 @@ describe("featureForPath", () => {
     "/nl/evenementen",
     "/nl/evenementen/abc",
     "/nl/dashboard/tickets",
-    "/nl/kaarten",
+    "/nl/verkopen/losse-kaarten",
+    "/nl/kaartenbak",
     "/nl/berichten/abc",
     "/nl/verkoper/abc",
     "/nl/veilingenx",

@@ -269,7 +269,9 @@
     "welcomeSettings": "Settings",
     "welcomeSettingsDesc": "Newsletter, privacy and notifications the way you like them",
     "asidePillEventsTitle": "Events in the shop",
-    "asidePillEventsDesc": "Sign up online, pay in advance and check in with your ticket."
+    "asidePillEventsDesc": "Sign up online, pay in advance and check in with your ticket.",
+    "welcomeSell": "Sell your cards",
+    "welcomeSellDesc": "See what your single cards and bulk are worth"
   },
   "home": {
     "heroTitle": "The Pokémon Card Marketplace",
@@ -755,7 +757,10 @@
       "testimonialsEyebrow": "Stories",
       "testimonialsTitle": "What players say",
       "testimonialsIntro": "Reviews and messages from players, parents and collectors. With their permission.",
-      "testimonialsAll": "All stories"
+      "testimonialsAll": "All stories",
+      "pillarCollectTextSell": "See what your single cards are worth at current market prices, or sell your bulk to us at a fixed price per category.",
+      "pillarCollectLinkSell": "Calculate what your cards are worth",
+      "audCollectorsB1Sell": "Current market prices in the sell calculator"
     }
   },
   "auction": {
@@ -2288,7 +2293,11 @@
     "hideFilters": "Hide filters",
     "heroTitle": "Find a card, Pokémon or player",
     "heroTitleQuery": "Here is what we found",
-    "heroWord": "card"
+    "heroWord": "card",
+    "placeholderPlayers": "Search players...",
+    "heroTitlePlayers": "Find a player",
+    "heroWordPlayers": "player",
+    "noResultsHintPlayers": "Try another username or part of a name."
   },
   "sellerProfile": {
     "shop": "Shop",
@@ -3223,7 +3232,7 @@
       "bulkBullet4": "Code cards, coins, sleeves and energy too",
       "howItWorksSubtitle": "From selection to payout in four steps: for single cards and bulk alike.",
       "singlesExampleTitle": "How we calculate your buyback price for single cards",
-      "singlesExampleIntro": "We pay {rate} of the market price shown on every card page in our database. A few examples:",
+      "singlesExampleIntro": "We pay {rate} of the current market price, which we update every night. A few examples:",
       "exampleColMarket": "Market price",
       "exampleColPayout": "You receive",
       "exampleNotEligible": "Above {max}: not eligible",

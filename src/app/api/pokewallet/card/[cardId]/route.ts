@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { syncSingleCard } from "@/lib/pokewallet/sync";
+import { assertFeatureForRoute } from "@/lib/feature-flags-server";
 
 // GET /api/pokewallet/card/:cardId
 //
@@ -11,6 +12,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ cardId: string }> },
 ) {
+  const blocked = await assertFeatureForRoute("FEATURE_CARD_DATABASE");
+  if (blocked) return blocked;
   const { cardId } = await params;
   try {
     const ok = await syncSingleCard(cardId);

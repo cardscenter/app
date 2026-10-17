@@ -48,12 +48,21 @@ function parseFloatParam(raw: string | undefined): number | undefined {
 export default async function ZoekenPage({ searchParams }: Props) {
   const params = await searchParams;
   const q = (params.q ?? "").trim();
-  const tab: TabKey = TAB_KEYS.includes(params.tab as TabKey) ? (params.tab as TabKey) : "alles";
+  const requestedTab: TabKey = TAB_KEYS.includes(params.tab as TabKey) ? (params.tab as TabKey) : "alles";
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const minPrice = parseFloatParam(params.minPrice);
   const maxPrice = parseFloatParam(params.maxPrice);
 
-  const [locale, t] = await Promise.all([getLocale(), getTranslations("search")]);
+  const [locale, t, guards] = await Promise.all([getLocale(), getTranslations("search"), getSupplyGuards()]);
+
+  // Kaartendatabase verborgen en geen handel zichtbaar: zoeken is dan alleen
+  // nog spelers zoeken, zonder tabs (ronde G, 2026-10-17).
+  const playersOnly = !guards.cardDatabase && guards.enabledTypes.size === 0;
+  const tab: TabKey = playersOnly
+    ? "gebruikers"
+    : !guards.cardDatabase && (requestedTab === "kaarten" || requestedTab === "pokemon")
+      ? "alles"
+      : requestedTab;
 
   const supplyFilters: SupplyFilters = {
     type: params.type === "auction" || params.type === "claimsale" || params.type === "listing" ? params.type : undefined,
@@ -67,13 +76,19 @@ export default async function ZoekenPage({ searchParams }: Props) {
 
   // Zoekform in de hero (GET, geen client-JS nodig; behoudt actieve tab).
   const hero = (
-    <CenteredHero title={q ? t("heroTitleQuery") : t("heroTitle")} highlightWord={t("heroWord")} highlightColor="yellow" size={3} className="pb-6 lg:pb-8">
+    <CenteredHero
+      title={q ? t("heroTitleQuery") : playersOnly ? t("heroTitlePlayers") : t("heroTitle")}
+      highlightWord={playersOnly ? t("heroWordPlayers") : t("heroWord")}
+      highlightColor="yellow"
+      size={3}
+      className="pb-6 lg:pb-8"
+    >
       <form method="get" action={`/${locale}/zoeken`} className="flex w-full max-w-2xl items-center gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[var(--foreground)]/45" />
-          <input type="search" name="q" defaultValue={q} placeholder={t("placeholder")} className={`${SEARCH_INPUT} pl-12 pr-4`} />
+          <input type="search" name="q" defaultValue={q} placeholder={playersOnly ? t("placeholderPlayers") : t("placeholder")} className={`${SEARCH_INPUT} pl-12 pr-4`} />
         </div>
-        {tab !== "alles" && <input type="hidden" name="tab" value={tab} />}
+        {tab !== "alles" && !playersOnly && <input type="hidden" name="tab" value={tab} />}
         <button type="submit" className={`${PILL_RED} py-3.5`}>
           {t("searchAction")}
         </button>
@@ -107,7 +122,6 @@ export default async function ZoekenPage({ searchParams }: Props) {
     );
   }
 
-  const guards = await getSupplyGuards();
   const counts = await countAll(q, guards);
   const totalAll = counts.cards + counts.pokemon + counts.supply + counts.users;
 
@@ -115,8 +129,12 @@ export default async function ZoekenPage({ searchParams }: Props) {
 
   const tabs: SearchTab[] = [
     { key: "alles", label: t("tabAll"), count: totalAll, href: tabHref("alles") },
-    { key: "kaarten", label: t("tabCards"), count: counts.cards, href: tabHref("kaarten") },
-    { key: "pokemon", label: t("tabPokemon"), count: counts.pokemon, href: tabHref("pokemon") },
+    ...(guards.cardDatabase
+      ? [
+          { key: "kaarten", label: t("tabCards"), count: counts.cards, href: tabHref("kaarten") },
+          { key: "pokemon", label: t("tabPokemon"), count: counts.pokemon, href: tabHref("pokemon") },
+        ]
+      : []),
     // Aanbod-tab alleen als er een handelssoort zichtbaar is (feature-flags, Fase 1).
     ...(guards.enabledTypes.size > 0 ? [{ key: "aanbod", label: t("tabSupply"), count: counts.supply, href: tabHref("aanbod") }] : []),
     { key: "gebruikers", label: t("tabUsers"), count: counts.users, href: tabHref("gebruikers") },
@@ -217,7 +235,7 @@ export default async function ZoekenPage({ searchParams }: Props) {
     const users = await searchUsers(q, guards, { page, pageSize: PAGE_SIZE });
     content =
       users.items.length === 0 ? (
-        emptyState(t("noResults", { query: q }), t("noResultsHint"))
+        emptyState(t("noResults", { query: q }), playersOnly ? t("noResultsHintPlayers") : t("noResultsHint"))
       ) : (
         <>
           {resultsLine(users.total)}
@@ -226,7 +244,7 @@ export default async function ZoekenPage({ searchParams }: Props) {
               <UserResultCard key={user.id} user={user} />
             ))}
           </div>
-          <Pagination currentPage={users.page} totalPages={users.totalPages} baseUrl="/zoeken" locale={locale} extraParams={{ q, tab: "gebruikers" }} />
+          <Pagination currentPage={users.page} totalPages={users.totalPages} baseUrl="/zoeken" locale={locale} extraParams={playersOnly ? { q } : { q, tab: "gebruikers" }} />
         </>
       );
   } else {
@@ -309,6 +327,8 @@ export default async function ZoekenPage({ searchParams }: Props) {
         </div>
       );
   }
+
+  if (playersOnly) return wrap(content);
 
   return wrap(
     <>

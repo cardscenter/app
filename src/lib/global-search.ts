@@ -113,6 +113,8 @@ export interface SupplyGuards {
   blockedIds: Set<string>;
   /** Feature-flags (Community Hub, Fase 1): welke handelssoorten deze bezoeker mag zien. */
   enabledTypes: Set<"auction" | "claimsale" | "listing">;
+  /** Kaartendatabase zichtbaar? Uit = geen kaarten en Pokémon in zoeken (ronde G). */
+  cardDatabase: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +139,7 @@ export async function getSupplyGuards(): Promise<SupplyGuards> {
     blockingWhere: sellerFilter ? { sellerId: sellerFilter } : {},
     blockedIds,
     enabledTypes,
+    cardDatabase: isFeatureVisibleFor("FEATURE_CARD_DATABASE", accountType),
   };
 }
 
@@ -676,8 +679,8 @@ export interface SearchCounts {
 
 export async function countAll(q: string, guards: SupplyGuards): Promise<SearchCounts> {
   const [cards, pokemonHits, supply, users] = await Promise.all([
-    countCards(q),
-    filterPokemon(q),
+    guards.cardDatabase ? countCards(q) : 0,
+    guards.cardDatabase ? filterPokemon(q) : null,
     countSupply(q, guards),
     countUsers(q, guards),
   ]);
@@ -747,14 +750,14 @@ export async function getSearchSuggestions(q: string): Promise<SearchSuggestions
 
   const [cardRows, pokemonHits, auctions, claimsales, listings, users] =
     await Promise.all([
-      prisma.card.findMany({
+      !guards.cardDatabase ? [] : prisma.card.findMany({
         where: buildCardSearchWhere(query),
         include: {
           cardSet: { select: { name: true, tcgdexSetId: true, releaseDate: true } },
         },
         take: 30,
       }),
-      filterPokemon(query),
+      guards.cardDatabase ? filterPokemon(query) : null,
       !guards.enabledTypes.has("auction") ? [] : prisma.auction.findMany({
         where: auctionWhere,
         select: {

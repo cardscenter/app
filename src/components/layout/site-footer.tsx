@@ -36,7 +36,7 @@ export async function SiteFooter({ loggedIn, features }: { loggedIn: boolean; fe
         { label: tc("league"), href: "/league" },
         { label: tc("news"), href: "/nieuws" },
         { label: tc("experiences"), href: "/ervaringen" },
-        { label: t("cardsDb"), href: "/kaarten" },
+        ...(features.FEATURE_CARD_DATABASE ? [{ label: t("cardsDb"), href: "/kaarten" }] : []),
       ],
     },
     {

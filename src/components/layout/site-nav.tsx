@@ -139,7 +139,7 @@ function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) 
     { href: "/league" as const, label: t("league"), show: true },
     { href: "/nieuws" as const, label: t("news"), show: true },
     { href: "/ervaringen" as const, label: t("experiences"), show: true },
-    { href: "/kaarten" as const, label: t("cards"), show: true },
+    { href: "/kaarten" as const, label: t("cards"), show: features.FEATURE_CARD_DATABASE },
     { href: "/verkopen" as const, label: t("sell"), show: true },
     { href: "/info" as const, label: t("info"), show: true },
   ].filter((l) => l.show);

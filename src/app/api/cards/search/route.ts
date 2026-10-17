@@ -6,6 +6,7 @@ import {
   buildCardTokenClauses,
   CARD_SEARCH_BASE_WHERE,
 } from "@/lib/search-utils";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 // Public search over the local Card table for the /kaarten database page.
 // Uses the searchName column for accent/diacritics-insensitive matching:
@@ -16,19 +17,31 @@ import {
 // category (Pokemon|Trainer|Energy), and comma-separated: types, rarities,
 // regulationMarks. When any advanced filter is set, the q>=2 requirement
 // is relaxed.
+//
+// Zolang de kaartendatabase verborgen is (FEATURE_CARD_DATABASE uit) bedient
+// deze route alleen nog de verkoopcalculator: altijd `buybackOnly`, een
+// zoekterm van minstens 2 tekens, geen geavanceerde filters en max 50 hits.
+// Zo blijven de prijzen in de calculator werken zonder dat de database vrij
+// door te bladeren is.
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const databaseOpen = isFeatureEnabled("FEATURE_CARD_DATABASE");
   const q = (searchParams.get("q") ?? "").trim();
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "500", 10) || 500, 1000);
+  const limit = Math.min(
+    parseInt(searchParams.get("limit") ?? "500", 10) || 500,
+    databaseOpen ? 1000 : 50,
+  );
 
+  // Database dicht: alleen de zoekterm telt, filters worden genegeerd.
+  const param = (key: string) => (databaseOpen ? (searchParams.get(key) ?? "") : "");
   const csv = (key: string) =>
-    (searchParams.get(key) ?? "")
+    param(key)
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
   const num = (key: string) => {
-    const raw = searchParams.get(key);
-    if (raw === null || raw === "") return NaN;
+    const raw = param(key);
+    if (raw === "") return NaN;
     const n = Number(raw);
     return Number.isFinite(n) ? n : NaN;
   };
@@ -42,10 +55,10 @@ export async function GET(request: Request) {
   const types = csv("types");
   const rarities = csv("rarities");
   const regulationMarks = csv("regulationMarks");
-  const seriesId = (searchParams.get("seriesId") ?? "").trim();
-  const setId = (searchParams.get("setId") ?? "").trim();
-  const illustrator = (searchParams.get("illustrator") ?? "").trim();
-  const category = (searchParams.get("category") ?? "").trim();
+  const seriesId = param("seriesId").trim();
+  const setId = param("setId").trim();
+  const illustrator = param("illustrator").trim();
+  const category = param("category").trim();
 
   const hasAdvancedFilters =
     !Number.isNaN(priceMin) ||
@@ -123,7 +136,7 @@ export async function GET(request: Request) {
   // the Collection Buyback Calculator: excludes bulk-only rarities (common/
   // uncommon/rare/rare holo — those go through the Bulk Calculator) and
   // promo-only McDonald's sets (not in scope for buyback).
-  const buybackOnly = searchParams.get("buybackOnly") === "true";
+  const buybackOnly = !databaseOpen || searchParams.get("buybackOnly") === "true";
 
   const where: Record<string, unknown> = { ...CARD_SEARCH_BASE_WHERE };
   if (andClauses.length > 0) where.AND = andClauses;

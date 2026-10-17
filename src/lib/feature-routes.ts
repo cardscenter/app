@@ -44,6 +44,10 @@ export const FEATURE_ROUTE_PREFIXES: ReadonlyArray<readonly [string, FeatureFlag
   // van de hub leven op /evenementen en zijn altijd zichtbaar.
   ["/beurzen", "FEATURE_COMMUNITY_EVENTS"],
   ["/dashboard/beurzen", "FEATURE_COMMUNITY_EVENTS"],
+  // Kaartendatabase (komt terug met de handel; de verkoopcalculator houdt
+  // z'n prijzen via /api/cards/search)
+  ["/kaarten", "FEATURE_CARD_DATABASE"],
+  ["/pokedex", "FEATURE_CARD_DATABASE"],
 ];
 
 const LOCALE_PREFIX = /^\/(nl|en)(?=\/|$)/;

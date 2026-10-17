@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { getLandingData } from "@/lib/landing-data";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { formatEventDateShort, formatEventTime, formatPrice } from "@/lib/shop-events/format";
 import { PLATFORM, formatShopAddress } from "@/lib/platform-config";
 import { LandingHero } from "./hero";
@@ -46,6 +47,7 @@ function datePart(d: Date, locale: string, opts: Intl.DateTimeFormatOptions) {
  */
 export async function LandingPage({ locale, viewer }: { locale: string; viewer: { id: string; name: string; image: string | null } | null }) {
   const [t, tc, data] = await Promise.all([getTranslations("home.landing"), getTranslations("community"), getLandingData(viewer?.id ?? null)]);
+  const cardDb = isFeatureEnabled("FEATURE_CARD_DATABASE");
   const { events, news, games, season, standings, settings, counts, testimonials } = data;
   const address = formatShopAddress();
   const leader = standings[0] ?? null;
@@ -184,7 +186,9 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
         items={[
           { title: t("pillarPlayTitle"), text: t("pillarPlayText"), href: "/evenementen", linkLabel: t("pillarPlayLink"), color: "pink", animation: "helix" },
           { title: t("pillarEatTitle"), text: t("pillarEatText"), href: "/bestellen?modus=bar", linkLabel: t("pillarEatLink"), color: "yellow", animation: "waves" },
-          { title: t("pillarCollectTitle"), text: t("pillarCollectText"), href: "/kaarten", linkLabel: t("pillarCollectLink"), color: "blue", animation: "rain" },
+          cardDb
+            ? { title: t("pillarCollectTitle"), text: t("pillarCollectText"), href: "/kaarten", linkLabel: t("pillarCollectLink"), color: "blue", animation: "rain" }
+            : { title: t("pillarCollectTitle"), text: t("pillarCollectTextSell"), href: "/verkopen/losse-kaarten", linkLabel: t("pillarCollectLinkSell"), color: "blue", animation: "rain" },
         ]}
       />
       <StatsPanel titleLine1={t("statsTitle1")} titleLine2={t("statsTitle2")} description={t("statsDesc")} cards={statCards} color="pink" balloon="red" />
@@ -214,7 +218,7 @@ export async function LandingPage({ locale, viewer }: { locale: string; viewer: 
         items={[
           { title: t("audPlayersTitle"), description: t("audPlayersDesc"), color: "blue", bullets: [t("audPlayersB1"), t("audPlayersB2"), t("audPlayersB3"), t("audPlayersB4")], ctaLabel: t("audPlayersCta"), ctaHref: "/evenementen" },
           { title: t("audParentsTitle"), description: t("audParentsDesc"), color: "yellow", bullets: [t("audParentsB1"), t("audParentsB2"), t("audParentsB3"), t("audParentsB4")], ctaLabel: t("audParentsCta"), ctaHref: "/info" },
-          { title: t("audCollectorsTitle"), description: t("audCollectorsDesc"), color: "pink", bullets: [t("audCollectorsB1"), t("audCollectorsB2"), t("audCollectorsB3"), t("audCollectorsB4")], ctaLabel: t("audCollectorsCta"), ctaHref: "/verkopen" },
+          { title: t("audCollectorsTitle"), description: t("audCollectorsDesc"), color: "pink", bullets: [t(cardDb ? "audCollectorsB1" : "audCollectorsB1Sell"), t("audCollectorsB2"), t("audCollectorsB3"), t("audCollectorsB4")], ctaLabel: t("audCollectorsCta"), ctaHref: "/verkopen" },
         ]}
       />
       {quotes.length >= 3 && (

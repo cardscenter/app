@@ -269,7 +269,9 @@
     "welcomeSettings": "Instellingen",
     "welcomeSettingsDesc": "Nieuwsbrief, privacy en meldingen naar wens",
     "asidePillEventsTitle": "Evenementen in de winkel",
-    "asidePillEventsDesc": "Schrijf je online in, betaal vooraf en check in met je ticket."
+    "asidePillEventsDesc": "Schrijf je online in, betaal vooraf en check in met je ticket.",
+    "welcomeSell": "Kaarten verkopen",
+    "welcomeSellDesc": "Reken uit wat je losse kaarten en bulk opbrengen"
   },
   "home": {
     "heroTitle": "De Pokémon Kaarten Marktplaats",
@@ -755,7 +757,10 @@
       "testimonialsEyebrow": "Ervaringen",
       "testimonialsTitle": "Wat spelers zeggen",
       "testimonialsIntro": "Reviews en berichten van spelers, ouders en verzamelaars. Met hun toestemming.",
-      "testimonialsAll": "Alle ervaringen"
+      "testimonialsAll": "Alle ervaringen",
+      "pillarCollectTextSell": "Reken uit wat je losse kaarten opbrengen tegen actuele marktprijzen, of verkoop je bulk aan ons tegen een vaste prijs per categorie.",
+      "pillarCollectLinkSell": "Bereken wat je kaarten opbrengen",
+      "audCollectorsB1Sell": "Actuele marktprijzen in de verkoopcalculator"
     }
   },
   "auction": {
@@ -2288,7 +2293,11 @@
     "hideFilters": "Verberg filters",
     "heroTitle": "Zoek een kaart, Pokémon of speler",
     "heroTitleQuery": "Dit vonden we voor je",
-    "heroWord": "kaart"
+    "heroWord": "kaart",
+    "placeholderPlayers": "Zoek spelers...",
+    "heroTitlePlayers": "Zoek een speler",
+    "heroWordPlayers": "speler",
+    "noResultsHintPlayers": "Probeer een andere gebruikersnaam of een deel van een naam."
   },
   "sellerProfile": {
     "shop": "Winkel",
@@ -3223,7 +3232,7 @@
       "bulkBullet4": "Ook code cards, coins, sleeves en energy",
       "howItWorksSubtitle": "Van selectie tot uitbetaling in vier stappen: voor losse kaarten én bulk.",
       "singlesExampleTitle": "Zo berekenen we je inkoopprijs voor losse kaarten",
-      "singlesExampleIntro": "We betalen {rate} van de marktprijs die je op elke kaartpagina in onze database ziet. Een paar voorbeelden:",
+      "singlesExampleIntro": "We betalen {rate} van de actuele marktprijs, die we elke nacht bijwerken. Een paar voorbeelden:",
       "exampleColMarket": "Marktprijs",
       "exampleColPayout": "Jij ontvangt",
       "exampleNotEligible": "Boven {max}: niet inkoopbaar",

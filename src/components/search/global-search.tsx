@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Search, X, BadgeCheck, ArrowRight, Gavel, Tag, Store, User as UserIcon } from "lucide-react";
 import type { SearchSuggestions } from "@/lib/global-search";
+import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
 
 /**
  * Header-zoekbalk met live suggesties (Kaarten / Pokémon / Aanbod /
@@ -25,9 +26,9 @@ const SUPPLY_ICONS = {
 } as const;
 
 const SUPPLY_COLORS = {
-  auction: "text-sky-400",
-  claimsale: "text-amber-400",
-  listing: "text-emerald-400",
+  auction: "text-sky-700",
+  claimsale: "text-amber-700",
+  listing: "text-emerald-700",
 } as const;
 
 function useSuggest(value: string) {
@@ -76,6 +77,12 @@ interface GlobalSearchProps {
 
 export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
   const t = useTranslations("search");
+  const features = useFeatureFlags();
+  // Kaartendatabase dicht en geen handel: de zoekbalk zoekt alleen spelers (ronde G).
+  const placeholder =
+    features.FEATURE_CARD_DATABASE || features.FEATURE_AUCTIONS || features.FEATURE_CLAIMSALES || features.FEATURE_MARKETPLACE
+      ? t("placeholder")
+      : t("placeholderPlayers");
   const router = useRouter();
   const [open, setOpen] = useState(variant === "mobile");
   const [value, setValue] = useState("");
@@ -170,12 +177,12 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
   const footerIndex = data ? usersStart + data.users.length : 0;
 
   const rowClass = (index: number) =>
-    `flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
-      index === activeIndex ? "bg-white/10" : "hover:bg-white/10"
+    `flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left no-underline transition-colors ${
+      index === activeIndex ? "bg-[var(--background)]" : "hover:bg-[var(--background)]"
     }`;
 
   const groupHeader = (label: string) => (
-    <div className="px-2.5 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+    <div className="px-2.5 pb-1 pt-3 text-xs font-semibold text-[var(--foreground)]/45">
       {label}
     </div>
   );
@@ -188,10 +195,10 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
     <div
       id="global-search-listbox"
       role="listbox"
-      className="max-h-[min(70vh,480px)] overflow-y-auto rounded-xl bg-slate-900/95 p-1.5 shadow-xl ring-1 ring-white/15 backdrop-blur-sm"
+      className="max-h-[min(70vh,480px)] overflow-y-auto rounded-[16px] bg-white p-1.5 text-[var(--foreground)] shadow-[0_18px_50px_-12px_rgba(0,0,0,0.25)] ring-1 ring-[var(--border)]"
     >
       {!hasResults && (
-        <p className="px-2.5 py-3 text-sm text-slate-400">{t("noSuggestions")}</p>
+        <p className="px-2.5 py-3 text-sm text-[var(--foreground)]/50">{t("noSuggestions")}</p>
       )}
 
       {data && data.cards.length > 0 && (
@@ -210,7 +217,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
               }}
               className={rowClass(cardsStart + i)}
             >
-              <div className="h-11 w-8 shrink-0 overflow-hidden rounded-sm bg-slate-800">
+              <div className="h-11 w-8 shrink-0 overflow-hidden rounded-[4px] bg-[var(--muted)]">
                 {card.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -222,13 +229,13 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">{card.name}</p>
-                <p className="truncate text-xs text-slate-400">
+                <p className="truncate text-sm font-medium text-[var(--foreground)]">{card.name}</p>
+                <p className="truncate text-xs text-[var(--foreground)]/50">
                   {card.setName} · #{card.localId}
                 </p>
               </div>
               {card.price !== null && (
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-white">
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--foreground)]">
                   €{card.price.toFixed(2)}
                 </span>
               )}
@@ -260,10 +267,10 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
                 className="size-8 shrink-0 object-contain"
                 loading="lazy"
               />
-              <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+              <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--foreground)]">
                 {p.displayName}
               </p>
-              <span className="shrink-0 font-mono text-xs text-slate-400">
+              <span className="shrink-0 font-mono text-xs text-[var(--foreground)]/50">
                 #{String(p.dexId).padStart(4, "0")}
               </span>
             </Link>
@@ -289,7 +296,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
                 }}
                 className={rowClass(supplyStart + i)}
               >
-                <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-800">
+                <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-[var(--muted)]">
                   {s.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -303,7 +310,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{s.title}</p>
+                  <p className="truncate text-sm font-medium text-[var(--foreground)]">{s.title}</p>
                   <p className={`truncate text-xs ${SUPPLY_COLORS[s.type]}`}>
                     {s.type === "auction"
                       ? t("typeAuction")
@@ -313,7 +320,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
                   </p>
                 </div>
                 {s.price !== null && (
-                  <span className="shrink-0 text-sm font-semibold tabular-nums text-white">
+                  <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--foreground)]">
                     €{s.price.toFixed(2)}
                   </span>
                 )}
@@ -339,7 +346,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
               }}
               className={rowClass(usersStart + i)}
             >
-              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[22%] bg-slate-800">
+              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[22%] bg-[var(--muted)]">
                 {u.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -349,20 +356,20 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
                     loading="lazy"
                   />
                 ) : (
-                  <UserIcon className="size-4 text-slate-400" />
+                  <UserIcon className="size-4 text-[var(--foreground)]/50" />
                 )}
               </div>
-              <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+              <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--foreground)]">
                 {u.displayName}
               </p>
-              {u.isVerified && <BadgeCheck className="size-4 shrink-0 text-sky-400" />}
+              {u.isVerified && <BadgeCheck className="size-4 shrink-0 text-sky-700" />}
             </Link>
           ))}
         </>
       )}
 
       {/* Footer: altijd naar de volledige resultatenpagina */}
-      <div className="mt-1 border-t border-white/10 pt-1">
+      <div className="mt-1 border-t border-[var(--border)] pt-1">
         <Link
           href={allHref}
           role="option"
@@ -399,16 +406,16 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
       <div ref={wrapperRef} className="relative">
         <form onSubmit={handleSubmit}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--foreground)]/50" />
             <input
               ref={inputRef}
               type="text"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t("placeholder")}
+              placeholder={placeholder}
               {...inputAria}
-              className="w-full rounded-lg bg-white/10 py-2.5 pl-9 pr-3 text-base text-white placeholder:text-slate-400 focus:bg-white/15 focus:outline-none focus:ring-1 focus:ring-white/30"
+              className="cc-pill w-full border border-[var(--border)] bg-white py-2.5 pl-9 pr-3 text-base text-[var(--foreground)] placeholder:text-[var(--foreground)]/45 focus:border-[var(--primary)]/40 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/15"
             />
           </div>
         </form>
@@ -428,7 +435,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={t("placeholder")}
+        aria-label={placeholder}
         className={`${HEADER_ICON_BTN} ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
         <Search className="h-5 w-5" />
@@ -437,21 +444,21 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
       {/* Uitklappende zoekbalk — geanimeerd naar links, over de nav heen */}
       <form
         onSubmit={handleSubmit}
-        className={`absolute right-0 top-1/2 z-50 flex -translate-y-1/2 items-center overflow-hidden rounded-lg bg-slate-800/95 shadow-lg ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300 ease-out ${
+        className={`absolute right-0 top-1/2 z-50 flex -translate-y-1/2 items-center overflow-hidden cc-pill bg-white shadow-[0_12px_32px_-12px_rgba(0,0,0,0.25)] ring-1 ring-[var(--border)] transition-all duration-300 ease-out ${
           open ? "w-[min(70vw,420px)] opacity-100" : "pointer-events-none w-0 opacity-0"
         }`}
       >
-        <Search className="ml-3 h-4 w-4 shrink-0 text-slate-400" />
+        <Search className="ml-3 h-4 w-4 shrink-0 text-[var(--foreground)]/50" />
         <input
           ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={t("placeholder")}
+          placeholder={placeholder}
           tabIndex={open ? 0 : -1}
           {...inputAria}
-          className="min-w-0 flex-1 bg-transparent px-2 py-2 text-base text-white placeholder:text-slate-400 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent px-2 py-2 text-base text-[var(--foreground)] placeholder:text-[var(--foreground)]/45 focus:outline-none"
         />
         <button
           type="button"
@@ -461,7 +468,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
           }}
           tabIndex={open ? 0 : -1}
           aria-label="Sluit"
-          className="mr-1 shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+          className="mr-1 shrink-0 rounded-full p-1.5 text-[var(--foreground)]/50 transition-colors hover:bg-[var(--background)] hover:text-[var(--foreground)]"
         >
           <X className="h-4 w-4" />
         </button>

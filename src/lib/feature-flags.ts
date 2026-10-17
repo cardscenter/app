@@ -24,6 +24,7 @@ export const FEATURE_FLAG_KEYS = [
   "FEATURE_MARKETPLACE",
   "FEATURE_COMMUNITY_EVENTS",
   "FEATURE_XP",
+  "FEATURE_CARD_DATABASE",
 ] as const;
 
 export type FeatureFlag = (typeof FEATURE_FLAG_KEYS)[number];
@@ -33,6 +34,12 @@ export interface FeatureFlagMeta {
   description: string;
   /** Flags die óók aan moeten staan voordat deze flag effectief aan is. */
   requires?: readonly FeatureFlag[];
+  /**
+   * OF-keten: de flag staat óók aan zodra één van deze flags effectief aan
+   * staat, zonder eigen env-var. Gebruikt door de kaartendatabase, die vanzelf
+   * terugkomt met de handel.
+   */
+  enabledBy?: readonly FeatureFlag[];
   /**
    * Zien admins de functie ook als de flag uit staat? Default **false**
    * (besluit Youri 2026-10-16: uit = voor iedereen uit, ook admins; pas aan
@@ -72,6 +79,12 @@ export const FEATURE_FLAGS: Record<FeatureFlag, FeatureFlagMeta> = {
     description:
       "Levels, XP-voortgang, prestaties en level-badges (/dashboard/level, voortgangsbalk in de zijbalk, badge op het spelersprofiel). Geparkeerd tot de league in Fase 5.",
   },
+  FEATURE_CARD_DATABASE: {
+    label: "Kaartendatabase",
+    description:
+      "Openbare kaartenlijst, sets, kaartdetail, pokédex en kaarten zoeken. Staat vanzelf aan zodra veilingen, claimsales of marktplaats aan staan. Uit = prijzen alleen nog in de verkoopcalculator.",
+    enabledBy: ["FEATURE_AUCTIONS", "FEATURE_CLAIMSALES", "FEATURE_MARKETPLACE"],
+  },
 };
 
 export type FlagEnv = Readonly<Record<string, string | undefined>>;
@@ -85,15 +98,17 @@ function envOn(value: string | undefined): boolean {
 /**
  * Staat de flag aan? Leest de env (default `process.env`), default uit.
  * Volgt de `requires`-keten: een flag is pas aan als al z'n vereisten aan zijn.
+ * Daarnaast de `enabledBy`-keten: staat één van die flags aan, dan deze ook.
  */
 export function isFeatureEnabled(flag: FeatureFlag, env: FlagEnv = process.env): boolean {
   const seen = new Set<FeatureFlag>();
   const check = (f: FeatureFlag): boolean => {
-    if (seen.has(f)) return true; // cyclus-guard; komt in de registry niet voor
+    if (seen.has(f)) return false; // cyclus-guard; komt in de registry niet voor
     seen.add(f);
-    if (!envOn(env[f])) return false;
-    const requires = FEATURE_FLAGS[f].requires ?? [];
-    return requires.every(check);
+    const meta = FEATURE_FLAGS[f];
+    const own = envOn(env[f]) && (meta.requires ?? []).every((r) => isFeatureEnabled(r, env));
+    if (own) return true;
+    return (meta.enabledBy ?? []).some(check);
   };
   return check(flag);
 }

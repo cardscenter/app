@@ -252,13 +252,21 @@ function DiscoverCards({ features }: { features: FeatureSnapshot }) {
       description: t("welcomeProfileDesc"),
       color: "bg-pink-500",
     },
-    {
-      href: "/kaarten" as const,
-      icon: Layers,
-      title: t("welcomeCards"),
-      description: t("welcomeCardsDesc"),
-      color: "bg-emerald-500",
-    },
+    features.FEATURE_CARD_DATABASE
+      ? {
+          href: "/kaarten" as const,
+          icon: Layers,
+          title: t("welcomeCards"),
+          description: t("welcomeCardsDesc"),
+          color: "bg-emerald-500",
+        }
+      : {
+          href: "/verkopen" as const,
+          icon: Layers,
+          title: t("welcomeSell"),
+          description: t("welcomeSellDesc"),
+          color: "bg-emerald-500",
+        },
     {
       href: "/dashboard/instellingen" as const,
       icon: Settings,

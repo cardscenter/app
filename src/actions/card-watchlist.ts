@@ -3,10 +3,13 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireFeature } from "@/lib/feature-flags-server";
 
 export async function toggleCardWatchlist(cardId: string) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Niet ingelogd" };
+  const feat = await requireFeature("FEATURE_CARD_DATABASE", session.user.accountType);
+  if ("error" in feat) return feat;
   const userId = session.user.id;
 
   const existing = await prisma.cardWatchlist.findUnique({

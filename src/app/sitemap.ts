@@ -21,7 +21,9 @@ const BASE_URL = getSiteUrl();
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/nl`, changeFrequency: "daily", priority: 1 },
-    { url: `${BASE_URL}/nl/kaarten`, changeFrequency: "weekly", priority: 0.9 },
+    ...(isFeatureEnabled("FEATURE_CARD_DATABASE")
+      ? [{ url: `${BASE_URL}/nl/kaarten`, changeFrequency: "weekly" as const, priority: 0.9 }]
+      : []),
     // Handel alleen zolang de feature-flags aan staan (Community Hub, Fase 1).
     ...(isFeatureEnabled("FEATURE_MARKETPLACE")
       ? [{ url: `${BASE_URL}/nl/marktplaats`, changeFrequency: "hourly" as const, priority: 0.8 }]
@@ -43,6 +45,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/nl/verkopen/voorwaarden-bulk`, changeFrequency: "monthly", priority: 0.3 },
     { url: `${BASE_URL}/nl/verkopen/voorwaarden-losse-kaarten`, changeFrequency: "monthly", priority: 0.3 },
   ];
+
+  // Kaartendatabase verborgen: geen set- en kaart-URL's (ronde G).
+  if (!isFeatureEnabled("FEATURE_CARD_DATABASE")) return staticEntries;
 
   try {
     const [sets, cards] = await Promise.all([

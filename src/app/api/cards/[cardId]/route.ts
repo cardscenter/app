@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCardImageUrl } from "@/lib/card-image";
+import { assertFeatureForRoute } from "@/lib/feature-flags-server";
 
 // Detail fetch for the typeahead card-picker (auction/listing/claimsale forms).
 // Called after a user selects a search result — returns high-res image,
@@ -11,6 +12,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ cardId: string }> }
 ) {
+  const blocked = await assertFeatureForRoute("FEATURE_CARD_DATABASE");
+  if (blocked) return blocked;
   const { cardId } = await params;
   if (!cardId) {
     return NextResponse.json({ error: "Missing cardId" }, { status: 400 });
