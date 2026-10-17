@@ -94,6 +94,17 @@ export function discountAmount(subtotal: number, rule: DiscountRule | null | und
   return Math.min(subtotal, round2(v));
 }
 
+/**
+ * Hoeveel spaarpunten er op een bestelling gaan (1 punt = 1 cent): zoveel
+ * mogelijk, maar nooit meer dan het saldo of het bedrag na de kortingscode.
+ * De fooi valt erbuiten en wordt nooit met punten betaald.
+ */
+export function pointsToApply(totalAfterCode: number, balance: number): { points: number; euro: number } {
+  const cents = Math.max(0, Math.round(totalAfterCode * 100));
+  const points = Math.max(0, Math.min(Math.floor(balance), cents));
+  return { points, euro: points / 100 };
+}
+
 export function normalizeCode(raw: string): string {
   return raw.trim().toUpperCase().replace(/\s+/g, "");
 }

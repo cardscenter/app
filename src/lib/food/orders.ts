@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { createProviderPayment, PAYMENTS_UNAVAILABLE_ERROR } from "@/lib/mollie";
 import { dayKey as shopDayKey, SHOP_TIMEZONE } from "@/lib/shop-events/format";
 import { mapProviderStatus, type PaymentStatus } from "@/lib/shop-events/config";
+import { getHubSettings } from "@/lib/app-config";
 import { getMenu, getWaitMinutes, toPricedLookup, type MenuView } from "./menu-server";
 import { FIRST_ORDER_NUMBER, NAME_MAX, NOTE_MAX, TABLE_MAX, TABLE_MIN, TIPS, UNPAID_ONLINE_MINUTES, DEFAULT_ITEMS } from "./menu-data";
 import {
@@ -13,6 +14,7 @@ import {
   drinksOnly,
   hasSoldOut,
   normalizeCode,
+  pointsToApply,
   round2,
   sanitizeBasket,
   type BasketLine,
@@ -23,6 +25,11 @@ import {
  * Bestellingen (Community Hub, Fase 4): plaatsen met server-side herberekening,
  * dagnummers, Mollie-koppeling (purpose FOOD_ORDER), keuken-statusmachine.
  * Gasten hebben geen account: de statuspagina werkt met `accessToken`.
+ *
+ * Spaarpunten (1 punt = 1 cent, alleen ingelogd): bij het plaatsen afgeschreven
+ * (`FOOD_SPEND`), teruggezet als de bestelling onbetaald vervalt (`FOOD_REFUND`)
+ * en bij betaling verdiend over het geldbedrag (`FOOD_EARN`). Alle drie zijn
+ * claim-first op een tijdstempel op de bestelling, dus nooit dubbel.
  */
 
 export type OrderStatus = "AWAITING_PAYMENT" | "NEW" | "PREPARING" | "READY" | "DONE" | "PAYMENT_FAILED";
@@ -41,6 +48,11 @@ export interface OrderView {
   savings: number;
   code: string | null;
   discount: number;
+  /** Ingezette spaarpunten en wat ze waard waren. */
+  pointsUsed: number;
+  pointsDiscount: number;
+  /** Verdiende spaarpunten (alleen ingevuld op de statuspagina, anders null). */
+  pointsEarned: number | null;
   total: number;
   tip: number;
   payment: "ONLINE" | "BAR";
@@ -85,6 +97,9 @@ export function toOrderView(o: NonNullable<OrderRow>): OrderView {
     savings: o.savings,
     code: o.code,
     discount: o.discount,
+    pointsUsed: o.pointsUsed,
+    pointsDiscount: o.pointsDiscount,
+    pointsEarned: null,
     total: o.total,
     tip: o.tip,
     payment: o.payment as "ONLINE" | "BAR",
@@ -159,11 +174,21 @@ export interface PlaceOrderInput {
   method?: string | null;
   locale: string;
   userId?: string | null;
+  /** Zoveel mogelijk spaarpunten inzetten (alleen met `userId`). */
+  usePoints?: boolean;
 }
 
 export type PlaceOrderResult =
   | { ok: true; orderId: string; number: number; accessToken: string; checkoutUrl: string | null }
-  | { error: string; code?: "drinks-only" | "sold-out" | "empty" | "table" | "name" | "code" | "payment" };
+  | { error: string; code?: "drinks-only" | "sold-out" | "empty" | "table" | "name" | "code" | "payment" | "points" };
+
+/** Saldo is net te laag geworden (een andere bestelling tegelijk): de transactie rolt terug. */
+class PointsRaceError extends Error {}
+
+async function pointsBalance(userId: string): Promise<number> {
+  const agg = await prisma.loyaltyEntry.aggregate({ where: { userId, kind: "POINTS" }, _sum: { delta: true } });
+  return agg._sum.delta ?? 0;
+}
 
 export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResult> {
   const menu = await getMenu();
@@ -188,7 +213,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const codeInfo = await resolveDiscountCode(input.code);
   if (input.code && normalizeCode(input.code) && !codeInfo) return { error: "Deze kortingscode is niet (meer) geldig.", code: "code" };
   const discount = discountAmount(subtotal, codeInfo?.rule ?? null);
-  const total = round2(subtotal - discount);
+  const afterCode = round2(subtotal - discount);
+  const userId = input.userId ?? null;
+  const pointsUsed = input.usePoints && userId ? pointsToApply(afterCode, await pointsBalance(userId)).points : 0;
+  const pointsDiscount = round2(pointsUsed / 100);
+  const total = round2(afterCode - pointsDiscount);
   const tip = input.payment === "ONLINE" && (TIPS as readonly number[]).includes(Number(input.tip)) ? Number(input.tip) : 0;
   const note = (input.note ?? "").trim().slice(0, NOTE_MAX) || null;
   const waitMinutes = await getWaitMinutes();
@@ -196,46 +225,65 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const dayKey = todayKey(now);
   const accessToken = randomBytes(18).toString("base64url");
   const locale = input.locale === "en" ? "en" : "nl";
-  const online = input.payment === "ONLINE";
+  // Alles al gedekt (punten en/of code): niets meer af te rekenen, meteen naar de keuken.
+  const settled = total <= 0 && (input.payment === "BAR" || tip <= 0);
+  const online = input.payment === "ONLINE" && !settled;
 
   // Dagnummer: max+1 vanaf 101; de unique-index vangt een race, dan opnieuw.
+  // Punten gaan in dezelfde transactie af; wordt het saldo daardoor negatief
+  // (twee bestellingen tegelijk), dan rolt alles terug.
   let created: { id: string; number: number } | null = null;
   for (let attempt = 0; attempt < 5 && !created; attempt++) {
     const last = await prisma.foodOrder.findFirst({ where: { dayKey }, orderBy: { number: "desc" }, select: { number: true } });
     const number = Math.max(FIRST_ORDER_NUMBER, (last?.number ?? FIRST_ORDER_NUMBER - 1) + 1);
     try {
-      const row = await prisma.foodOrder.create({
-        data: {
-          dayKey,
-          number,
-          mode: input.mode,
-          tableNumber: table,
-          name,
-          userId: input.userId ?? null,
-          locale,
-          lines: JSON.stringify(basket),
-          note,
-          subtotal,
-          savings,
-          code: codeInfo?.code ?? null,
-          discount,
-          total,
-          tip,
-          payment: input.payment,
-          method: online ? methodLabel(input.method) : null,
-          paid: false,
-          status: online ? "AWAITING_PAYMENT" : "NEW",
-          waitMinutes,
-          accessToken,
-        },
-        select: { id: true, number: true },
+      const row = await prisma.$transaction(async (tx) => {
+        const order = await tx.foodOrder.create({
+          data: {
+            dayKey,
+            number,
+            mode: input.mode,
+            tableNumber: table,
+            name,
+            userId,
+            locale,
+            lines: JSON.stringify(basket),
+            note,
+            subtotal,
+            savings,
+            code: codeInfo?.code ?? null,
+            discount,
+            pointsUsed,
+            pointsDiscount,
+            total,
+            tip,
+            payment: input.payment,
+            method: settled ? POINTS_METHOD_LABEL : online ? methodLabel(input.method) : null,
+            paid: settled,
+            paidAt: settled ? now : null,
+            status: online ? "AWAITING_PAYMENT" : "NEW",
+            waitMinutes,
+            accessToken,
+          },
+          select: { id: true, number: true },
+        });
+        if (pointsUsed > 0 && userId) {
+          await tx.loyaltyEntry.create({
+            data: { userId, kind: "POINTS", delta: -pointsUsed, reason: `Bestelling #${order.number}`, source: "FOOD_SPEND", foodOrderId: order.id },
+          });
+          const agg = await tx.loyaltyEntry.aggregate({ where: { userId, kind: "POINTS" }, _sum: { delta: true } });
+          if ((agg._sum.delta ?? 0) < 0) throw new PointsRaceError();
+        }
+        return order;
       });
       created = row;
     } catch (err) {
+      if (err instanceof PointsRaceError) return { error: "Je spaarpunten zijn net veranderd. Probeer het opnieuw.", code: "points" };
       if (attempt === 4) throw err;
     }
   }
   if (!created) return { error: "Kon geen bestelnummer maken. Probeer het opnieuw." };
+  if (settled) await awardFoodPoints(created.id);
 
   if (codeInfo) await prisma.discountCode.update({ where: { code: codeInfo.code }, data: { uses: { increment: 1 } } }).catch(() => {});
 
@@ -300,10 +348,14 @@ export async function onFoodOrderPaymentStatus(paymentId: string, next: PaymentS
   const order = await prisma.foodOrder.findUnique({ where: { paymentId }, select: { id: true, status: true, paid: true } });
   if (!order) return;
   if (next === "PAID") {
-    await prisma.foodOrder.updateMany({
+    const r = await prisma.foodOrder.updateMany({
       where: { id: order.id, paid: false },
       data: { paid: true, paidAt: now, status: order.status === "AWAITING_PAYMENT" || order.status === "PAYMENT_FAILED" ? "NEW" : order.status },
     });
+    if (r.count === 1) {
+      await rechargeRefundedPoints(order.id);
+      await awardFoodPoints(order.id);
+    }
     return;
   }
   if (next === "FAILED" || next === "CANCELED" || next === "EXPIRED") {
@@ -320,7 +372,9 @@ export async function getGuestOrder(orderId: string, accessToken: string, userId
   const byToken = !!accessToken && o.accessToken === accessToken;
   const byUser = !!userId && o.userId === userId;
   if (!byToken && !byUser) return null;
-  return toOrderView(o);
+  const view = toOrderView(o);
+  if (o.userId && o.pointsAwardedAt) view.pointsEarned = await pointsEarnedFor(o.id);
+  return view;
 }
 
 export async function listOrdersForUser(userId: string, take = 10): Promise<OrderView[]> {
@@ -366,14 +420,85 @@ export async function advanceOrder(orderId: string, to: OrderStatus): Promise<{ 
 
 export async function markOrderPaidAtBar(orderId: string): Promise<{ ok: true } | { error: string }> {
   const r = await prisma.foodOrder.updateMany({ where: { id: orderId, payment: "BAR", paid: false }, data: { paid: true, paidAt: new Date() } });
-  return r.count === 1 ? { ok: true } : { error: "Al betaald of geen barbestelling" };
+  if (r.count !== 1) return { error: "Al betaald of geen barbestelling" };
+  await awardFoodPoints(orderId);
+  return { ok: true };
 }
 
-/** Cron: online bestellingen die na 30 min nog niet betaald zijn → PAYMENT_FAILED. */
-export async function expireUnpaidOnlineOrders(now: Date = new Date()): Promise<{ expired: number }> {
+/** Cron: online bestellingen die na 30 min nog niet betaald zijn → PAYMENT_FAILED, ingezette punten terug. */
+export async function expireUnpaidOnlineOrders(now: Date = new Date()): Promise<{ expired: number; refunded: number }> {
   const cutoff = new Date(now.getTime() - UNPAID_ONLINE_MINUTES * 60_000);
   const r = await prisma.foodOrder.updateMany({ where: { status: "AWAITING_PAYMENT", createdAt: { lt: cutoff } }, data: { status: "PAYMENT_FAILED" } });
-  return { expired: r.count };
+  // Na 30 min kan opnieuw betalen niet meer (`retryOrderPayment`), dus dan zijn ze definitief vervallen.
+  const dead = await prisma.foodOrder.findMany({
+    where: { status: "PAYMENT_FAILED", paid: false, pointsUsed: { gt: 0 }, pointsRefundedAt: null, createdAt: { lt: cutoff } },
+    select: { id: true },
+  });
+  let refunded = 0;
+  for (const o of dead) if (await refundOrderPoints(o.id, now)) refunded++;
+  return { expired: r.count, refunded };
+}
+
+// ---------------------------------------------------------------- spaarpunten
+
+/** Label op de bon als punten (en/of code) alles dekken. */
+const POINTS_METHOD_LABEL = "Spaarpunten";
+
+/**
+ * Ingezette punten van een onbetaalde bestelling terugzetten. Claim-first op
+ * `pointsRefundedAt`, dus hoogstens één keer. Geeft true als er iets terugging.
+ */
+export async function refundOrderPoints(orderId: string, now: Date = new Date()): Promise<boolean> {
+  const o = await prisma.foodOrder.findUnique({ where: { id: orderId }, select: { userId: true, number: true, pointsUsed: true } });
+  if (!o?.userId || o.pointsUsed <= 0) return false;
+  const claim = await prisma.foodOrder.updateMany({
+    where: { id: orderId, paid: false, pointsUsed: { gt: 0 }, pointsRefundedAt: null },
+    data: { pointsRefundedAt: now },
+  });
+  if (claim.count !== 1) return false;
+  await prisma.loyaltyEntry.create({
+    data: { userId: o.userId, kind: "POINTS", delta: o.pointsUsed, reason: `Bestelling #${o.number} niet betaald`, source: "FOOD_REFUND", foodOrderId: orderId },
+  });
+  return true;
+}
+
+/** Komt een betaling alsnog binnen nadat de punten al terug waren: dan gaan ze er opnieuw af. */
+async function rechargeRefundedPoints(orderId: string): Promise<void> {
+  const o = await prisma.foodOrder.findUnique({ where: { id: orderId }, select: { userId: true, number: true, pointsUsed: true, pointsRefundedAt: true } });
+  if (!o?.userId || o.pointsUsed <= 0 || !o.pointsRefundedAt) return;
+  const claim = await prisma.foodOrder.updateMany({ where: { id: orderId, pointsRefundedAt: { not: null } }, data: { pointsRefundedAt: null } });
+  if (claim.count !== 1) return;
+  await prisma.loyaltyEntry.create({
+    data: { userId: o.userId, kind: "POINTS", delta: -o.pointsUsed, reason: `Bestelling #${o.number} alsnog betaald`, source: "FOOD_SPEND", foodOrderId: orderId },
+  });
+}
+
+/**
+ * Spaarpunten verdienen over het betaalde geldbedrag (niet over punten of
+ * fooi), alleen voor ingelogde spelers. Claim-first op `pointsAwardedAt`.
+ * Faalt nooit hard: een betaling mag hier niet op stuklopen.
+ */
+export async function awardFoodPoints(orderId: string, now: Date = new Date()): Promise<number> {
+  try {
+    const o = await prisma.foodOrder.findUnique({ where: { id: orderId }, select: { userId: true, number: true, total: true, paid: true, pointsAwardedAt: true } });
+    if (!o?.userId || !o.paid || o.pointsAwardedAt) return 0;
+    const { pointsPerEuroFood } = await getHubSettings();
+    const points = Math.max(0, Math.floor(round2(o.total * pointsPerEuroFood)));
+    const claim = await prisma.foodOrder.updateMany({ where: { id: orderId, paid: true, pointsAwardedAt: null }, data: { pointsAwardedAt: now } });
+    if (claim.count !== 1 || points <= 0) return 0;
+    await prisma.loyaltyEntry.create({
+      data: { userId: o.userId, kind: "POINTS", delta: points, reason: `Bestelling #${o.number}`, source: "FOOD_EARN", foodOrderId: orderId },
+    });
+    return points;
+  } catch (err) {
+    console.error("[food] spaarpunten bijschrijven mislukt", err);
+    return 0;
+  }
+}
+
+async function pointsEarnedFor(orderId: string): Promise<number> {
+  const agg = await prisma.loyaltyEntry.aggregate({ where: { foodOrderId: orderId, source: "FOOD_EARN" }, _sum: { delta: true } });
+  return agg._sum.delta ?? 0;
 }
 
 export interface DayStats {
@@ -407,9 +532,12 @@ export async function getDayStats(): Promise<DayStats> {
   };
 }
 
-/** "Bestellingen van vorige dagen wissen": alles van vóór vandaag. */
+/** "Bestellingen van vorige dagen wissen": alles van vóór vandaag (onbetaald = ingezette punten eerst terug). */
 export async function clearOrdersBeforeToday(): Promise<{ deleted: number }> {
-  const r = await prisma.foodOrder.deleteMany({ where: { createdAt: { lt: dayStart() } } });
+  const start = dayStart();
+  const unpaid = await prisma.foodOrder.findMany({ where: { createdAt: { lt: start }, paid: false, pointsUsed: { gt: 0 }, pointsRefundedAt: null }, select: { id: true } });
+  for (const o of unpaid) await refundOrderPoints(o.id);
+  const r = await prisma.foodOrder.deleteMany({ where: { createdAt: { lt: start } } });
   return { deleted: r.count };
 }
 

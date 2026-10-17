@@ -12,6 +12,7 @@ import {
   hasFood,
   lineKey,
   normalizeCode,
+  pointsToApply,
   removeLine,
   sanitizeBasket,
   setLineRemoved,
@@ -132,3 +133,20 @@ function round(n: number) {
 }
 
 export type _L = BasketLine;
+
+describe("pointsToApply", () => {
+  it("gebruikt het hele saldo als dat kleiner is dan het bedrag", () => {
+    expect(pointsToApply(12.5, 340)).toEqual({ points: 340, euro: 3.4 });
+  });
+  it("dekt hoogstens het bedrag, op de cent", () => {
+    expect(pointsToApply(7.95, 5000)).toEqual({ points: 795, euro: 7.95 });
+  });
+  it("rondt het bedrag af op centen (float-ruis)", () => {
+    expect(pointsToApply(0.1 + 0.2, 1000).points).toBe(30);
+  });
+  it("geeft niets bij een leeg saldo, negatief saldo of bedrag nul", () => {
+    expect(pointsToApply(10, 0).points).toBe(0);
+    expect(pointsToApply(10, -50).points).toBe(0);
+    expect(pointsToApply(0, 500).points).toBe(0);
+  });
+});
