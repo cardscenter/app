@@ -21,16 +21,16 @@ import { HomeKpiCard } from "@/components/dashboard/home/home-kpi-card";
 import { RecentOrdersTable } from "@/components/dashboard/home/recent-orders-table";
 import { ActionItemsWidget } from "@/components/dashboard/home/action-items-widget";
 import { ActiveActivityWidget } from "@/components/dashboard/home/active-activity-widget";
-import { DashboardPageHeader } from "@/components/dashboard/ui/page-header";
+import { HubHome } from "@/components/dashboard/home/hub-home";
+import { getHubDashboardData } from "@/lib/dashboard-hub-data";
+import { getUnreadConversationCountFor, getUnreadNotificationCountFor } from "@/lib/unread-counts";
 
-// Dashboard-home in TailAdmin-stijl (sept 2026): saldo-band → KPI-rij →
-// cash flow + actie-nodig → recente orders + lopend aanbod.
-// Periode via ?period= (zelfde selector als /dashboard/statistieken), default 30d.
-//
-// Feature-flags (Community Hub, Fase 1): zonder FEATURE_WALLET vervallen de
-// saldo-band, KPI-rij, cash flow en recente orders — er blijft een compacte
-// kop met "Actie nodig" en lopende activiteit over. De echte hub-home
-// (events, tickets, stempelkaart) komt in latere fases.
+// Dashboard-home.
+// Hub-modus (FEATURE_WALLET uit, de normale stand): <HubHome> met welkomstpaneel,
+// tegels voor ticket/stempelkaart/league/spaarpunten en alleen de blokken die
+// iets te melden hebben (design-pass ronde G, 2026-10-17).
+// Met FEATURE_WALLET: saldo-band, KPI-rij, cash flow, actie-nodig, recente
+// orders en lopend aanbod. Periode via ?period=, default 30d.
 
 const DEFAULT_PERIOD = "30d";
 
@@ -53,13 +53,30 @@ export default async function DashboardPage({
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { displayName: true, accountType: true, totpEnabled: true },
+    select: { displayName: true, firstName: true, accountType: true, totpEnabled: true },
   });
   if (!user) return null;
 
   const hasPremium = user.accountType !== "FREE";
   const features = getFeatureSnapshot(user.accountType);
   const walletOn = features.FEATURE_WALLET;
+
+  if (!walletOn) {
+    const [hub, messages, notifications] = await Promise.all([
+      getHubDashboardData(userId),
+      getUnreadConversationCountFor(userId),
+      getUnreadNotificationCountFor(userId),
+    ]);
+    return (
+      <HubHome
+        locale={locale}
+        firstName={user.firstName?.trim() || user.displayName}
+        data={hub}
+        unread={{ messages, notifications }}
+        totpEnabled={user.totpEnabled}
+      />
+    );
+  }
 
   const [actionItemsRaw, activityRaw, hasShippingAddress] = await Promise.all([
     fetchActionItems(userId),
@@ -68,26 +85,6 @@ export default async function DashboardPage({
   ]);
   const actionItems = maskActionItems(actionItemsRaw, features);
   const activity = maskActiveActivity(activityRaw, features);
-
-  if (!walletOn) {
-    return (
-      <div className="space-y-4">
-        <DashboardPageHeader title={t("title")} subtitle={th("greeting", { name: user.displayName })} />
-
-        <div className="grid gap-4 xl:grid-cols-3">
-          <div className="xl:col-span-2">
-            <ActionItemsWidget
-              counts={actionItems}
-              totpEnabled={user.totpEnabled}
-              hasShippingAddress={hasShippingAddress}
-              layout="grid"
-            />
-          </div>
-          <ActiveActivityWidget data={activity} />
-        </div>
-      </div>
-    );
-  }
 
   const [balance, cashFlow, orders] = await Promise.all([
     fetchBalanceOverview(userId),
