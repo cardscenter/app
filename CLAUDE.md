@@ -4,6 +4,16 @@
 
 Pokémon trading card marketplace — auctions, claimsales, listings, wallet, messaging, reviews, watchlist, notifications, disputes.
 
+## Begin hier (na een nieuw of gecleard gesprek)
+1. **Waar staan we?** De actuele stand (wat live staat, wat open is, volgende stap) staat in de memory-notitie `project_current_state.md` (index: MEMORY.md). Lees die eerst en ga daar verder; vraag Youri alleen iets als de notitie het niet beantwoordt.
+2. **Skills laden** (via de Skill-tool) zodra het onderwerp past, ook als Youri ze niet noemt:
+   - `design-system`: bij élke UI-, pagina-, component-, styling-, dashboard- of adminwijziging (bron: `docs/design/DESIGN.md`).
+   - `deploy-live`: bij pushen/mergen naar `main`, live zetten, deployen of schemawijzigingen voor Turso.
+   - `testserver`: dev-server (her)starten met verse cache (`/testserver`).
+   - `gitpush`: alleen als Youri expliciet om commit + push vraagt.
+   - `pokewallet-api`: bij werk aan kaartprijzen/PokeWallet-sync.
+3. **Git**: werk op een feature-branch, commit per stap, `main` = live (zie CRITICAL RULES).
+
 ## Design-systeem (leidend sinds 2026-10)
 **Bouw alles in de nieuwe stijl; de oude stijl (TailAdmin-dashboard, glass, dark-mode, slate/blauw, `rounded-md`-knoppen, amber-blokken) is vervallen**, ook waar oudere secties hieronder of oude code iets anders zeggen.
 - **Lees `docs/design/DESIGN.md`** vóór je UI bouwt: principes, tokens, catalogus van alle bouwstenen met props, recepten (publieke pagina, dashboardpagina, tabel, formulier), mobiel/animatie-regels, verboden lijst en checklist. De project-skill **`design-system`** (`.claude/skills/design-system/SKILL.md`) laadt dit automatisch bij UI-werk.
@@ -56,7 +66,7 @@ De app wordt omgebouwd van handelsplatform naar **community-hub voor de fysieke 
 - `npx prisma db seed` — Seed the database
 - `npx prisma generate` — Regenerate Prisma client (na elke `db push`)
 
-**Env-vars** (`.env`): `FEATURE_WALLET`/`FEATURE_AUCTIONS`/`FEATURE_CLAIMSALES`/`FEATURE_MARKETPLACE`/`FEATURE_COMMUNITY_EVENTS`/`FEATURE_XP`/`FEATURE_CARD_DATABASE` (feature-flags, leeg = uit — zie Koerswijziging), `DATABASE_URL`, `AUTH_SECRET`, `AUTH_TRUST_HOST`, `POKEWALLET_API_KEY`, `ANTHROPIC_API_KEY` (image content-moderation — leeg = fail-open, uploads gaan ongechecked door), `EMAIL_PROVIDER` (`console`=mock / `resend`), `RESEND_API_KEY` + `EMAIL_FROM` (bij resend), `EMAIL_REPLY_TO` (optioneel; leeg = pure noreply, contact loopt via de site), `MOLLIE_API_KEY` (leeg = simulatiemodus voor tickets/eten/retouren; `test_`/`live_`-key = Mollie, webhook vereist publieke site-URL), `IBAN_ENCRYPTION_KEY` (32 bytes base64/hex; verplicht in productie, lokaal afgeleid van AUTH_SECRET).
+**Env-vars** (`.env`): `FEATURE_WALLET`/`FEATURE_AUCTIONS`/`FEATURE_CLAIMSALES`/`FEATURE_MARKETPLACE`/`FEATURE_COMMUNITY_EVENTS`/`FEATURE_XP`/`FEATURE_CARD_DATABASE` (feature-flags, leeg = uit — zie Koerswijziging), `DATABASE_URL`, `AUTH_SECRET`, `AUTH_TRUST_HOST`, `POKEWALLET_API_KEY`, `ANTHROPIC_API_KEY` (image content-moderation — leeg = fail-open, uploads gaan ongechecked door), `EMAIL_PROVIDER` (`console`=mock / `resend`), `RESEND_API_KEY` + `EMAIL_FROM` (bij resend), `EMAIL_REPLY_TO` (optioneel; leeg = pure noreply, contact loopt via de site), `MOLLIE_API_KEY` (leeg = simulatiemodus voor tickets/eten/retouren; `test_`/`live_`-key = Mollie, webhook vereist publieke site-URL), `IBAN_ENCRYPTION_KEY` (32 bytes base64/hex; verplicht in productie, lokaal afgeleid van AUTH_SECRET), `PAYMENT_SIMULATION` (`true` = betaalsimulatie ook in productie toestaan; standaard uit, dan geeft online betalen zonder Mollie-sleutel een nette melding).
 
 ### Schema-wijziging workflow
 1. Edit `prisma/schema.prisma`
@@ -83,6 +93,7 @@ De testfase-site draait live. **Workflow: altijd eerst lokaal testen (`npm run d
 `DATABASE_URL` (libsql Turso-URL), `TURSO_AUTH_TOKEN`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, `NEXTAUTH_URL` + `NEXT_PUBLIC_SITE_URL` (= live domein), `CRON_SECRET`, `R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`R2_BUCKET`. Optioneel: `ANTHROPIC_API_KEY`, `POKEWALLET_API_KEY`. Sjabloon: `.env.example`.
 
 ### Schema naar Turso pushen (NIET `prisma db push` — die praat niet met remote libSQL)
+**Controle (2026-10-17)**: `scripts/compare-schema.ts <expected.sql> <url>` vergelijkt het hele verwachte schema met een database (read-only) en `scripts/check-hub-migrations.ts <url>` toont per hub-migratiebestand of het erop staat. Op live toegepast op 2026-10-17: `turso-hub-fase2..6.sql` + `turso-design-testimonials.sql` (live-URL `libsql://cardscenter-cardscenter.aws-eu-west-1.turso.io`). Volledige livegang-checklist: skill `deploy-live`.
 `prisma.config.ts` heeft geen driver-adapter, dus de Prisma-CLI kan geen remote `libsql://` bereiken. Workflow voor schema-wijzigingen op Turso:
 1. SQL genereren: `npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script > prisma/turso-schema.sql` (let op: vlag is `--to-schema`, niet `--to-schema-datamodel`).
 2. Toepassen: `npx tsx scripts/push-to-turso.ts "libsql://<db>.turso.io"` (leest `TURSO_AUTH_TOKEN` uit `.env`, voert SQL uit via `@libsql/client.executeMultiple`).
