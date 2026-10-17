@@ -1,6 +1,6 @@
 /**
  * Vaste "willekeur" per vakje: een kleine hash van seed + vaknummer. Zo staat
- * elke stempel net anders (hoek, verschuiving, inkt), maar springt hij niet
+ * elke stempel net anders (hoek, verschuiving, grootte), maar springt hij niet
  * bij elke render en klopt server- en client-HTML met elkaar.
  */
 function rand(seed: string, i: number, salt: number): number {
@@ -16,21 +16,21 @@ function rand(seed: string, i: number, salt: number): number {
   return (h >>> 0) / 4294967296;
 }
 
-/** Hoe een echte stempel landt: elke hoek, iets uit het midden, wisselend veel inkt. */
+/** Hoe een echte stempel landt: elke hoek, iets uit het midden, net wat groter of kleiner. */
 function stampLook(seed: string, i: number) {
   return {
     rotate: Math.round(rand(seed, i, 1) * 360),
     x: Math.round((rand(seed, i, 2) - 0.5) * 12),
     y: Math.round((rand(seed, i, 3) - 0.5) * 12),
     scale: 0.92 + rand(seed, i, 4) * 0.12,
-    ink: 0.78 + rand(seed, i, 5) * 0.22,
   };
 }
 
 /**
  * Stempelkaart (design-pass): een rij ronde vakjes. Een verdiend vakje toont
  * de Cards Center-stempel, gezet zoals met de hand: in een willekeurige stand,
- * soms op z'n kop, net niet in het midden. De nieuwste wordt erin "gestempeld"
+ * soms op z'n kop, net niet in het midden; het gestippelde vakje blijft er
+ * vaag achter staan, alsof de stempel erop gedrukt is. De nieuwste wordt erin "gestempeld"
  * (`.cc-stamp-in` in globals.css). Geef `seed` (bv. de speler-id) mee zodat
  * elke speler een eigen patroon heeft. Puur presentatie.
  */
@@ -43,10 +43,10 @@ export function StampCardVisual({ total, filled, seed = "cards-center", classNam
         if (i < f) {
           const look = stampLook(seed, i);
           return (
-            <span key={i} className="relative aspect-square">
+            <span key={i} className="relative aspect-square rounded-full border-2 border-dashed border-[var(--foreground)]/15">
               <span
-                className="absolute inset-0"
-                style={{ rotate: `${look.rotate}deg`, translate: `${look.x}% ${look.y}%`, scale: look.scale.toFixed(3), opacity: look.ink.toFixed(2) }}
+                className="absolute -inset-[2px]"
+                style={{ rotate: `${look.rotate}deg`, translate: `${look.x}% ${look.y}%`, scale: look.scale.toFixed(3) }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
