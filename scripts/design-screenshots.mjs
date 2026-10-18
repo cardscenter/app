@@ -3,7 +3,7 @@
 // Gebruikt de lokale Chrome via het DevTools-protocol: geen puppeteer/playwright nodig.
 //
 //   node scripts/design-screenshots.mjs                        alle pagina's uit PAGES → docs/design/reference/site/
-//   node scripts/design-screenshots.mjs --url /nl/league --width 390 --out tmp.png [--full]
+//   node scripts/design-screenshots.mjs --url /nl/league --width 390 --out tmp.png [--full] [--scroll 600] [--eval "document.querySelector(...).click()"]
 //   COOKIE=<authjs.session-token> node scripts/design-screenshots.mjs   ook de ingelogde pagina's
 //
 // Opties: --base http://localhost:3000, --chrome <pad naar chrome.exe>, DSF=2 voor scherpere beelden.
@@ -110,7 +110,7 @@ async function connect() {
   return { ws, send };
 }
 
-async function shoot(send, url, width, height, file, full) {
+async function shoot(send, url, width, height, file, full, scrollTo = 0, evalJs = "") {
   await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: Number(process.env.DSF || 1), mobile: width < 700 });
   await send("Page.navigate", { url });
   await sleep(6500);
@@ -120,6 +120,14 @@ async function shoot(send, url, width, height, file, full) {
     expression: "new Promise(r => { let y = 0; const t = setInterval(() => { y += 600; scrollTo(0, y); if (y > document.documentElement.scrollHeight) { clearInterval(t); scrollTo(0, 0); setTimeout(r, 900); } }, 120); })",
     awaitPromise: true,
   });
+  // Optioneel: op een scrollpositie vastleggen (bv. de header in gescrolde stand).
+  if (scrollTo > 0) {
+    await send("Runtime.evaluate", { expression: `new Promise(r => { scrollTo(0, ${scrollTo}); setTimeout(r, 1200); })`, awaitPromise: true });
+  }
+  // Optioneel: eerst wat JS draaien (bv. het menu openklikken) en even wachten.
+  if (evalJs) {
+    await send("Runtime.evaluate", { expression: `new Promise(r => { ${evalJs}; setTimeout(r, 900); })`, awaitPromise: true });
+  }
   if (process.env.DEBUG) console.log("debug", JSON.stringify((await send("Runtime.evaluate", { expression: "location.href + ' | ' + document.title + ' | ' + document.documentElement.scrollHeight", returnByValue: true })).result));
   const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: full });
   writeFileSync(file, Buffer.from(shot.result.data, "base64"));
@@ -132,7 +140,7 @@ try {
   const single = opt("url")?.replace(/\\/g, "/").replace(/^[A-Za-z]:\/.*?\/Git(?=\/)/, "");
   if (single) {
     const width = Number(opt("width", "1440"));
-    await shoot(send, BASE + single, width, width < 700 ? 844 : 900, path.resolve(opt("out", "screenshot.png")), flag("full"));
+    await shoot(send, BASE + single, width, width < 700 ? 844 : 900, path.resolve(opt("out", "screenshot.png")), flag("full"), Number(opt("scroll", "0")), opt("eval", ""));
   } else {
     mkdirSync(OUT_DIR, { recursive: true });
     for (const [name, p, needsLogin] of PAGES) {

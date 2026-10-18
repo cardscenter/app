@@ -71,7 +71,7 @@ DisplayHeading-maten: 1 = 56→144px, 2 = 44→96px, 3 = 40→64px, 4 = 32→44p
 ## 4. Layout en breedtes
 
 - **Inhoud**: `max-w-6xl` (1152px), zijpadding `px-4 sm:px-5 lg:px-6`. `PageContainer` default = 6xl, narrow = 3xl, wide = 1400px.
-- **Navigatie**: zwevende witte pil (`src/components/layout/site-nav.tsx`), max 1400px, `px-4 lg:px-8`.
+- **Navigatie**: zwevende witte pil (`src/components/layout/site-nav.tsx`), max 1400px, `px-4 lg:px-8`. Het logo staat los van de pillen (2026-10-18): mobiel gecentreerd op knophoogte (h-12), desktop links van de linkspil (h-10). Zodra de pagina meer dan 24px gescrold is veert het omhoog weg (framer-motion, zelfde easing als het footer-logo) en schuift de linkspil naar links; helemaal bovenaan komt het terug. In het mobiele menu is zoeken een loepje dat over de actierij heen uitklapt (`GlobalSearch variant="mobile"`).
 - **Panelen**: `<Panel color>` loopt full-bleed met 20px radius, binnenkant op 72rem.
 - **Dashboard**: frame `max-w-[1400px] px-4 lg:px-8` (gelijk aan de nav-pil), links een zwevend donker paneel van 248px (`dashboard-shell.tsx`), rechts de inhoud met `space-y-6`.
 - **Berichten**: `MessagesFrame` 1400px, schermvullend, zonder zijbalk.

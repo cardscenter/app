@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { SessionProvider, useSession } from "next-auth/react";
 import { Bell, ChevronRight, Menu, MessageCircle, X } from "lucide-react";
@@ -39,8 +40,25 @@ const MOBILE_LINK =
  * tot menu met zoekveld, snelle acties (met ongelezen-tellers) en links.
  * Functioneel gelijk aan de vorige donkere header (SSE-badges, sessie-
  * verversing na avatar-wijziging, feature-flags op de handelslinks).
+ * Het logo staat los van de pillen (2026-10-18): op mobiel gecentreerd boven
+ * de pagina, op desktop links van de linkspil. Zodra de pagina scrolt veert
+ * het omhoog uit beeld en schuift de linkspil naar links; helemaal bovenaan
+ * komt het terug. Zelfde veer-easing als het footer-logo.
  * Het root-element is <header>: /bestellen en /keuken verbergen `body > header`.
  */
+const LOGO_SPRING = { duration: 0.55, ease: [0.34, 1.56, 0.64, 1] as const };
+const LOGO_HIDE = { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const };
+/** Breedte van het desktop-logo (h-10 bij een 3:1-logo) plus de ruimte tot de pil. */
+const DESKTOP_LOGO_SLOT = 120 + 20;
+/** Vanaf hoeveel pixels scrollen het logo wegveert. */
+const SCROLL_HIDE_AT = 24;
+
+function subscribeScroll(onChange: () => void) {
+  window.addEventListener("scroll", onChange, { passive: true });
+  return () => window.removeEventListener("scroll", onChange);
+}
+const isScrolled = () => window.scrollY > SCROLL_HIDE_AT;
+const isScrolledServer = () => false;
 function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) {
   const t = useTranslations("common");
   const tn = useTranslations("nav");
@@ -54,6 +72,12 @@ function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) 
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const menuId = useId();
+  const reduced = useReducedMotion();
+
+  // Logo verbergen zodra de pagina gescrold is; weer tonen helemaal bovenaan.
+  const scrolled = useSyncExternalStore(subscribeScroll, isScrolled, isScrolledServer);
+  const logoHidden = scrolled || open;
+  const logoTransition = reduced ? { duration: 0 } : logoHidden ? LOGO_HIDE : LOGO_SPRING;
 
   // Eerste render uit de server-sessie, daarna neemt useSession het over.
   const viewer: NavViewer | null =
@@ -146,23 +170,35 @@ function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   const avatarSrc = avatarOverride === undefined ? viewer?.image : avatarOverride;
-  const logo = (
-    <Link href="/" aria-label="Cards Center" className="block shrink-0">
+  const logo = (sizeClass: string) => (
+    <Link href="/" aria-label="Cards Center" className="block shrink-0" tabIndex={logoHidden ? -1 : undefined}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/images/logo-white-bg.png" alt="" width={120} height={40} className="h-7 w-auto" />
+      <img src="/images/logo-white-bg.png" alt="" width={120} height={40} className={`${sizeClass} w-auto`} />
     </Link>
   );
   const pill = `bg-white ${HEADER_PILL_SHADOW}`;
 
   return (
     <header className="pointer-events-none fixed inset-x-0 top-4 z-40 flex justify-center md:top-6">
-      <div className="flex w-full max-w-[1400px] items-start justify-between gap-3 px-4 lg:px-8">
+      <div className="relative flex w-full max-w-[1400px] items-start justify-between gap-3 px-4 lg:px-8">
+        {/* Mobiel/tablet: los logo in het midden, veert omhoog weg bij scrollen of open menu */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex h-12 items-center justify-center min-[960px]:hidden" aria-hidden={logoHidden}>
+          <motion.div
+            initial={false}
+            animate={logoHidden ? { y: -56, opacity: 0, scale: 0.9 } : { y: 0, opacity: 1, scale: 1 }}
+            transition={logoTransition}
+            className={logoHidden ? "pointer-events-none" : "pointer-events-auto"}
+          >
+            {logo("h-11 min-[400px]:h-12")}
+          </motion.div>
+        </div>
+
         {/* Mobiel/tablet: uitklappende pil met menu */}
         <div className="pointer-events-auto relative h-12 min-[960px]:hidden">
           <div
-            className={`absolute left-0 top-0 flex flex-col overflow-hidden rounded-[24px] ${pill} transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${open ? "w-[min(22rem,calc(100vw-2rem))]" : "w-[150px]"}`}
+            className={`absolute left-0 top-0 flex flex-col overflow-hidden rounded-[24px] ${pill} transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${open ? "w-[min(22rem,calc(100vw-2rem))]" : "w-12"}`}
           >
-            <div className="flex h-12 items-center gap-3 pl-4 pr-5">
+            <div className="flex h-12 items-center px-1.5">
               <button
                 type="button"
                 aria-expanded={open}
@@ -173,19 +209,18 @@ function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) 
               >
                 {open ? <X className="size-4" /> : <Menu className="size-4" />}
               </button>
-              {logo}
             </div>
             <div
               id={menuId}
               aria-hidden={!open}
               className={`flex flex-col gap-1 overflow-y-auto px-2 transition-[max-height,opacity,padding] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${open ? "max-h-[calc(100dvh-7rem)] pb-3 pt-1 opacity-100" : "max-h-0 py-0 opacity-0"}`}
             >
-              {/* Zoekveld (donkere stijl van de zoekcomponent in een inkt-blok) */}
-              <div className="rounded-[16px] bg-[var(--foreground)] p-2">
-                <GlobalSearch variant="mobile" onNavigate={() => setOpen(false)} />
-              </div>
-              {viewer && (
-                <div className="mt-1 flex items-center gap-2 px-1">
+              {/* Actierij: loep (klapt uit over de rij heen), berichten, meldingen,
+                  dashboard. De key zorgt dat de zoekbalk ingeklapt begint bij elk openen. */}
+              <div className="relative mt-1 flex items-center gap-2 px-1">
+                <GlobalSearch key={open ? "open" : "closed"} variant="mobile" onNavigate={() => setOpen(false)} />
+                {viewer && (
+                  <>
                   <Link
                     href="/berichten"
                     onClick={() => setOpen(false)}
@@ -221,8 +256,9 @@ function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) 
                     <span className="min-w-0 flex-1 truncate">{t("dashboard")}</span>
                     <ChevronRight className="size-4 shrink-0 opacity-60" />
                   </Link>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
               <nav className="mt-1 flex flex-col gap-0.5" aria-label={tn("mainMenu")}>
                 {links.map((l) => (
                   <Link key={l.href} href={l.href} aria-current={isActive(l.href) ? "page" : undefined} className={`${MOBILE_LINK} ${isActive(l.href) ? "bg-[var(--background)] text-[var(--foreground)]" : ""}`}>
@@ -249,17 +285,28 @@ function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) 
           </div>
         </div>
 
-        {/* Desktop: witte pil met logo + links */}
-        <nav className={`pointer-events-auto hidden h-12 items-center rounded-full pl-5 pr-6 ${pill} min-[960px]:flex`} aria-label={tn("mainMenu")}>
-          <span className="mr-8">{logo}</span>
-          <div className="flex h-full items-center gap-6 xl:gap-7">
-            {links.map((l) => (
-              <Link key={l.href} href={l.href} aria-current={isActive(l.href) ? "page" : undefined} className={`${DESKTOP_LINK} ${isActive(l.href) ? "text-[var(--foreground)]" : "text-[var(--foreground)]/70"}`}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
+        {/* Desktop: los logo links, daarnaast de witte pil met links. Bij scrollen
+            verdwijnt het logo omhoog en schuift de pil naar links in zijn plaats. */}
+        <div className="hidden h-12 items-center min-[960px]:flex">
+          <motion.div
+            initial={false}
+            animate={logoHidden ? { width: 0, opacity: 0, y: -40 } : { width: DESKTOP_LOGO_SLOT, opacity: 1, y: 0 }}
+            transition={logoTransition}
+            className={`flex h-12 shrink-0 items-center overflow-hidden ${logoHidden ? "pointer-events-none" : "pointer-events-auto"}`}
+            aria-hidden={logoHidden}
+          >
+            {logo("h-10")}
+          </motion.div>
+          <nav className={`pointer-events-auto flex h-12 items-center rounded-full px-6 ${pill}`} aria-label={tn("mainMenu")}>
+            <div className="flex h-full items-center gap-6 xl:gap-7">
+              {links.map((l) => (
+                <Link key={l.href} href={l.href} aria-current={isActive(l.href) ? "page" : undefined} className={`${DESKTOP_LINK} ${isActive(l.href) ? "text-[var(--foreground)]" : "text-[var(--foreground)]/70"}`}>
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        </div>
 
         {/* Rechts: acties */}
         <div className="pointer-events-auto flex h-12 shrink-0 items-center gap-2 sm:gap-3">
@@ -273,9 +320,9 @@ function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) 
                 {features.FEATURE_CLAIMSALES && <CartIcon />}
               </div>
               {features.FEATURE_WALLET && <UserBalance />}
-              <Link href="/dashboard" className={`${HEADER_AVATAR_PILL} pl-1.5 pr-1.5 min-[960px]:pr-4`} title={t("dashboard")} aria-label={t("dashboard")}>
+              <Link href="/dashboard" className={`${HEADER_AVATAR_PILL} pl-1.5 pr-1.5 min-[1100px]:pr-4`} title={t("dashboard")} aria-label={t("dashboard")}>
                 <UserAvatar src={avatarSrc} name={viewer.name} size="sm" emphasis />
-                <span className="hidden max-w-[140px] truncate min-[960px]:inline">{t("dashboard")}</span>
+                <span className="hidden max-w-[140px] truncate min-[1100px]:inline">{t("dashboard")}</span>
               </Link>
             </>
           ) : (
@@ -283,12 +330,17 @@ function SiteNavContent({ initialViewer }: { initialViewer: NavViewer | null }) 
               <div className={`hidden h-12 items-center rounded-full px-1.5 ${pill} min-[960px]:flex`}>
                 <GlobalSearch variant="desktop" />
               </div>
-              <Link href="/login" className={`hidden h-12 items-center rounded-full px-6 text-sm font-semibold text-[var(--foreground)] no-underline transition-colors hover:bg-[var(--background)] min-[540px]:inline-flex ${pill}`}>
+              <Link href="/login" className={`inline-flex h-12 items-center rounded-full px-4 min-[400px]:px-5 min-[960px]:px-6 text-sm font-semibold text-[var(--foreground)] no-underline transition-colors hover:bg-[var(--background)] ${pill}`}>
                 {t("login")}
               </Link>
-              <CtaButton href="/register" variant="red" className="h-12 !py-0 shadow-[0_8px_30px_-12px_rgba(140,20,32,0.5)]">
-                {tn("cta")}
-              </CtaButton>
+              {/* De rode actieknop alleen op brede schermen: op mobiel staat het logo in
+                  het midden en zit "Account aanmaken" in het uitklapmenu; tussen 960 en
+                  1100px past hij niet naast het losse logo. */}
+              <span className="hidden min-[1100px]:inline-flex">
+                <CtaButton href="/register" variant="red" className="h-12 !py-0 shadow-[0_8px_30px_-12px_rgba(140,20,32,0.5)]">
+                  {tn("cta")}
+                </CtaButton>
+              </span>
             </>
           )}
         </div>

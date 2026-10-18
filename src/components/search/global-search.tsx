@@ -12,7 +12,8 @@ import { useFeatureFlags } from "@/components/providers/feature-flags-provider";
  * Header-zoekbalk met live suggesties (Kaarten / Pokémon / Aanbod /
  * Gebruikers) uit /api/search/suggest. Twee varianten:
  *  - "desktop": loep-icoon dat naar links uitklapt (md+), dropdown eronder
- *  - "mobile": full-width balk in het mobiele menu, dropdown eronder
+ *  - "mobile": loep-knop in de actierij van het mobiele menu die naar rechts
+ *    uitklapt over de rij heen (de rij zelf is `relative`), dropdown eronder
  * Toetsenbord: ↑/↓ door alle rijen (wrap), Enter navigeert, Escape sluit.
  */
 
@@ -92,7 +93,7 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
       ? t("placeholder")
       : t("placeholderPlayers");
   const router = useRouter();
-  const [open, setOpen] = useState(variant === "mobile");
+  const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -122,36 +123,36 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
   }
 
   useEffect(() => {
-    if (variant === "desktop" && open) inputRef.current?.focus();
-  }, [open, variant]);
+    if (open) inputRef.current?.focus();
+  }, [open]);
 
-  // Click-outside + Escape sluiten (desktop klapt in, mobiel sluit dropdown).
+  // Click-outside + Escape klappen de balk weer in.
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        if (variant === "desktop") setOpen(false);
-        else setValue("");
+        setOpen(false);
+        setValue("");
       }
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open, variant]);
+  }, [open]);
 
   const navigate = useCallback(
     (href: string) => {
       router.push(href);
       setValue("");
       setActiveIndex(-1);
-      if (variant === "desktop") setOpen(false);
+      setOpen(false);
       onNavigate?.();
     },
-    [router, variant, onNavigate]
+    [router, onNavigate]
   );
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") {
-      if (variant === "desktop") setOpen(false);
+      setOpen(false);
       setValue("");
       setActiveIndex(-1);
       return;
@@ -409,26 +410,54 @@ export function GlobalSearch({ variant, onNavigate }: GlobalSearchProps) {
   };
 
   // ---------------------------------------------------------------------
-  // Mobiel: full-width balk in het menu, dropdown eronder
+  // Mobiel: ronde loep-knop in de actierij van het menu; de balk klapt vanaf
+  // die knop naar rechts uit over de rest van de rij (de rij is `relative`).
   // ---------------------------------------------------------------------
   if (variant === "mobile") {
     return (
-      <div ref={wrapperRef} className="relative">
-        <form onSubmit={handleSubmit}>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--foreground)]/50" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              {...inputAria}
-              className="cc-pill w-full border border-[var(--border)] bg-white py-2.5 pl-9 pr-3 text-base text-[var(--foreground)] placeholder:text-[var(--foreground)]/45 focus:border-[var(--primary)]/40 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/15"
-            />
-          </div>
+      <div ref={wrapperRef} className="static shrink-0">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={placeholder}
+          aria-expanded={open}
+          className={`flex size-11 items-center justify-center rounded-full bg-[var(--background)] text-[var(--foreground)]/75 transition-opacity hover:bg-[var(--muted)] ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
+        >
+          <Search className="size-5" />
+        </button>
+
+        <form
+          onSubmit={handleSubmit}
+          className={`absolute left-0 top-0 z-10 flex h-11 items-center overflow-hidden cc-pill bg-white ring-1 ring-[var(--border)] transition-[width,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+            open ? "w-full opacity-100" : "pointer-events-none w-11 opacity-0"
+          }`}
+        >
+          <Search className="ml-3.5 size-4 shrink-0 text-[var(--foreground)]/50" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            tabIndex={open ? 0 : -1}
+            {...inputAria}
+            className="min-w-0 flex-1 bg-transparent px-2 py-2 text-base text-[var(--foreground)] placeholder:text-[var(--foreground)]/45 focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setValue("");
+            }}
+            tabIndex={open ? 0 : -1}
+            aria-label="Sluit"
+            className="mr-1.5 shrink-0 rounded-full p-1.5 text-[var(--foreground)]/50 transition-colors hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+          >
+            <X className="size-4" />
+          </button>
         </form>
+
         {showDropdown && (
           <div className="absolute left-0 right-0 top-full z-50 mt-2">{dropdown}</div>
         )}
