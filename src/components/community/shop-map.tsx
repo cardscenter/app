@@ -39,15 +39,21 @@ interface ShopMapLabels {
 const ICONS: Record<ShopMapModeKey, typeof Car> = { car: Car, bike: Bike, bus: Bus };
 const COLORS: Record<ShopMapModeKey, PastelColor> = { car: "yellow", bike: "pink", bus: "blue" };
 
-/** Zoompunt per route (percentages van de tekening, uit de kaarten afgelezen). */
-const FOCUS: Record<ShopMapModeKey | "main", { scale: number; origin: string }> = {
-  main: { scale: 1, origin: "50% 50%" },
-  car: { scale: 1.6, origin: "26% 36%" },
-  bike: { scale: 2, origin: "31% 33%" },
-  bus: { scale: 1.4, origin: "44% 0%" },
+/**
+ * Zoom per route: `ox`/`oy` is het punt van de tekening (in procenten) dat op
+ * zijn plaats blijft; het zichtbare venster loopt van `o·(1−1/s)` tot
+ * `o·(1−1/s) + 100/s`. Waarden zijn zo gekozen dat de hele route plus de
+ * winkelspeld in het vak vallen.
+ */
+const FOCUS: Record<ShopMapModeKey | "main", { scale: number; ox: number; oy: number }> = {
+  main: { scale: 1, ox: 50, oy: 50 },
+  car: { scale: 2.8, ox: 13, oy: 24 },
+  bike: { scale: 3.2, ox: 24, oy: 21 },
+  bus: { scale: 2.4, ox: 35, oy: 0 },
 };
 
-const SPRING = { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] as const };
+/** Zonder overshoot: een schaal onder 1 zou witte randen geven. */
+const ZOOM = { duration: 0.9, ease: [0.22, 1, 0.36, 1] as const };
 const FADE = { duration: 0.45, ease: [0.4, 0, 0.2, 1] as const };
 
 /**
@@ -155,14 +161,13 @@ export function ShopMap({ modes, images, labels }: { modes: ShopMapMode[]; image
 function MapStack({ images, active, zoom, alt, className = "" }: { images: ShopMapImages; active: ShopMapModeKey | "main"; zoom: boolean; alt: string; className?: string }) {
   const focus = zoom ? FOCUS[active] : FOCUS.main;
   const layers: ShopMapModeKey[] = ["car", "bike", "bus"];
+  // Draaipunt vast op de linkerbovenhoek en de verschuiving mee-animeren:
+  // schaal en positie lopen dan in één vloeiende beweging (een wisselend
+  // transform-origin laat de kaart verspringen bij het terugzoomen).
+  const target = { scale: focus.scale, x: `${focus.ox * (1 - focus.scale)}%`, y: `${focus.oy * (1 - focus.scale)}%` };
   return (
     <div className={`relative aspect-[1961/2092] overflow-hidden rounded-[16px] bg-white ${className}`}>
-      <motion.div
-        className="absolute inset-0"
-        animate={{ scale: focus.scale }}
-        style={{ transformOrigin: focus.origin }}
-        transition={SPRING}
-      >
+      <motion.div className="absolute inset-0" initial={false} animate={target} style={{ transformOrigin: "0 0" }} transition={ZOOM}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={images.main} alt={alt} className="absolute inset-0 h-full w-full object-cover" />
         {layers.map((k) => (
