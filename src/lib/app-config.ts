@@ -68,7 +68,7 @@ export const DEFAULT_HUB_SETTINGS: HubSettings = {
   ].join("\n\n"),
   directions: [
     "Cards Center zit op Dubbele Poort 7 in het centrum van Hulst, op loopafstand van de Grote Markt.",
-    "Auto: parkeren kan op de parkeerplaatsen rond de vestingwal (betaald) of op de Grote Markt. In de straat zelf is weinig ruimte.",
+    "Auto: parkeren kan op de bolwerken rond de vesting (zoals het Oranje Bolwerk en het Nassaubolwerk) en op het 's-Gravenhofplein: € 1,75 per uur, op de bolwerken ook een dagkaart van € 5. Betaald van maandag tot en met zaterdag 10:00 tot 18:00 en zondag 12:00 tot 18:00; buiten de stadswallen parkeer je gratis, met een geldige gehandicaptenparkeerkaart overal. In de straat zelf is weinig ruimte.",
     "Fiets: voor de deur staat geen fietsenrek. Zet je fiets in de fietsenstalling aan de Bierkaai, vlak om de hoek.",
     "Openbaar vervoer: lijnbussen stoppen op busstation Hulst, vanaf daar is het acht minuten lopen (550 meter).",
     "Vanuit België: Hulst ligt vlak over de grens bij Sint-Gillis-Waas en Kieldrecht, ongeveer een halfuur rijden vanaf Antwerpen.",
