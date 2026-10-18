@@ -37,7 +37,7 @@ export const PLATFORM = {
     name: "Cards Center",
     street: "Dubbele Poort",
     houseNumber: "7",
-    postalCode: "",
+    postalCode: "4561 BJ",
     city: "Hulst",
     countryCode: "NL",
   },

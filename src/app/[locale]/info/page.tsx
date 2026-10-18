@@ -7,6 +7,9 @@ import { formatPrice } from "@/lib/shop-events/format";
 import { toParagraphs } from "@/lib/community/config";
 import { formatShopAddress, PLATFORM } from "@/lib/platform-config";
 import { CenteredHero, TileQuad, FeatureRows, FaqSection, BannerPromo, ClosingCta, CtaButton } from "@/components/ploy";
+import { Panel } from "@/components/ploy/panel";
+import { SectionHead } from "@/components/ploy/section-head";
+import { ShopMap, type ShopMapMode } from "@/components/community/shop-map";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +36,13 @@ export default async function InfoPage({ params }: { params: Promise<{ locale: s
   const linkCls = "inline-flex items-center gap-1.5 text-sm font-semibold underline underline-offset-4";
   const rules = toParagraphs(s.houseRules);
   const directions = toParagraphs(s.directions);
+  // Plattegrond: routes per vervoerswijze, met een Google Maps-link in dezelfde modus.
+  const routeUrl = (travelmode: "driving" | "bicycling" | "transit") => `${mapsUrl}&travelmode=${travelmode}`;
+  const mapModes: ShopMapMode[] = [
+    { key: "car", title: t("mapCar"), text: t("mapCarText"), fact: t("mapCarFact"), mapsUrl: routeUrl("driving") },
+    { key: "bike", title: t("mapBike"), text: t("mapBikeText"), fact: t("mapBikeFact"), mapsUrl: routeUrl("bicycling") },
+    { key: "bus", title: t("mapBus"), text: t("mapBusText"), fact: t("mapBusFact"), mapsUrl: routeUrl("transit") },
+  ];
 
   return (
     <div className="cc-landing overflow-clip">
@@ -69,6 +79,11 @@ export default async function InfoPage({ params }: { params: Promise<{ locale: s
                 {p}
               </p>
             )),
+            action: (
+              <a href="#plattegrond" className={`${linkCls} text-[var(--foreground)]`}>
+                <MapPin className="size-4" /> {t("seeMap")}
+              </a>
+            ),
           },
           {
             id: "contact",
@@ -89,6 +104,27 @@ export default async function InfoPage({ params }: { params: Promise<{ locale: s
           },
         ]}
       />
+
+      <Panel color="green" id="plattegrond">
+        <SectionHead title={t("mapTitle")} />
+        <ShopMap
+          modes={mapModes}
+          images={{
+            main: "/images/sections/plattegrond-main.webp",
+            car: "/images/sections/plattegrond-car.webp",
+            bike: "/images/sections/plattegrond-bike.webp",
+            bus: "/images/sections/plattegrond-bus.webp",
+          }}
+          labels={{
+            intro: t("mapIntro", { address: address }),
+            hint: t("mapHint"),
+            routeLabel: t("mapRouteIn"),
+            enlargeLabel: t("mapEnlarge"),
+            closeLabel: t("mapClose"),
+            alt: t("mapAlt"),
+          }}
+        />
+      </Panel>
 
       <FeatureRows id="huisregels" title={t("houseRules")} intro={t("infoRulesIntro")} rows={rules.map((p, i) => ({ number: String(i + 1).padStart(2, "0"), text: p }))} />
 

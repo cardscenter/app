@@ -115,7 +115,7 @@ Importeer uit `@/components/ploy` (barrel) of het losse bestand; `StoryRows`, `A
 `CARD`, `TILE`, `TILE_IMG`, `PILL_BTN`, `PILL_BTN_SM`, `PILL_RED`, `PILL_RED_SM`, `PILL_INK`, `MENU`, `MENU_ITEM_ACTIVE`, `SEARCH_INPUT`, `INPUT`, `SELECT`, `TEXTAREA`, `LABEL`, `TABLE_HEAD`, `TABLE_CELL`, `H2`, `H3`, `MUTED`. Knoppen kunnen ook via `buttonVariants()` uit `src/components/ui/button-variants.ts` (zijn al pillen; default = `cc-grad`).
 
 ### Community (`src/components/community/`)
-`Podium` (top 3), `StandingsTable` (ranglijst, eigen rij geel), `StampCardVisual` (stempelkaart), `NewsCard` (`featured` = breed), `PlayerProfileHeader`, `LeagueBadgePill`.
+`Podium` (top 3), `StandingsTable` (ranglijst, eigen rij geel), `StampCardVisual` (stempelkaart), `NewsCard` (`featured` = breed), `PlayerProfileHeader`, `LeagueBadgePill`, `ShopMap` (plattegrond van Hulst met routelagen auto/fiets/bus: hover toont, klik zet vast, zachte zoom per route, "Vergroot" opent een lightbox; afbeeldingen `public/images/sections/plattegrond-*.webp`, bronnen via `scripts/convert-webp.mjs`).
 
 ### Dashboard (`src/components/dashboard/ui/`)
 

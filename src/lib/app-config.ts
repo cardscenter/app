@@ -69,8 +69,8 @@ export const DEFAULT_HUB_SETTINGS: HubSettings = {
   directions: [
     "Cards Center zit op Dubbele Poort 7 in het centrum van Hulst, op loopafstand van de Grote Markt.",
     "Auto: parkeren kan op de parkeerplaatsen rond de vestingwal (betaald) of op de Grote Markt. In de straat zelf is weinig ruimte.",
-    "Fiets: er is een fietsenrek voor de deur.",
-    "Openbaar vervoer: lijnbussen stoppen op het busstation van Hulst, vanaf daar is het een paar minuten lopen.",
+    "Fiets: voor de deur staat geen fietsenrek. Zet je fiets in de fietsenstalling aan de Bierkaai, vlak om de hoek.",
+    "Openbaar vervoer: lijnbussen stoppen op busstation Hulst, vanaf daar is het acht minuten lopen (550 meter).",
     "Vanuit België: Hulst ligt vlak over de grens bij Sint-Gillis-Waas en Kieldrecht, ongeveer een halfuur rijden vanaf Antwerpen.",
   ].join("\n\n"),
   stampsPerCard: 10,
